@@ -141,6 +141,84 @@ async def test_missing_signature_header_is_rejected(
     assert response.json()["error"]["code"] == "INVALID_SIGNATURE"
 
 
+async def test_a_rejected_attempt_does_not_shadow_the_real_delivery(
+    client_for: ClientFactory,
+    webhook_settings: Settings,
+    job_queue: NullJobQueue,
+    session: AsyncSession,
+) -> None:
+    """Rule 3 answers for handled deliveries only (§6.10).
+
+    Secret rotation makes this the ordinary case: GitHub's first attempt fails the HMAC and
+    its retry carries the right one. An unauthenticated POST that knew the delivery id
+    would otherwise be enough to make the retry answer `duplicate` and never review.
+    """
+    delivery = webhook_delivery("pull_request_synchronize")
+    bad = {**delivery.headers, "X-Hub-Signature-256": "sha256=" + "0" * 64}
+
+    async with client_for(webhook_settings) as client:
+        rejected = await _post(client, delivery, headers=bad)
+        accepted = await _post(client, delivery)
+
+    assert rejected.status_code == 401
+    assert accepted.status_code == 202, accepted.text
+    assert job_queue.enqueued == [accepted.json()["review_id"]]
+
+    # One delivery id, one row (§5.1's unique index), holding the disposition that stuck.
+    recorded = (await session.execute(sa.select(models.WebhookDelivery))).scalars().one()
+    assert recorded.status == "accepted"
+    assert recorded.review_run_id == accepted.json()["review_id"]
+
+
+async def test_a_bad_signature_cannot_undo_an_accepted_delivery(
+    client_for: ClientFactory,
+    webhook_settings: Settings,
+    job_queue: NullJobQueue,
+    session: AsyncSession,
+) -> None:
+    """The mirror case: forged bytes must not reopen a delivery that was already handled,
+    or GitHub's next retry would start a second review."""
+    delivery = webhook_delivery("pull_request_synchronize")
+    bad = {**delivery.headers, "X-Hub-Signature-256": "sha256=" + "0" * 64}
+
+    async with client_for(webhook_settings) as client:
+        accepted = await _post(client, delivery)
+        forged = await _post(client, delivery, headers=bad)
+        retry = await _post(client, delivery)
+
+    assert (accepted.status_code, forged.status_code, retry.status_code) == (202, 401, 200)
+    assert retry.json() == {"status": "duplicate", "review_id": accepted.json()["review_id"]}
+    assert job_queue.enqueued == [accepted.json()["review_id"]]
+
+    recorded = (await session.execute(sa.select(models.WebhookDelivery))).scalars().one()
+    assert recorded.status == "accepted"
+
+
+async def test_oversized_headers_on_the_unauthenticated_path_are_bounded(
+    client_for: ClientFactory, webhook_settings: Settings, session: AsyncSession
+) -> None:
+    """Rule 2 records headers nobody has authenticated, so they are trimmed to the columns
+    they land in — `delivery_id` is String(255) and Postgres would raise, not truncate."""
+    delivery = webhook_delivery("pull_request_synchronize")
+
+    async with client_for(webhook_settings) as client:
+        response = await _post(
+            client,
+            delivery,
+            headers={
+                "X-GitHub-Event": "e" * 500,
+                "X-GitHub-Delivery": "d" * 5000,
+                "X-Hub-Signature-256": "sha256=" + "0" * 64,
+            },
+        )
+
+    assert response.status_code == 401
+    recorded = (await session.execute(sa.select(models.WebhookDelivery))).scalars().one()
+    assert recorded.status == "invalid"
+    assert len(recorded.delivery_id) == 255
+    assert len(recorded.event or "") == 64
+
+
 async def test_duplicate_delivery_is_idempotent(
     client_for: ClientFactory,
     webhook_settings: Settings,
