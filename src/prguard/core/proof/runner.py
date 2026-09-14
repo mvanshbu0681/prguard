@@ -76,8 +76,9 @@ from prguard.core.types import (
 RunState = Literal["pass", "fail", "timeout", "error", "not_run"]
 
 #: Why the verdict came out the way it did. Finer-grained than §5.1's six-value ``outcome``
-#: column, and identical to the vocabulary ``tests/fixtures/expectations/proof_matrix.json``
-#: records, so an artifact can say *why* and not only *what*.
+#: column, and a superset of the vocabulary ``tests/fixtures/expectations/proof_matrix.json``
+#: records — every corpus reason appears here verbatim, plus the ones the corpus has no row for
+#: — so an artifact can say *why* and not only *what*.
 ProofReason = Literal[
     "failed_as_predicted",
     "passed_unexpectedly",
