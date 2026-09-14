@@ -252,7 +252,6 @@ async def coordinate(
         return deterministic_merge(
             candidates,
             hallucinated=hallucinated,
-            task=task,
             tenant_id=tenant_id,
             repository_id=repository_id,
             detail=f"{type(error).__name__}: {error}",
@@ -297,7 +296,6 @@ def deterministic_merge(
     candidates: Sequence[tuple[str, SpecialistFinding]],
     *,
     hallucinated: Sequence[DroppedFinding],
-    task: ReviewTask,
     tenant_id: str,
     repository_id: str,
     detail: str = "",
@@ -409,7 +407,7 @@ def _apply(
                         kept,
                         reason="hallucinated_path",
                         detail=_HALLUCINATED_DETAIL,
-                        fallback_specialist=claimed[0][0] if claimed else "",
+                        specialist=_attribution(kept, claimed),
                     )
                 )
                 recorded.add(key)
@@ -498,11 +496,15 @@ def _partition_hallucinated(
 def _attribution(
     kept: CoordinatedFinding, claimed: Sequence[tuple[str, SpecialistFinding]]
 ) -> str:
-    """Which reviewer gets the credit: the first source named, else whoever we matched."""
-    if kept.sources:
-        return kept.sources[0]
+    """Which reviewer gets the credit.
+
+    The reviewer we matched wins over the one the coordinator names: attribution feeds
+    ``/v1/accuracy``'s per-specialist numbers, and those should reflect who actually found it.
+    """
     if claimed:
         return claimed[0][0]
+    if kept.sources:
+        return kept.sources[0]
     return COORDINATOR_PROMPT
 
 
@@ -592,10 +594,10 @@ def _dropped_from_coordinated(
     *,
     reason: DropReason,
     detail: str,
-    fallback_specialist: str,
+    specialist: str,
 ) -> DroppedFinding:
     return DroppedFinding(
-        specialist=(kept.sources[0] if kept.sources else fallback_specialist),
+        specialist=specialist,
         rule_key=_slug(kept.rule_key),
         category=kept.category,
         title=kept.title,

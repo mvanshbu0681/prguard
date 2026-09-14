@@ -463,6 +463,32 @@ async def test_an_unnormalised_rule_key_is_slugified() -> None:
     assert result.findings[0].symbol_path == "app/checkout.py"
 
 
+async def test_credit_goes_to_the_reviewer_that_actually_found_it() -> None:
+    """Attribution feeds `/v1/accuracy`; a mislabelled `sources` must not skew it."""
+    response = json.dumps(
+        {
+            "findings": [
+                {
+                    "rule_key": "unguarded_none_arithmetic",
+                    "category": "correctness",
+                    "title": "apply_discount raises TypeError when rate is None",
+                    "body_markdown": "…",
+                    "file_path": "app/billing.py",
+                    "start_line": 41,
+                    "end_line": 44,
+                    "sources": ["security"],
+                }
+            ],
+            "dropped": [],
+        }
+    )
+    client = FakeLLMClient(script=[response])
+
+    result = await run(client, output("bugs", finding()))
+
+    assert result.findings[0].specialist == "bugs"
+
+
 async def test_the_llm_severity_hint_is_stored_and_never_ranked() -> None:
     """§4.4: severity is computed from blast radius in S5. The adjective is evidence, not input."""
     client = coordinator_client()
