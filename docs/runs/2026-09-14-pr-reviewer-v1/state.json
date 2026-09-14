@@ -1,0 +1,200 @@
+{
+  "run_id": "2026-09-14-pr-reviewer-v1",
+  "problem_statement": "Build AI PR review product from scratch: FastAPI backend + Next.js frontend + marketing site. Positioning: evidence-based merge gate, not a review assistant. Backend architecture is priority 1, marketing site priority 2.",
+  "target_dir": "/Users/vanshmehta/Documents/Projects_2026/PR-Reviewer",
+  "stage": "GATE_2",
+  "interview_depth": "critical",
+  "questions_asked": 12,
+  "spec_approved": true,
+  "execute_authorized": false,
+  "verify_command": "uv run pytest -q && uv run ruff check src tests && uv run mypy src",
+  "round": 0,
+  "max_rounds": 3,
+  "paths": {
+    "spec": "docs/specs/2026-09-14-pr-reviewer-v1-spec.md",
+    "plan": "docs/plans/2026-09-14-pr-reviewer-v1-plan.md",
+    "run_log": "docs/runs/2026-09-14-pr-reviewer-v1/run-log.md",
+    "report": "docs/runs/2026-09-14-pr-reviewer-v1/final-report.md"
+  },
+  "tracks": [
+    {
+      "id": "T0",
+      "title": "Repo seed",
+      "status": "pending",
+      "branch": "agent/T0",
+      "depends_on": [],
+      "acs": []
+    },
+    {
+      "id": "T1",
+      "title": "Persistence, config & app shell",
+      "status": "pending",
+      "branch": "agent/T1",
+      "depends_on": [
+        "T0"
+      ],
+      "acs": [
+        "AC-27"
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Contracts, predicates & LLM substrate",
+      "status": "pending",
+      "branch": "agent/T2",
+      "depends_on": [
+        "T0"
+      ],
+      "acs": [
+        "AC-23c"
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Offline fixture corpus",
+      "status": "pending",
+      "branch": "agent/T3",
+      "depends_on": [
+        "T0"
+      ],
+      "acs": []
+    },
+    {
+      "id": "T4",
+      "title": "Analysis core - severity + fingerprint",
+      "status": "pending",
+      "branch": "agent/T4",
+      "depends_on": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "acs": [
+        "AC-5a",
+        "AC-6",
+        "AC-9",
+        "AC-16",
+        "AC-25a",
+        "AC-26"
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Proof subsystem",
+      "status": "pending",
+      "branch": "agent/T5",
+      "depends_on": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "acs": [
+        "AC-10",
+        "AC-11a",
+        "AC-12a",
+        "AC-13"
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Delivery & governance",
+      "status": "pending",
+      "branch": "agent/T6",
+      "depends_on": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "acs": [
+        "AC-7a",
+        "AC-14",
+        "AC-15",
+        "AC-17",
+        "AC-18",
+        "AC-24"
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "API, audit & accuracy",
+      "status": "pending",
+      "branch": "agent/T7",
+      "depends_on": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "acs": [
+        "AC-1",
+        "AC-2",
+        "AC-3a",
+        "AC-5b",
+        "AC-8a",
+        "AC-11b",
+        "AC-19",
+        "AC-21a",
+        "AC-22"
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Specialists & coordinator",
+      "status": "pending",
+      "branch": "agent/T8",
+      "depends_on": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "acs": [
+        "AC-25b"
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Pipeline, queue & orchestration",
+      "status": "pending",
+      "branch": "agent/T9",
+      "depends_on": [
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8"
+      ],
+      "acs": [
+        "AC-3b",
+        "AC-4",
+        "AC-7b",
+        "AC-8b",
+        "AC-12b",
+        "AC-20",
+        "AC-21b",
+        "AC-23a"
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Integration & VERIFY green",
+      "status": "pending",
+      "branch": "agent/T10",
+      "depends_on": [
+        "T9"
+      ],
+      "acs": [
+        "AC-28"
+      ]
+    }
+  ],
+  "integration_branch": "",
+  "pr_url": "",
+  "open_findings": [],
+  "escalations": [
+    {
+      "id": "E0",
+      "issue": "target_dir is not a git repo; git init required before Stage C",
+      "status": "open"
+    }
+  ],
+  "updated": "2026-09-15"
+}
