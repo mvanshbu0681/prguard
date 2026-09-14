@@ -35,6 +35,7 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final, cast
 
+import httpx
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -58,7 +59,7 @@ from prguard.core.delivery.review_poster import (
     updated_finding_ids,
 )
 from prguard.core.ingest import IngestError, PullRequestSnapshot, fetch_file_bodies, ingest
-from prguard.core.proof.deps import DependencyInstaller
+from prguard.core.proof.deps import DependencyInstaller, UvInstaller
 from prguard.core.proof.generator import (
     ProofGenerationError,
     ProofPromptContext,
@@ -77,7 +78,11 @@ from prguard.core.proof.runner import (
     skipped_outcome,
 )
 from prguard.core.proof.selector import select_candidates
-from prguard.core.proof.workspace import WorkspaceSource, materialise
+from prguard.core.proof.workspace import (
+    GitHubTarballSource,
+    WorkspaceSource,
+    materialise,
+)
 from prguard.core.queue import is_cancelled, supersede_older_runs
 from prguard.core.specialists.base import ReviewTask, run_specialists
 from prguard.core.specialists.registry import specialists_for
@@ -96,7 +101,7 @@ from prguard.core.types import (
 from prguard.db import models
 from prguard.db.base import new_uuid, utcnow
 from prguard.llm.circuit import FailbackClient
-from prguard.llm.client import LLMClient
+from prguard.llm.client import LLMClient, build_client
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +128,10 @@ ERROR_INTERNAL: Final[str] = "INTERNAL_ERROR"
 #: Spec §4.2: "workers update stage, stage_started_at, heartbeat_at at least every 30 s".
 #: Stage boundaries beat too; this covers a stage that outlives one.
 HEARTBEAT_INTERVAL_SECONDS: Final[float] = 30.0
+
+#: A shallow tarball of a real repository is megabytes, not kilobytes — the REST client's
+#: 30 s is the wrong budget for it, `[ASSUMED]`.
+WORKSPACE_TIMEOUT_SECONDS: Final[float] = 120.0
 
 #: E23's degradation for a repro the generator could not write. Advisory, never fatal (§8.1).
 DEGRADATION_PROOF_NOT_GENERATED: Final[str] = "proof_not_generated"
@@ -169,17 +178,72 @@ class FatalStage(Exception):
 class PipelineDeps:
     """Every edge that leaves this process, injectable so VERIFY can run with the world off.
 
-    All optional: production resolves each from `Settings`, and a test hands over the fake it
-    wants. `sandbox` overrides :func:`select_runner` entirely, which is what lets the
+    All optional: :func:`build_deps` resolves each from `Settings`, and a test hands over the
+    fake it wants. `sandbox` overrides :func:`select_runner` entirely, which is what lets the
     integration suite run real repros through the subprocess runner with the Docker daemon
     stopped (X7).
+
+    `workspace_source` is fixed; `workspace_factory` is per pull request, because a tarball
+    source is bound to one repository and the app serves many.
     """
 
     llm_client: LLMClient | None = None
     github_client: GitHubClient | None = None
     workspace_source: WorkspaceSource | None = None
+    workspace_factory: Callable[[PullRequestSnapshot], WorkspaceSource] | None = None
     sandbox: SandboxSelection | None = None
     installer: DependencyInstaller | None = None
+    #: Owned by the app's lifespan; `None` when every client was injected by a caller.
+    http_client: httpx.AsyncClient | None = None
+
+    def source_for(self, snapshot: PullRequestSnapshot) -> WorkspaceSource | None:
+        if self.workspace_source is not None:
+            return self.workspace_source
+        return self.workspace_factory(snapshot) if self.workspace_factory is not None else None
+
+    async def aclose(self) -> None:
+        """Release the sockets this process owns. Called once, by the lifespan."""
+        if self.github_client is not None:
+            await self.github_client.aclose()
+        if self.http_client is not None:
+            await self.http_client.aclose()
+
+
+def build_deps(settings: Settings) -> PipelineDeps:
+    """The production wiring: every §4.8 key resolved into the client that uses it.
+
+    The tarball client is separate from :class:`GitHubClient` on purpose — one speaks the
+    REST API with its retry policy, the other streams a 30 MB archive, and giving them one
+    timeout would be wrong for both.
+    """
+    http_client = httpx.AsyncClient(
+        timeout=WORKSPACE_TIMEOUT_SECONDS,
+        headers=(
+            {"authorization": f"Bearer {settings.GITHUB_TOKEN}"}
+            if settings.GITHUB_TOKEN
+            else {}
+        ),
+    )
+
+    def workspace_for(snapshot: PullRequestSnapshot) -> WorkspaceSource:
+        return GitHubTarballSource(
+            client=http_client,
+            owner=snapshot.owner,
+            repo=snapshot.name,
+            api_base=settings.GITHUB_API_BASE,
+        )
+
+    return PipelineDeps(
+        llm_client=build_client(
+            provider=settings.LLM_PROVIDER, api_key=settings.ANTHROPIC_API_KEY
+        ),
+        github_client=GitHubClient(
+            token=settings.GITHUB_TOKEN, base_url=settings.GITHUB_API_BASE
+        ),
+        workspace_factory=workspace_for,
+        installer=UvInstaller(timeout_seconds=settings.DEP_INSTALL_TIMEOUT),
+        http_client=http_client,
+    )
 
 
 @dataclass
@@ -926,7 +990,8 @@ class Pipeline:
             outcome = errored_outcome(sandbox.runner, f"{type(error).__name__}: {error}")
             return outcome
 
-        if sandbox.runner is None or self.deps.workspace_source is None:
+        source = self.deps.source_for(snapshot)
+        if sandbox.runner is None or source is None:
             # E14: no sandbox is not an error. Nothing is claimed, the gate goes neutral.
             outcome = skipped_outcome(reason=sandbox.reason or "no sandbox available")
             self._persist_artifact(session, state, finding, outcome, request)
@@ -935,7 +1000,7 @@ class Pipeline:
         workspace = None
         try:
             workspace = await materialise(
-                self.deps.workspace_source,
+                source,
                 request=request,
                 head_ref=snapshot.head_sha,
                 base_ref=snapshot.base_sha if policy.require_baseline else None,
@@ -1480,4 +1545,5 @@ __all__ = [
     "Pipeline",
     "PipelineDeps",
     "RunState",
+    "build_deps",
 ]
