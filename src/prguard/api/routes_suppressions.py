@@ -24,7 +24,13 @@ import sqlalchemy as sa
 from fastapi import APIRouter, Header, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from prguard.api.deps import RequireBearer, SessionDep, TenantScope, TenantScopeDep
+from prguard.api.deps import (
+    RequireBearer,
+    SessionDep,
+    SettingsDep,
+    TenantScope,
+    TenantScopeDep,
+)
 from prguard.api.errors import ErrorCode, PRGuardError, request_id_of
 from prguard.api.pagination import decode_cursor, encode_cursor
 from prguard.api.schemas import (
@@ -39,6 +45,8 @@ from prguard.api.schemas import (
     SuppressRequest,
 )
 from prguard.core import audit
+from prguard.core.severity import is_blocking
+from prguard.core.types import Band, FindingStatus, ProofStatus
 from prguard.db import models
 from prguard.db.base import as_utc, new_uuid, utcnow
 
@@ -66,6 +74,7 @@ async def suppress_finding(
     request: Request,
     session: SessionDep,
     scope: TenantScopeDep,
+    settings: SettingsDep,
     x_actor_id: Annotated[str | None, Header(alias=ACTOR_HEADER)] = None,
 ) -> SuppressionCreated:
     finding = await _load_finding(session, scope, finding_id)
@@ -101,7 +110,13 @@ async def suppress_finding(
     # The finding is suppressed, and the ledger row is why (§6.6 side effects).
     finding.status = models.FindingStatus.SUPPRESSED.value
     finding.suppression_id = suppression.id
-    finding.blocking = False
+    finding.blocking = is_blocking(
+        proof_status=cast("ProofStatus", finding.proof_status),
+        band=cast("Band", finding.severity_band or "info"),
+        language=finding.language or "",
+        status=cast("FindingStatus", finding.status),
+        block_min_severity=settings.BLOCK_MIN_SEVERITY,
+    )
     session.add(
         models.FindingOutcome(
             id=new_uuid(),

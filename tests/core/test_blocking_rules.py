@@ -126,6 +126,23 @@ def test_the_python_equivalent_of_those_cases_does_block() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _is_is_blocking_call(value: ast.expr | None) -> bool:
+    """True when the assigned value is the result of calling ``severity.is_blocking``.
+
+    The invariant is that ``blocking`` is only ever *written from* ``is_blocking``, not that
+    the attribute is never assigned. Recomputing the flag through the single source of truth
+    is the required pattern, so it must not be reported as an offender.
+    """
+    if not isinstance(value, ast.Call):
+        return False
+    func = value.func
+    if isinstance(func, ast.Name):
+        return func.id == "is_blocking"
+    if isinstance(func, ast.Attribute):
+        return func.attr == "is_blocking"
+    return False
+
+
 def test_is_blocking_is_the_only_writer_of_the_blocking_flag() -> None:
     """Assign ``blocking`` anywhere else and the gate stops being a function of proof."""
     offenders: list[str] = []
@@ -137,6 +154,9 @@ def test_is_blocking_is_the_only_writer_of_the_blocking_flag() -> None:
                 targets = list(node.targets)
             elif isinstance(node, ast.AnnAssign | ast.AugAssign):
                 targets = [node.target]
+            value = getattr(node, "value", None)
+            if _is_is_blocking_call(value):
+                continue
             for target in targets:
                 if isinstance(target, ast.Attribute) and target.attr == "blocking":
                     offenders.append(f"{path.relative_to(SRC)}:{node.lineno}")
