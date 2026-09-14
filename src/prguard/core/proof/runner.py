@@ -30,7 +30,7 @@ import asyncio
 import os
 import subprocess
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from types import MappingProxyType
@@ -60,6 +60,7 @@ from prguard.core.types import (
     ProofRunner,
     ProofStatus,
     RunResult,
+    SeverityInputs,
     SeverityResult,
 )
 
@@ -685,21 +686,53 @@ def clamp_disproven(severity: SeverityResult | None) -> SeverityResult | None:
     )
 
 
+def with_proof_confidence(
+    severity: SeverityResult | None, status: ProofStatus
+) -> SeverityResult | None:
+    """Write the proof's contribution into the stored severity inputs (§4.4).
+
+    S5 scores a finding before S7 proves it, so at scoring time ``proof_confidence`` is 0.5 —
+    "we have not looked". Once the sandbox has answered, the stored inputs must say what it
+    found, because ``/result`` shows the arithmetic and the arithmetic has to be over the real
+    numbers (R4: the claim is transparency, not calibration).
+
+    The *score* is not recomputed here. That is ``severity.compute``'s job, and
+    :func:`apply_outcome` takes it as a hook so this module never grows a second opinion about
+    how a severity is calculated.
+    """
+    if severity is None:
+        return None
+    confidence = proof_confidence(status)
+    if severity.inputs.proof_confidence == confidence:
+        return severity
+    return replace(severity, inputs=replace(severity.inputs, proof_confidence=confidence))
+
+
 def apply_outcome(
     finding: CanonicalFinding,
     outcome: ProofOutcome,
     *,
     block_min_severity: Band = "high",
+    recompute: Callable[[SeverityInputs], SeverityResult] | None = None,
 ) -> CanonicalFinding:
     """Write a proof verdict onto a finding (E12, §4.4). Mutates and returns ``finding``.
 
-    ``blocking`` is **not** set here: it is recomputed by calling
+    ``recompute`` is ``severity.compute`` when the pipeline passes it: the proof changed one of
+    the six inputs, so the score that inputs produce has changed too. Without it the inputs are
+    still updated and the score is left as S5 computed it, which is the right behaviour for a
+    unit test and the wrong one for a run — S9 supplies the hook.
+
+    ``blocking`` is **not** assigned here: it is recomputed by calling
     :func:`prguard.core.severity.is_blocking`, which is the sole writer of that flag in the
     codebase. At proof time a finding is still ``proposed``, so the answer is ``False``;
     delivery recomputes it once the finding is published. Keeping the call here rather than
     assigning a literal is what stops a second writer from ever appearing.
     """
     finding.proof_status = outcome.status
+    finding.severity = with_proof_confidence(finding.severity, outcome.status)
+    if recompute is not None and finding.severity is not None:
+        rescored = recompute(finding.severity.inputs)
+        finding.severity = replace(rescored, notes=[*finding.severity.notes, *rescored.notes])
     if outcome.status == "disproven":
         finding.status = "disproven"
         finding.severity = clamp_disproven(finding.severity)
@@ -711,6 +744,35 @@ def apply_outcome(
         block_min_severity=block_min_severity,
     )
     return finding
+
+
+def artifact_columns(
+    outcome: ProofOutcome, request: ProofRequest, *, image: str | None = None
+) -> dict[str, object]:
+    """The §5.1 ``proof_artifacts`` column values for one proof. Persistence-layer-agnostic.
+
+    Kept here rather than in the pipeline so that the mapping from "what the runner observed"
+    to "what the audit trail records" is written once, next to the verdict it describes.
+    """
+    return {
+        "runner": outcome.runner,
+        "isolation": outcome.isolation,
+        "image": image,
+        "test_file_path": request.test_file_path,
+        "test_code": request.test_code,
+        "expected_failure_signal": request.expected_failure_signal,
+        "command": (outcome.head or outcome.base or RunResult(exit_code=0)).command,
+        "base_exit_code": outcome.base.exit_code if outcome.base is not None else None,
+        "base_stdout": outcome.base.stdout if outcome.base is not None else None,
+        "base_stderr": outcome.base.stderr if outcome.base is not None else None,
+        "head_exit_code": outcome.head.exit_code if outcome.head is not None else None,
+        "head_stdout": outcome.head.stdout if outcome.head is not None else None,
+        "head_stderr": outcome.head.stderr if outcome.head is not None else None,
+        "outcome": outcome.outcome,
+        "baseline_mode": outcome.baseline_mode,
+        "deps_install_ok": outcome.deps_install_ok,
+        "duration_ms": outcome.duration_ms,
+    }
 
 
 def blocking_band_reached(band: Band, *, block_min_severity: Band) -> bool:
