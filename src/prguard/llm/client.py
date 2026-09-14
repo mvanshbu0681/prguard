@@ -13,8 +13,9 @@ Three rules this module exists to enforce:
 3. **A fake never invents an answer.** An unmatched call raises :class:`NoFakeResponseError`
    rather than returning something plausible; a silently-wrong fixture is a debugging tar pit.
 
-Ownership: T2 owns this module. T8 replaces the body of :class:`AnthropicClient` in wave 2 and
-adds ``llm/circuit.py`` (the failback chain) next to it.
+Ownership: T2 owns this module. The live provider it resolves lives in ``llm/anthropic.py``
+(T8), imported only when ``LLM_PROVIDER=anthropic`` actually selects it, next to
+``llm/circuit.py`` (the failback chain).
 """
 
 from __future__ import annotations
@@ -227,41 +228,6 @@ class FakeLLMClient:
         )
 
 
-class AnthropicClient:
-    """The real provider. **Stub until T8** — see plan §10, track T8.
-
-    Constructed here (rather than in wave 2) so that ``build_client`` and every type annotation
-    downstream are already correct when T8 fills in the body.
-    """
-
-    def __init__(
-        self,
-        *,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        timeout: float = 120.0,
-        max_retries: int = 2,
-    ) -> None:
-        self.api_key = api_key
-        self.base_url = base_url
-        self.timeout = timeout
-        self.max_retries = max_retries
-
-    async def complete(
-        self,
-        *,
-        model: str,
-        system: str,
-        messages: Sequence[Message],
-        max_tokens: int,
-        temperature: float,
-    ) -> LLMResponse:
-        raise NotImplementedError(
-            "AnthropicClient is a typed stub in T2; T8 implements the live call. "
-            "Set LLM_PROVIDER=fake to run offline."
-        )
-
-
 def build_client(
     *,
     provider: str,
@@ -280,6 +246,10 @@ def build_client(
             return FakeLLMClient.from_fixtures(fixture_dir)
         return FakeLLMClient()
     if normalised == "anthropic":
+        # Imported here, not at module scope: `llm.anthropic` imports this module for the
+        # protocol, and the offline path must never pay for the SDK import at all.
+        from prguard.llm.anthropic import AnthropicClient
+
         return AnthropicClient(api_key=api_key)
     raise UnknownProviderError(
         f"unknown LLM_PROVIDER {provider!r}; expected one of: anthropic, fake"
