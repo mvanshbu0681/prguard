@@ -53,6 +53,7 @@ from prguard.core.coordinator import coordinate
 from prguard.core.delivery.gate import GateDecision, decide, deliver_gate
 from prguard.core.delivery.github_client import GitHubClient, GitHubError
 from prguard.core.delivery.review_poster import (
+    DEGRADATION_COMMENTS_UNREADABLE,
     ExistingComment,
     ReviewDelivery,
     fingerprint_of_comment,
@@ -1125,6 +1126,9 @@ class Pipeline:
             result_url=None,
             dry_run=self._dry_run(),
             max_distance=self.settings.NEAREST_LINE_MAX_DISTANCE,
+            # E26's other half: no prefix pattern recognises *our* token, and a finding that
+            # quotes an env value would publish it to the PR and persist it in review_payload.
+            secrets=self._secrets(),
         )
         state.delivery = delivery
         state.degrade(*delivery.degradations)
@@ -1176,8 +1180,16 @@ class Pipeline:
             dry_run=self._dry_run(),
         )
 
-    async def _existing_comments(self, state: RunState) -> tuple[ExistingComment, ...]:
-        """What an earlier run already said on this PR (E3/AC-7a). Degrading, never fatal."""
+    async def _existing_comments(self, state: RunState) -> tuple[ExistingComment, ...] | None:
+        """What an earlier run already said on this PR (E3/AC-7a). Degrading, never fatal.
+
+        ``None`` is "GitHub would not say", which is a different answer from ``()`` — "there is
+        nothing there". Returning the empty tuple for both made a failed read invisible: reuse
+        became impossible, the re-review posted the same fingerprint as a brand-new comment, and
+        `degradations[]` said nothing had happened. §8.1 S8 is explicit that a GitHub failure in
+        delivery degrades and is recorded, and `post_review` demotes an unknown comment list to
+        the review body rather than risk the duplicate.
+        """
         client = self.deps.github_client
         snapshot = self._require_snapshot(state)
         if client is None or self._dry_run():
@@ -1188,7 +1200,8 @@ class Pipeline:
             )
         except GitHubError as error:
             logger.info("could not read existing review comments: %s", error)
-            return ()
+            state.degrade(DEGRADATION_COMMENTS_UNREADABLE)
+            return None
         return tuple(
             ExistingComment(
                 comment_id=int(comment["id"]),

@@ -17,6 +17,14 @@ Transport errors and 5xx are retried :data:`MAX_ATTEMPTS` times with exponential
 jitter (fixed backoff would synchronise every worker onto the same instant). 4xx is never
 retried — repeating a request GitHub understood and refused only spends rate limit.
 
+**A retry is only safe on an idempotent call**, and ``POST …/pulls/{n}/reviews`` is not one:
+GitHub's edge returns 502 *after* the review row exists at least as readily as before it, so
+repeating the request publishes the whole review a second time. Spec §4.7 says exactly one
+POST per run, and a re-post is the duplicated-comment outcome E3/AC-7a exists to prevent, so
+:meth:`GitHubClient.create_review` is sent **once** and the caller decides what an unknown
+outcome means. Rate limiting is still waited out even there: a 403 is GitHub refusing the
+request, which is proof it was not applied.
+
 The clock is injectable (``sleep``, ``jitter``) so the whole retry policy is testable offline
 and instantly, which is what keeps VERIFY under §9.4's time budget.
 """
@@ -224,9 +232,18 @@ class GitHubClient:
     async def create_review(
         self, owner: str, repo: str, number: int, payload: dict[str, Any]
     ) -> dict[str, Any]:
-        """``POST /repos/{o}/{r}/pulls/{n}/reviews`` — the one review a run may post (§4.7)."""
+        """``POST /repos/{o}/{r}/pulls/{n}/reviews`` — the one review a run may post (§4.7).
+
+        ``idempotent=False``: this call creates a resource, so a 5xx is *not* evidence that it
+        was refused. Retrying it is how a single hiccup becomes nine reviews and every comment
+        duplicated; the review poster treats the unknown outcome as delivered-unconfirmed
+        instead (§4.7, E3/AC-7a).
+        """
         return await self._json(
-            "POST", f"/repos/{owner}/{repo}/pulls/{number}/reviews", json=payload
+            "POST",
+            f"/repos/{owner}/{repo}/pulls/{number}/reviews",
+            json=payload,
+            idempotent=False,
         )
 
     async def update_review_comment(
@@ -251,13 +268,22 @@ class GitHubClient:
 
     # -- transport ------------------------------------------------------------------
 
-    async def _json(self, method: str, path: str, **kwargs: Any) -> dict[str, Any]:
-        response = await self._request(method, path, **kwargs)
+    async def _json(
+        self, method: str, path: str, *, idempotent: bool = True, **kwargs: Any
+    ) -> dict[str, Any]:
+        response = await self._request(method, path, idempotent=idempotent, **kwargs)
         body = response.json() if response.content else {}
         return dict(body) if isinstance(body, dict) else {}
 
-    async def _request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
-        """One request with the full retry policy. Raises a typed error or returns a 2xx."""
+    async def _request(
+        self, method: str, path: str, *, idempotent: bool = True, **kwargs: Any
+    ) -> httpx.Response:
+        """One request with the full retry policy. Raises a typed error or returns a 2xx.
+
+        ``idempotent=False`` sends the request exactly once: a transport failure or a 5xx
+        leaves the outcome genuinely unknown, and for a call that creates a resource the safe
+        reading of "unknown" is "it may have happened", never "do it again".
+        """
         last_error: GitHubError | None = None
         for attempt in range(1, self.max_attempts + 1):
             try:
@@ -266,7 +292,7 @@ class GitHubClient:
                 last_error = GitHubUnavailableError(
                     f"{method} {path} failed: {transport_error}", url=path
                 )
-                if attempt == self.max_attempts:
+                if attempt == self.max_attempts or not idempotent:
                     raise last_error from transport_error
                 await self._backoff(attempt)
                 continue
@@ -276,12 +302,17 @@ class GitHubClient:
 
             error = _classify(response, method=method, path=path)
             if isinstance(error, GitHubRateLimitError):
+                # A rate limit is a refusal, so waiting it out is safe even for a create.
                 wait = error.retry_after
                 if wait is None or wait > self.max_wait_seconds or attempt == self.max_attempts:
                     raise error
                 await self._sleep(wait)
                 continue
-            if response.status_code in _RETRYABLE_STATUSES and attempt < self.max_attempts:
+            if (
+                idempotent
+                and response.status_code in _RETRYABLE_STATUSES
+                and attempt < self.max_attempts
+            ):
                 last_error = error
                 await self._backoff(attempt)
                 continue
