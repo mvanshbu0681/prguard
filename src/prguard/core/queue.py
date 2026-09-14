@@ -214,34 +214,66 @@ async def supersede_older_runs(
     keep_run_id: str,
     now: datetime | None = None,
 ) -> tuple[str, ...]:
-    """Cancel every in-flight run for this PR that is not on ``head_sha`` — spec §4.2, E3.
+    """Cancel every **older** in-flight run for this PR that is not on ``head_sha`` (§4.2, E3).
 
     A run whose `head_sha` is still `null` is superseded too: it was triggered through the API
-    door, which does not resolve the SHA on the request path, so "unresolved" can only mean
-    "older than the run that has already resolved one".
+    door, which does not resolve the SHA on the request path, so "unresolved" means "has not
+    got as far as we have".
+
+    Two things make this safe when `REVIEW_WORKERS` genuinely runs two of them at once, which
+    E21 (`force:true` during an in-flight run), a webhook racing a forced API call, and the
+    startup re-enqueue of two `queued` rows all reach:
+
+    * **It is one conditional UPDATE**, not a read followed by a write. The read-then-write
+      version let both workers see the other as unresolved before either commit landed.
+    * **It is antisymmetric.** "Not on our SHA" is symmetric — two unresolved runs each read
+      the other as older and both ended `cancelled/SUPERSEDED`, so nothing was ever posted to
+      the PR. Ordering on `(created_at, id)` — a strict total order over the rows — means only
+      the *newer* run can cancel the older one, so §4.2's "sets **the older** run to cancelled"
+      is taken literally and exactly one survivor is guaranteed under any interleaving.
 
     Commits, like every other decision about a run's lifecycle: the cancelled run may be read
-    by another worker a millisecond later, and it has to read as cancelled.
+    by another worker a millisecond later, and it has to read as cancelled. The commit also
+    publishes *our* `head_sha`, so the next worker to arrive compares against a resolved SHA
+    instead of a `null`.
     """
     moment = now or utcnow()
-    statement = sa.select(models.ReviewRun).where(
-        models.ReviewRun.pull_request_id == pull_request_id,
-        models.ReviewRun.id != keep_run_id,
-        models.ReviewRun.status.in_(IN_FLIGHT),
-        sa.or_(
-            models.ReviewRun.head_sha.is_(None),
-            models.ReviewRun.head_sha != head_sha,
-        ),
+    keep_created_at = (
+        sa.select(models.ReviewRun.created_at)
+        .where(models.ReviewRun.id == keep_run_id)
+        .scalar_subquery()
     )
-    superseded = list((await session.execute(statement)).scalars().all())
-    for run in superseded:
-        run.status = models.RunStatus.CANCELLED.value
-        run.error_code = ERROR_SUPERSEDED
-        run.error_message = f"Superseded by a newer head SHA ({head_sha})."
-        run.finished_at = moment
-    if superseded:
-        await session.commit()
-    return tuple(run.id for run in superseded)
+    statement = (
+        sa.update(models.ReviewRun)
+        .where(
+            models.ReviewRun.pull_request_id == pull_request_id,
+            models.ReviewRun.id != keep_run_id,
+            models.ReviewRun.status.in_(IN_FLIGHT),
+            sa.or_(
+                models.ReviewRun.head_sha.is_(None),
+                models.ReviewRun.head_sha != head_sha,
+            ),
+            # Strictly older than us, `id` breaking a same-microsecond tie.
+            sa.or_(
+                models.ReviewRun.created_at < keep_created_at,
+                sa.and_(
+                    models.ReviewRun.created_at == keep_created_at,
+                    models.ReviewRun.id < keep_run_id,
+                ),
+            ),
+        )
+        .values(
+            status=models.RunStatus.CANCELLED.value,
+            error_code=ERROR_SUPERSEDED,
+            error_message=f"Superseded by a newer head SHA ({head_sha}).",
+            finished_at=moment,
+        )
+        .returning(models.ReviewRun.id)
+        .execution_options(synchronize_session="fetch")
+    )
+    superseded = tuple((await session.execute(statement)).scalars().all())
+    await session.commit()
+    return superseded
 
 
 async def is_cancelled(session: AsyncSession, review_run_id: str) -> bool:

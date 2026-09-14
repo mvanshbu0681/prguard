@@ -17,8 +17,10 @@ is why the normalisation below is specific rather than clever:
 * **``shape_hash``** names *what* — the enclosing function reparsed with docstrings dropped,
   identifiers rewritten to positional placeholders in order of first appearance, and literals
   replaced by their type token. Imported module aliases, attribute names, keyword-argument
-  names and builtins are **preserved**: ``json.dumps`` and ``pickle.dumps`` are not the same
-  code, and a normalisation that says they are would merge unrelated findings.
+  names and *free* builtins are **preserved**: ``json.dumps`` and ``pickle.dumps`` are not the
+  same code, and a normalisation that says they are would merge unrelated findings. A builtin
+  name the function itself **binds** — a local called ``id``, a parameter called ``type`` — is
+  a local and is placeholdered like any other, or renaming it would mint a new identity.
 
 Nothing here raises. E28 (a syntax error at head, or a Python 2 file) and a file that could not
 be fetched at all both degrade to the bucket path — a coarser identity is a survivable loss, an
@@ -204,7 +206,9 @@ def _normalised_source(
     function: ast.FunctionDef | ast.AsyncFunctionDef, module: ast.Module
 ) -> str:
     """The §4.5 normal form of one function: no docstrings, placeholder names, typed literals."""
-    normaliser = _Normaliser(preserved=_preserved_names(module))
+    normaliser = _Normaliser(
+        preserved=_preserved_names(module) - _bound_names(function),
+    )
     rewritten = normaliser.visit(_stripped(function))
     ast.fix_missing_locations(rewritten)
     return ast.unparse(rewritten)
@@ -246,6 +250,43 @@ def _preserved_names(module: ast.Module) -> frozenset[str]:
             if node.module:
                 imported.add(node.module.split(".")[0])
     return frozenset(imported | _BUILTIN_NAMES)
+
+
+def _bound_names(function: ast.FunctionDef | ast.AsyncFunctionDef) -> frozenset[str]:
+    """Every name this function *binds* — the discriminator ``_preserved_names`` lacks.
+
+    Preserving a name on spelling alone made renaming a local that shadows a builtin
+    (``id``, ``type``, ``list``, ``sum``, ``filter``, …) mint a brand-new identity: a second
+    GitHub comment for the same bug, and a suppression the human wrote that stops applying
+    (AC-6b, §6.6). A name a linter can ask you to rename is a local, whatever it is spelled
+    like, so the question is "is this name assigned or bound here", not "does it appear in
+    ``dir(builtins)``".
+
+    The whole subtree is walked, nested ``def``\\ s included: a name bound anywhere inside is
+    renameable everywhere inside, and a shape that rewrote only some occurrences would be
+    neither stable nor distinguishing. Free names — the real ``round``, the real ``abs``, an
+    imported ``json`` — bind nothing here and are still preserved, so
+    ``test_distinct_builtin_calls_do_not_collide`` holds.
+    """
+    bound: set[str] = set()
+    for node in ast.walk(function):
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            bound.add(node.name)
+        elif isinstance(node, ast.arg):
+            bound.add(node.arg)
+        elif isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store | ast.Del):
+            bound.add(node.id)
+        elif isinstance(node, ast.alias):
+            bound.add(node.asname or node.name.split(".")[0])
+        elif isinstance(node, ast.ExceptHandler) and node.name is not None:
+            bound.add(node.name)
+        elif isinstance(node, ast.Global | ast.Nonlocal):
+            bound.update(node.names)
+        elif isinstance(node, ast.MatchAs | ast.MatchStar) and node.name is not None:
+            bound.add(node.name)
+        elif isinstance(node, ast.MatchMapping) and node.rest is not None:
+            bound.add(node.rest)
+    return frozenset(bound)
 
 
 class _Normaliser(ast.NodeTransformer):

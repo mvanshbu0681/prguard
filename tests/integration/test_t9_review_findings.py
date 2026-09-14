@@ -157,17 +157,23 @@ async def test_f2_an_unreadable_comment_list_duplicates_comments_silently(
     )
 
 
-async def test_f4_gate_is_green_on_a_degraded_run(
+async def test_f4_the_degraded_sandbox_exemption_is_disclosed_and_bounded(
     settings: Settings,
     session: AsyncSession,
     session_factory: async_sessionmaker[AsyncSession],
     default_tenant: models.Tenant,
     github_mock: respx.Router,
 ) -> None:
-    """§4.7: "neutral if the run degraded or all proofs were skipped for environment reasons".
+    """F4, resolved as spec §11.2 assumption 26 — the amendment to §4.7, pinned.
 
-    `GATE_DEGRADATION_EXEMPT` drops `sandbox_degraded` out of "the run degraded", so a run
-    that recorded a degradation and proved nothing reports `success`.
+    §4.7's "neutral if the run degraded" taken literally makes *every* run on a Docker-less
+    machine neutral, because §4.6's subprocess fallback always records `sandbox_degraded` —
+    and X7 says the demo machine is exactly that. §8.1's Docker row is the more specific rule
+    and defines the fallback as working behaviour, reserving neutral for "nothing could be
+    proven". `GATE_DEGRADATION_EXEMPT` implements that, as a *documented* amendment.
+
+    This test is the amendment's price: the exemption may only be claimed when the degraded
+    sandbox actually executed something, and the degradation must stay visible on the run.
     """
     from tests.fixtures.loader import llm_fixture
     from tests.integration.conftest import local_workspace_source
@@ -188,9 +194,60 @@ async def test_f4_gate_is_green_on_a_degraded_run(
     assert run is not None
     await session.refresh(run)
     assert run.status == "succeeded"
+    # Disclosed, not hidden: the weaker isolation is on the run and on `/result`.
     assert run.degradations == ["sandbox_degraded"]
+    artifacts = (
+        (
+            await session.execute(
+                sa.select(models.ProofArtifact).where(
+                    models.ProofArtifact.review_run_id == review_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert artifacts, "the amendment only applies to a sandbox that executed something"
+    assert [artifact.isolation for artifact in artifacts] == ["degraded"]
+    assert run.gate_conclusion == "success", (
+        "a repro that really ran at base and at head is evidence; §8.1's Docker row makes the "
+        f"subprocess fallback working behaviour, not a lost verdict. got {run.degradations!r}"
+    )
+
+
+async def test_f4b_the_exemption_cannot_hide_a_run_that_proved_nothing(
+    settings: Settings,
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    default_tenant: models.Tenant,
+    github_mock: respx.Router,
+) -> None:
+    """The other half of assumption 26: the amendment is bounded, and this is the boundary.
+
+    Same exempt degradation, but nothing could be executed. §8.1's independent
+    "nothing could be proven" input has to reach the gate on its own, or the exemption would
+    be a way to publish `success` on a run that checked precisely nothing.
+    """
+    mock_pull_request(github_mock)
+    mock_delivery(github_mock)
+    pipeline = make_pipeline(
+        settings=settings,
+        session_factory=session_factory,
+        sandbox=SandboxSelection(
+            runner=None,
+            degradations=("sandbox_degraded",),
+            reason="docker unavailable and the fallback could not be used",
+        ),
+    )
+
+    review_id = await trigger_review(settings, session_factory, pipeline)
+    run = await session.get(models.ReviewRun, review_id)
+    assert run is not None
+    await session.refresh(run)
+    assert run.status == "succeeded"
+    assert run.degradations == ["sandbox_degraded"], "the only degradation is the exempt one"
     assert run.gate_conclusion == "neutral", (
-        f"the run recorded {run.degradations!r} and still concluded {run.gate_conclusion!r}"
+        "nothing was executed, so there is no verdict to claim — whatever the exemption says"
     )
 
 

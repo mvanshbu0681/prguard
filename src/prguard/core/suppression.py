@@ -28,8 +28,10 @@ def matches(*, finding: CanonicalFinding, rule: SuppressionRule, now: datetime) 
     2. **Revocation.** A revoked rule stops matching immediately; its row survives (§5.1).
     3. **Expiry.** ``expires_at`` is exclusive: at the instant it expires it no longer
        suppresses (AC-9, "an ``expires_at`` in the past does not suppress").
-    4. **Identity narrowing.** ``fingerprint`` and ``match_rule_key``, when set, must agree.
-    5. **Scope.** Delegated to :func:`_scope_matches`.
+    4. **Repository.** Delegated to :func:`_repository_in_scope`, because ``tenant`` is the
+       one scope that must be able to reach past the repository the row was written from.
+    5. **Identity narrowing.** ``fingerprint`` and ``match_rule_key``, when set, must agree.
+    6. **Scope.** Delegated to :func:`_scope_matches`.
 
     A match is a *human decision* and outranks everything downstream, including a later
     ``proven`` verdict (E29) — the caller records ``override.break_glass`` in that case.
@@ -40,13 +42,27 @@ def matches(*, finding: CanonicalFinding, rule: SuppressionRule, now: datetime) 
         return False
     if rule.expires_at is not None and _as_utc(rule.expires_at) <= _as_utc(now):
         return False
-    if rule.repository_id is not None and rule.repository_id != finding.repository_id:
+    if not _repository_in_scope(finding=finding, rule=rule):
         return False
     if rule.fingerprint is not None and rule.fingerprint != finding.fingerprint:
         return False
     if rule.match_rule_key is not None and rule.match_rule_key != finding.rule_key:
         return False
     return _scope_matches(finding=finding, rule=rule)
+
+
+def _repository_in_scope(*, finding: CanonicalFinding, rule: SuppressionRule) -> bool:
+    """Repository narrowing — applied to every scope **except** ``tenant`` (§5.1, AC-9).
+
+    ``POST /v1/findings/{id}/suppress`` records ``repository_id`` on every row, because a
+    ledger entry that cannot say which repository a human was looking at is poor evidence.
+    Running that column as an unconditional narrowing made ``scope="tenant"`` unreachable:
+    the widest rule we offer could never leave the first repository it was written in, which
+    is the opposite of what the scope means.
+    """
+    if rule.scope == "tenant":
+        return True
+    return rule.repository_id is None or rule.repository_id == finding.repository_id
 
 
 def _scope_matches(*, finding: CanonicalFinding, rule: SuppressionRule) -> bool:
@@ -60,7 +76,9 @@ def _scope_matches(*, finding: CanonicalFinding, rule: SuppressionRule) -> bool:
     * ``tenant`` — the whole tenant. The widest rule we offer, and the only one that needs no
       further narrowing at all.
     * ``repo`` — one repository; the row must actually name one.
-    * ``file`` — exact path equality; the row must carry a path.
+    * ``file`` — exact path equality. §6.6 ignores the request body's ``match_path`` for this
+      scope, so the route records the *finding's* path on the row; a row without one is a row
+      that names no file and suppresses nothing.
     * ``pattern`` — a path-aware glob (see :func:`_path_matches`), never the bare ``fnmatch``
       whose ``*`` happily crosses directory separators.
     * ``line`` — the narrowest scope, and an *identity* rather than a location: fingerprints

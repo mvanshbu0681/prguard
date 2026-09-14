@@ -184,6 +184,11 @@ SCOPE_MATRIX: tuple[tuple[str, SuppressionRule, frozenset[str]], ...] = (
         make_rule("tenant", match_rule_key="bare_except"),
         frozenset({"billing-except", "cli-main", "cli-nested"}),
     ),
+    (
+        "tenant: written from one repository, and still tenant-wide",
+        make_rule("tenant", repository_id=REPO),
+        EVERY_ID - {"other-tenant"},
+    ),
 )
 
 

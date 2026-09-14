@@ -87,6 +87,44 @@ def test_two_different_renames_of_the_same_local_agree() -> None:
     assert first.value == second.value
 
 
+def test_stable_under_rename_of_a_local_that_shadows_a_builtin() -> None:
+    """A local called ``id`` is still a local (§4.5, AC-6b).
+
+    ``_preserved_names`` used to keep every name in ``dir(builtins)`` on spelling alone, so
+    renaming ``id`` to ``customer_key`` — a rename a linter actively asks for — minted a new
+    identity, and with it a second GitHub comment and a dead suppression.
+    """
+    shadowing = (
+        "def charge(order):\n"
+        "    id = order.reference\n"
+        "    return lookup(id)\n"
+    )
+    renamed = shadowing.replace("id", "customer_key")
+    assert "customer_key = order.reference" in renamed
+    assert fingerprint.shape_hash_for(
+        file_path="app/x.py", line=3, source=shadowing
+    ) == fingerprint.shape_hash_for(file_path="app/x.py", line=3, source=renamed)
+
+
+@pytest.mark.parametrize("shadowed", ["type", "list", "input", "next", "hash", "filter"])
+def test_a_parameter_that_shadows_a_builtin_is_still_renameable(shadowed: str) -> None:
+    """Parameters bind too, so the same rule has to reach them (§4.5 "local-variable rename")."""
+    original = f"def f({shadowed}):\n    return {shadowed} + 1\n"
+    renamed = "def f(value):\n    return value + 1\n"
+    assert fingerprint.shape_hash_for(
+        file_path="app/x.py", line=2, source=original
+    ) == fingerprint.shape_hash_for(file_path="app/x.py", line=2, source=renamed)
+
+
+def test_a_shadowed_builtin_does_not_collide_with_the_real_one() -> None:
+    """The discriminator is "bound here", not "spelled like a builtin" — both stay separable."""
+    shadowed = "def f(values):\n    sum = 0\n    return sum\n"
+    genuine = "def f(values):\n    return sum(values)\n"
+    assert fingerprint.shape_hash_for(
+        file_path="app/x.py", line=3, source=shadowed
+    ) != fingerprint.shape_hash_for(file_path="app/x.py", line=2, source=genuine)
+
+
 def test_stable_under_rewording() -> None:
     """Title and body are not fingerprint inputs, and the rule key is normalised first."""
     source = billing_source()

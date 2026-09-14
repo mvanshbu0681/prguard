@@ -1061,6 +1061,11 @@ All of the following are `[ASSUMED]`. Each is a config value or a reversible cho
 23. `[ASSUMED]` **Lint/type policy**: `mypy --strict` on `src` only; `ruff check` with `I` and 100-char lines; `ruff format` deliberately **not** in VERIFY.
 24. `[ASSUMED]` **Demo repo is out of scope** (Q3 was explicitly deferred). The engine accepts any public GitHub Python PR URL, and a miniature fixture repo with a seeded bug is committed under `tests/fixtures/repos/` so the proof path is demonstrable with no network.
 25. `[ASSUMED]` **Webhook fails closed**: no secret configured ⇒ 503, unless `ALLOW_UNSIGNED_WEBHOOKS=true` for local ngrok testing.
+26. `[ASSUMED]` **Amendment to §4.7's "degraded ⇒ neutral" rule** (added in review round 1, finding R14; implemented as `pipeline.GATE_DEGRADATION_EXEMPT`). Two degradations do **not** by themselves make a run's verdict neutral:
+    - `sandbox_degraded` — §4.7 read literally makes *every* run on a machine without Docker neutral, because §4.6's subprocess fallback always records it, and X7 says that is the machine the demo runs on. §8.1's Docker row is the more specific rule: the fallback is defined *working* behaviour and §8.1 reserves neutral for the case where it is disallowed and "nothing could be proven". A repro that really ran at base and at head is evidence whichever runner executed it; `isolation=degraded` is recorded on every artifact and `sandbox_degraded` on the run, so the weaker isolation is disclosed on `/result` rather than hidden.
+    - `proof_skipped_no_env` — not dropped, re-routed. §4.7 gives "all proofs were skipped for environment reasons" its own independent gate input; the conclusion is `neutral` either way and only the published reason differs, and §8.1 requires that reason to be "no sandbox available — nothing could be proven". Counting it as a generic degradation as well replaced it with the generic sentence.
+
+    The narrowing is bounded and tested in both directions: it can never turn a gate **red** into anything else (`failure` outranks `neutral`), and it can never reach `success` on a run that executed nothing, because `all_proofs_skipped_for_env` forces `neutral` independently and is true whenever the sandbox was unavailable. Reversible: emptying the frozenset restores §4.7 literally.
 
 ### 11.3 Remaining ambiguity (known unknowns, accepted)
 
