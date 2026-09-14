@@ -122,3 +122,42 @@ async def test_lifespan_upgrades_the_schema_before_anything_reads_it(
         await engine.dispose()
 
     assert [tenant.slug for tenant in tenants] == ["default"]
+
+
+async def test_the_asgi_lifespan_protocol_starts_and_stops_the_app(
+    file_settings: Settings,
+) -> None:
+    """`uvicorn prguard.main:app` is the demo's first command; drive it the way uvicorn does.
+
+    Everything else here calls the context manager directly, which would not notice a
+    lifespan FastAPI refuses to run. This one speaks the ASGI protocol.
+    """
+    app = create_app(settings=file_settings)
+    inbox: asyncio.Queue[dict[str, str]] = asyncio.Queue()
+    sent: list[dict[str, str]] = []
+
+    async def receive() -> dict[str, str]:
+        return await inbox.get()
+
+    async def send(message: dict[str, str]) -> None:
+        sent.append(message)
+
+    served = asyncio.create_task(
+        app({"type": "lifespan", "asgi": {"version": "3.0"}}, receive, send)
+    )
+    await inbox.put({"type": "lifespan.startup"})
+    for _ in range(200):
+        if sent:
+            break
+        await asyncio.sleep(0.01)
+    assert sent and sent[0]["type"] == "lifespan.startup.complete", sent
+    assert isinstance(app.state.job_queue, AsyncioJobQueue)
+
+    await inbox.put({"type": "lifespan.shutdown"})
+    await asyncio.wait_for(served, timeout=10.0)
+
+    assert [message["type"] for message in sent] == [
+        "lifespan.startup.complete",
+        "lifespan.shutdown.complete",
+    ]
+    assert app.state.job_queue.tasks == ()
