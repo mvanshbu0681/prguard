@@ -13,6 +13,16 @@ uv sync
 cp .env.example .env
 ```
 
+## Database
+
+Postgres-first schema, run on SQLite locally and in the whole test suite; `DATABASE_URL` is
+the only switch (spec §5, §11.2 assumption 1). Migration `0001` creates all twelve tables and
+seeds the `default` tenant that requests without `X-Tenant-Id` resolve to.
+
+```
+uv run alembic upgrade head
+```
+
 ## VERIFY
 
 The definition of done (spec §9). It passes with no network access and with the Docker daemon
