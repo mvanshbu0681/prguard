@@ -42,6 +42,17 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def as_utc(value: datetime) -> datetime:
+    """Re-attach UTC to a timestamp read back from the database.
+
+    `TimestampType` is `DateTime(timezone=True)`, but SQLite has no timezone storage: a
+    value written as aware UTC comes back *naive* UTC. Anything that compares a stored
+    timestamp against `utcnow()` — or hands it to a serialiser — normalises through here
+    first, or it silently reads the wall clock as local time.
+    """
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
 class Base(DeclarativeBase):
     metadata = sa.MetaData(naming_convention=NAMING_CONVENTION)
 
