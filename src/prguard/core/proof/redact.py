@@ -34,13 +34,18 @@ MIN_SECRET_LENGTH: Final[int] = 8
 #: E26's patterns, applied in order. ``Authorization:`` comes first so that a header carrying a
 #: bearer token is masked whole rather than leaving ``Authorization: ***redacted***`` behind —
 #: the header name is not the secret, but the rest of the line always is.
+#:
+#: The token patterns deliberately carry **no** leading ``\b``. A token glued to the end of a
+#: word (``...decodedghp_AAAA…``, or anything inside a base64 blob) has no word boundary in
+#: front of it, and a pattern that misses it is a pattern that publishes it. Over-redacting a
+#: traceback is survivable; under-redacting one is not.
 SECRET_PATTERNS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
-    (re.compile(r"(?i)\b(authorization\s*:\s*)[^\r\n]+"), r"\1" + REDACTED),
-    (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._\-~+/=]+"), f"Bearer {REDACTED}"),
-    (re.compile(r"\bghp_[A-Za-z0-9]{8,}"), REDACTED),
-    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{8,}"), REDACTED),
-    (re.compile(r"\bsk-ant-[A-Za-z0-9_\-]{8,}"), REDACTED),
-    (re.compile(r"\bAKIA[0-9A-Z]{12,}"), REDACTED),
+    (re.compile(r"(?i)(authorization\s*:\s*)[^\r\n]+"), r"\1" + REDACTED),
+    (re.compile(r"(?i)bearer\s+[A-Za-z0-9._\-~+/=]+"), f"Bearer {REDACTED}"),
+    (re.compile(r"ghp_[A-Za-z0-9]{8,}"), REDACTED),
+    (re.compile(r"github_pat_[A-Za-z0-9_]{8,}"), REDACTED),
+    (re.compile(r"sk-ant-[A-Za-z0-9_\-]{8,}"), REDACTED),
+    (re.compile(r"AKIA[0-9A-Z]{12,}"), REDACTED),
 )
 
 
