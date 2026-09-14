@@ -7,10 +7,12 @@ Three ideas, and they are all borrowed from the one production system that publi
    mandatory rules (``prompts/SHARED.md``) plus one file per reviewer, concatenated into the
    system prompt. Reviewing a prompt then means reading a document, which is the only way prompt
    quality survives contact with a deadline.
-2. **Everything from the pull request is fenced.** ``build_user_prompt`` wraps each block of
-   user-controlled text in ``<untrusted_content source="…">`` and SHARED.md tells the model that
-   what is inside is data. The text must already have passed ``core/sanitize.py`` (E15), which
-   neutralises forged boundary tags; this module places the boundary, it does not police it.
+2. **Everything from the pull request is fenced, and nothing reaches a prompt uncleaned.**
+   ``build_user_prompt`` wraps each block of user-controlled text in
+   ``<untrusted_content source="…">`` and SHARED.md tells the model that what is inside is data.
+   ``core/sanitize.py`` (E15) runs on both sides of that boundary here — on every untrusted
+   ``ReviewTask`` field at construction, and on every fenced body — because the one thing this
+   module must not do is trust a caller to have remembered.
 3. **One reviewer failing is a degradation, not an outage.** The runner gathers every specialist
    under a semaphore and returns typed failures alongside the outputs, so the pipeline can record
    ``degradations:["specialist_bugs_failed"]`` and carry on with the rest (E23). Only *every*
@@ -24,11 +26,12 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Final, Protocol, runtime_checkable
 
+from prguard.core.sanitize import sanitize
 from prguard.core.types import RiskTier, SpecialistOutput
 from prguard.llm.client import LLMClient, LLMError
 from prguard.llm.structured import StructuredOutputError, complete_structured
@@ -41,6 +44,14 @@ SHARED_PROMPT: Final[str] = "SHARED"
 
 #: How many specialists may be in flight at once by default (§11.2 assumption 10: four of them).
 DEFAULT_MAX_CONCURRENCY: Final[int] = 4
+
+#: The :class:`ReviewTask` fields that are *ours* — read from our own records, never a string
+#: whoever opened the pull request chose. Everything not named here is sanitised on
+#: construction, so the default is distrust: a field added later is defended before anyone
+#: remembers to defend it. This list, not a docstring, is the E15 contract.
+TRUSTED_TASK_FIELDS: Final[frozenset[str]] = frozenset(
+    {"repository", "pull_request_number", "risk_tier"}
+)
 
 _SECTION_SEPARATOR: Final[str] = "\n\n---\n\n"
 
@@ -68,10 +79,16 @@ def system_prompt(agent: str) -> str:
 class ReviewTask:
     """The material S2 prepared, ready to be shown to a model.
 
-    ``title``, ``description``, ``diff`` and ``file_context`` are user-controlled and **must
-    already be sanitised** (E15) — they are fenced here, not cleaned here. ``supplied_files`` is
-    the authoritative context set: a finding naming anything else is a hallucination and the
-    coordinator drops it (§6.12).
+    Every field except the ones in :data:`TRUSTED_TASK_FIELDS` is user-controlled, and every
+    one of them is sanitised **here, on construction** (E15). That is deliberate: this used to
+    be a docstring asking callers to sanitise first, the docstring listed four of the five
+    untrusted fields, and the one it forgot — ``supplied_files``, a filename a pull request
+    author chooses — was rendered into the *trusted* preamble ahead of any fence. A rule a
+    caller has to remember is a rule that gets a new field added past it.
+
+    ``supplied_files`` is also the authoritative context set: a finding naming anything else is
+    a hallucination and the coordinator drops it (§6.12). It is matched *after* sanitising, on
+    both sides, so the set the model was shown is the set it is held to.
     """
 
     repository: str
@@ -85,18 +102,50 @@ class ReviewTask:
     conventions: str = ""
     truncation_note: str = ""
 
+    def __post_init__(self) -> None:
+        for field in fields(self):
+            if field.name in TRUSTED_TASK_FIELDS:
+                continue
+            object.__setattr__(self, field.name, _sanitised(field.name, getattr(self, field.name)))
+
+
+def _sanitised(name: str, value: object) -> object:
+    """``sanitize`` applied through a field's shape; anything else is refused loudly.
+
+    A field that is neither trusted nor a string is a question only the person adding it can
+    answer, so it fails at construction rather than becoming the next unfenced hole.
+    """
+    if isinstance(value, str):
+        return sanitize(value)
+    if isinstance(value, tuple):
+        return tuple(_sanitised(name, item) for item in value)
+    raise TypeError(
+        f"ReviewTask.{name} is {type(value).__name__}, which cannot be sanitised. Give it a "
+        f"string shape, or name it in TRUSTED_TASK_FIELDS if it is ours and not the PR's."
+    )
+
 
 def fence_untrusted(source: str, body: str) -> str:
-    """Wrap one block of user-controlled text in its boundary tags (E15).
+    """Sanitise one block of user-controlled text and wrap it in its boundary tags (E15).
 
-    The tag name is deliberately the one ``core/sanitize.py`` neutralises inside the body, so a
-    forged closing tag in a diff cannot end the fence early.
+    The tag name is deliberately the one ``core/sanitize.py`` neutralises inside the body, and
+    the neutralising happens **here** rather than in the caller, so a forged closing tag cannot
+    end the fence early no matter who assembled the body. ``sanitize`` is idempotent, so a
+    caller that cleaned its text first loses nothing by arriving already clean.
+
+    This matters beyond the diff: a specialist's finding is model prose written *about* text a
+    stranger wrote, and the coordinator fences a block of them. Fencing text we never cleaned
+    is a fence with the attacker holding the closing tag.
     """
-    return f'<untrusted_content source="{source}">\n{body}\n</untrusted_content>'
+    return f'<untrusted_content source="{source}">\n{sanitize(body)}\n</untrusted_content>'
 
 
 def context_header(task: ReviewTask) -> str:
-    """The trusted preamble: which pull request this is, and which paths exist."""
+    """The trusted preamble: which pull request this is, and which paths exist.
+
+    Nothing is fenced here, which is exactly why :class:`ReviewTask` sanitises on construction:
+    the paths and the truncation note are rendered as our own words.
+    """
     paths = "\n".join(f"- {path}" for path in task.supplied_files)
     lines = [
         f"Repository: {task.repository}",

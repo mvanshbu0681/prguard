@@ -590,17 +590,19 @@ class Pipeline:
     async def _stage_specialists(self, session: AsyncSession, state: RunState) -> None:
         snapshot = self._require_snapshot(state)
         selection = self._require_selection(state)
-        # E15: everything the PR controls is sanitised **here**, at the seam where it becomes
-        # a prompt. `specialists/base.py` places the fence; it does not clean the body.
+        # E15: `ReviewTask` sanitises every untrusted field on construction — the filenames and
+        # the truncation banner included, because `context_header` renders those into the
+        # trusted preamble, outside every fence. Cleaning them here instead would put the
+        # contract back in a caller, which is precisely how `supplied_files` was missed.
         task = ReviewTask(
             repository=snapshot.slug,
             pull_request_number=snapshot.number,
-            title=sanitize.sanitize(snapshot.title),
-            description=sanitize.sanitize(snapshot.description),
+            title=snapshot.title,
+            description=snapshot.description,
             risk_tier=selection.risk_tier,
             supplied_files=selection.supplied_paths,
-            diff=sanitize.sanitize(snapshot.diff),
-            file_context=sanitize.sanitize(self._file_bodies(state)),
+            diff=snapshot.diff,
+            file_context=self._file_bodies(state),
             truncation_note=selection.banner() or "",
         )
         state.task = task

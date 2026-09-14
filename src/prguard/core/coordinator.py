@@ -272,8 +272,12 @@ def build_coordinator_prompt(
 ) -> str:
     """The trusted preamble, the same fenced context the specialists saw, then their findings.
 
-    The findings are fenced too. They are our reviewers' words, but every one of them quotes a
-    diff written by a stranger, so they are handled as evidence rather than as instruction.
+    The findings are fenced *and* sanitised. They are our reviewers' words, but every one of
+    them is model prose quoting a diff written by a stranger, so a forged
+    ``</untrusted_content>`` inside a finding body is exactly as reachable as one inside the
+    diff — and would end this fence early, leaving the rest of the attacker's text reading as
+    our own prompt. :func:`~prguard.core.specialists.base.fence_untrusted` neutralises the body
+    it wraps, so the closer in that fence is always ours (E15).
     """
     listed = "\n\n".join(
         _describe(specialist, finding) for specialist, finding in candidates
@@ -630,7 +634,12 @@ def _dropped_from_report(drop: CoordinatorDrop) -> DroppedFinding:
 
 
 def _describe(specialist: str, finding: SpecialistFinding) -> str:
-    """One finding, rendered for the coordinator to judge."""
+    """One finding, rendered for the coordinator to judge.
+
+    Every value below is model output shaped by the pull request, and is interpolated raw on
+    purpose: the block this joins is neutralised as a whole by ``fence_untrusted``, so escaping
+    twice here would only double the entities the coordinator reads back.
+    """
     lines = [
         f"- reviewer: {specialist}",
         f"  rule_key: {finding.rule_key}",
