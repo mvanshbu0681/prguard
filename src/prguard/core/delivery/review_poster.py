@@ -18,12 +18,26 @@ move, because a 422 is precisely the moment a finding could be lost.
 not own), 404 and an unrecoverable 422 all end as ``degraded``: the exact payload we would have
 posted is returned for persistence in ``review_runs.review_payload`` and served by ``/result``
 (E17). A PR that closed mid-run is ``skipped_pr_closed`` (E19). In both cases the run succeeds.
+
+**Every published finding reaches GitHub somewhere.** :func:`assert_conservation` counts rungs,
+and a rung is an intention; :func:`assert_delivery_conservation` counts the *channels* a reader
+of the pull request actually sees — a comment in the payload, a row in the body, or a live
+comment updated in place — and refuses to let two findings occupy one of them. That second
+check exists because a rung count cannot see the one way a published finding vanishes: two
+findings sharing a fingerprint (ordinary — ``fingerprint.compute`` is symbol-based, AC-6) both
+claiming the same live comment, where the second body overwrites the first.
+
+**Nothing leaves here unredacted** (§7 E26). A "hardcoded credential" finding quotes the
+credential; the review body is published to a pull request that may be public and persisted in
+``review_runs.review_payload``. Comment and body text therefore goes through
+:func:`prguard.core.proof.redact.redact` — the same pattern table the sandbox output uses, so
+the two E26 call sites cannot drift apart.
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Collection, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final, Literal
 
@@ -32,6 +46,7 @@ from prguard.core.delivery.comment_ladder import (
     FILE_SUBJECT_TYPE,
     NEAREST_LINE_MAX_DISTANCE,
     LadderBreakdown,
+    LadderConservationError,
     RungAssignment,
     assert_conservation,
     assign_rungs,
@@ -42,8 +57,10 @@ from prguard.core.delivery.comment_ladder import (
 from prguard.core.delivery.github_client import (
     GitHubClient,
     GitHubError,
+    GitHubUnavailableError,
     GitHubValidationError,
 )
+from prguard.core.proof.redact import redact
 from prguard.core.types import CanonicalFinding, LineMap, Side
 
 #: Spec §4.7. The only review event this product will ever send. Not configurable, by design.
@@ -63,6 +80,16 @@ DEGRADATION_422: Final[str] = "review_422_demoted"
 
 #: Recorded when GitHub refused the post outright and the payload was persisted instead (E17).
 DEGRADATION_UNPOSTED: Final[str] = "review_not_posted"
+
+#: Recorded when the review POST came back 5xx. GitHub received it, so it may well have created
+#: the review; §4.7 forbids sending it again to find out. The delivery is reported as posted —
+#: the honest reading of "GitHub has it" — and this key is what says we could not confirm it.
+DEGRADATION_POST_UNCONFIRMED: Final[str] = "review_post_unconfirmed"
+
+#: Recorded when GitHub would not say which of our comments are still live on the PR (E3).
+#: Without that list every comment we post might be a duplicate, so the whole review demotes to
+#: rung 4 and ships in the body instead. §8.1 S8: a GitHub failure in delivery degrades.
+DEGRADATION_COMMENTS_UNREADABLE: Final[str] = "review_comments_unreadable"
 
 #: How a comment carries its finding's identity across runs (E3/AC-7a). GitHub renders nothing
 #: for an HTML comment, so the marker is invisible to humans and exact for us.
@@ -191,6 +218,11 @@ class ReusePlan:
     ``updates`` maps a finding id to the live comment id carrying the same fingerprint;
     ``fresh`` is everything genuinely new. Together they partition the published findings, so
     re-review adds zero duplicates without ever silently skipping a finding.
+
+    ``updates`` is **not** injective: a fingerprint is symbol-based (AC-6), so two findings in
+    one function share one, and both then name the same comment id. A comment displays one
+    body, so only one of them can be delivered that way — see :func:`updated_finding_ids`,
+    which is where that arity is resolved rather than assumed away.
     """
 
     updates: Mapping[str, int] = field(default_factory=dict)
@@ -212,6 +244,7 @@ def build_review_payload(
     event: str = REVIEW_EVENT,
     result_url: str | None = None,
     skip_comment_for: Collection[str] = (),
+    secrets: Sequence[str] = (),
 ) -> ReviewPayload:
     """Build the single review payload for a run — spec §4.7, AC-14, E24.
 
@@ -225,6 +258,9 @@ def build_review_payload(
     ``skip_comment_for`` names findings already delivered by updating an existing comment
     (E3/AC-7a). They keep their rung — conservation is over the assignment table, not over the
     comments array — they simply are not posted twice.
+
+    ``secrets`` is the literal values E26 redacts by value, on top of the token shapes the
+    pattern table already knows. Nothing built here leaves unmasked.
     """
     if event != REVIEW_EVENT:
         raise ReviewEventError(
@@ -234,7 +270,7 @@ def build_review_payload(
     reused = set(skip_comment_for)
     by_id = {finding.id: finding for finding in findings}
     comments = tuple(
-        _build_comment(by_id[finding_id], assignment)
+        _build_comment(by_id[finding_id], assignment, secrets)
         for finding_id, assignment in assignments.items()
         if finding_id in by_id and assignment.mode != "summary_only" and finding_id not in reused
     )
@@ -248,20 +284,27 @@ def build_review_payload(
         summary_rows=summary_rows,
         files_reviewed=files_reviewed,
         result_url=result_url,
+        secrets=secrets,
     )
     return ReviewPayload(body=body, comments=comments, commit_id=commit_id)
 
 
 def plan_comment_reuse(
     findings: Sequence[CanonicalFinding],
-    existing: Sequence[ExistingComment],
+    existing: Sequence[ExistingComment] | None,
 ) -> ReusePlan:
     """Decide which findings update an existing comment and which are new — E3, AC-7a.
 
     A fingerprint that already carries a live comment on this PR is **updated**, never
     re-posted: the same bug reported twice reads as a broken bot. The decision is pure and
     lives here so it is unit-testable; T9 proves it end to end.
+
+    ``existing=None`` means GitHub would not tell us what is live on this PR. Nothing can be
+    reused then — there is no comment id to PATCH — so every finding is ``fresh`` and
+    :func:`post_review` demotes the review to the body rather than risk posting a duplicate.
     """
+    if existing is None:
+        return ReusePlan(updates={}, fresh=tuple(finding.id for finding in findings))
     live = {
         comment.fingerprint: comment.comment_id
         for comment in existing
@@ -288,11 +331,12 @@ async def post_review(
     line_maps: Mapping[str, LineMap],
     files_reviewed: int,
     commit_id: str | None = None,
-    existing_comments: Sequence[ExistingComment] = (),
+    existing_comments: Sequence[ExistingComment] | None = (),
     result_url: str | None = None,
     dry_run: bool = False,
     max_distance: int = NEAREST_LINE_MAX_DISTANCE,
     event: str = REVIEW_EVENT,
+    secrets: Sequence[str] = (),
 ) -> ReviewDelivery:
     """Stage S8 — build the ladder, post exactly one review, degrade rather than fail.
 
@@ -307,7 +351,14 @@ async def post_review(
        so it is still delivered.
     4. **Post once.** On 422, demote what GitHub named, re-assert conservation, retry once;
        then send survivors to rung 4 and post the body. On 403/404/rate limit, stop: the payload
-       is persisted and served from ``/result`` (E17), and the run still succeeds.
+       is persisted and served from ``/result`` (E17), and the run still succeeds. On 5xx,
+       stop as well and say so: the POST is not idempotent, GitHub has the request, and
+       sending it again is how one hiccup becomes a pull request with every comment twice.
+
+    ``existing_comments=None`` is "GitHub would not say what is already on this PR". Reuse is
+    then impossible and any inline comment might be a duplicate, so the whole review demotes to
+    rung 4 — every finding still ships, once, in the body — and the delivery is ``degraded``
+    with :data:`DEGRADATION_COMMENTS_UNREADABLE` (§8.1 S8, E3/AC-7a).
 
     ``client=None`` or ``dry_run=True`` builds everything and posts nothing, which is what
     ``GITHUB_DELIVERY_MODE=dry_run`` and a missing token both mean (§4.8, X4).
@@ -319,6 +370,15 @@ async def post_review(
 
     published_ids = [finding.id for finding in findings]
     assignments = assign_rungs(findings, line_maps, max_distance=max_distance)
+    comments_unreadable = existing_comments is None
+    if comments_unreadable:
+        # We cannot tell a finding we have already commented on from a new one, and a re-posted
+        # inline comment is the duplicate AC-7a promises never to make. Rung 4 is the floor for
+        # exactly this kind of "GitHub will not take a comment": nothing is dropped, it moves.
+        assignments = {
+            finding_id: demote_to_summary(assignment)
+            for finding_id, assignment in assignments.items()
+        }
     breakdown = assert_conservation(published_ids, assignments)
 
     def payload_for(skip: Collection[str] = ()) -> ReviewPayload:
@@ -329,6 +389,7 @@ async def post_review(
             commit_id=commit_id,
             result_url=result_url,
             skip_comment_for=skip,
+            secrets=secrets,
         )
 
     if client is None or dry_run:
@@ -357,9 +418,22 @@ async def post_review(
 
     reuse = plan_comment_reuse(findings, existing_comments)
     updated, degradations = await _apply_updates(
-        client, owner, repo, reuse, findings, assignments
+        client, owner, repo, reuse, findings, assignments, secrets
     )
-    payload = payload_for(skip=updated_finding_ids(reuse, updated))
+    if comments_unreadable:
+        degradations.append(DEGRADATION_COMMENTS_UNREADABLE)
+
+    def review_for() -> ReviewPayload:
+        """The payload, with the findings a live comment already carries left out of it."""
+        delivered_by_update = {
+            finding_id: reuse.updates[finding_id]
+            for finding_id in updated_finding_ids(reuse, updated)
+        }
+        built = payload_for(skip=delivered_by_update)
+        assert_delivery_conservation(published_ids, assignments, built, delivered_by_update)
+        return built
+
+    payload = review_for()
 
     for attempt in range(1, MAX_POST_ATTEMPTS + 1):
         try:
@@ -372,6 +446,14 @@ async def post_review(
                 line_maps,
                 to_summary=attempt > MAX_REVIEW_RETRIES,
             )
+            if moved:
+                if DEGRADATION_422 not in degradations:
+                    degradations.append(DEGRADATION_422)
+                # The table just changed under us — AC-18's whole point is that this still
+                # holds, and it holds on the way out of the loop as well as around it: the
+                # breakdown /result reports has to describe the assignments it ships with.
+                breakdown = assert_conservation(published_ids, assignments)
+                payload = review_for()
             if not moved or attempt == MAX_POST_ATTEMPTS:
                 return _degraded(
                     payload,
@@ -382,11 +464,16 @@ async def post_review(
                     attempts=attempt,
                     detail=str(invalid),
                 )
-            if DEGRADATION_422 not in degradations:
-                degradations.append(DEGRADATION_422)
-            # The table just changed under us — AC-18's whole point is that this still holds.
-            breakdown = assert_conservation(published_ids, assignments)
-            payload = payload_for(skip=updated_finding_ids(reuse, updated))
+        except GitHubUnavailableError as unavailable:
+            return _unconfirmed_or_degraded(
+                unavailable,
+                payload,
+                breakdown,
+                assignments,
+                updated=updated,
+                degradations=degradations,
+                attempts=attempt,
+            )
         except GitHubError as error:
             return _degraded(
                 payload,
@@ -399,7 +486,10 @@ async def post_review(
             )
         else:
             return ReviewDelivery(
-                status="posted",
+                # §8.1 S8: a GitHub failure inside delivery degrades the delivery, even when
+                # the review itself went out — the body-only review is the mitigation, not a
+                # clean result, and `/result` has to say which one it is looking at.
+                status="degraded" if comments_unreadable else "posted",
                 payload=payload,
                 ladder_breakdown=breakdown,
                 assignments=assignments,
@@ -413,11 +503,69 @@ async def post_review(
 
 
 def updated_finding_ids(reuse: ReusePlan, updated: Sequence[int]) -> tuple[str, ...]:
-    """The findings whose existing comment was successfully updated this run (E3)."""
+    """The findings whose existing comment was successfully updated this run (E3).
+
+    ``reuse.updates`` may point several findings at one comment id — two bugs in one function
+    share a fingerprint (AC-6) — but a comment shows exactly one body, the last one written to
+    it. Crediting every claimant would mark a published finding delivered when it reached
+    GitHub nowhere, so only the last claimant of each updated comment counts here; the rest are
+    left out and rejoin the review payload, which is where :func:`_apply_updates` puts a
+    comment whose final write failed too.
+    """
     done = set(updated)
-    return tuple(
-        finding_id for finding_id, comment_id in reuse.updates.items() if comment_id in done
-    )
+    carried = {
+        comment_id: finding_id
+        for finding_id, comment_id in reuse.updates.items()
+        if comment_id in done
+    }
+    delivered = set(carried.values())
+    return tuple(finding_id for finding_id in reuse.updates if finding_id in delivered)
+
+
+def assert_delivery_conservation(
+    published_finding_ids: Iterable[str],
+    assignments: Mapping[str, RungAssignment],
+    payload: ReviewPayload,
+    delivered_by_update: Mapping[str, int],
+) -> None:
+    """Every published finding occupies a channel, and no channel carries two — §4.7, AC-17.
+
+    :func:`~prguard.core.delivery.comment_ladder.assert_conservation` counts rungs, which is
+    what we *meant* to do with each finding. This counts what a reader of the pull request will
+    actually find: a comment in the review payload, a row in the body's summary table, or a
+    live comment updated in place. The two are not the same check, and the gap between them is
+    a real bug shape — two findings sharing a fingerprint both claim one live comment, the
+    second PATCH overwrites the first, and a rung count sees four findings on four rungs while
+    one of them reached GitHub nowhere.
+
+    Raises :class:`~prguard.core.delivery.comment_ladder.LadderConservationError`, like its
+    sibling: this is the product claim, so it runs in production and never as a bare ``assert``.
+    """
+    posted = {comment.finding_id for comment in payload.comments}
+    channels: dict[tuple[str, str | int], str] = {}
+    dropped: list[str] = []
+    collisions: list[str] = []
+    for finding_id in published_finding_ids:
+        assignment = assignments.get(finding_id)
+        comment_id = delivered_by_update.get(finding_id)
+        if comment_id is not None:
+            channel: tuple[str, str | int] = ("live_comment", comment_id)
+        elif finding_id in posted:
+            channel = ("review_comment", finding_id)
+        elif assignment is not None and assignment.mode == "summary_only":
+            channel = ("summary_row", finding_id)
+        else:
+            dropped.append(finding_id)
+            continue
+        held_by = channels.setdefault(channel, finding_id)
+        if held_by != finding_id:
+            collisions.append(f"{held_by} and {finding_id} both hold {channel[0]} {channel[1]}")
+    if dropped or collisions:
+        raise LadderConservationError(
+            "a published finding would reach GitHub nowhere — "
+            f"delivered through no channel: {sorted(dropped) or 'none'}; "
+            f"sharing one channel: {collisions or 'none'}"
+        )
 
 
 async def _apply_updates(
@@ -427,10 +575,18 @@ async def _apply_updates(
     reuse: ReusePlan,
     findings: Sequence[CanonicalFinding],
     assignments: Mapping[str, RungAssignment],
+    secrets: Sequence[str] = (),
 ) -> tuple[list[int], list[str]]:
-    """PATCH each reused comment. A failure is not fatal — the finding rejoins the review."""
+    """PATCH each reused comment. A failure is not fatal — the finding rejoins the review.
+
+    Several findings may name one comment (a shared fingerprint), and they are written in
+    ``reuse.updates`` order, so the comment ends up carrying the last of them. A comment is
+    therefore reported as updated only while its **last** write succeeded: if that one is
+    refused, the comment drops out of ``updated`` entirely and every finding that claimed it
+    rejoins the review, exactly as a single refused update already does.
+    """
     by_id = {finding.id: finding for finding in findings}
-    updated: list[int] = []
+    carried: dict[int, str] = {}
     degradations: list[str] = []
     for finding_id, comment_id in reuse.updates.items():
         finding = by_id.get(finding_id)
@@ -439,14 +595,15 @@ async def _apply_updates(
             continue
         try:
             await client.update_review_comment(
-                owner, repo, comment_id, _comment_body(finding, assignment)
+                owner, repo, comment_id, _comment_body(finding, assignment, secrets)
             )
         except GitHubError:
+            carried.pop(comment_id, None)
             if DEGRADATION_UNPOSTED not in degradations:
                 degradations.append(DEGRADATION_UNPOSTED)
         else:
-            updated.append(comment_id)
-    return updated, degradations
+            carried[comment_id] = finding_id
+    return list(carried), degradations
 
 
 def _demote_rejected(
@@ -507,6 +664,50 @@ def _weakest_claim(
     return max(candidates, key=distance)
 
 
+def _unconfirmed_or_degraded(
+    unavailable: GitHubUnavailableError,
+    payload: ReviewPayload,
+    breakdown: LadderBreakdown,
+    assignments: Mapping[str, RungAssignment],
+    *,
+    updated: Sequence[int] = (),
+    degradations: Sequence[str] = (),
+    attempts: int = 0,
+) -> ReviewDelivery:
+    """What a 5xx on the one review POST means — spec §4.7, §8.1 S8.
+
+    GitHub answered, which means it *received* the review, and its edge is as likely to fail
+    after writing the row as before it. The request is not idempotent and §4.7 allows exactly
+    one POST per run, so there is no second attempt and no way to find out: the delivery is
+    reported as posted — the reading that does not risk publishing the review twice — with
+    :data:`DEGRADATION_POST_UNCONFIRMED` saying we could not confirm it, no review id, and the
+    payload preserved for ``/result`` either way.
+
+    A transport failure is the other case: nothing got an answer, so nothing was applied, and
+    that is an ordinary degraded delivery.
+    """
+    if unavailable.status is None:
+        return _degraded(
+            payload,
+            breakdown,
+            assignments,
+            updated=updated,
+            degradations=degradations,
+            attempts=attempts,
+            detail=str(unavailable),
+        )
+    return ReviewDelivery(
+        status="posted",
+        payload=payload,
+        ladder_breakdown=breakdown,
+        assignments=assignments,
+        updated_comment_ids=tuple(updated),
+        degradations=(*degradations, DEGRADATION_POST_UNCONFIRMED),
+        attempts=attempts,
+        detail=str(unavailable),
+    )
+
+
 def _degraded(
     payload: ReviewPayload,
     breakdown: LadderBreakdown,
@@ -546,8 +747,10 @@ def _as_int(value: Any) -> int | None:
         return None
 
 
-def _build_comment(finding: CanonicalFinding, assignment: RungAssignment) -> ReviewComment:
-    body = _comment_body(finding, assignment)
+def _build_comment(
+    finding: CanonicalFinding, assignment: RungAssignment, secrets: Sequence[str] = ()
+) -> ReviewComment:
+    body = _comment_body(finding, assignment, secrets)
     if assignment.mode == "file_level":
         return ReviewComment(
             path=assignment.file_path,
@@ -568,7 +771,14 @@ def _build_comment(finding: CanonicalFinding, assignment: RungAssignment) -> Rev
     )
 
 
-def _comment_body(finding: CanonicalFinding, assignment: RungAssignment) -> str:
+def _comment_body(
+    finding: CanonicalFinding, assignment: RungAssignment, secrets: Sequence[str] = ()
+) -> str:
+    """One comment's markdown, redacted — E26.
+
+    A finding about a hardcoded credential quotes the credential; this is the last point before
+    it would be published to a pull request anyone can read.
+    """
     parts: list[str] = []
     if assignment.is_relocated:
         parts.append(nearest_line_note(assignment.file_path, assignment.line))
@@ -579,7 +789,7 @@ def _comment_body(finding: CanonicalFinding, assignment: RungAssignment) -> str:
         parts.append(f"_Reported at `{assignment.file_path}:{assignment.line}`._")
     if finding.fingerprint:
         parts.append(FINGERPRINT_MARKER.format(fingerprint=finding.fingerprint))
-    return "\n\n".join(parts)
+    return redact("\n\n".join(parts), secrets=secrets)
 
 
 def _claim(finding: CanonicalFinding) -> str:
@@ -596,7 +806,9 @@ def _build_body(
     summary_rows: Sequence[tuple[CanonicalFinding, RungAssignment]],
     files_reviewed: int,
     result_url: str | None,
+    secrets: Sequence[str] = (),
 ) -> str:
+    """The review body, redacted (E26) — it is published *and* persisted in `review_payload`."""
     if not findings:
         # E24: a clean PR is a valid, good outcome. Say it in one line and stop.
         return "\n\n".join(
@@ -617,7 +829,7 @@ def _build_body(
     if summary_rows:
         sections.append(_summary_table(summary_rows))
     sections.append(_footer(result_url))
-    return "\n\n".join(sections)
+    return redact("\n\n".join(sections), secrets=secrets)
 
 
 def _summary_table(rows: Sequence[tuple[CanonicalFinding, RungAssignment]]) -> str:
@@ -657,6 +869,8 @@ def _plural(count: int, noun: str) -> str:
 
 __all__ = [
     "DEGRADATION_422",
+    "DEGRADATION_COMMENTS_UNREADABLE",
+    "DEGRADATION_POST_UNCONFIRMED",
     "DEGRADATION_UNPOSTED",
     "FINGERPRINT_MARKER",
     "MAX_POST_ATTEMPTS",
@@ -670,6 +884,7 @@ __all__ = [
     "ReviewDelivery",
     "ReviewEventError",
     "ReviewPayload",
+    "assert_delivery_conservation",
     "build_review_payload",
     "fingerprint_of_comment",
     "plan_comment_reuse",
