@@ -55,7 +55,7 @@ from prguard.core.types import (
     SpecialistFinding,
     SpecialistOutput,
 )
-from prguard.llm.client import LLMClient, LLMError
+from prguard.llm.client import LLMClient
 from prguard.llm.structured import complete_structured
 
 #: The markdown file assembled on top of ``SHARED.md`` for this stage.
@@ -232,17 +232,23 @@ async def coordinate(
         # E24: nothing to coordinate is a complete answer, and it costs nothing to reach.
         return CoordinationResult(dropped=tuple(hallucinated))
 
+    # Assembled outside the try: a missing prompt file is our bug, and degrading quietly to the
+    # deterministic merge on every run is exactly how it would go unnoticed.
+    system = system_prompt(COORDINATOR_PROMPT)
+    prompt = build_coordinator_prompt(task, candidates)
     try:
         response = await complete_structured(
             client,
             model=model,
-            system=system_prompt(COORDINATOR_PROMPT),
-            prompt=build_coordinator_prompt(task, candidates),
+            system=system,
+            prompt=prompt,
             schema=CoordinatorOutput,
             max_tokens=max_tokens,
             temperature=temperature,
         )
-    except LLMError as error:
+    except Exception as error:
+        # Deliberately broad, deliberately not `BaseException`: §8.1 says a coordinator failure
+        # degrades the run, and cancellation (E3) must still propagate.
         return deterministic_merge(
             candidates,
             hallucinated=hallucinated,

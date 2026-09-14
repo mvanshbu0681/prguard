@@ -176,6 +176,9 @@ class PromptSpecialist:
     def __init__(self, name: str, *, prompt: str | None = None) -> None:
         self.name = name
         self.prompt_name = prompt or name
+        # Load now, at wiring time. A missing prompt file caught mid-run would look like four
+        # model failures and fail the run with LLM_UNAVAILABLE, which is a lie.
+        system_prompt(self.prompt_name)
 
     def __repr__(self) -> str:
         return f"PromptSpecialist({self.name!r})"

@@ -562,6 +562,36 @@ async def test_deterministic_merge_fallback() -> None:
     assert reasons(result)["app/legacy_pricing.py"] == "hallucinated_path"
 
 
+async def test_an_unexpected_failure_degrades_rather_than_killing_the_stage() -> None:
+    """§8.1 names the coordinator as degrading. Not "when it fails in the anticipated way"."""
+
+    class BrokenClient:
+        async def complete(
+            self,
+            *,
+            model: str,
+            system: str,
+            messages: list[Message] | tuple[Message, ...],
+            max_tokens: int,
+            temperature: float,
+        ) -> LLMResponse:
+            raise RuntimeError("the provider SDK raised something we never typed")
+
+    result = await coordinate(
+        BrokenClient(),
+        outputs=(output("bugs", finding()),),
+        task=TASK,
+        tenant_id=TENANT,
+        repository_id=REPOSITORY,
+        model=MODEL,
+        max_tokens=8000,
+        temperature=0.0,
+    )
+
+    assert result.degradations == (COORDINATOR_FALLBACK_DEGRADATION,)
+    assert [found.rule_key for found in result.findings] == ["unguarded_none_arithmetic"]
+
+
 async def test_the_fallback_dedupes_on_an_exact_match_only() -> None:
     client = FakeLLMClient()  # no reply registered: raises, so the fallback path runs
 

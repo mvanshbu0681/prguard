@@ -18,6 +18,7 @@ import json
 import pytest
 
 from prguard.core.specialists.base import (
+    PromptNotFoundError,
     PromptSpecialist,
     ReviewTask,
     SpecialistFailure,
@@ -111,6 +112,12 @@ def test_every_reviewer_is_negative_prompted(name: str) -> None:
 
     assert "## Do not report" in agent
     assert "Calibration" in agent
+
+
+def test_a_missing_prompt_file_fails_at_wiring_time_not_mid_review() -> None:
+    """Four "model failures" and a LLM_UNAVAILABLE run would be a lie about a missing file."""
+    with pytest.raises(PromptNotFoundError):
+        PromptSpecialist("no_such_reviewer")
 
 
 def test_the_test_integrity_reviewer_names_the_tampering_patterns() -> None:
