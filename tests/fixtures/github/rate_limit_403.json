@@ -1,0 +1,25 @@
+{
+  "name": "rate_limit_403",
+  "notes": "E27: 403 with x-ratelimit-remaining: 0. The client waits for x-ratelimit-reset but no longer than GITHUB_MAX_WAIT (60 s), then fails the stage — fatal in S1, degrading in S2 and S8. x-ratelimit-reset here is 25 s after the recorded date header, deliberately inside the default wait budget.",
+  "request": {
+    "method": "GET",
+    "path": "/repos/octocat/hello-world/pulls/42/files",
+    "headers": {"accept": "application/vnd.github+json"}
+  },
+  "status": 403,
+  "headers": {
+    "content-type": "application/json; charset=utf-8",
+    "date": "Mon, 14 Sep 2026 23:39:35 GMT",
+    "x-ratelimit-limit": "5000",
+    "x-ratelimit-remaining": "0",
+    "x-ratelimit-used": "5000",
+    "x-ratelimit-reset": "1789170000",
+    "x-ratelimit-resource": "core",
+    "retry-after": "25"
+  },
+  "body": {
+    "message": "API rate limit exceeded for user ID 583231.",
+    "documentation_url": "https://docs.github.com/rest/overview/rate-limits-for-the-rest-api",
+    "status": "403"
+  }
+}

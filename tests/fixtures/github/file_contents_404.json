@@ -1,0 +1,22 @@
+{
+  "name": "file_contents_404",
+  "notes": "S2 is a *degrading* stage (§8.1): a file we cannot fetch simply leaves context, with the reason recorded in `degradations`. It must never fail the run. The path here is the one the hallucinated-path specialist fixture invents, so the two fixtures tell one story: nobody can fetch app/legacy_pricing.py because it does not exist.",
+  "request": {
+    "method": "GET",
+    "path": "/repos/octocat/hello-world/contents/app/legacy_pricing.py",
+    "query": {"ref": "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d"},
+    "headers": {"accept": "application/vnd.github+json"}
+  },
+  "status": 404,
+  "headers": {
+    "content-type": "application/json; charset=utf-8",
+    "x-ratelimit-limit": "5000",
+    "x-ratelimit-remaining": "4986",
+    "x-ratelimit-reset": "1789171200"
+  },
+  "body": {
+    "message": "Not Found",
+    "documentation_url": "https://docs.github.com/rest/repos/contents#get-repository-content",
+    "status": "404"
+  }
+}

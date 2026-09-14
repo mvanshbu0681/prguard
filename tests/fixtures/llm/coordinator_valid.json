@@ -1,0 +1,106 @@
+{
+  "name": "coordinator_valid",
+  "kind": "coordinator_output",
+  "valid": true,
+  "model": "claude-opus-5",
+  "prompt_key": "coordinator:pr_42",
+  "notes": "S4's output: canonical findings plus the drop list /result reports. All six \u00a76.12 drop reasons appear exactly once, so T8 can assert each is reachable and recorded.",
+  "response_text": "{\n  \"findings\": [\n    {\n      \"rule_key\": \"unguarded_none_arithmetic\",\n      \"category\": \"correctness\",\n      \"title\": \"apply_discount raises TypeError when rate is None\",\n      \"body_markdown\": \"`apply_discount` computes `price * (1 - rate)` with no guard, and `Promotion.rate` is `None` for codes that carry no discount.\",\n      \"file_path\": \"app/billing.py\",\n      \"start_line\": 41,\n      \"end_line\": 44,\n      \"symbol_hint\": \"apply_discount\",\n      \"language\": \"python\",\n      \"llm_severity_hint\": \"high\",\n      \"confidence\": 0.82,\n      \"provable\": true,\n      \"repro_hint\": \"call apply_discount(100.0, None)\",\n      \"sources\": [\n        \"bugs\"\n      ],\n      \"evidence\": [\n        {\n          \"file_path\": \"app/checkout.py\",\n          \"line\": 88,\n          \"quote\": \"total = apply_discount(total, promo.rate)\"\n        }\n      ]\n    },\n    {\n      \"rule_key\": \"assertion_weakened\",\n      \"category\": \"test_integrity\",\n      \"title\": \"test_promotion_without_a_rate_is_a_no_op was weakened to assertTrue\",\n      \"body_markdown\": \"The assertion that pinned the no-op behaviour was weakened.\",\n      \"file_path\": \"tests/test_billing.py\",\n      \"start_line\": 31,\n      \"end_line\": 32,\n      \"symbol_hint\": \"test_promotion_without_a_rate_is_a_no_op\",\n      \"language\": \"python\",\n      \"llm_severity_hint\": \"medium\",\n      \"confidence\": 0.58,\n      \"provable\": false,\n      \"repro_hint\": \"\",\n      \"sources\": [\n        \"tests\"\n      ],\n      \"evidence\": []\n    }\n  ],\n  \"dropped\": [\n    {\n      \"rule_key\": \"missing_regression_test\",\n      \"file_path\": \"app/legacy_pricing.py\",\n      \"drop_reason\": \"hallucinated_path\",\n      \"detail\": \"file was not supplied in context\",\n      \"source\": \"tests\"\n    },\n    {\n      \"rule_key\": \"promotion_rate_not_normalised\",\n      \"file_path\": \"app/checkout.py\",\n      \"drop_reason\": \"duplicate\",\n      \"detail\": \"same root cause as unguarded_none_arithmetic\",\n      \"source\": \"bugs\"\n    },\n    {\n      \"rule_key\": \"prefer_dataclasses\",\n      \"file_path\": \"app/billing.py\",\n      \"drop_reason\": \"nitpick\",\n      \"detail\": \"style preference with no defect behind it\",\n      \"source\": \"quality\"\n    },\n    {\n      \"rule_key\": \"possible_race_condition\",\n      \"file_path\": \"app/checkout.py\",\n      \"drop_reason\": \"speculative\",\n      \"detail\": \"no evidence cited; 'could potentially' phrasing\",\n      \"source\": \"bugs\"\n    },\n    {\n      \"rule_key\": \"use_f_strings\",\n      \"file_path\": \"app/receipts.py\",\n      \"drop_reason\": \"convention_contradicted\",\n      \"detail\": \"the repo consistently uses str.format()\",\n      \"source\": \"quality\"\n    },\n    {\n      \"rule_key\": \"unused_import\",\n      \"file_path\": \"app/receipts.py\",\n      \"drop_reason\": \"out_of_diff\",\n      \"detail\": \"line is not part of this PR's changes\",\n      \"source\": \"quality\"\n    }\n  ],\n  \"notes\": \"Merged 4 specialist outputs; every drop reason in \u00a76.12 is represented.\"\n}",
+  "parsed": {
+    "findings": [
+      {
+        "rule_key": "unguarded_none_arithmetic",
+        "category": "correctness",
+        "title": "apply_discount raises TypeError when rate is None",
+        "body_markdown": "`apply_discount` computes `price * (1 - rate)` with no guard, and `Promotion.rate` is `None` for codes that carry no discount.",
+        "file_path": "app/billing.py",
+        "start_line": 41,
+        "end_line": 44,
+        "symbol_hint": "apply_discount",
+        "language": "python",
+        "llm_severity_hint": "high",
+        "confidence": 0.82,
+        "provable": true,
+        "repro_hint": "call apply_discount(100.0, None)",
+        "sources": [
+          "bugs"
+        ],
+        "evidence": [
+          {
+            "file_path": "app/checkout.py",
+            "line": 88,
+            "quote": "total = apply_discount(total, promo.rate)"
+          }
+        ]
+      },
+      {
+        "rule_key": "assertion_weakened",
+        "category": "test_integrity",
+        "title": "test_promotion_without_a_rate_is_a_no_op was weakened to assertTrue",
+        "body_markdown": "The assertion that pinned the no-op behaviour was weakened.",
+        "file_path": "tests/test_billing.py",
+        "start_line": 31,
+        "end_line": 32,
+        "symbol_hint": "test_promotion_without_a_rate_is_a_no_op",
+        "language": "python",
+        "llm_severity_hint": "medium",
+        "confidence": 0.58,
+        "provable": false,
+        "repro_hint": "",
+        "sources": [
+          "tests"
+        ],
+        "evidence": []
+      }
+    ],
+    "dropped": [
+      {
+        "rule_key": "missing_regression_test",
+        "file_path": "app/legacy_pricing.py",
+        "drop_reason": "hallucinated_path",
+        "detail": "file was not supplied in context",
+        "source": "tests"
+      },
+      {
+        "rule_key": "promotion_rate_not_normalised",
+        "file_path": "app/checkout.py",
+        "drop_reason": "duplicate",
+        "detail": "same root cause as unguarded_none_arithmetic",
+        "source": "bugs"
+      },
+      {
+        "rule_key": "prefer_dataclasses",
+        "file_path": "app/billing.py",
+        "drop_reason": "nitpick",
+        "detail": "style preference with no defect behind it",
+        "source": "quality"
+      },
+      {
+        "rule_key": "possible_race_condition",
+        "file_path": "app/checkout.py",
+        "drop_reason": "speculative",
+        "detail": "no evidence cited; 'could potentially' phrasing",
+        "source": "bugs"
+      },
+      {
+        "rule_key": "use_f_strings",
+        "file_path": "app/receipts.py",
+        "drop_reason": "convention_contradicted",
+        "detail": "the repo consistently uses str.format()",
+        "source": "quality"
+      },
+      {
+        "rule_key": "unused_import",
+        "file_path": "app/receipts.py",
+        "drop_reason": "out_of_diff",
+        "detail": "line is not part of this PR's changes",
+        "source": "quality"
+      }
+    ],
+    "notes": "Merged 4 specialist outputs; every drop reason in \u00a76.12 is represented."
+  },
+  "context": {
+    "repo_fixture": "buggy_calc",
+    "ref": "head"
+  }
+}

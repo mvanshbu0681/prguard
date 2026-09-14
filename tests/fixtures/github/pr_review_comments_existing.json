@@ -1,0 +1,56 @@
+{
+  "name": "pr_review_comments_existing",
+  "notes": "GET /repos/{o}/{r}/pulls/{n}/comments — the comments run 1 already posted. E3/AC-7: on the force-push re-review, the finding whose fingerprint matches comment 1188402931 must be UPDATED (PATCH …/pulls/comments/{id}), not re-posted. `body` carries the fingerprint marker the matcher keys on.",
+  "request": {
+    "method": "GET",
+    "path": "/repos/octocat/hello-world/pulls/42/comments",
+    "headers": {"accept": "application/vnd.github+json"}
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json; charset=utf-8",
+    "x-ratelimit-limit": "5000",
+    "x-ratelimit-remaining": "4975",
+    "x-ratelimit-reset": "1789171200"
+  },
+  "body": [
+    {
+      "id": 1188402931,
+      "node_id": "PRRC_kwDOABCD1M5G2xYz",
+      "pull_request_review_id": 2938475,
+      "path": "app/billing.py",
+      "line": 41,
+      "start_line": 41,
+      "side": "RIGHT",
+      "start_side": "RIGHT",
+      "commit_id": "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+      "original_commit_id": "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+      "user": {"login": "prguard-app", "id": 209388211, "type": "Bot"},
+      "body": "**apply_discount raises TypeError when rate is None** — proven: the generated repro passes at base and fails at head.\n\n<!-- prguard:fingerprint=4c1f9b5e7a2d8c30 -->",
+      "created_at": "2026-09-14T23:44:49Z",
+      "updated_at": "2026-09-14T23:44:49Z",
+      "html_url": "https://github.com/octocat/hello-world/pull/42#discussion_r1188402931",
+      "url": "https://api.github.com/repos/octocat/hello-world/pulls/comments/1188402931",
+      "in_reply_to_id": null
+    },
+    {
+      "id": 1188402977,
+      "node_id": "PRRC_kwDOABCD1M5G2xY9",
+      "pull_request_review_id": 2938475,
+      "path": "app/checkout.py",
+      "line": 88,
+      "start_line": 88,
+      "side": "RIGHT",
+      "start_side": "RIGHT",
+      "commit_id": "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+      "original_commit_id": "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+      "user": {"login": "prguard-app", "id": 209388211, "type": "Bot"},
+      "body": "**Promotion rate reaches billing unnormalised** — advisory.\n\n<!-- prguard:fingerprint=9d3a7c21e0b45f68 -->",
+      "created_at": "2026-09-14T23:44:49Z",
+      "updated_at": "2026-09-14T23:44:49Z",
+      "html_url": "https://github.com/octocat/hello-world/pull/42#discussion_r1188402977",
+      "url": "https://api.github.com/repos/octocat/hello-world/pulls/comments/1188402977",
+      "in_reply_to_id": null
+    }
+  ]
+}

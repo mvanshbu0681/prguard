@@ -1,0 +1,20 @@
+{
+  "name": "proof_generator_pre_existing_failure",
+  "kind": "proof_repro",
+  "valid": true,
+  "model": "claude-opus-5",
+  "prompt_key": "proof_generator:pre_existing_failure:duration_minutes_ignored",
+  "notes": "E13: red at base and red at head. This PR did not cause it, so the verdict is `inconclusive` and the finding stays advisory.",
+  "response_text": "{\n  \"test_file_path\": \".prguard_proof/test_duration_5b1a30.py\",\n  \"test_code\": \"import unittest\\n\\nfrom app.durations import parse_duration\\n\\n\\nclass TestParseDurationMinutes(unittest.TestCase):\\n    def test_minutes_become_seconds(self):\\n        self.assertEqual(parse_duration(\\\"2m\\\"), 120)\\n\\n\\nif __name__ == \\\"__main__\\\":\\n    unittest.main()\\n\",\n  \"expected_failure_signal\": \"AssertionError\",\n  \"extra_requirements\": [],\n  \"explanation\": \"Exercises the minutes suffix the finding claims is mishandled.\"\n}",
+  "parsed": {
+    "test_file_path": ".prguard_proof/test_duration_5b1a30.py",
+    "test_code": "import unittest\n\nfrom app.durations import parse_duration\n\n\nclass TestParseDurationMinutes(unittest.TestCase):\n    def test_minutes_become_seconds(self):\n        self.assertEqual(parse_duration(\"2m\"), 120)\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n",
+    "expected_failure_signal": "AssertionError",
+    "extra_requirements": [],
+    "explanation": "Exercises the minutes suffix the finding claims is mishandled."
+  },
+  "context": {
+    "repo_fixture": "pre_existing_failure",
+    "ref": "head"
+  }
+}
