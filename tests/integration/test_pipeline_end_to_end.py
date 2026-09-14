@@ -11,8 +11,11 @@ the machine it was written on.
 
 from __future__ import annotations
 
+import asyncio
 import json
+from datetime import UTC, datetime, timedelta
 
+import pytest
 import respx
 import sqlalchemy as sa
 from httpx import AsyncClient
@@ -20,8 +23,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from prguard.api.routes_reviews import PIPELINE_STAGES
 from prguard.config import Settings
+from prguard.core import pipeline as pipeline_module
 from prguard.core.pipeline import PIPELINE_STAGES as CORE_STAGES
 from prguard.db import models
+from prguard.db.base import as_utc
+from tests.conftest import RowFactory
 from tests.fixtures.loader import llm_fixture
 from tests.integration.conftest import (
     BASE_SHA,
@@ -304,3 +310,47 @@ async def test_proof_failure_modes_leave_the_run_succeeded(
         .all()
     )
     assert len(artifacts) == 1, "the attempt is still recorded, verdict and all"
+
+
+async def test_the_worker_keeps_beating_inside_a_long_stage(
+    settings: Settings,
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    rows: RowFactory,
+    default_tenant: models.Tenant,
+    repository: models.Repository,
+    pull_request: models.PullRequest,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """§4.2: "at least every 30 s", so the status endpoint can say how long it has been.
+
+    The heartbeat task is driven directly because that is the only way to observe it without
+    a stage that takes half a minute — and a suite with one of those in it is a suite nobody
+    runs (§9.4).
+    """
+    monkeypatch.setattr(pipeline_module, "HEARTBEAT_INTERVAL_SECONDS", 0.01)
+    run = await rows.review_run(
+        default_tenant,
+        pull_request,
+        status=models.RunStatus.RUNNING.value,
+        stage="specialists",
+        heartbeat_at=datetime.now(UTC) - timedelta(seconds=120),
+    )
+    stale_beat = run.heartbeat_at
+    pipeline = make_pipeline(settings=settings, session_factory=session_factory)
+
+    stop = asyncio.Event()
+    beat = asyncio.create_task(pipeline._beat(run.id, stop))
+    try:
+        for _ in range(200):
+            await session.refresh(run)
+            if as_utc(run.heartbeat_at or stale_beat) > as_utc(stale_beat):
+                break
+            await asyncio.sleep(0.01)
+    finally:
+        stop.set()
+        await asyncio.wait_for(beat, timeout=5.0)
+
+    assert run.heartbeat_at is not None
+    assert as_utc(run.heartbeat_at) > as_utc(stale_beat), "the run is still alive and says so"
+    assert run.status == "running", "a heartbeat reports; it does not decide"

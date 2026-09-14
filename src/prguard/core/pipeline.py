@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
+import contextlib
 import logging
 import re
 import time
@@ -128,6 +129,9 @@ ERROR_INTERNAL: Final[str] = "INTERNAL_ERROR"
 #: Spec §4.2: "workers update stage, stage_started_at, heartbeat_at at least every 30 s".
 #: Stage boundaries beat too; this covers a stage that outlives one.
 HEARTBEAT_INTERVAL_SECONDS: Final[float] = 30.0
+
+#: How long the run waits for a beat in flight before cancelling it, `[ASSUMED]`.
+HEARTBEAT_SHUTDOWN_GRACE_SECONDS: Final[float] = 5.0
 
 #: A shallow tarball of a real repository is megabytes, not kilobytes — the REST client's
 #: 30 s is the wrong budget for it, `[ASSUMED]`.
@@ -351,10 +355,17 @@ class Pipeline:
 
         state = RunState(run=run, pull_request=pull_request, repository=repository)
         await self._start(session, state)
-        heartbeat = asyncio.create_task(self._beat(run.id), name=f"prguard-heartbeat-{run.id}")
+        stop = asyncio.Event()
+        heartbeat = asyncio.create_task(
+            self._beat(run.id, stop), name=f"prguard-heartbeat-{run.id}"
+        )
         try:
             await self._walk(session, state)
         finally:
+            # Asked to stop, then waited for, then cancelled. A heartbeat killed mid-write
+            # leaves a transaction half-open on the connection the next stage needs.
+            stop.set()
+            await asyncio.wait({heartbeat}, timeout=HEARTBEAT_SHUTDOWN_GRACE_SECONDS)
             heartbeat.cancel()
             await asyncio.gather(heartbeat, return_exceptions=True)
 
@@ -457,14 +468,17 @@ class Pipeline:
         )
         logger.warning("review run %s failed at %s: %s (%s)", run.id, run.stage, message, code)
 
-    async def _beat(self, review_run_id: str) -> None:
+    async def _beat(self, review_run_id: str, stop: asyncio.Event) -> None:
         """Keep `heartbeat_at` fresh inside a stage that outlives the interval (§4.2).
 
         Its own session: the pipeline's is mid-transaction for most of a stage, and a
         heartbeat that has to wait for the stage it is reporting on is not a heartbeat.
         """
-        while True:
-            await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
+        while not stop.is_set():
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=HEARTBEAT_INTERVAL_SECONDS)
+            if stop.is_set():
+                return
             try:
                 async with self.session_factory() as session:
                     await session.execute(
