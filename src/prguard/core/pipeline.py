@@ -68,6 +68,7 @@ from prguard.core.proof.generator import (
     generate_repro,
 )
 from prguard.core.proof.runner import (
+    DEGRADATION_NO_SANDBOX,
     DEGRADATION_SANDBOX_DEGRADED,
     ProofPolicy,
     SandboxSelection,
@@ -141,10 +142,39 @@ WORKSPACE_TIMEOUT_SECONDS: Final[float] = 120.0
 #: E23's degradation for a repro the generator could not write. Advisory, never fatal (§8.1).
 DEGRADATION_PROOF_NOT_GENERATED: Final[str] = "proof_not_generated"
 
-#: A degraded sandbox is **not** a degraded verdict (E14): the subprocess runner really ran,
-#: really compared base to head, and a proof it produced is as real as Docker's. The neutral
-#: rung is for "nothing could be executed", which `all_proofs_skipped_for_env` carries.
-GATE_DEGRADATION_EXEMPT: Final[frozenset[str]] = frozenset({DEGRADATION_SANDBOX_DEGRADED})
+#: §5.1 `proof_artifacts.outcome` for a proof the environment could not execute (E14).
+PROOF_OUTCOME_SKIPPED_NO_ENV: Final[str] = "skipped_no_env"
+
+#: **Documented amendment to §4.7** (spec §11.2 assumption 26 — read it before widening this).
+#:
+#: §4.7 says "``neutral`` if the run degraded or all proofs were skipped for environment
+#: reasons". Taken literally that makes *every* run on a machine without Docker neutral,
+#: because §4.6's subprocess fallback always records ``sandbox_degraded`` — which is the
+#: configuration §11.2 assumption 8 designs for and X7 says the demo runs on. §8.1's Docker
+#: row is the more specific rule and disagrees: falling back to the subprocess runner is the
+#: defined *working* behaviour, and it reserves ``neutral`` for the case where the fallback is
+#: disallowed and "nothing could be proven". These two degradations are exempted from
+#: "the run degraded" on that reading, and on nothing else:
+#:
+#: * ``sandbox_degraded`` — the subprocess runner really ran, really compared base to head,
+#:   and a proof it produced is as real as Docker's. ``isolation=degraded`` is on every
+#:   artifact and ``sandbox_degraded`` is on the run, so the weaker evidence is disclosed
+#:   rather than hidden.
+#: * ``proof_skipped_no_env`` — not dropped, *re-routed*. It is the one condition §8.1 gives
+#:   its own gate input for, and the conclusion is identical either way (``neutral``); only
+#:   the published reason differs, and §8.1 names which one it has to be. Counting it twice
+#:   would replace "no sandbox available — nothing could be proven" with the generic degraded
+#:   sentence, which is the reason the spec separated the inputs in the first place.
+#:
+#: The narrowing is bounded in both directions, and
+#: ``test_t9_review_findings.py::test_f4b_the_exemption_cannot_hide_a_run_that_proved_nothing``
+#: is the pin: it can never turn a gate **red** into anything else (``failure`` outranks both),
+#: and it can never reach ``success`` on a run that executed nothing, because
+#: ``all_proofs_skipped_for_env`` forces ``neutral`` independently and is True whenever the
+#: sandbox was unavailable.
+GATE_DEGRADATION_EXEMPT: Final[frozenset[str]] = frozenset(
+    {DEGRADATION_SANDBOX_DEGRADED, DEGRADATION_NO_SANDBOX}
+)
 
 #: How the untrusted head bodies are labelled inside the fenced `file_bodies` block (E15).
 _FILE_BLOCK = "### {path}\n```{language}\n{body}\n```"
@@ -975,8 +1005,16 @@ class Pipeline:
             )
             self._write_finding(state.rows[finding.id], finding)
 
-        state.all_proofs_skipped_for_env = bool(outcomes) and all(
-            outcome.status == "skipped_no_env" for outcome in outcomes
+        # §8.1's Docker row gives "nothing could be proven" its own gate input, separate from
+        # the degradation list, precisely so it cannot be lost. `runner.skipped_outcome()`
+        # records it as `status="not_attempted"`, `outcome="skipped_no_env"` — reading
+        # `status` here compared against a value that column never holds for a skip, so the
+        # input was dead code and the neutral rung rode on the degradation flag alone, under
+        # the wrong reason. `sandbox.available` covers the run that had no sandbox *and* no
+        # proof candidate to skip: nothing could be proven there either.
+        state.all_proofs_skipped_for_env = not sandbox.available or (
+            bool(outcomes)
+            and all(outcome.outcome == PROOF_OUTCOME_SKIPPED_NO_ENV for outcome in outcomes)
         )
         await session.commit()
 
