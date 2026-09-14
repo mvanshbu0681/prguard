@@ -5,10 +5,12 @@ Proves the envelope path, the request-id middleware and the router seam T7 fills
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from prguard import __version__
 from prguard.api import (
@@ -19,7 +21,9 @@ from prguard.api import (
     routes_reviews,
     routes_suppressions,
     routes_webhooks,
+    schemas,
 )
+from prguard.api.deps import RequireBearer
 from prguard.api.errors import (
     ERROR_STATUS,
     REQUEST_ID_HEADER,
@@ -199,3 +203,68 @@ async def test_openapi_schema_is_servable(client: AsyncClient) -> None:
     response = await client.get("/openapi.json")
     assert response.status_code == 200
     assert response.json()["info"]["title"] == "prguard"
+
+
+# --------------------------------------------------------------------------------------
+# Dependencies (spec §6 preamble) — the bearer guard on mutating endpoints
+# --------------------------------------------------------------------------------------
+async def _bearer_probe(settings: Settings, headers: dict[str, str]) -> int:
+    app = create_app(settings=settings)
+
+    @app.post("/_probe", dependencies=[RequireBearer])
+    async def _probe() -> dict[str, str]:
+        return {"ok": "yes"}
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    ) as probe_client:
+        return (await probe_client.post("/_probe", headers=headers)).status_code
+
+
+async def test_bearer_is_a_noop_while_the_token_is_unset(settings: Settings) -> None:
+    assert settings.PRGUARD_API_TOKEN is None
+    assert await _bearer_probe(settings, headers={}) == 200
+
+
+async def test_bearer_is_required_once_the_token_is_set() -> None:
+    guarded = Settings(DATABASE_URL="sqlite+aiosqlite://", PRGUARD_API_TOKEN="s3cret")
+
+    assert await _bearer_probe(guarded, headers={}) == 401
+    assert await _bearer_probe(guarded, headers={"Authorization": "Bearer wrong"}) == 401
+    assert await _bearer_probe(guarded, headers={"Authorization": "Token s3cret"}) == 401
+    assert await _bearer_probe(guarded, headers={"Authorization": "Bearer s3cret"}) == 200
+
+
+# --------------------------------------------------------------------------------------
+# Schemas — the two validations §6.6 states in prose, and §6.9's required caveats
+# --------------------------------------------------------------------------------------
+def test_suppress_request_requires_a_non_empty_reason() -> None:
+    with pytest.raises(ValidationError):
+        schemas.SuppressRequest(scope="repo", reason="   ")
+
+
+def test_suppress_request_requires_match_path_for_pattern_scope() -> None:
+    with pytest.raises(ValidationError):
+        schemas.SuppressRequest(scope="pattern", reason="agreed on 2026-08-11")
+
+    rule = schemas.SuppressRequest(scope="pattern", reason="agreed", match_path="cli/**")
+    assert rule.match_path == "cli/**"
+
+
+def test_accuracy_report_requires_caveats() -> None:
+    field = schemas.AccuracyReport.model_fields["caveats"]
+    assert any(getattr(meta, "min_length", None) == 1 for meta in field.metadata)
+
+
+def test_timestamps_serialise_with_a_trailing_z() -> None:
+    accepted = schemas.ReviewAccepted(
+        review_id="b9f1c2d0",
+        status="queued",
+        trigger="api",
+        repository=schemas.RepositoryRef(owner="octocat", name="hello-world"),
+        pull_request=schemas.PullRequestRef(number=42),
+        poll_url="/v1/reviews/b9f1c2d0",
+        result_url="/v1/reviews/b9f1c2d0/result",
+        created_at=datetime(2026, 9, 14, 23, 41, 7, tzinfo=UTC),
+    )
+    assert accepted.model_dump(mode="json")["created_at"] == "2026-09-14T23:41:07Z"
