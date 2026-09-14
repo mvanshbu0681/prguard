@@ -782,12 +782,22 @@ class Pipeline:
         self._write_finding(row, finding)
         return row
 
-    @staticmethod
-    def _write_finding(row: models.Finding, finding: CanonicalFinding) -> None:
-        """Copy the mutable half of a canonical finding onto its row (§5.1)."""
+    def _write_finding(self, row: models.Finding, finding: CanonicalFinding) -> None:
+        """Copy the mutable half of a canonical finding onto its row (§5.1).
+
+        `blocking` is re-derived rather than copied. It is the same answer — the four facts
+        it depends on are right here — but it keeps `severity.is_blocking` the only thing in
+        the codebase that can put a `true` in that column (§4.4).
+        """
         row.status = finding.status
         row.proof_status = finding.proof_status
-        row.blocking = finding.blocking
+        row.blocking = severity.is_blocking(
+            proof_status=finding.proof_status,
+            band=finding.severity.band if finding.severity is not None else "info",
+            language=finding.language,
+            status=finding.status,
+            block_min_severity=self.settings.BLOCK_MIN_SEVERITY,
+        )
         row.delivery_mode = finding.delivery_mode
         row.delivered_line = finding.delivered_line
         row.github_comment_id = finding.github_comment_id

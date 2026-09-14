@@ -3,19 +3,32 @@
 A ledger without reasons is not evidence, and a ledger you can delete from is not a ledger:
 `DELETE` revokes, the row survives, and every write lands in the audit chain.
 
-T9 appends `::test_suppress_then_rerun_excludes_finding` here in wave 3 (plan §9.2).
+T9 appended `::test_suppress_then_rerun_excludes_finding` in wave 3 (plan §9.2): the
+end-to-end half of AC-8 needs a pipeline to re-run, and E29's break-glass event needs a
+finding the gate would otherwise have blocked on.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
+import pytest
+import respx
 import sqlalchemy as sa
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from prguard.config import Settings
 from prguard.db import models
 from tests.conftest import RowFactory
+from tests.integration.conftest import (
+    make_pipeline,
+    make_settings,
+    mock_delivery,
+    mock_pull_request,
+    trigger_review,
+)
 
 REASON = "We intentionally allow bare except in the CLI entrypoint; discussed 2026-08-11."
 
@@ -296,3 +309,139 @@ async def test_ledger_is_scoped_to_the_requesting_tenant(
 
     assert listed.json()["items"] == []
     assert revoke.status_code == 404
+
+
+# --------------------------------------------------------------------------------------
+# T9 — the ledger applied by a real run (AC-8b, E29)
+# --------------------------------------------------------------------------------------
+@pytest.fixture
+def github_mock() -> Iterator[respx.Router]:
+    """respx over the GitHub API base, for the tests here that run a whole review."""
+    with respx.mock(base_url="https://api.github.com", assert_all_called=False) as router:
+        yield router
+
+
+async def test_suppress_then_rerun_excludes_finding(
+    client: AsyncClient,
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    default_tenant: models.Tenant,
+    settings: Settings,
+    github_mock: respx.Router,
+) -> None:
+    """AC-8b: suppress a finding, re-run the PR, and it is `suppressed` and unpublished.
+
+    E29 rides along, because the finding being silenced here is the one that turned the gate
+    red: the suppression wins, the proof artifact from the run that proved it is still on the
+    record, and `override.break_glass` names the human who decided (§5.4).
+    """
+    posting = make_settings(settings, GITHUB_TOKEN="ghp_test_token")
+    mock_pull_request(github_mock)
+    routes = mock_delivery(github_mock)
+
+    first_id = await trigger_review(
+        posting,
+        session_factory,
+        make_pipeline(settings=posting, session_factory=session_factory),
+    )
+    first = (
+        (
+            await session.execute(
+                sa.select(models.Finding).where(models.Finding.review_run_id == first_id)
+            )
+        )
+        .scalars()
+        .one()
+    )
+    assert (first.status, first.blocking) == ("published", True), "it blocked before"
+
+    created = await client.post(
+        f"/v1/findings/{first.id}/suppress",
+        json={"scope": "repo", "reason": REASON},
+        headers={"X-Actor-Id": "vansh.m@shavastudios.ai"},
+    )
+    assert created.status_code == 201
+
+    second_id = await trigger_review(
+        posting,
+        session_factory,
+        make_pipeline(settings=posting, session_factory=session_factory),
+        force=True,
+    )
+
+    second = (
+        (
+            await session.execute(
+                sa.select(models.Finding).where(models.Finding.review_run_id == second_id)
+            )
+        )
+        .scalars()
+        .one()
+    )
+    assert second.status == "suppressed"
+    assert second.suppression_id == created.json()["suppression_id"]
+    assert second.blocking is False, "a suppressed finding cannot block a merge"
+    assert second.proof_status == "not_attempted", "we do not spend a sandbox on a silenced bug"
+
+    run = await session.get(models.ReviewRun, second_id)
+    assert run is not None
+    await session.refresh(run)
+    assert run.status == "succeeded"
+    assert run.findings_suppressed == 1
+    assert run.findings_published == 0
+    assert run.gate_conclusion == "success", "nothing left to block on"
+    assert run.review_payload is not None
+    assert run.review_payload["comments"] == [], "AC-8b: excluded from the review payload"
+    assert "No blocking issues found" in run.review_payload["body"]
+    assert routes["review"].call_count == 2
+
+    result = await client.get(f"/v1/reviews/{second_id}/result")
+    assert result.status_code == 200
+    assert result.json()["counts"]["suppressed"] == 1
+    assert result.json()["counts"]["published"] == 0
+    (rendered,) = result.json()["findings"]
+    assert rendered["status"] == "suppressed"
+    assert rendered["suppression"]["reason"] == REASON
+
+    ledger = await client.get("/v1/suppressions")
+    (item,) = ledger.json()["items"]
+    assert item["reason"] == REASON
+    assert item["scope"] == "repo"
+    assert item["created_by"] == "vansh.m@shavastudios.ai"
+    assert item["suppressed_count"] == 2, "both sightings of the fingerprint"
+
+    events = (
+        (
+            await session.execute(
+                sa.select(models.AuditEvent)
+                .where(models.AuditEvent.review_run_id == second_id)
+                .order_by(models.AuditEvent.seq.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    kinds = [event.event_type for event in events]
+    assert "finding.suppressed" in kinds
+    assert "override.break_glass" in kinds, "E29: silencing a blocking-eligible finding is loud"
+    assert "finding.published" not in kinds
+    break_glass = next(event for event in events if event.event_type == "override.break_glass")
+    assert break_glass.actor_type == "human"
+    assert break_glass.actor_id == "vansh.m@shavastudios.ai"
+    assert break_glass.payload["reason"] == REASON
+    assert break_glass.payload["severity_band"] == "high"
+    assert break_glass.finding_id == second.id
+
+    artifacts = (
+        (
+            await session.execute(
+                sa.select(models.ProofArtifact).where(
+                    models.ProofArtifact.finding_id == first.id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(artifacts) == 1, "E29: the finding is suppressed *with* its proof artifact"
+    assert artifacts[0].outcome == "failing_as_expected"

@@ -4,24 +4,34 @@
 recomputed on every read, and a broken chain is *served* with `verified: false` rather than
 hidden — hiding it would defeat the purpose.
 
-T9 appends `::test_run_emits_complete_ordered_event_set` here in wave 3 (plan §9.2): the
-ordering of a *whole run*'s events needs the pipeline, which does not exist in this track.
+T9 appended `::test_run_emits_complete_ordered_event_set` in wave 3 (plan §9.2): the ordering
+of a *whole run*'s events needs the pipeline, which did not exist in that track.
 """
 
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 
 import pytest
+import respx
 import sqlalchemy as sa
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from prguard.config import Settings
 from prguard.core import audit
 from prguard.db import models
 from prguard.db.models import ActorType, AuditEventType
 from tests.conftest import RowFactory
+from tests.integration.conftest import (
+    make_pipeline,
+    make_settings,
+    mock_delivery,
+    mock_pull_request,
+    trigger_review,
+)
 
 
 async def _seed_chain(
@@ -396,3 +406,95 @@ async def test_audit_is_scoped_to_the_requesting_tenant(
     assert other.json()["items"] == []
     assert other.json()["chain"]["checked"] == 0
     assert other.json()["chain"]["verified"] is True
+
+
+# --------------------------------------------------------------------------------------
+# T9 — the whole run, in order (AC-21b)
+# --------------------------------------------------------------------------------------
+@pytest.fixture
+def github_mock() -> Iterator[respx.Router]:
+    """respx over the GitHub API base, for the one test here that runs a whole review."""
+    with respx.mock(base_url="https://api.github.com", assert_all_called=False) as router:
+        yield router
+
+
+async def test_run_emits_complete_ordered_event_set(
+    client: AsyncClient,
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    default_tenant: models.Tenant,
+    settings: Settings,
+    github_mock: respx.Router,
+) -> None:
+    """AC-21b: `review.requested` to `review.completed`, in §4.1's order, for one real run.
+
+    The audit chain is the product's claim about itself (§4.1: "the ground truth for what the
+    AI did"), so the order is asserted exactly rather than as a set. `review.degraded` sits
+    between the stage events and the findings because this machine has no Docker daemon (E14,
+    X7) — a degradation is part of the record, and AC-21's sequence is the projection below.
+    """
+    posting = make_settings(settings, GITHUB_TOKEN="ghp_test_token")
+    mock_pull_request(github_mock)
+    mock_delivery(github_mock)
+
+    review_id = await trigger_review(
+        posting,
+        session_factory,
+        make_pipeline(settings=posting, session_factory=session_factory),
+    )
+
+    events = (
+        (
+            await session.execute(
+                sa.select(models.AuditEvent)
+                .where(models.AuditEvent.review_run_id == review_id)
+                .order_by(models.AuditEvent.seq.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    kinds = [event.event_type for event in events]
+
+    assert kinds == [
+        "review.requested",
+        "review.started",
+        *["review.stage_completed"] * 9,
+        "review.degraded",
+        "finding.proposed",
+        "proof.executed",
+        "finding.published",
+        "gate.evaluated",
+        "gate.delivered",
+        "review.completed",
+    ]
+    assert [kind for kind in kinds if kind != "review.degraded"] == [
+        "review.requested",
+        "review.started",
+        *["review.stage_completed"] * 9,
+        "finding.proposed",
+        "proof.executed",
+        "finding.published",
+        "gate.evaluated",
+        "gate.delivered",
+        "review.completed",
+    ], "AC-21's prescribed sequence, verbatim"
+
+    by_kind = {event.event_type: event for event in events}
+    assert by_kind["review.requested"].actor_type == "human"
+    assert by_kind["finding.proposed"].actor_type == "ai"
+    assert by_kind["finding.proposed"].actor_id.startswith("specialist:")
+    assert by_kind["finding.proposed"].finding_id is not None
+    assert by_kind["proof.executed"].payload["proof_status"] == "proven"
+    assert by_kind["proof.executed"].payload["base_exit_code"] == 0
+    assert by_kind["proof.executed"].payload["head_exit_code"] == 1
+    assert by_kind["finding.published"].payload["blocking"] is True
+    assert by_kind["gate.evaluated"].payload["conclusion"] == "failure"
+    assert by_kind["gate.delivered"].payload["delivery"] == "commit_status"
+    assert by_kind["review.completed"].payload["counts"]["published"] == 1
+
+    served = await client.get("/v1/audit", params={"review_id": review_id, "limit": 100})
+
+    assert served.status_code == 200
+    assert served.json()["chain"]["verified"] is True
+    assert [item["event_type"] for item in served.json()["items"]] == kinds
