@@ -206,6 +206,69 @@ async def test_supersede_leaves_a_run_on_the_same_head_sha_alone(
     assert sibling.status == "running"
 
 
+async def test_two_unresolved_runs_cannot_supersede_each_other(
+    session: AsyncSession,
+    rows: RowFactory,
+    default_tenant: models.Tenant,
+    repository: models.Repository,
+    pull_request: models.PullRequest,
+) -> None:
+    """§4.2 requires exactly one survivor; "not on our SHA" alone is a symmetric predicate.
+
+    Both workers resolve the same SHA at the same moment and each still reads the other's
+    `head_sha` as `null`, because neither commit has landed. Under the old predicate each one
+    cancelled the other and the pull request got nothing at all.
+    """
+    older = await rows.review_run(default_tenant, pull_request, head_sha=None)
+    newer = await rows.review_run(default_tenant, pull_request, head_sha=None)
+    sha = "c" * 40
+
+    # Whichever order the two workers reach S1 in, the answer is the same.
+    by_older = await supersede_older_runs(
+        session, pull_request_id=pull_request.id, head_sha=sha, keep_run_id=older.id
+    )
+    by_newer = await supersede_older_runs(
+        session, pull_request_id=pull_request.id, head_sha=sha, keep_run_id=newer.id
+    )
+
+    assert by_older == (), "the older run may never cancel the one created after it"
+    assert by_newer == (older.id,)
+    await session.refresh(older)
+    await session.refresh(newer)
+    assert (older.status, older.error_code) == ("cancelled", ERROR_SUPERSEDED)
+    assert newer.status == "queued", "exactly one survivor (§4.2)"
+
+
+async def test_supersede_never_cancels_a_run_newer_than_us(
+    session: AsyncSession,
+    rows: RowFactory,
+    default_tenant: models.Tenant,
+    repository: models.Repository,
+    pull_request: models.PullRequest,
+) -> None:
+    """§4.2 cancels *the older* run — a slow run resolving a stale SHA does not win."""
+    slow = await rows.review_run(
+        default_tenant, pull_request, status=models.RunStatus.RUNNING.value, head_sha=None
+    )
+    force_pushed = await rows.review_run(
+        default_tenant,
+        pull_request,
+        status=models.RunStatus.RUNNING.value,
+        head_sha="d" * 40,
+    )
+
+    cancelled = await supersede_older_runs(
+        session,
+        pull_request_id=pull_request.id,
+        head_sha="a" * 40,
+        keep_run_id=slow.id,
+    )
+
+    assert cancelled == ()
+    await session.refresh(force_pushed)
+    assert force_pushed.status == "running", "the newer head SHA is the one still worth having"
+
+
 # ---------------------------------------------------------------------------------------
 # Startup recovery (E22)
 # ---------------------------------------------------------------------------------------
