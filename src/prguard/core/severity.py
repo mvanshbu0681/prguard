@@ -153,21 +153,22 @@ def compute(
         band=band,
         inputs=inputs,
         weights=dict(table),
-        explanation=explain(inputs),
+        explanation=explain(inputs, weights=table),
         notes=collected,
     )
 
 
-def explain(inputs: SeverityInputs) -> str:
+def explain(inputs: SeverityInputs, *, weights: Mapping[str, float] | None = None) -> str:
     """A one-line "critical because…" for the dashboard (spec §4.4, §6.4).
 
-    Phrases are ordered by how much each input actually contributed, so the first clause is the
-    reason the finding scored where it did. Inputs contributing nothing are left out rather than
-    padded with "no churn" noise.
+    Phrases are ordered by how much each input actually contributed *under the weights in
+    force*, so the first clause is the reason the finding scored where it did. Inputs
+    contributing nothing are left out rather than padded with "no churn" noise.
     """
+    table = DEFAULT_SEVERITY_WEIGHTS if weights is None else weights
     measured = _measured(inputs)
     contributing = [
-        (DEFAULT_SEVERITY_WEIGHTS[name] * measured[name], index, name)
+        (table.get(name, 0.0) * measured[name], index, name)
         for index, name in enumerate(SEVERITY_INPUT_FIELDS)
         if measured[name] > 0.0
     ]

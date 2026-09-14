@@ -276,13 +276,20 @@ def test_truncation_is_reported() -> None:
 
 
 def test_no_file_is_lost_between_the_three_buckets() -> None:
-    """Reviewed + excluded == changed, at every budget. The conservation rule of S2."""
+    """Every changed file is either supplied or accounted for, at every budget.
+
+    The S2 counterpart of the delivery ladder's conservation rule: a file may be reviewed or
+    it may be excluded with a reason, and there is no third outcome where it quietly vanishes.
+    """
     files = changed_files_from("pr_large_files")
+    every_path = {entry.path for entry in files}
     for budget in (0, 50, 150, 400, 1_000, 120_000):
         selection = context.build_context(files, token_budget=budget)
+        supplied = set(selection.supplied_paths)
+        accounted = set(selection.excluded_reasons)
+        assert supplied | accounted == every_path
+        assert supplied & accounted == set()
         assert selection.files_reviewed + selection.files_excluded == selection.files_changed
-        assert selection.files_reviewed == len(selection.files)
-        assert len(selection.excluded_reasons) == selection.files_excluded
 
 
 def test_a_file_too_large_for_the_budget_is_truncated_to_its_largest_hunks() -> None:

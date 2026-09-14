@@ -234,7 +234,12 @@ class ChangedFile:
 
 @dataclass(frozen=True)
 class ContextSelection:
-    """The S2 result: what the specialists see, what was left out, and why."""
+    """The S2 result: what the specialists see, what was left out, and why.
+
+    ``estimated_tokens`` is the cost of the **patches** that survived, which is what E5's
+    budget governs and what E5 truncates. Files fetched whole as referenced context are
+    requested separately and are not spent from this budget.
+    """
 
     files: tuple[FileContext, ...] = ()
     excluded: tuple[FileContext, ...] = ()
