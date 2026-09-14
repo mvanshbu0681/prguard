@@ -334,8 +334,10 @@ async def test_result_assembles_the_full_section_6_3_document(
         "file_level": 0,
         "summary_only": 0,
     }
+    # §6.3: `proposed` is everything that entered the run (`9 = 4 + 3 + 1 + 1` in the
+    # spec's own worked example), not the rows still sitting in the `proposed` status.
     assert body["counts"] == {
-        "proposed": 0,
+        "proposed": 2,
         "published": 1,
         "suppressed": 0,
         "dropped": 0,

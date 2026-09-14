@@ -336,11 +336,13 @@ async def get_review_status(
         risk_tier=cast(RiskTierName | None, run.risk_tier),
         head_sha=run.head_sha,
         degradations=[str(item) for item in run.degradations or []],
+        # §6.2 is a live progress readout: these are the findings sitting in each status
+        # right now, so `proposed` here is the backlog still to be triaged.
         counts=RunCounts(
-            proposed=counts.get(models.FindingStatus.PROPOSED.value, 0),
-            published=counts.get(models.FindingStatus.PUBLISHED.value, 0),
-            suppressed=counts.get(models.FindingStatus.SUPPRESSED.value, 0),
-            blocking=counts.get("blocking", 0),
+            proposed=counts.of(models.FindingStatus.PROPOSED),
+            published=counts.of(models.FindingStatus.PUBLISHED),
+            suppressed=counts.of(models.FindingStatus.SUPPRESSED),
+            blocking=counts.blocking,
         ),
         started_at=run.started_at,
         finished_at=run.finished_at,
@@ -411,13 +413,15 @@ async def get_review_result(
         context=_context_info(run),
         gate=_gate_info(run, blocking_ids, settings),
         delivery=_delivery_info(run, findings),
+        # §6.3 is the final accounting of one run: `proposed` is the total that entered it,
+        # and the terminal statuses are how it was spent.
         counts=ResultCounts(
-            proposed=counts.get(models.FindingStatus.PROPOSED.value, 0),
-            published=counts.get(models.FindingStatus.PUBLISHED.value, 0),
-            suppressed=counts.get(models.FindingStatus.SUPPRESSED.value, 0),
-            dropped=counts.get(models.FindingStatus.DROPPED.value, 0),
-            disproven=counts.get(models.FindingStatus.DISPROVEN.value, 0),
-            blocking=counts.get("blocking", 0),
+            proposed=counts.proposed_total,
+            published=counts.of(models.FindingStatus.PUBLISHED),
+            suppressed=counts.of(models.FindingStatus.SUPPRESSED),
+            dropped=counts.of(models.FindingStatus.DROPPED),
+            disproven=counts.of(models.FindingStatus.DISPROVEN),
+            blocking=counts.blocking,
         ),
         cost=CostInfo(
             usd_estimate=run.cost_usd_estimate,
@@ -628,14 +632,37 @@ async def _supersede_in_flight(
     await session.execute(statement)
 
 
-async def _finding_counts(session: AsyncSession, review_run_id: str) -> dict[str, int]:
+@dataclass(frozen=True)
+class _FindingCounts:
     """Counts derived from the rows, so the numbers and the `findings` array never disagree."""
+
+    by_status: dict[str, int]
+    blocking: int
+
+    @property
+    def proposed_total(self) -> int:
+        """Everything the specialists proposed, whatever became of it afterwards.
+
+        `proposed` is a *stage*, not a resting place: a finished run has no rows left in
+        that status, so counting them would publish 0 forever. §6.3's worked example says
+        the same thing out loud — `proposed 9 = published 4 + suppressed 3 + dropped 1 +
+        disproven 1` — and `core.accuracy` reads the word this way too.
+        """
+        return sum(self.by_status.values())
+
+    def of(self, status: models.FindingStatus) -> int:
+        return self.by_status.get(status.value, 0)
+
+
+async def _finding_counts(session: AsyncSession, review_run_id: str) -> _FindingCounts:
     statement = (
         sa.select(models.Finding.status, sa.func.count())
         .where(models.Finding.review_run_id == review_run_id)
         .group_by(models.Finding.status)
     )
-    counts = {str(name): int(total) for name, total in (await session.execute(statement)).all()}
+    by_status = {
+        str(name): int(total) for name, total in (await session.execute(statement)).all()
+    }
     blocking = await session.scalar(
         sa.select(sa.func.count())
         .select_from(models.Finding)
@@ -644,8 +671,7 @@ async def _finding_counts(session: AsyncSession, review_run_id: str) -> dict[str
             models.Finding.blocking.is_(True),
         )
     )
-    counts["blocking"] = int(blocking or 0)
-    return counts
+    return _FindingCounts(by_status=by_status, blocking=int(blocking or 0))
 
 
 # --------------------------------------------------------------------------------------

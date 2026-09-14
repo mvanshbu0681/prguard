@@ -149,9 +149,14 @@ async def test_report_math_matches_definitions(
     assert proxies["execution_verified_precision"]["n"] == 2
     assert proxies["self_caught_false_positive_rate"]["value"] == 0.25
     assert proxies["self_caught_false_positive_rate"]["n"] == 4
-    assert proxies["human_dismissal_rate"]["value"] == 0.333
-    assert proxies["human_dismissal_rate"]["n"] == 3
-    assert proxies["addressed_rate"]["value"] == 0.667
+    # The seed's dismissed finding is `suppressed`, because suppressing is what moved it
+    # off `published`: the denominator is the 3 still published plus that one, and the
+    # numerator is that same one. Dividing by the 3 would count it on one side only.
+    assert proxies["human_dismissal_rate"]["value"] == 0.25
+    assert proxies["human_dismissal_rate"]["n"] == 4
+    # The seed's two `addressed` rows hang off a suppressed and a dropped finding, neither
+    # of which was ever published — nothing published here disappeared on a later run.
+    assert proxies["addressed_rate"]["value"] == 0.0
     assert proxies["addressed_rate"]["n"] == 3
     assert body["gate"] == {
         "runs_red": 1,
@@ -159,6 +164,47 @@ async def test_report_math_matches_definitions(
         "runs_neutral": 1,
         "break_glass_overrides": 1,
     }
+
+
+async def test_both_halves_of_a_proxy_come_from_one_population(
+    client: AsyncClient,
+    rows: RowFactory,
+    default_tenant: models.Tenant,
+    pull_request: models.PullRequest,
+) -> None:
+    """The self-report's arithmetic, on a population where every ratio is non-trivial.
+
+    One PR, two runs inside the window, four published findings: two were addressed on the
+    later run and one was dismissed by a human. Every numerator is a subset of its own
+    denominator, so `/v1/accuracy` can never publish a "rate" above 1.0.
+    """
+    await rows.review_run(default_tenant, pull_request, status=models.RunStatus.SUCCEEDED.value)
+    run = await rows.review_run(
+        default_tenant, pull_request, status=models.RunStatus.SUCCEEDED.value
+    )
+    published = [
+        await rows.finding(default_tenant, run, status=models.FindingStatus.PUBLISHED.value)
+        for _ in range(4)
+    ]
+    for finding in published[:2]:
+        await rows.finding_outcome(
+            default_tenant, finding, outcome=models.OutcomeKind.ADDRESSED.value
+        )
+
+    dismissed = await client.post(
+        f"/v1/findings/{published[3].id}/suppress",
+        json={"scope": "repo", "reason": "intentional, discussed 2026-08-11"},
+    )
+    assert dismissed.status_code == 201, dismissed.text
+
+    proxies = (await client.get("/v1/accuracy")).json()["precision_proxies"]
+
+    # 3 findings are still published, and the 4th is published-then-dismissed: 1 / 4.
+    assert proxies["human_dismissal_rate"]["value"] == 0.25
+    assert proxies["human_dismissal_rate"]["n"] == 4
+    # The suppressed one left the addressable population with it: 2 / 3.
+    assert proxies["addressed_rate"]["value"] == 0.667
+    assert proxies["addressed_rate"]["n"] == 3
 
 
 async def test_every_metric_has_n_and_definition(

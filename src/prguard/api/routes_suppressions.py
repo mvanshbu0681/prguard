@@ -60,6 +60,11 @@ SUPPRESSION_LIMIT_DEFAULT = 50
 ACTOR_HEADER = "X-Actor-Id"
 DEFAULT_ACTOR = "api"
 
+#: `suppressions.created_by` and `audit_events.actor_id` are both String(255) (§5.1), and
+#: the header is whatever the caller sent: SQLite would store 5 kB of it and Postgres would
+#: raise `StringDataRightTruncation` on the same request.
+ACTOR_ID_MAX = 255
+
 
 @router.post(
     "/findings/{finding_id}/suppress",
@@ -98,7 +103,7 @@ async def suppress_finding(
         match_path=body.match_path if body.scope == "pattern" else None,
         match_rule_key=finding.rule_key,
         reason=body.reason.strip(),
-        created_by=x_actor_id or DEFAULT_ACTOR,
+        created_by=_actor_id(x_actor_id),
         source=models.SuppressionSource.HUMAN_API.value,
         expires_at=as_utc(body.expires_at) if body.expires_at is not None else None,
         revoked_at=None,
@@ -274,13 +279,18 @@ async def revoke_suppression(
             tenant_id=scope.tenant_id,
             event_type=models.AuditEventType.SUPPRESSION_REVOKED,
             actor_type=models.ActorType.HUMAN,
-            actor_id=x_actor_id or DEFAULT_ACTOR,
+            actor_id=_actor_id(x_actor_id),
             payload={"suppression_id": found.id, "scope": found.scope},
             request_id=request_id_of(request),
         )
 
     rendered = await _render(session, [found])
     return rendered[0]
+
+
+def _actor_id(header: str | None) -> str:
+    """The human named by `X-Actor-Id`, bounded to the column it is recorded in."""
+    return (header or DEFAULT_ACTOR)[:ACTOR_ID_MAX]
 
 
 async def _load_finding(

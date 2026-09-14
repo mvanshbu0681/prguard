@@ -7,6 +7,12 @@ testing. An unauthenticated endpoint that triggers work is not a shortcut, it is
 Handled deliveries call the *same* :func:`prguard.api.routes_reviews.enqueue_review` the
 API door calls (G6). Nothing about a review is decided here: this module authenticates,
 deduplicates, and translates a GitHub payload into a `ReviewTarget`.
+
+The order of §6.10's rules is the security property, not a formality. Rule 2 runs before
+the body is parsed and before `action` is known, because unverified bytes are not handed to
+a JSON parser; rule 3 runs after it, and only ever answers for a delivery this service
+actually *handled* — an `invalid` row is a rejected attempt, and letting it count as a
+duplicate would let anyone who knows a delivery id suppress the real one.
 """
 
 from __future__ import annotations
@@ -19,6 +25,7 @@ from typing import Annotated, Any
 import sqlalchemy as sa
 from fastapi import APIRouter, Header, Request, status
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from prguard.api.deps import JobQueueDep, SessionDep, SettingsDep, TenantScope, TenantScopeDep
@@ -34,6 +41,13 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 HANDLED_ACTIONS = frozenset({"opened", "synchronize", "reopened", "ready_for_review"})
 HANDLED_EVENT = "pull_request"
 SIGNATURE_PREFIX = "sha256="
+
+#: The `webhook_deliveries` column widths (§5.1). Rule 2 records a delivery nobody has
+#: authenticated, so the headers it records are bounded to the columns they land in: an
+#: oversized header must not turn the 401 AC-19 requires into a 500.
+DELIVERY_ID_MAX = 255
+EVENT_MAX = 64
+ACTION_MAX = 64
 
 
 @router.post(
@@ -62,19 +76,20 @@ async def receive_github_webhook(
         # Rule 1, before anything is recorded: we cannot trust this delivery at all.
         raise PRGuardError(ErrorCode.WEBHOOK_NOT_CONFIGURED)
 
-    event = x_github_event or ""
-    delivery_id = x_github_delivery or new_uuid()
-    payload = _decode(body)
-    action = str(payload.get("action") or "") or None
+    # Headers only. The body stays raw bytes until the HMAC has spoken for it.
+    event = _bounded(x_github_event, EVENT_MAX) or ""
+    delivery_id = _bounded(x_github_delivery, DELIVERY_ID_MAX) or new_uuid()
 
     if secret and not _signature_matches(body, x_hub_signature_256, secret):
-        # Rule 2: recorded as `invalid` so a probing attempt is visible afterwards.
-        await _record(
-            session, scope, delivery_id, event, action, models.WebhookStatus.INVALID, commit=True
-        )
+        # Rule 2, before anything reads the body: `action` is unknowable here precisely
+        # because these bytes are not trusted enough to parse. The attempt is recorded so
+        # probing is visible afterwards, and recorded once — GitHub retries with the same
+        # delivery id and an attacker replays by definition, so a second insert would 500
+        # on the unique index where AC-19 requires 401 every time.
+        await _record_rejection(session, scope, delivery_id, event)
         raise PRGuardError(ErrorCode.INVALID_SIGNATURE, details={"delivery_id": delivery_id})
 
-    duplicate = await _known_delivery(session, delivery_id)
+    duplicate = await _handled_delivery(session, delivery_id)
     if duplicate is not None:
         # Rule 3 / E20: GitHub retries deliveries; without this the demo double-reviews.
         return _json(
@@ -82,6 +97,8 @@ async def receive_github_webhook(
             WebhookDuplicate(review_id=duplicate.review_run_id),
         )
 
+    payload = _decode(body)
+    action = _bounded(payload.get("action"), ACTION_MAX)
     pull_request = payload.get("pull_request")
     if event != HANDLED_EVENT or action not in HANDLED_ACTIONS or not isinstance(
         pull_request, dict
@@ -169,7 +186,7 @@ def _decode(body: bytes) -> dict[str, Any]:
     return payload if isinstance(payload, dict) else {}
 
 
-async def _known_delivery(
+async def _delivery_row(
     session: AsyncSession, delivery_id: str
 ) -> models.WebhookDelivery | None:
     """Not tenant-scoped on purpose: `delivery_id` is unique across the whole table (§5.1)."""
@@ -177,6 +194,55 @@ async def _known_delivery(
         models.WebhookDelivery.delivery_id == delivery_id
     )
     return (await session.execute(statement)).scalars().first()
+
+
+async def _handled_delivery(
+    session: AsyncSession, delivery_id: str
+) -> models.WebhookDelivery | None:
+    """Rule 3's duplicate — a delivery this service actually handled.
+
+    `invalid` rows are excluded. They record an attempt that was *refused*, so treating one
+    as a duplicate would answer `200 {"status": "duplicate"}` to the correctly-signed
+    delivery that follows it and no review would ever run — reachable by an unauthenticated
+    POST that knows only the delivery id, and reached for free during a secret rotation,
+    where GitHub's first attempt fails the HMAC and its retry is the real one.
+    """
+    statement = sa.select(models.WebhookDelivery).where(
+        models.WebhookDelivery.delivery_id == delivery_id,
+        models.WebhookDelivery.status != models.WebhookStatus.INVALID.value,
+    )
+    return (await session.execute(statement)).scalars().first()
+
+
+async def _record_rejection(
+    session: AsyncSession, scope: TenantScope, delivery_id: str, event: str
+) -> None:
+    """Rule 2's `invalid` row, written at most once per delivery id.
+
+    A delivery already on file keeps the disposition it has. Re-inserting would violate the
+    unique index, and overwriting would let an unauthenticated POST erase the record of a
+    delivery that was accepted — so a replay is simply refused again, which is what AC-19
+    asks for.
+    """
+    if await _delivery_row(session, delivery_id) is not None:
+        return
+    session.add(
+        models.WebhookDelivery(
+            id=new_uuid(),
+            tenant_id=scope.tenant_id,
+            delivery_id=delivery_id,
+            event=event or None,
+            action=None,
+            received_at=utcnow(),
+            status=models.WebhookStatus.INVALID.value,
+        )
+    )
+    try:
+        await session.commit()
+    except IntegrityError:
+        # Two replays landed at once and the other one won. One record is enough, and the
+        # caller owes this delivery a 401 either way.
+        await session.rollback()
 
 
 async def _record(
@@ -189,16 +255,22 @@ async def _record(
     *,
     commit: bool,
 ) -> models.WebhookDelivery:
-    delivery = models.WebhookDelivery(
-        id=new_uuid(),
-        tenant_id=scope.tenant_id,
-        delivery_id=delivery_id,
-        event=event or None,
-        action=action,
-        received_at=utcnow(),
-        status=outcome.value,
-    )
-    session.add(delivery)
+    """Record how this delivery was handled, one row per `delivery_id` (§5.1).
+
+    A rejected attempt and the correctly-signed delivery that follows it are one delivery,
+    so the existing row is updated rather than joined by a second one that the unique index
+    would refuse.
+    """
+    delivery = await _delivery_row(session, delivery_id)
+    if delivery is None:
+        delivery = models.WebhookDelivery(
+            id=new_uuid(), tenant_id=scope.tenant_id, delivery_id=delivery_id
+        )
+        session.add(delivery)
+    delivery.event = event or None
+    delivery.action = action
+    delivery.received_at = utcnow()
+    delivery.status = outcome.value
     if commit:
         # The rejected and ignored paths raise or return immediately, so the record has to
         # be durable before that happens.
@@ -216,3 +288,9 @@ def _json(
 
 def _optional_str(value: Any) -> str | None:
     return None if value is None else str(value)
+
+
+def _bounded(value: Any, limit: int) -> str | None:
+    """An untrusted header or payload field, trimmed to the column it lands in (§5.1)."""
+    text = "" if value is None else str(value)
+    return text[:limit] or None
