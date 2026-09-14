@@ -26,6 +26,7 @@ from prguard.core.proof.workspace import (
     ProofWorkspace,
     UnsafeReproPathError,
     WorkspaceError,
+    _unpack_tarball,
     default_repro_path,
     materialise,
     safe_repro_path,
@@ -268,6 +269,37 @@ async def test_a_non_200_tarball_is_a_workspace_error_not_a_crash(tmp_path: Path
             source = GitHubTarballSource(client=client, owner="octocat", repo="hello-world")
             with pytest.raises(WorkspaceError):
                 await source.fetch(ref=HEAD_SHA, destination=tmp_path / "head")
+
+
+def test_an_entry_that_climbs_into_an_existing_directory_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``filter="data"`` is the *entire* host-escape guarantee here, so pin the argument's effect.
+
+    Python 3.12 still extracts with ``fully_trusted`` when no filter is given (3.14 flips the
+    default), and this project's floor is 3.12 — so deleting that one keyword turns a
+    downloaded archive into arbitrary writes as whoever runs the worker.
+
+    The archive above is refused even unfiltered, but for the wrong reason: ``octocat-…/../..``
+    makes ``tarfile`` try to *create* a directory that already exists and it fails on the
+    ``mkdir``, not on the traversal. This entry climbs exactly one level, into a directory that
+    certainly exists, where an unfiltered extraction succeeds silently — which is what a
+    traversal actually looks like. Staging is redirected under ``tmp_path`` so the escape, if it
+    ever happens, lands somewhere the test can see it and pytest will clean it up.
+    """
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    payload = io.BytesIO()
+    with tarfile.open(fileobj=payload, mode="w:gz") as archive:
+        body = b"ESCAPED"
+        entry = tarfile.TarInfo("../escaped.py")
+        entry.size = len(body)
+        archive.addfile(entry, io.BytesIO(body))
+
+    with pytest.raises(WorkspaceError):
+        _unpack_tarball(payload.getvalue(), tmp_path / "nested" / "head")
+
+    assert not (tmp_path / "escaped.py").exists()
+    assert not (tmp_path / "nested" / "head" / "escaped.py").exists()
 
 
 async def test_an_archive_that_tries_to_escape_is_refused(tmp_path: Path) -> None:
