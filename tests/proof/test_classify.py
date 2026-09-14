@@ -338,6 +338,143 @@ def test_nothing_is_not_run() -> None:
 
 
 # ---------------------------------------------------------------------------------------
+# Summary interpretation — the half of the evidence an exit code does not carry
+# ---------------------------------------------------------------------------------------
+
+
+def summary(line: str, *, exit_code: int = 0) -> RunResult:
+    """A run whose pytest terminal summary line is ``line``.
+
+    The summary is the only sentence in the output pytest writes itself, and it is where "did a
+    test body actually run?" is answered. Everything below is that question, because pytest
+    exits **0** when every collected test was skipped.
+    """
+    return RunResult(exit_code=exit_code, stdout=f"s{' ' * 20}[100%]\n{line}\n")
+
+
+#: Exit-0 summaries in which no test body ran to a verdict about the finding's contract.
+NOTHING_EXECUTED = [
+    "1 skipped in 0.01s",
+    "3 skipped in 0.42s",
+    "1 deselected in 0.01s",
+    "1 xfailed in 0.02s",
+    "1 xpassed in 0.02s",
+    "no tests ran in 0.01s",
+    "1 skipped, 2 warnings in 0.03s",
+    "1 passed, 1 skipped in 0.03s",
+]
+
+
+@pytest.mark.parametrize("line", NOTHING_EXECUTED)
+def test_exit_zero_is_not_a_pass_when_no_test_executed(line: str) -> None:
+    """R2, the root cause: a baseline that ran nothing is not a passing baseline.
+
+    ``@pytest.mark.skipif`` on a module the PR adds, a bare ``pytest.skip()`` and an
+    ``importorskip`` hedged against an offline sandbox are the three shapes a generator reaches
+    for, and all three exit 0. ``pass`` is the state that lets ``classify`` reach ``proven``, so
+    if any of these reads as a pass the gate can go red on a bug nobody observed.
+
+    ``1 passed, 1 skipped`` is in the list on purpose: a count cannot say *which* test passed,
+    so a half-skipped baseline cannot support a passing-to-failing claim about the other half.
+    """
+    assert run_state(summary(line)) == "error"
+
+
+@pytest.mark.parametrize("line", NOTHING_EXECUTED)
+def test_a_baseline_that_executed_nothing_is_never_proven(line: str) -> None:
+    """And not under any flag: the head failed with the predicted signal in every case here.
+
+    ``base_applicable=False`` and ``require_baseline=False`` widen what counts as a *clean*
+    baseline when there is none; neither may launder a baseline that ran and observed nothing.
+    """
+    for require_baseline, base_applicable in itertools.product((True, False), repeat=2):
+        status = classify(
+            summary(line),
+            result_for("fail", signal_present=True),
+            SIGNAL,
+            True,
+            require_baseline=require_baseline,
+            base_applicable=base_applicable,
+        )
+        assert status == "inconclusive", (line, require_baseline, base_applicable)
+
+
+@pytest.mark.parametrize("line", NOTHING_EXECUTED)
+def test_a_head_that_executed_nothing_is_never_disproven(line: str) -> None:
+    """E12 means "the repro passed at head", not "the repro was never executed".
+
+    A repro skipped at both revisions would otherwise self-refute its own finding, clamp it to
+    ``info`` and publish us as having checked something we never ran.
+    """
+    assert classify(result_for("pass"), summary(line), SIGNAL, True) == "inconclusive"
+
+
+@pytest.mark.parametrize(
+    "line",
+    ["1 error in 0.05s", "2 errors in 0.05s", "1 error, 1 skipped in 0.05s"],
+)
+def test_exit_one_is_not_a_fail_when_no_test_failed(line: str) -> None:
+    """A test whose *setup* blew up never reached the assertion the finding is about.
+
+    Its traceback can still carry the predicted signal, which is precisely how an error would
+    otherwise buy a ``proven``.
+    """
+    errored = summary(line, exit_code=1)
+    assert run_state(errored) == "error"
+    assert classify(result_for("pass"), errored, SIGNAL, True) == "inconclusive"
+
+
+def test_a_run_that_printed_a_real_summary_still_passes_and_fails_normally() -> None:
+    """The guard is not a blanket: pytest's ordinary summaries still mean what they say."""
+    assert run_state(summary("1 passed in 0.01s")) == "pass"
+    assert run_state(summary("4 passed, 2 warnings in 1.20s")) == "pass"
+    assert run_state(summary("1 failed in 0.01s", exit_code=1)) == "fail"
+    assert run_state(summary("1 failed, 1 passed in 0.01s", exit_code=1)) == "fail"
+
+
+def test_counts_are_read_from_pytests_summary_line_and_not_from_the_repros_own_output() -> None:
+    """A repro may print whatever it likes; only the line pytest wrote decides what ran."""
+    noisy = RunResult(
+        exit_code=0,
+        stdout="my fixture reports: 1 skipped, 3 deselected\n.  [100%]\n1 passed in 0.01s\n",
+    )
+    assert run_state(noisy) == "pass"
+
+
+def test_a_run_with_no_summary_at_all_is_read_from_its_exit_code() -> None:
+    """The documented residual: with nothing to check the code against, the code is all there is.
+
+    A sandbox that captured no output at all is a broken runner rather than a skipped test —
+    and pytest always prints the line, which ``redact.truncate`` keeps by preserving the tail.
+    """
+    assert run_state(RunResult(exit_code=0)) == "pass"
+    assert run_state(RunResult(exit_code=1, stderr="TypeError: bad operand\n")) == "fail"
+
+
+def test_the_reason_names_which_half_of_the_comparison_ran_nothing() -> None:
+    """An artifact has to say *why*: "ran nothing" and "failed" are different facts (§5.1)."""
+    skipped_base = classify_outcome(
+        summary("1 skipped in 0.01s"), result_for("fail", signal_present=True), SIGNAL, True
+    )
+    assert skipped_base.status == "inconclusive"
+    assert skipped_base.reason == "baseline_not_observed"
+    assert skipped_base.outcome == "error"
+    assert "no test" in skipped_base.detail
+
+    skipped_head = classify_outcome(
+        result_for("pass"), summary("1 skipped in 0.01s"), SIGNAL, True
+    )
+    assert skipped_head.status == "inconclusive"
+    assert skipped_head.reason == "no_tests_ran"
+    assert skipped_head.outcome == "error"
+
+    imported_badly = classify_outcome(
+        result_for("pass"), result_for("error"), SIGNAL, True
+    )
+    assert imported_badly.reason == "collection_error"
+
+
+# ---------------------------------------------------------------------------------------
 # Outcome, baseline mode and the persisted reason
 # ---------------------------------------------------------------------------------------
 
