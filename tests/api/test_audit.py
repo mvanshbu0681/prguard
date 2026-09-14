@@ -3,6 +3,9 @@
 "Audit trail" without tamper-evidence is just a log (§11.2 assumption 15). The chain is
 recomputed on every read, and a broken chain is *served* with `verified: false` rather than
 hidden — hiding it would defeat the purpose.
+
+T9 appends `::test_run_emits_complete_ordered_event_set` here in wave 3 (plan §9.2): the
+ordering of a *whole run*'s events needs the pipeline, which does not exist in this track.
 """
 
 from __future__ import annotations

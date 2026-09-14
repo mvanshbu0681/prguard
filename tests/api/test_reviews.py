@@ -9,6 +9,7 @@ from __future__ import annotations
 import time
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import pytest
 import respx
 import sqlalchemy as sa
@@ -57,6 +58,22 @@ async def test_trigger_returns_202_without_blocking(
     assert run.finished_at is None
     assert run.head_sha is None, "the head SHA is resolved inside the worker (§6.1)"
     assert run.tenant_id == default_tenant.id
+
+
+async def test_the_zero_github_calls_assertion_has_a_working_sensor() -> None:
+    """Guards AC-1's instrument: a `call_count == 0` on a blind router proves nothing.
+
+    If respx ever stopped intercepting this process's httpx traffic, the test above would
+    still pass while the request path quietly called GitHub. This proves the sensor fires.
+    """
+    async with respx.mock(assert_all_called=False) as github:
+        any_github_call = github.route(host="api.github.com").mock(
+            return_value=httpx.Response(200, json={})
+        )
+        async with httpx.AsyncClient() as probe:
+            await probe.get("https://api.github.com/repos/octocat/hello-world/pulls/42")
+
+    assert any_github_call.call_count == 1
 
 
 @pytest.mark.parametrize(
