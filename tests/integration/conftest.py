@@ -28,8 +28,10 @@ from prguard.core.proof.runner import SandboxSelection
 from prguard.core.proof.subprocess_runner import SubprocessRunner
 from prguard.core.proof.workspace import LocalPathSource
 from prguard.core.queue import SyncJobQueue
+from prguard.db import models
 from prguard.llm.client import FakeLLMClient
 from prguard.main import create_app
+from tests.conftest import RowFactory
 from tests.fixtures.loader import github_response, llm_fixture, repo_tree
 
 OWNER = "octocat"
@@ -177,6 +179,7 @@ async def trigger_review(
     pipeline: Pipeline,
     *,
     pr_url: str = PR_URL,
+    force: bool = False,
     headers: Mapping[str, str] | None = None,
 ) -> str:
     """Drive a run through the real API door with an inline queue; return the run id.
@@ -186,9 +189,14 @@ async def trigger_review(
     otherwise exactly the ones production uses (G6).
     """
     queue = SyncJobQueue(pipeline.run)
+    body: dict[str, Any] = {"pr_url": pr_url}
+    if force:
+        # E21: without a head SHA the API door deduplicates against any run still in flight,
+        # so a test that wants a *second* run has to say so explicitly.
+        body["options"] = {"force": True}
     async with app_for(settings, session_factory, queue) as client:
         response = await client.post(
-            "/v1/reviews", json={"pr_url": pr_url}, headers=dict(headers or {})
+            "/v1/reviews", json=body, headers=dict(headers or {})
         )
     assert response.status_code == 202, response.text
     return str(response.json()["review_id"])
@@ -268,3 +276,17 @@ def settings(settings: Settings) -> Settings:
     that a review is ever actually sent.
     """
     return make_settings(settings, GITHUB_TOKEN="ghp_test_token")
+
+
+@pytest.fixture
+async def repository(rows: RowFactory, default_tenant: models.Tenant) -> models.Repository:
+    """`octocat/hello-world` — the repository every recorded fixture describes."""
+    return await rows.repository(default_tenant)
+
+
+@pytest.fixture
+async def pull_request(
+    rows: RowFactory, default_tenant: models.Tenant, repository: models.Repository
+) -> models.PullRequest:
+    """PR 42 with no head SHA yet: the API door resolves nothing on the request path."""
+    return await rows.pull_request(default_tenant, repository, head_sha=None, base_sha=None)
