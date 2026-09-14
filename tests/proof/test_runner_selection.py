@@ -151,6 +151,22 @@ def test_every_proof_is_skipped_no_env_when_there_is_no_sandbox() -> None:
     assert "No sandbox" in outcome.detail
 
 
+def test_a_skipped_proof_never_claims_the_sandbox_it_did_not_get() -> None:
+    """E14: the artifact may not say ``docker``/``isolated`` about a proof that never ran.
+
+    §5.1 makes both columns non-nullable, so something has to be written; what is written is the
+    runner we *would* have used and the isolation it *would* have had, because claiming the
+    container we never started is the one answer that would make a reader trust this row. The
+    columns are read straight back out by ``/result`` and by the accuracy self-report, and an
+    unrun proof that reads ``isolated`` is indistinguishable there from a real one.
+    """
+    outcome = skipped_outcome()
+
+    assert outcome.runner == "subprocess"
+    assert outcome.isolation == "degraded"
+    assert outcome.status == "not_attempted"
+
+
 async def test_run_proof_with_no_runner_executes_nothing(materialise_repo: Any) -> None:
     """Belt and braces: the top-level entry point must also refuse to pretend."""
     request = make_request("proof_generator_billing_none_rate")

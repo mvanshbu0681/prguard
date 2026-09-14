@@ -7,9 +7,12 @@ single documented path, so that path is written here once, as a pure function ov
 
 **The invariant.** ``proven`` requires *all* of:
 
-1. the baseline ran and **passed** — or there was legitimately no baseline to run (the file is
-   new at head ⇒ ``not_applicable``, or ``PROOF_REQUIRE_BASELINE=false`` was set for demo
-   latency, in which case the artifact is labelled ``head_only``);
+1. the baseline **executed a test** and that test **passed** — or there was legitimately no
+   baseline to run (the file is new at head ⇒ ``not_applicable``, or
+   ``PROOF_REQUIRE_BASELINE=false`` was set for demo latency, in which case the artifact is
+   labelled ``head_only``). "Executed" is not decoration: pytest exits 0 when every collected
+   test was *skipped*, so a baseline read from its exit code alone can be a baseline that ran
+   nothing;
 2. the head run **failed** (exit code 1 — it ran and answered);
 3. the generation's ``expected_failure_signal`` appears in the head output;
 4. every dependency the repro needed was installed.
@@ -28,6 +31,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import subprocess
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -72,8 +76,9 @@ from prguard.core.types import (
 RunState = Literal["pass", "fail", "timeout", "error", "not_run"]
 
 #: Why the verdict came out the way it did. Finer-grained than §5.1's six-value ``outcome``
-#: column, and identical to the vocabulary ``tests/fixtures/expectations/proof_matrix.json``
-#: records, so an artifact can say *why* and not only *what*.
+#: column, and a superset of the vocabulary ``tests/fixtures/expectations/proof_matrix.json``
+#: records — every corpus reason appears here verbatim, plus the ones the corpus has no row for
+#: — so an artifact can say *why* and not only *what*.
 ProofReason = Literal[
     "failed_as_predicted",
     "passed_unexpectedly",
@@ -82,6 +87,8 @@ ProofReason = Literal[
     "baseline_missing",
     "signal_absent",
     "collection_error",
+    "no_tests_ran",
+    "baseline_not_observed",
     "deps_install_failed",
     "timeout",
     "skipped_no_env",
@@ -98,6 +105,8 @@ REASON_OUTCOME: Final[Mapping[ProofReason, ProofOutcomeKind]] = MappingProxyType
         "baseline_missing": "error",
         "signal_absent": "error",
         "collection_error": "error",
+        "no_tests_ran": "error",
+        "baseline_not_observed": "error",
         "deps_install_failed": "error",
         "timeout": "timeout",
         "skipped_no_env": "skipped_no_env",
@@ -123,6 +132,10 @@ PYTEST_EXIT_TESTS_FAILED: Final[int] = 1
 #: Exit code of a run in which every test passed (pytest's 0).
 PYTEST_EXIT_OK: Final[int] = 0
 
+#: What pytest prints when it collected nothing at all. Exit code 5 usually accompanies it,
+#: but not always — hence a marker rather than a code.
+NO_TESTS_RAN_MARKER: Final[str] = "no tests ran"
+
 #: Output markers that mean "the repro never ran", whatever the exit code claims. E8: a test
 #: that died importing a third-party module says nothing about the finding.
 COLLECTION_FAILURE_MARKERS: Final[tuple[str, ...]] = (
@@ -132,7 +145,31 @@ COLLECTION_FAILURE_MARKERS: Final[tuple[str, ...]] = (
     "INTERNALERROR",
     "ModuleNotFoundError",
     "ImportError while importing test module",
-    "no tests ran",
+    NO_TESTS_RAN_MARKER,
+)
+
+#: The tail every pytest terminal summary line carries: ``… in 0.42s`` (a long run adds
+#: ``(0:01:05)`` after it). Used to find that line and to refuse to read counts from any other,
+#: because a repro is free to print "1 passed" for reasons of its own and the sentence that
+#: decides whether a test executed has to be pytest's, not the repro's.
+SUMMARY_DURATION: Final[re.Pattern[str]] = re.compile(r"\bin\s+\d+(?:\.\d+)?s\b")
+
+#: One ``<n> <outcome>`` pair inside that line.
+SUMMARY_COUNT: Final[re.Pattern[str]] = re.compile(
+    r"(\d+)\s+(passed|failed|errors?|skipped|deselected|xfailed|xpassed)\b"
+)
+
+#: Summary counts that are *not* "a test body ran and upheld the contract". ``skipped`` and
+#: ``deselected`` never ran at all; ``error`` means setup or teardown decided the outcome, not
+#: the assertion the finding is about; ``xfailed``/``xpassed`` ran under a declaration that
+#: either result was acceptable, which is no more falsifiable than an empty
+#: ``expected_failure_signal``. None of them can be half of a passing-to-failing claim.
+UNEXECUTED_SUMMARY_COUNTS: Final[tuple[str, ...]] = (
+    "skipped",
+    "deselected",
+    "error",
+    "xfailed",
+    "xpassed",
 )
 
 #: §6.4 — the note a clamped finding carries so the API can explain itself.
@@ -162,24 +199,38 @@ DOCKER_INFO_COMMAND: Final[tuple[str, ...]] = ("docker", "info", "--format", "{{
 
 
 def run_state(result: RunResult | None) -> RunState:
-    """Interpret one execution.
+    """Interpret one execution — from the exit code *and* the output, never one alone.
 
-    pytest reserves exit code 0 for "everything passed" and 1 for "a test failed"; every other
-    code (2 interrupted, 3 internal error, 4 usage error, 5 nothing collected, negative for a
-    signal) means it never got as far as answering the question. A run killed at the timeout is
-    a ``timeout`` whatever code the kill left behind.
+    *The exit code* says what pytest concluded. It reserves 0 for "nothing failed" and 1 for
+    "a test failed"; every other code (2 interrupted, 3 internal error, 4 usage error, 5
+    nothing collected, negative for a signal) means it never got as far as answering the
+    question. A run killed at the timeout is a ``timeout`` whatever code the kill left behind.
+
+    *The output* says whether a test body actually ran, and that is the half on which the
+    product's claim depends. **pytest exits 0 when every collected test was skipped**, so a
+    ``@pytest.mark.skipif`` on a module the PR adds, a bare ``pytest.skip()`` or an
+    ``importorskip`` hedged against a sandbox with no network all produce a baseline that
+    executed nothing and reports success. ``pass`` is the state :func:`classify` consumes on
+    the way to ``proven``, so "exit 0" on its own never earns it. Symmetrically, exit 1 with
+    errors and no failures is not a ``fail``: a test whose *setup* blew up never reached the
+    assertion the finding is about, and its traceback may still carry the predicted signal.
+
+    Only a run that printed no summary at all is decided by its exit code alone — there is then
+    nothing to check the code against, and a sandbox that captured no output is a broken runner
+    rather than a skipped test.
     """
     if result is None:
         return "not_run"
     if result.timed_out:
         return "timeout"
-    if result.exit_code == PYTEST_EXIT_OK:
-        return "pass"
-    if result.exit_code != PYTEST_EXIT_TESTS_FAILED:
+    if result.exit_code not in (PYTEST_EXIT_OK, PYTEST_EXIT_TESTS_FAILED):
         return "error"
     if _looks_like_a_collection_failure(result):
         return "error"
-    return "fail"
+    counts = _summary_counts(result)
+    if result.exit_code == PYTEST_EXIT_OK:
+        return "pass" if _every_collected_test_passed(counts) else "error"
+    return "fail" if _a_test_failed(counts) else "error"
 
 
 def classify(
@@ -305,6 +356,10 @@ REASON_DETAIL: Final[Mapping[ProofReason, str]] = MappingProxyType(
         "baseline_missing": "No baseline ran and PROOF_REQUIRE_BASELINE is set.",
         "signal_absent": "Head failed, but not with the predicted failure signal.",
         "collection_error": "The repro never ran: collection or import failed.",
+        "no_tests_ran": "The repro was collected but no test executed: every test was skipped.",
+        "baseline_not_observed": (
+            "The baseline executed no test, so there is no passing-to-failing claim."
+        ),
         "deps_install_failed": "A dependency the repro needed was not installed.",
         "timeout": "The repro was killed at PROOF_TIMEOUT.",
         "skipped_no_env": "No sandbox was available, so nothing was executed.",
@@ -362,7 +417,7 @@ def _reason_for(
     if head_state == "timeout":
         return "timeout"
     if head_state == "error":
-        return "collection_error"
+        return "no_tests_ran" if _no_test_executed(head) else "collection_error"
     if not deps_ok:
         return "deps_install_failed"
 
@@ -371,6 +426,8 @@ def _reason_for(
     )
     if base_state == "not_run":
         return "baseline_missing"
+    if base_state == "error" and _no_test_executed(base):
+        return "baseline_not_observed"
     if base_state == "fail" and head_state == "fail":
         return "pre_existing_failure"
     if base_state not in ("pass", "not_applicable"):
@@ -396,6 +453,67 @@ def _signal_present(signal: str, head: RunResult | None) -> bool:
 def _looks_like_a_collection_failure(result: RunResult) -> bool:
     return any(marker in result.stdout or marker in result.stderr
                for marker in COLLECTION_FAILURE_MARKERS)
+
+
+def _summary_counts(result: RunResult) -> Mapping[str, int]:
+    """pytest's own terminal summary, parsed into counts. Empty when it printed none.
+
+    pytest writes the line last and :func:`redact.truncate` deliberately keeps the tail of the
+    output, so the summary survives to here even for a repro that printed 200 KB before it
+    finished. The scan runs backwards for the same reason: the last summary in the buffer is
+    this run's.
+    """
+    for line in reversed(_output(result).splitlines()):
+        candidate = line.strip().strip("=").strip()
+        if not SUMMARY_DURATION.search(candidate):
+            continue
+        counts = {
+            outcome.rstrip("s"): int(value) for value, outcome in SUMMARY_COUNT.findall(candidate)
+        }
+        if counts:
+            return counts
+    return {}
+
+
+def _every_collected_test_passed(counts: Mapping[str, int]) -> bool:
+    """Whether an exit-0 run observed the repro execute and hold.
+
+    *Every* collected test, not merely one of them: a repro that hedges half of itself behind a
+    ``skipif`` says nothing about the half that did not run, and a count of passes cannot say
+    *which* test passed — so "1 passed, 1 skipped" at base followed by "1 passed, 1 failed" at
+    head could be a test that never had a baseline at all. Proving less is the designed failure
+    mode; proving wrong is the one that is not survivable.
+    """
+    if not counts:
+        return True
+    if counts.get("passed", 0) < 1:
+        return False
+    return not any(counts.get(outcome, 0) for outcome in UNEXECUTED_SUMMARY_COUNTS)
+
+
+def _a_test_failed(counts: Mapping[str, int]) -> bool:
+    """Whether an exit-1 run observed a test body run and fail."""
+    if not counts:
+        return True
+    return counts.get("failed", 0) >= 1
+
+
+def _no_test_executed(result: RunResult | None) -> bool:
+    """Whether a run that finished executed no test at all — the shape E8 is really about."""
+    if result is None or result.timed_out:
+        return False
+    if NO_TESTS_RAN_MARKER in _output(result):
+        return True
+    counts = _summary_counts(result)
+    if not counts:
+        return False
+    return counts.get("passed", 0) == 0 and counts.get("failed", 0) == 0
+
+
+def _output(result: RunResult) -> str:
+    """Everything the run said, in one string. Both streams: pytest writes to stdout, a bare
+    interpreter to stderr, and which one carried the summary is not something to depend on."""
+    return f"{result.stdout}\n{result.stderr}"
 
 
 # ---------------------------------------------------------------------------------------

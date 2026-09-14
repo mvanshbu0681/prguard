@@ -12,6 +12,7 @@ with the daemon stopped — which is this machine's actual state.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -28,7 +29,7 @@ from prguard.core.proof.runner import (
     proof_confidence,
     run_proof,
 )
-from prguard.core.proof.subprocess_runner import SubprocessRunner
+from prguard.core.proof.subprocess_runner import SubprocessRunner, sandbox_env
 from prguard.core.types import ProofOutcome, SeverityInputs, SeverityResult
 from prguard.db import models
 from tests.conftest import RowFactory
@@ -422,6 +423,21 @@ async def test_the_repro_runs_inside_the_workspace_and_sees_the_tree(
     result = await RUNNER.execute(tree=workspace.head_tree, request=request)
 
     assert result.exit_code == 0, result.stdout + result.stderr
+
+
+def test_the_sandbox_disables_the_hosts_pytest_plugins() -> None:
+    """``PYTEST_DISABLE_PLUGIN_AUTOLOAD`` is load-bearing, not tidiness.
+
+    The host running this suite carries ``anyio``, ``asyncio`` and whatever else the developer
+    installed globally; autoloaded into the sandbox they can change a repro's exit code, its
+    summary line, or whether it is collected at all. A verdict that depends on which plugins
+    happen to be installed on the machine is not evidence, and every proof in the product is
+    read from exactly those two things.
+    """
+    env = sandbox_env(Path("/tmp/workspace"))
+
+    assert env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] == "1"
+    assert env["PYTHONPATH"] == "/tmp/workspace"
 
 
 def test_the_command_is_the_one_the_spec_documents() -> None:

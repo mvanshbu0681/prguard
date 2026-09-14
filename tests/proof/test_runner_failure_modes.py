@@ -13,12 +13,17 @@ reported as a proof. The A/B below runs exactly that pair.
 
 from __future__ import annotations
 
+import os
+import signal
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from prguard.core.proof.deps import (
+    InstallResult,
     NullInstaller,
     Requirements,
     UvInstaller,
@@ -126,6 +131,74 @@ async def test_the_timeout_kills_the_whole_process_group(materialise_repo: Any) 
     assert result.duration_ms < 20_000
 
 
+async def test_the_timeout_kills_the_childs_children_and_not_only_the_child(
+    materialise_repo: Any,
+) -> None:
+    """E11, stated as the survivors rather than as the wall clock.
+
+    The test above notices a ``process.kill()`` only because the orphan happens to hold the
+    output pipe open; a repro that redirects its children elsewhere would leave them running
+    for as long as they like and nothing would ever say so. So this one hands the grandchild
+    ``DEVNULL``, records its pid from inside the sandbox, and asks the operating system
+    afterwards whether it is still there. ``start_new_session`` puts the repro in its own
+    process group precisely so that ``killpg`` can answer "no".
+    """
+    request = make_request(
+        "proof_generator_slow_repro",
+        timeout_seconds=2,
+        test_code=(
+            "import pathlib\n"
+            "import subprocess\n"
+            "import sys\n"
+            "import time\n\n\n"
+            "def test_spawns_a_child_that_does_not_hold_the_pipe():\n"
+            "    child = subprocess.Popen(\n"
+            '        [sys.executable, "-c", "import time; time.sleep(60)"],\n'
+            "        stdout=subprocess.DEVNULL,\n"
+            "        stderr=subprocess.DEVNULL,\n"
+            "    )\n"
+            '    pathlib.Path("grandchild.pid").write_text(str(child.pid))\n'
+            "    time.sleep(60)\n"
+        ),
+    )
+    workspace = materialise_repo("slow_test", request, with_base=False)
+
+    result = await SubprocessRunner(timeout_seconds=2).execute(
+        tree=workspace.head_tree, request=request
+    )
+
+    assert result.timed_out is True
+    pid_file = workspace.head_tree / "grandchild.pid"
+    assert pid_file.is_file(), "the repro never got as far as spawning its child"
+    grandchild = int(pid_file.read_text())
+    try:
+        assert _is_dead(grandchild), (
+            f"pid {grandchild} outlived the repro: the timeout killed the process, not the group"
+        )
+    finally:
+        _reap(grandchild)
+
+
+def _is_dead(pid: int, *, within_seconds: float = 5.0) -> bool:
+    """Whether ``pid`` is gone, polling briefly so a signal in flight is not a flake."""
+    deadline = time.monotonic() + within_seconds
+    while time.monotonic() < deadline:
+        try:
+            os.kill(pid, 0)
+        except (ProcessLookupError, PermissionError):
+            return True
+        time.sleep(0.05)
+    return False
+
+
+def _reap(pid: int) -> None:
+    """Leave no 60-second orphan behind when the assertion above fails."""
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except OSError:
+        return
+
+
 # ---------------------------------------------------------------------------------------
 # E10 — the dependency that could not be installed
 # ---------------------------------------------------------------------------------------
@@ -175,6 +248,125 @@ async def test_the_same_request_without_the_bad_pin_is_proven(materialise_repo: 
     )
 
     assert outcome.deps_install_ok is True
+    assert outcome.status == "proven"
+
+
+@dataclass
+class RecordingInstaller:
+    """An installer that succeeds, fails, or both, depending on which tree it is handed.
+
+    ``run_proof`` installs into base and head separately, and ``deps_ok`` is the conjunction of
+    the two results. Every fixture above fails *both* halves at once, so the base-side conjunct
+    could be dropped without a single test noticing — which is E10's rule ("an install failure
+    can never produce a `proven` finding") quietly holding only on the head.
+    """
+
+    failing_trees: tuple[str, ...] = ()
+    interpreter_for: dict[str, str] = field(default_factory=dict)
+    seen: list[Path] = field(default_factory=list)
+
+    async def install(self, *, tree: Path, requirements: Requirements) -> InstallResult:
+        self.seen.append(tree)
+        if tree.name in self.failing_trees:
+            return InstallResult(ok=False, performed=True, detail=f"install failed in {tree.name}")
+        return InstallResult(
+            ok=True,
+            performed=True,
+            detail=f"installed in {tree.name}",
+            python_executable=self.interpreter_for.get(tree.name),
+        )
+
+
+async def test_an_install_failure_at_base_alone_can_never_be_proven(
+    materialise_repo: Any,
+) -> None:
+    """E10 on the half nothing else covers: base could not be prepared, so its pass proves nothing.
+
+    Same repo, same repro, same two exit codes as ``test_base_passes_head_fails_marks_proven``.
+    The only difference is that the *baseline* tree was never given what it needed, which makes
+    its green meaningless — the repro may have passed there for want of a dependency rather
+    than because the contract held.
+    """
+    request = make_request("proof_generator_billing_none_rate")
+    workspace = materialise_repo("buggy_calc", request)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RUNNER,
+        policy=POLICY,
+        installer=RecordingInstaller(failing_trees=("base",)),
+    )
+
+    assert outcome.base is not None and outcome.head is not None
+    assert (outcome.base.exit_code, outcome.head.exit_code) == (0, 1)
+    assert "TypeError" in outcome.head.stdout
+    assert outcome.deps_install_ok is False
+    assert outcome.status == "inconclusive"
+    assert outcome.status != "proven"
+
+
+async def test_both_installs_succeeding_is_what_the_same_request_needs(
+    materialise_repo: Any,
+) -> None:
+    """The other half of the A/B: the identical run with both trees prepared is the proof."""
+    request = make_request("proof_generator_billing_none_rate")
+    workspace = materialise_repo("buggy_calc", request)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RUNNER,
+        policy=POLICY,
+        installer=RecordingInstaller(),
+    )
+
+    assert outcome.deps_install_ok is True
+    assert outcome.status == "proven"
+
+
+async def test_each_tree_is_run_by_the_interpreter_its_own_install_created(
+    materialise_repo: Any,
+) -> None:
+    """§4.6: ``uv venv`` then run the repro *in that venv*, per tree.
+
+    A runner invoked with ``python_executable=None`` would fall back to this process's
+    interpreter, where the installed dependency is not present — the install would be real, the
+    run would not use it, and E10's boolean would say everything was fine. The two trees get
+    different venvs, so passing the head's interpreter to both is caught as well.
+    """
+    installer = RecordingInstaller(
+        interpreter_for={"head": "/venv/head/bin/python", "base": "/venv/base/bin/python"}
+    )
+    invocations: list[tuple[str, str | None]] = []
+
+    class RecordingRunner:
+        name = "subprocess"
+        isolation = "degraded"
+
+        async def execute(
+            self, *, tree: Path, request: ProofRequest, python_executable: str | None = None
+        ) -> RunResult:
+            invocations.append((tree.name, python_executable))
+            passed = RunResult(exit_code=0, stdout="1 passed in 0.01s\n")
+            failed = RunResult(exit_code=1, stdout="E   TypeError: nope\n1 failed in 0.01s\n")
+            return passed if tree.name == "base" else failed
+
+    request = make_request("proof_generator_billing_none_rate")
+    workspace = materialise_repo("buggy_calc", request)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RecordingRunner(),  # type: ignore[arg-type]
+        policy=POLICY,
+        installer=installer,
+    )
+
+    assert dict(invocations) == {
+        "head": "/venv/head/bin/python",
+        "base": "/venv/base/bin/python",
+    }
     assert outcome.status == "proven"
 
 
