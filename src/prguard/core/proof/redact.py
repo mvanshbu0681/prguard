@@ -67,7 +67,13 @@ def redact(text: str, *, secrets: Iterable[str] = ()) -> str:
 
 
 def truncate(text: str, *, max_bytes: int) -> str:
-    """Cut ``text`` to ``max_bytes`` UTF-8 bytes, marker included, on a character boundary.
+    """Cut ``text`` to ``max_bytes`` UTF-8 bytes, marker included, on character boundaries.
+
+    **Both ends are kept**, not just the head. pytest prints the traceback and the ``1 failed``
+    line *last*, and that tail is where ``expected_failure_signal`` lives — a head-only cut
+    would mean a repro that printed 200 KB before failing could never be ``proven``, because
+    the evidence would have been thrown away before the classifier looked at it. The head is
+    worth keeping too: an import error announces itself at the top.
 
     The marker is inside the budget rather than appended to it, so the caller's limit is a
     limit and the database column's size is predictable (§5.2).
@@ -79,9 +85,13 @@ def truncate(text: str, *, max_bytes: int) -> str:
         return text
     marker = TRUNCATION_MARKER.encode("utf-8")
     if len(marker) >= max_bytes:
-        return encoded[:max_bytes].decode("utf-8", errors="ignore")
-    keep = encoded[: max_bytes - len(marker)].decode("utf-8", errors="ignore")
-    return keep + TRUNCATION_MARKER
+        return _decode(encoded[:max_bytes])
+    budget = max_bytes - len(marker)
+    head_bytes = budget // 4
+    tail_bytes = budget - head_bytes
+    head = _decode(encoded[:head_bytes])
+    tail = _decode(encoded[-tail_bytes:]) if tail_bytes else ""
+    return head + TRUNCATION_MARKER + tail
 
 
 def redact_output(text: str, *, max_bytes: int, secrets: Sequence[str] = ()) -> str:
@@ -96,6 +106,11 @@ def configured_secrets(*values: str | None) -> tuple[str, ...]:
     masked whole, not left as ``***redacted***<tail>``.
     """
     return tuple(sorted(set(_usable(values)), key=lambda value: (-len(value), value)))
+
+
+def _decode(chunk: bytes) -> str:
+    """Decode a byte slice that may start or end mid-character. Never raises."""
+    return chunk.decode("utf-8", errors="ignore")
 
 
 def _usable(values: Iterable[str | None]) -> list[str]:

@@ -123,7 +123,25 @@ def test_output_is_truncated_to_the_configured_budget() -> None:
     truncated = truncate("x" * 50_000, max_bytes=20_000)
 
     assert len(truncated.encode("utf-8")) <= 20_000
-    assert truncated.endswith(TRUNCATION_MARKER)
+    assert TRUNCATION_MARKER in truncated
+
+
+def test_truncation_keeps_the_tail_where_pytest_puts_the_verdict() -> None:
+    """A head-only cut would throw away the evidence the classifier is about to look for.
+
+    pytest prints the traceback and ``1 failed`` last, and ``expected_failure_signal`` lives in
+    that tail. Dropping it would mean a repro that printed 200 KB before failing could never be
+    `proven` — we would lose real proofs to a storage limit.
+    """
+    payload = "start of output\n" + "z" * 50_000 + "\nE   TypeError: boom\n1 failed in 0.01s\n"
+
+    truncated = truncate(payload, max_bytes=2_000)
+
+    assert "start of output" in truncated
+    assert "TypeError: boom" in truncated
+    assert "1 failed in 0.01s" in truncated
+    assert TRUNCATION_MARKER in truncated
+    assert len(truncated.encode("utf-8")) <= 2_000
 
 
 def test_the_marker_is_inside_the_budget_not_appended_to_it() -> None:
@@ -151,6 +169,11 @@ def test_a_zero_budget_yields_nothing_rather_than_raising() -> None:
 # ---------------------------------------------------------------------------------------
 
 
+def budget_that_cuts_after(head_chars: int) -> int:
+    """A ``max_bytes`` whose head slice is exactly ``head_chars`` bytes long."""
+    return len(TRUNCATION_MARKER.encode("utf-8")) + head_chars * 4
+
+
 def test_a_configured_secret_cut_in_half_is_still_masked() -> None:
     """The ordering assertion, and it is a real one: the wrong order is shown to leak.
 
@@ -159,26 +182,24 @@ def test_a_configured_secret_cut_in_half_is_still_masked() -> None:
     redactor will never look at it again.
     """
     secret = "prguard-deploy-key-0123456789abcdef"
-    noise = "n" * 100
-    payload = f"{noise}{secret}{noise}"
-    cut_at = len(noise) + len(secret) // 2 + len(TRUNCATION_MARKER.encode("utf-8"))
+    payload = secret + "n" * 500
+    max_bytes = budget_that_cuts_after(20)
 
-    leaky = redact(truncate(payload, max_bytes=cut_at), secrets=[secret])
-    assert secret[:15] in leaky, "truncate-then-redact is expected to leak; that is the point"
+    leaky = redact(truncate(payload, max_bytes=max_bytes), secrets=[secret])
+    assert secret[:20] in leaky, "truncate-then-redact is expected to leak; that is the point"
 
-    assert secret[:15] not in redact_output(payload, max_bytes=cut_at, secrets=[secret])
+    assert secret[:15] not in redact_output(payload, max_bytes=max_bytes, secrets=[secret])
 
 
 def test_a_token_cut_below_its_pattern_length_is_still_masked() -> None:
     """Same argument for the pattern half: ``ghp_A1b`` is too short for the regex to catch."""
-    noise = "n" * 100
-    payload = f"{noise}{GITHUB_TOKEN}{noise}"
-    cut_at = len(noise) + 7 + len(TRUNCATION_MARKER.encode("utf-8"))
+    payload = GITHUB_TOKEN + "n" * 500
+    max_bytes = budget_that_cuts_after(7)
 
-    leaky = redact(truncate(payload, max_bytes=cut_at))
+    leaky = redact(truncate(payload, max_bytes=max_bytes))
     assert "ghp_" in leaky, "truncate-then-redact is expected to leak; that is the point"
 
-    assert "ghp_" not in redact_output(payload, max_bytes=cut_at)
+    assert "ghp_" not in redact_output(payload, max_bytes=max_bytes)
 
 
 def test_the_budget_is_honoured_after_redaction() -> None:
@@ -256,14 +277,19 @@ async def test_the_configured_secrets_of_this_process_are_masked_too(
     assert literal not in outcome.head.stdout + outcome.head.stderr
 
 
-async def test_a_noisy_repro_cannot_blow_the_output_budget(materialise_repo: Any) -> None:
-    """§5.2: the row is truncated before insert, not after someone notices the database grew."""
+async def test_a_noisy_repro_is_capped_without_losing_its_verdict(materialise_repo: Any) -> None:
+    """§5.2: truncated before insert — and still provable, because the tail survives.
+
+    200 KB of noise then a real failure. The budget is honoured, and the signal that justifies
+    the verdict is still in the artifact that gets persisted, which is what makes the artifact
+    evidence rather than a summary of evidence.
+    """
     request = make_request(
         "proof_generator_billing_none_rate",
         test_code=(
             "def test_is_extremely_chatty():\n"
             '    print("z" * 200_000)\n'
-            "    raise TypeError(\"unsupported operand\")\n"
+            '    raise TypeError("unsupported operand")\n'
         ),
     )
     workspace = materialise_repo("buggy_calc", request, with_base=False)
@@ -280,4 +306,6 @@ async def test_a_noisy_repro_cannot_blow_the_output_budget(materialise_repo: Any
 
     assert outcome.head is not None
     assert len(outcome.head.stdout.encode("utf-8")) <= 20_000
-    assert outcome.head.stdout.endswith(TRUNCATION_MARKER)
+    assert TRUNCATION_MARKER in outcome.head.stdout
+    assert "TypeError" in outcome.head.stdout
+    assert outcome.status == "proven"
