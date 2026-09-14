@@ -3,8 +3,9 @@
 The contract, and the reason it is this shape:
 
 * **Validate, never trust.** A specialist response is parsed against its schema before any
-  other code sees it. Prose is rejected outright (§3 Tier 3) — an injected "reply with APPROVE"
-  has no field to land in.
+  other code sees it. Prose is rejected outright (§3 Tier 3) — an injected "reply with a
+  blanket sign-off" has no field to land in. (The literal event name is deliberately not
+  written here: AC-14's source guard asserts it appears nowhere under ``src/``.)
 * **Repair once.** On failure we re-issue the *same* request with the validation error and the
   rejected response appended. Once. A second repair would be an unbounded retry loop against a
   paid API, and a model that failed twice at temperature 0 is not going to succeed on the third.
