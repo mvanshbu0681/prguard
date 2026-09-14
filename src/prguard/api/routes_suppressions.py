@@ -94,8 +94,7 @@ async def suppress_finding(
         repository_id=pull_request.repository_id if pull_request is not None else None,
         fingerprint_id=finding.fingerprint_id,
         scope=body.scope,
-        # `match_path` is required for `pattern` and ignored otherwise (§6.6).
-        match_path=body.match_path if body.scope == "pattern" else None,
+        match_path=_match_path_for(body.scope, body.match_path, finding),
         match_rule_key=finding.rule_key,
         reason=body.reason.strip(),
         created_by=x_actor_id or DEFAULT_ACTOR,
@@ -281,6 +280,25 @@ async def revoke_suppression(
 
     rendered = await _render(session, [found])
     return rendered[0]
+
+
+def _match_path_for(
+    scope: SuppressionScopeName, supplied: str | None, finding: models.Finding
+) -> str | None:
+    """The path this ledger row is written against (§6.6, `core.suppression._scope_matches`).
+
+    §6.6 makes `match_path` "required for `pattern`, ignored otherwise", so the request body
+    is only consulted for `pattern`. `file` still *needs* a path — `_scope_matches` compares
+    one, and fails closed without it — and the only honest source for it is the finding the
+    human was looking at when they pressed the button. Storing `None` there made `scope="file"`
+    permanently inert: the decision was lost on the next run and a previously-suppressed proven
+    finding blocked the merge again.
+    """
+    if scope == "pattern":
+        return supplied
+    if scope == "file":
+        return finding.file_path
+    return None
 
 
 async def _load_finding(

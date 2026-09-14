@@ -834,7 +834,11 @@ class Pipeline:
         """The ledger rows that could bear on this repository, as domain objects (§6.6).
 
         Revoked and expired rows are loaded too: `suppression.matches` decides, and it is the
-        one place those guards live (AC-9).
+        one place those guards live (AC-9). The preload only ever *widens* what that function
+        is offered — a predicate here that narrows more than the matcher does silently deletes
+        a scope, which is what happened to `tenant`: every row carries the repository it was
+        written from, so filtering on it alone hid every tenant-wide rule the moment the human
+        moved to a second repository.
         """
         statement = (
             sa.select(models.Suppression, models.FindingFingerprint.fingerprint)
@@ -847,6 +851,7 @@ class Pipeline:
                 sa.or_(
                     models.Suppression.repository_id.is_(None),
                     models.Suppression.repository_id == state.repository.id,
+                    models.Suppression.scope == models.SuppressionScope.TENANT.value,
                 ),
             )
         )

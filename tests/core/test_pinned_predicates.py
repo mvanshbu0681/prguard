@@ -402,10 +402,22 @@ def test_tenant_scope_spans_repositories() -> None:
     assert suppression.matches(finding=make_finding(repository_id="r-99"), rule=rule, now=NOW)
 
 
-@pytest.mark.parametrize("scope", ["line", "file", "pattern", "repo", "tenant"])
+def test_tenant_scope_spans_repositories_even_when_a_repository_is_recorded() -> None:
+    """§5.1/§6.6: ``tenant`` is the widest scope and is the one that must widen back out.
+
+    `POST /v1/findings/{id}/suppress` records `repository_id` on **every** row, so this is
+    not an exotic shape — it is the only shape the API can produce. Reading that column as an
+    unconditional narrowing made `scope="tenant"` unreachable past its first repository.
+    """
+    rule = make_rule(scope="tenant", repository_id="r-1")
+    assert suppression.matches(finding=make_finding(repository_id="r-2"), rule=rule, now=NOW)
+
+
+@pytest.mark.parametrize("scope", ["line", "file", "pattern", "repo"])
 def test_repository_scoped_rule_never_leaks_across_repositories(
     scope: SuppressionScope,
 ) -> None:
+    """Every scope narrower than ``tenant``; ``tenant`` is covered by the test above it."""
     rule = make_rule(
         scope=scope, repository_id="r-1", match_path="app/billing.py", fingerprint="8f14e45f" * 8
     )
