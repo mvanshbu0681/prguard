@@ -221,6 +221,97 @@ async def test_the_artifact_is_retained_for_a_disproven_finding(materialise_repo
 
 
 # ---------------------------------------------------------------------------------------
+# "There was no baseline" has two meanings and only one of them permits a proof
+# ---------------------------------------------------------------------------------------
+
+
+async def test_a_missing_base_tree_is_not_the_same_claim_as_a_new_file(
+    materialise_repo: Any,
+) -> None:
+    """The sharpest false-`proven` trap in the whole track, and it looks like plumbing.
+
+    §4.6 row 1 permits ``proven`` with no baseline **when the file is new at head** — there was
+    nothing to run. A workspace that simply has no base tree is a different statement: maybe
+    the tarball failed, maybe the caller forgot. Reading the second as the first would let any
+    failing repro prove a bug with no passing-to-failing evidence at all.
+
+    ``PROOF_REQUIRE_BASELINE`` is on here, so the honest answer is `inconclusive`.
+    """
+    request = make_request("proof_generator_billing_none_rate")
+    workspace = materialise_repo("buggy_calc", request, with_base=False)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RUNNER,
+        policy=ProofPolicy(timeout_seconds=TEST_TIMEOUT_SECONDS, require_baseline=True),
+        installer=NullInstaller(),
+    )
+
+    assert outcome.head is not None and outcome.head.exit_code == 1
+    assert outcome.base is None
+    assert outcome.status == "inconclusive"
+    assert outcome.status != "proven"
+
+
+async def test_a_file_that_is_new_at_head_has_no_baseline_to_compare(
+    materialise_repo: Any,
+) -> None:
+    """§4.6 row 1's parenthetical, stated explicitly by the caller rather than inferred."""
+    request = make_request("proof_generator_billing_none_rate")
+    workspace = materialise_repo("buggy_calc", request, with_base=False)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RUNNER,
+        policy=ProofPolicy(timeout_seconds=TEST_TIMEOUT_SECONDS, require_baseline=True),
+        installer=NullInstaller(),
+        base_applicable=False,
+    )
+
+    assert outcome.status == "proven"
+    assert outcome.baseline_mode == "not_applicable"
+
+
+async def test_require_baseline_false_is_the_documented_head_only_shortcut(
+    materialise_repo: Any,
+) -> None:
+    """§4.6: flipping it off halves demo latency and records ``baseline=skipped``."""
+    request = make_request("proof_generator_billing_none_rate")
+    workspace = materialise_repo("buggy_calc", request, with_base=False)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RUNNER,
+        policy=ProofPolicy(timeout_seconds=TEST_TIMEOUT_SECONDS, require_baseline=False),
+        installer=NullInstaller(),
+    )
+
+    assert outcome.status == "proven"
+    assert outcome.baseline_mode == "skipped"
+
+
+async def test_a_request_that_waives_the_baseline_is_honoured(materialise_repo: Any) -> None:
+    """The per-request flag and the config flag both have to want a baseline for one to run."""
+    request = make_request("proof_generator_billing_none_rate", require_baseline=False)
+    workspace = materialise_repo("buggy_calc", request)
+
+    outcome = await run_proof(
+        request=request,
+        workspace=workspace,
+        runner=RUNNER,
+        policy=ProofPolicy(timeout_seconds=TEST_TIMEOUT_SECONDS, require_baseline=True),
+        installer=NullInstaller(),
+    )
+
+    assert outcome.base is None
+    assert outcome.baseline_mode == "skipped"
+    assert outcome.status == "proven"
+
+
+# ---------------------------------------------------------------------------------------
 # The adversarial repro — T3's sharpest guard against a false `proven`
 # ---------------------------------------------------------------------------------------
 

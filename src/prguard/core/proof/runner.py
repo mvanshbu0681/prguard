@@ -595,6 +595,7 @@ async def run_proof(
     policy: ProofPolicy | None = None,
     installer: DependencyInstaller | None = None,
     secrets: Sequence[str] = (),
+    base_applicable: bool = True,
 ) -> ProofOutcome:
     """Execute one repro at base and at head and classify the pair. Never raises.
 
@@ -602,6 +603,14 @@ async def run_proof(
     proof never fails a run (§4.1). A repro is generated code running against a repository we
     did not write, so the interesting failures are the ones nobody predicted — hence the
     catch-all, which downgrades to ``inconclusive`` rather than propagating.
+
+    ``base_applicable=False`` is §4.6 row 1's parenthetical and **only** that: the finding's
+    file did not exist at base, so there was never a baseline to run. It is deliberately a
+    parameter rather than something inferred from ``workspace.base_tree``. "The file is new"
+    and "no base tree was materialised" look identical from in here and mean opposite things —
+    conflating them would let a workspace that simply failed to fetch base produce a ``proven``
+    finding with no passing-to-failing evidence behind it, which is the one bug in this
+    codebase that damages the product's claim.
 
     The order matters for latency, not for correctness: the head run is the one that decides
     whether there is anything to prove, but the baseline is what makes the claim mean
@@ -620,6 +629,7 @@ async def run_proof(
             policy=policy,
             installer=installer,
             secrets=secrets,
+            base_applicable=base_applicable,
         )
     except Exception as exc:  # noqa: BLE001 - S7 degrades on everything, by design
         return errored_outcome(runner, f"the proof runner failed: {type(exc).__name__}: {exc}")
@@ -633,19 +643,22 @@ async def _run_proof(
     policy: ProofPolicy | None,
     installer: DependencyInstaller | None,
     secrets: Sequence[str],
+    base_applicable: bool,
 ) -> ProofOutcome:
     settings = policy or ProofPolicy()
     started = time.monotonic()
     effective_installer = installer if installer is not None else NullInstaller()
-    base_applicable = workspace.base_tree is not None
-    want_baseline = settings.require_baseline and base_applicable
+    # Both the config knob and the per-request flag have to want a baseline for one to run;
+    # either of them saying "head only" is the §4.6 demo shortcut.
+    require_baseline = settings.require_baseline and request.require_baseline
+    base_tree = workspace.base_tree if require_baseline else None
 
     head_install = await _install(
         effective_installer, tree=workspace.head_tree, request=request
     )
     base_install = (
-        await _install(effective_installer, tree=workspace.base_tree, request=request)
-        if want_baseline and workspace.base_tree is not None
+        await _install(effective_installer, tree=base_tree, request=request)
+        if base_tree is not None
         else InstallResult(ok=True, performed=False, detail="baseline not run")
     )
 
@@ -653,17 +666,13 @@ async def _run_proof(
         runner, tree=workspace.head_tree, request=request, install=head_install, settings=settings,
         secrets=secrets,
     )
-    base = (
-        await _execute(
-            runner,
-            tree=workspace.base_tree,
-            request=request,
-            install=base_install,
-            settings=settings,
-            secrets=secrets,
-        )
-        if want_baseline and workspace.base_tree is not None
-        else None
+    base = await _execute(
+        runner,
+        tree=base_tree,
+        request=request,
+        install=base_install,
+        settings=settings,
+        secrets=secrets,
     )
 
     deps_ok = head_install.ok and base_install.ok
@@ -672,7 +681,7 @@ async def _run_proof(
         head,
         request.expected_failure_signal,
         deps_ok,
-        require_baseline=settings.require_baseline,
+        require_baseline=require_baseline,
         base_applicable=base_applicable,
     )
     detail = verdict.detail if deps_ok else f"{verdict.detail} ({head_install.detail})"
