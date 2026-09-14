@@ -142,13 +142,17 @@ def run_repro(repo: str, ref: str, test_file_path: str, test_code: str) -> tuple
         shutil.rmtree(tree, ignore_errors=True)
 
 
-def classify(base: str, head: str, signal_present: bool, deps_ok: bool) -> str:
+def classify(
+    base: str, head: str, signal_present: bool, deps_ok: bool, executed: bool = True
+) -> str:
     """The §4.6 table as a pure function — plan §8 Cluster B's invariant, restated here.
 
     Deliberately duplicated in the corpus rather than imported from ``src``: this script has to
     be able to say "the expectation table lies" even when T5's implementation is the thing that
     is wrong. There is exactly one path to ``proven``.
     """
+    if not executed:
+        return "not_attempted"
     if head in {"timeout", "error"}:
         return "inconclusive"
     if not deps_ok:
@@ -247,6 +251,7 @@ REQUIRED_FILES = [
 REQUIRED_REPOS = [
     "buggy_calc",
     "buggy_calc_disproven",
+    "buggy_calc_drift",
     "no_manifest",
     "bad_requirements",
     "slow_test",
@@ -396,21 +401,34 @@ def check_422_names_a_comment(report: Report) -> None:
 
 @check
 def check_patches_match_repo_trees(report: Report) -> None:
-    """The recorded PR-42 diff must describe the committed buggy_calc trees exactly."""
-    payload = load_json(GITHUB / "pr_42_files.json", report)
-    if payload is None:
-        return
-    files = payload.get("body") or []
-    report.require(bool(files), "pr_42_files.json: body must be a non-empty files array")
+    """Every recorded diff must describe the committed tree it claims to come from."""
+    checked = 0
+    for path in iter_json(GITHUB):
+        payload = load_json(path, report)
+        if payload is None or not payload.get("repo_fixture"):
+            continue
+        checked += 1
+        repo = payload["repo_fixture"]
+        files = payload.get("body") or []
+        report.require(bool(files), f"{rel(path)}: body must be a non-empty files array")
+        _check_patch_set(report, rel(path), repo, files)
+    report.require(
+        checked >= 2,
+        f"only {checked} recorded diffs are tied to a repo fixture; the PR-42 and force-push "
+        "files responses must both declare `repo_fixture` so their hunks stay verifiable",
+    )
+
+
+def _check_patch_set(report: Report, origin: str, repo: str, files: list[dict[str, Any]]) -> None:
     for entry in files:
         filename = entry.get("filename")
         patch = entry.get("patch")
         if not filename or not patch:
             continue
-        base_file = REPOS / "buggy_calc" / "base" / filename
-        head_file = REPOS / "buggy_calc" / "head" / filename
+        base_file = REPOS / repo / "base" / filename
+        head_file = REPOS / repo / "head" / filename
         if not head_file.is_file():
-            report.fail(f"pr_42_files.json: {filename} is not in repos/buggy_calc/head")
+            report.fail(f"{origin}: {filename} is not in repos/{repo}/head")
             continue
         base_lines = read_lines(base_file) if base_file.is_file() else []
         head_lines = read_lines(head_file)
@@ -419,14 +437,14 @@ def check_patches_match_repo_trees(report: Report) -> None:
                 actual = base_lines[number - 1] if 0 < number <= len(base_lines) else None
                 if actual != text:
                     report.fail(
-                        f"pr_42_files.json: {filename} hunk {hunk['header']} claims base line "
+                        f"{origin}: {filename} hunk {hunk['header']} claims base line "
                         f"{number} is {text!r} but the committed base tree has {actual!r}"
                     )
             for number, text in hunk["head_lines"]:
                 actual = head_lines[number - 1] if 0 < number <= len(head_lines) else None
                 if actual != text:
                     report.fail(
-                        f"pr_42_files.json: {filename} hunk {hunk['header']} claims head line "
+                        f"{origin}: {filename} hunk {hunk['header']} claims head line "
                         f"{number} is {text!r} but the committed head tree has {actual!r}"
                     )
 
@@ -735,7 +753,11 @@ def check_proof_matrix_is_self_consistent(report: Report) -> None:
     report.require(bool(cases), "proof_matrix.json: no cases")
     for case in cases:
         derived = classify(
-            case["base_outcome"], case["head_outcome"], case["signal_present"], case["deps_ok"]
+            case["base_outcome"],
+            case["head_outcome"],
+            case["signal_present"],
+            case["deps_ok"],
+            case.get("executed", True),
         )
         statuses.add(case.get("expected_proof_status"))
         if derived != case.get("expected_proof_status"):
@@ -889,9 +911,11 @@ def check_excluded_file_classes(report: Report) -> None:
             )
         if reason == "generated":
             head = target.read_text(encoding="utf-8", errors="replace").splitlines()[:5]
+            named = path.endswith("_pb2.py") or path.endswith(".min.js")
             report.require(
-                any("@generated" in ln or "Generated by" in ln for ln in head),
-                f"{path} is classified generated but carries no marker in its first 5 lines",
+                named or any("@generated" in ln or "Generated by" in ln for ln in head),
+                f"{path} is classified generated but matches no E9 signal: neither a "
+                "`*_pb2.py`/`*.min.js` name nor a marker in the first 5 lines",
             )
         if reason == "vendored":
             report.require(
@@ -951,13 +975,20 @@ def check_large_pr_fixture(report: Report) -> None:
 
 
 @check
-def check_no_generated_artifacts_committed(report: Report) -> None:
-    """The corpus is committed data. Nothing here may be a build artifact."""
-    for path in FIXTURES.rglob("*"):
-        if path.is_dir() and path.name in {"__pycache__", ".venv", ".pytest_cache"}:
-            report.fail(f"{rel(path)}: build artifact inside the corpus")
+def check_repo_trees_were_not_run_in_place(report: Report) -> None:
+    """The repo fixtures are committed data; they are copied into a workspace, never run here.
+
+    Scoped to ``repos/`` deliberately: pytest writes ``tests/fixtures/__pycache__`` the moment
+    it imports this package's conftest, and failing on that would be a lie.
+    """
+    for path in REPOS.rglob("*"):
+        if path.is_dir() and path.name in {"__pycache__", ".venv", ".pytest_cache", ".ruff_cache"}:
+            report.fail(
+                f"{rel(path)}: a fixture tree was run in place instead of in a materialised "
+                "copy. Delete it (it is gitignored) and use loader.repo_tree() + a temp dir."
+            )
         if path.is_file() and path.suffix in {".pyc", ".pyo"}:
-            report.fail(f"{rel(path)}: compiled artifact inside the corpus")
+            report.fail(f"{rel(path)}: compiled artifact inside a fixture tree; delete it")
 
 
 # --------------------------------------------------------------------------------------

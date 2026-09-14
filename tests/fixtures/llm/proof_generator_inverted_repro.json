@@ -1,0 +1,20 @@
+{
+  "name": "proof_generator_inverted_repro",
+  "kind": "proof_repro",
+  "valid": true,
+  "model": "claude-opus-5",
+  "prompt_key": "proof_generator:buggy_calc:inverted",
+  "notes": "The adversarial case, and the reason classify() must be a table and not a pile of ifs: this repro FAILS at base and PASSES at head \u2014 the exact inverse of the proven row. \u00a74.6's table does not list (base=fail, head=pass), so it resolves to `inconclusive`. Any implementation that reports `proven` here is the bug that kills the product claim.",
+  "response_text": "{\n  \"test_file_path\": \".prguard_proof/test_null_deref_inverted.py\",\n  \"test_code\": \"import unittest\\n\\nfrom app.billing import apply_discount\\n\\n\\nclass TestApplyDiscountRaises(unittest.TestCase):\\n    \\\"\\\"\\\"Asserts the bug instead of the contract \u2014 the wrong shape of repro.\\\"\\\"\\\"\\n\\n    def test_missing_rate_raises(self):\\n        with self.assertRaises(TypeError):\\n            apply_discount(100.0, None)\\n\\n\\nif __name__ == \\\"__main__\\\":\\n    unittest.main()\\n\",\n  \"expected_failure_signal\": \"TypeError\",\n  \"extra_requirements\": [],\n  \"explanation\": \"Asserts that the buggy behaviour occurs.\"\n}",
+  "parsed": {
+    "test_file_path": ".prguard_proof/test_null_deref_inverted.py",
+    "test_code": "import unittest\n\nfrom app.billing import apply_discount\n\n\nclass TestApplyDiscountRaises(unittest.TestCase):\n    \"\"\"Asserts the bug instead of the contract \u2014 the wrong shape of repro.\"\"\"\n\n    def test_missing_rate_raises(self):\n        with self.assertRaises(TypeError):\n            apply_discount(100.0, None)\n\n\nif __name__ == \"__main__\":\n    unittest.main()\n",
+    "expected_failure_signal": "TypeError",
+    "extra_requirements": [],
+    "explanation": "Asserts that the buggy behaviour occurs."
+  },
+  "context": {
+    "repo_fixture": "buggy_calc",
+    "ref": "head"
+  }
+}

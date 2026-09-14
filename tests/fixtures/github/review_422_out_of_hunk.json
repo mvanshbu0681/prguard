@@ -1,0 +1,32 @@
+{
+  "name": "review_422_out_of_hunk",
+  "notes": "The E2/AC-18 case: GitHub rejects the whole batched review because one comment's line is not part of the diff — here the anchor line 91 chosen for the `f-nearest-boundary` finding, whose hunk map was built from a diff fetched before the branch moved. `errors[]` names the offending comment by path and line, which is what lets T6 demote exactly that one comment a rung, retry the whole review once, and re-assert the conservation invariant afterwards.",
+  "request": {
+    "method": "POST",
+    "path": "/repos/octocat/hello-world/pulls/42/reviews",
+    "headers": {"accept": "application/vnd.github+json"}
+  },
+  "status": 422,
+  "headers": {
+    "content-type": "application/json; charset=utf-8",
+    "x-ratelimit-limit": "5000",
+    "x-ratelimit-remaining": "4978",
+    "x-ratelimit-reset": "1789171200"
+  },
+  "body": {
+    "message": "Validation Failed",
+    "errors": [
+      {
+        "resource": "PullRequestReviewComment",
+        "code": "custom",
+        "field": "line",
+        "path": "app/checkout.py",
+        "line": 91,
+        "side": "RIGHT",
+        "message": "line must be part of the diff"
+      }
+    ],
+    "documentation_url": "https://docs.github.com/rest/pulls/reviews#create-a-review-for-a-pull-request",
+    "status": "422"
+  }
+}
