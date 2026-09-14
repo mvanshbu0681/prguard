@@ -12,8 +12,9 @@ removing the row, because a ledger you can silently edit is not audit evidence. 
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
-from fnmatch import fnmatchcase
+from functools import lru_cache
 
 from prguard.core.types import CanonicalFinding, SuppressionRule
 
@@ -49,35 +50,84 @@ def matches(*, finding: CanonicalFinding, rule: SuppressionRule, now: datetime) 
 
 
 def _scope_matches(*, finding: CanonicalFinding, rule: SuppressionRule) -> bool:
-    """Path/identity part of the scope matrix (spec §5.1 ``scope``).
+    """Path/identity part of the scope matrix (spec §5.1 ``scope``, AC-9).
 
-    T2 ships this first cut; **T4 completes the matrix** for AC-9
-    (``tests/core/test_suppression.py::test_scope_matrix``). Tenant and repository narrowing
-    has already been applied by :func:`matches` before this is called.
+    Tenant and repository narrowing has already been applied by :func:`matches`; what is left
+    is how wide the human meant the rule to be. Every branch **fails closed** — a ledger row
+    that is missing the field its scope depends on suppresses nothing, because the alternative
+    is a half-written row silencing a whole repository.
 
-    * ``tenant`` / ``repo`` — no further narrowing; the ledger row's own ``repository_id``
-      already bounded it.
-    * ``file`` — exact path equality.
-    * ``pattern`` — glob against ``match_path``; a pattern rule with no path matches nothing.
-    * ``line`` — the identity scope: the fingerprint pins the symbol (fingerprints carry no
-      line numbers, §4.5), and ``match_path`` pins the file when present.
+    * ``tenant`` — the whole tenant. The widest rule we offer, and the only one that needs no
+      further narrowing at all.
+    * ``repo`` — one repository; the row must actually name one.
+    * ``file`` — exact path equality; the row must carry a path.
+    * ``pattern`` — a path-aware glob (see :func:`_path_matches`), never the bare ``fnmatch``
+      whose ``*`` happily crosses directory separators.
+    * ``line`` — the narrowest scope, and an *identity* rather than a location: fingerprints
+      carry no line numbers (§4.5), so what pins it is the fingerprint, optionally narrowed to
+      one path. Without a fingerprint a ``line`` rule would silently widen to a whole file,
+      which is a different decision than the one the human made.
     """
-    if rule.scope in ("tenant", "repo"):
+    if rule.scope == "tenant":
         return True
+    if rule.scope == "repo":
+        return rule.repository_id is not None
     if rule.scope == "pattern":
         if rule.match_path is None:
             return False
         return _path_matches(pattern=rule.match_path, path=finding.file_path)
-    if rule.scope in ("file", "line"):
-        if rule.match_path is None:
-            return rule.scope == "line" and rule.fingerprint is not None
-        return rule.match_path == finding.file_path
+    if rule.scope == "file":
+        return rule.match_path is not None and rule.match_path == finding.file_path
+    if rule.scope == "line":
+        if rule.fingerprint is None:
+            return False
+        return rule.match_path is None or rule.match_path == finding.file_path
     return False
 
 
 def _path_matches(*, pattern: str, path: str) -> bool:
-    """Glob a POSIX repo path. ``cli/**`` matches ``cli/main.py`` and ``cli/cmd/run.py``."""
-    return fnmatchcase(path, pattern) or fnmatchcase(path, pattern.replace("**", "*"))
+    """Glob a POSIX repo path, with ``*`` bounded by directory separators.
+
+    ``cli/**`` matches ``cli/main.py`` and ``cli/cmd/run.py``; ``app/*.py`` matches
+    ``app/billing.py`` but **not** ``app/api/routes.py``. That distinction is the whole reason
+    this is not ``fnmatch``: ``fnmatch``'s ``*`` crosses ``/``, so ``app/*.py`` would quietly
+    suppress every Python file in every subdirectory — findings a human never agreed to lose.
+    """
+    return _compile(pattern).match(path) is not None
+
+
+@lru_cache(maxsize=512)
+def _compile(pattern: str) -> re.Pattern[str]:
+    """Translate a repo-path glob to a regex. Cached: a ledger re-matches the same few rules."""
+    out: list[str] = []
+    index = 0
+    while index < len(pattern):
+        char = pattern[index]
+        if pattern.startswith("**/", index):
+            out.append("(?:[^/]+/)*")
+            index += 3
+        elif pattern.startswith("**", index):
+            out.append(".*")
+            index += 2
+        elif char == "*":
+            out.append("[^/]*")
+            index += 1
+        elif char == "?":
+            out.append("[^/]")
+            index += 1
+        elif char == "[":
+            closing = pattern.find("]", index + 1)
+            if closing == -1:
+                out.append(re.escape(char))
+                index += 1
+            else:
+                body = pattern[index + 1 : closing].replace("\\", "\\\\")
+                out.append(f"[{'^' + body[1:] if body.startswith('!') else body}]")
+                index = closing + 1
+        else:
+            out.append(re.escape(char))
+            index += 1
+    return re.compile(f"(?s:{''.join(out)})\\Z")
 
 
 def _as_utc(moment: datetime) -> datetime:
