@@ -55,7 +55,13 @@ async def list_audit_events(
     found = list((await session.execute(statement.limit(limit + 1))).scalars().all())
     has_more = len(found) > limit
     events = found[:limit]
-    chain = audit.verify_chain(events)
+    # An unfiltered page is a contiguous slice of one tenant's chain (`cursor` and `limit`
+    # only choose where it starts and stops), so a gap in `seq` is a deleted row rather
+    # than a filtered-out one, and the verifier is told it may say so.
+    unfiltered = all(
+        criterion is None for criterion in (review_id, finding_id, event_type, actor_type, since)
+    )
+    chain = audit.verify_chain(events, contiguous=unfiltered)
 
     return AuditList(
         items=[_audit_item(event) for event in events],

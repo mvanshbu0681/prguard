@@ -102,20 +102,30 @@ def event_hash_of(event: AuditEvent) -> str:
     )
 
 
-def verify_chain(events: Sequence[AuditEvent]) -> ChainVerification:
+def verify_chain(events: Sequence[AuditEvent], *, contiguous: bool = False) -> ChainVerification:
     """Recompute every hash in `events`, and the linkage of every adjacent pair.
 
     `events` is whatever the caller is serving — `GET /v1/audit` filters, so the page is
     not always contiguous. Linkage is therefore only asserted between rows that really are
     neighbours in the chain (`seq` + 1, same tenant); the per-row hash is always checked,
     and that alone catches a mutated payload, actor or timestamp.
+
+    `contiguous=True` says the caller is serving an *unfiltered* window of one tenant's
+    chain, where `seq` runs without gaps by construction. A missing `seq` is then not a
+    filtered-out row but a **deleted** one — excising the `proof.executed` event is exactly
+    the tamper an auditor looks for, and it leaves every surviving hash intact. Callers
+    that filter must leave this off: there, a gap is the filter doing its job.
     """
     broken_at: int | None = None
     previous: AuditEvent | None = None
     for event in events:
         intact = event.event_hash == event_hash_of(event)
-        if intact and previous is not None and _are_neighbours(previous, event):
-            intact = event.prev_hash == previous.event_hash
+        if intact and previous is not None:
+            if _are_neighbours(previous, event):
+                intact = event.prev_hash == previous.event_hash
+            elif contiguous:
+                # Nothing was filtered out, so the row that held this `seq` is gone.
+                intact = False
         if not intact:
             broken_at = event.seq
             break

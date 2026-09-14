@@ -324,6 +324,39 @@ async def test_tampering_is_detected(
     assert len(body["items"]) == 3
 
 
+async def test_a_filtered_page_with_gaps_still_verifies(
+    client: AsyncClient,
+    session: AsyncSession,
+    rows: RowFactory,
+    default_tenant: models.Tenant,
+    pull_request: models.PullRequest,
+) -> None:
+    """The deletion check must not misread the filter doing its job.
+
+    A filtered page is meant to skip `seq` values, so only an *unfiltered* listing may
+    read a gap as an excised row.
+    """
+    run = await rows.review_run(default_tenant, pull_request)
+    finding = await rows.finding(default_tenant, run)
+    await _seed_chain(session, default_tenant, run, finding)
+    # seq 3 (`gate.evaluated`) carries no finding, so filtering on one leaves a hole at 3.
+    await audit.append(
+        session,
+        tenant_id=default_tenant.id,
+        event_type=AuditEventType.FINDING_SUPPRESSED,
+        actor_type=ActorType.HUMAN,
+        review_run_id=run.id,
+        finding_id=finding.id,
+    )
+
+    filtered = await client.get("/v1/audit", params={"finding_id": finding.id})
+
+    body = filtered.json()
+    assert [item["seq"] for item in body["items"]] == [1, 2, 4]
+    assert body["chain"]["verified"] is True
+    assert body["chain"]["broken_at_seq"] is None
+
+
 async def test_audit_filters_by_review_finding_type_and_actor(
     client: AsyncClient,
     session: AsyncSession,
