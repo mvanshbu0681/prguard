@@ -114,6 +114,19 @@ def test_every_reviewer_is_negative_prompted(name: str) -> None:
     assert "Calibration" in agent
 
 
+def test_each_prompt_carries_a_unique_routing_marker() -> None:
+    """The offline fixture corpus is addressed by content (§9.1), and these headings are the key.
+
+    ``FakeLLMClient`` matches the longest marker appearing in the prompt, so a heading that leaked
+    into a second file would silently route one reviewer's fixture to another.
+    """
+    files = (*SPECIALIST_NAMES, "coordinator", "SHARED")
+    for name in SPECIALIST_NAMES:
+        marker = f"# Reviewer: {name}"
+        assert [other for other in files if marker in load_prompt(other)] == [name]
+    assert [other for other in files if "# Coordinator" in load_prompt(other)] == ["coordinator"]
+
+
 def test_a_missing_prompt_file_fails_at_wiring_time_not_mid_review() -> None:
     """Four "model failures" and a LLM_UNAVAILABLE run would be a lie about a missing file."""
     with pytest.raises(PromptNotFoundError):
