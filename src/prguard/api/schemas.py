@@ -35,8 +35,14 @@ STAGE_TOTAL = 9
 
 
 def _iso_z(value: datetime) -> str:
-    """The spec renders timestamps as `2026-09-14T23:41:07Z`, not `+00:00`."""
-    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
+    """The spec renders timestamps as `2026-09-14T23:41:07Z`, not `+00:00`.
+
+    Naive input is read as UTC rather than as local time: SQLite stores no timezone, so a
+    timestamp written as aware UTC comes back naive (see `db.base.as_utc`), and
+    `astimezone` on a naive value would silently shift it by the host's offset.
+    """
+    aware = value.replace(tzinfo=UTC) if value.tzinfo is None else value
+    return aware.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
 UtcDatetime = Annotated[datetime, PlainSerializer(_iso_z, return_type=str, when_used="json")]
