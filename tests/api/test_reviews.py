@@ -301,13 +301,22 @@ async def test_result_assembles_the_full_section_6_3_document(
     assert body["pull_request"]["head_sha"] == pull_request.head_sha
     assert body["risk_tier"] == "full"
     assert body["gate"]["conclusion"] == "failure"
+    assert body["gate"]["reason"] == (
+        "1 finding carries a repro test that passes at base and fails at head."
+    )
     assert body["gate"]["delivery"] == "commit_status"
     assert body["gate"]["context_name"] == "prguard/merge-gate"
     assert body["gate"]["blocking_finding_ids"] == [blocking.id]
     assert body["delivery"]["status"] == "posted"
     assert body["delivery"]["event"] == "COMMENT"
     assert body["delivery"]["github_review_id"] == 2938475
-    assert body["delivery"]["ladder_breakdown"]["inline_exact"] == 1
+    assert body["delivery"]["comments_posted"] == 1
+    assert body["delivery"]["ladder_breakdown"] == {
+        "inline_exact": 1,
+        "inline_nearest": 0,
+        "file_level": 0,
+        "summary_only": 0,
+    }
     assert body["counts"] == {
         "proposed": 0,
         "published": 1,
