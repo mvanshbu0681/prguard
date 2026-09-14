@@ -16,6 +16,7 @@ Exit code 0 = corpus intact, 1 = corpus broken.
 from __future__ import annotations
 
 import ast
+import base64
 import json
 import os
 import shutil
@@ -266,9 +267,15 @@ REQUIRED_GITHUB = [
     "pr_42.diff",
     "pr_42_commits.json",
     "file_contents_billing.json",
+    "file_contents_checkout.json",
+    "file_contents_404.json",
     "review_created.json",
     "review_422_out_of_hunk.json",
     "review_403_forbidden.json",
+    "check_run_403_app_only.json",
+    "commit_status_created.json",
+    "pr_detail_closed.json",
+    "pr_404_not_found.json",
     "rate_limit_403.json",
     "pr_review_comments_existing.json",
     "pr_detail_force_push.json",
@@ -407,11 +414,12 @@ def check_patches_match_repo_trees(report: Report) -> None:
         payload = load_json(path, report)
         if payload is None or not payload.get("repo_fixture"):
             continue
+        body = payload.get("body")
+        if not isinstance(body, list):
+            continue  # single-file responses are covered by check_file_contents_match_tree
         checked += 1
-        repo = payload["repo_fixture"]
-        files = payload.get("body") or []
-        report.require(bool(files), f"{rel(path)}: body must be a non-empty files array")
-        _check_patch_set(report, rel(path), repo, files)
+        report.require(bool(body), f"{rel(path)}: body must be a non-empty files array")
+        _check_patch_set(report, rel(path), payload["repo_fixture"], body)
     report.require(
         checked >= 2,
         f"only {checked} recorded diffs are tied to a repo fixture; the PR-42 and force-push "
@@ -469,6 +477,43 @@ def check_unified_diff_matches_files_api(report: Report) -> None:
                 f"pr_42.diff: hunk {hunk_header!r} for {filename} is in the files API fixture "
                 "but missing from the unified diff",
             )
+
+
+@check
+def check_file_contents_match_tree(report: Report) -> None:
+    """A recorded contents response must decode to the committed file, byte for byte."""
+    checked = 0
+    for path in iter_json(GITHUB):
+        payload = load_json(path, report)
+        if payload is None or not isinstance(payload.get("body"), dict):
+            continue
+        body = payload["body"]
+        if body.get("encoding") != "base64":
+            continue
+        repo, ref = payload.get("repo_fixture"), payload.get("ref")
+        if not report.require(
+            bool(repo) and bool(ref),
+            f"{rel(path)}: a base64 contents fixture must declare repo_fixture and ref",
+        ):
+            continue
+        target = REPOS / str(repo) / str(ref) / str(body.get("path"))
+        if not report.require(
+            target.is_file(), f"{rel(path)}: no committed file at {repo}/{ref}/{body.get('path')}"
+        ):
+            continue
+        decoded = base64.b64decode(body.get("content", ""))
+        expected = target.read_bytes()
+        checked += 1
+        if decoded != expected:
+            report.fail(
+                f"{rel(path)}: base64 content decodes to {len(decoded)} bytes that differ from "
+                f"the committed {repo}/{ref}/{body.get('path')} ({len(expected)} bytes)"
+            )
+        if body.get("size") != len(expected):
+            report.fail(
+                f"{rel(path)}: recorded size {body.get('size')} != actual {len(expected)}"
+            )
+    report.require(checked >= 1, "no recorded file-contents response is tied to a committed file")
 
 
 @check

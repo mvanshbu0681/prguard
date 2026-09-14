@@ -1,6 +1,8 @@
 {
   "name": "file_contents_billing",
-  "notes": "GET /repos/{o}/{r}/contents/app/billing.py?ref=<head> \u2014 base64 of the committed head tree, so decoding it must yield repos/buggy_calc/head/app/billing.py byte for byte (verify_corpus.py checks exactly that).",
+  "notes": "GET /repos/{o}/{r}/contents/app/billing.py?ref=<head>. base64 of the committed head tree \u2014 decoding it must yield repos/buggy_calc/head/app/billing.py byte for byte, which verify_corpus.py checks.",
+  "repo_fixture": "buggy_calc",
+  "ref": "head",
   "request": {
     "method": "GET",
     "path": "/repos/octocat/hello-world/contents/app/billing.py",
@@ -15,7 +17,7 @@
   "headers": {
     "content-type": "application/json; charset=utf-8",
     "x-ratelimit-limit": "5000",
-    "x-ratelimit-remaining": "4989",
+    "x-ratelimit-remaining": "4988",
     "x-ratelimit-reset": "1789171200"
   },
   "body": {
