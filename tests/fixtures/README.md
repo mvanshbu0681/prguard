@@ -11,10 +11,14 @@ python3 tests/fixtures/verify_corpus.py
 ```
 
 Stdlib only, no pytest, no `src` import, exit 0 or 1. It is a real self-check: it runs the
-seeded bug at base and head, re-derives every proof expectation from the §4.6 table,
-recomputes every ladder rung from the recorded diff, and proves each recorded hunk's line
-numbers against the committed trees. If you edit a fixture and it stops agreeing with the
-rest of the corpus, this tells you — loudly.
+seeded bug at base and head, executes four generated repros and re-derives their
+`proof_status` from the §4.6 table, recomputes every ladder rung from the recorded diff,
+proves each recorded hunk's line numbers against the committed trees, and decodes every
+recorded file body back to the file it claims to be. If you edit a fixture and it stops
+agreeing with the rest of the corpus, this tells you — loudly.
+
+`tests/fixtures/test_corpus_integrity.py` runs the same script from `pytest`, so a broken
+fixture fails your own test run rather than surfacing at integration.
 
 ## Layout
 
@@ -27,6 +31,39 @@ rest of the corpus, this tells you — loudly.
 | `llm/*.json` | Recorded model responses for the `fake` provider, valid and invalid. |
 | `expectations/*.json` | What the corpus asserts about itself: the proof matrix, the ladder rungs, the context and exclusion sets. |
 | `loader.py` | Typed stdlib accessors. Read fixtures through these rather than rebuilding paths. |
+
+Read fixtures through `loader.py`:
+
+```python
+from tests.fixtures.loader import github_response, llm_fixture, repo_tree
+
+recorded = github_response("pr_42_files")
+respx_mock.get(recorded.url).mock(
+    return_value=httpx.Response(recorded.status, headers=recorded.headers, json=recorded.body)
+)
+```
+
+## Recorded GitHub responses
+
+| Fixture | Shape | Drives |
+|---|---|---|
+| `pr_detail` | 200 PR detail, head/base SHAs every other fixture uses | S1 ingest |
+| `pr_42_files` · `pr_42.diff` | The diff, generated from the committed trees | S2, the ladder |
+| `pr_42_commits` | 14 commits in 90 days ⇒ churn 0.7 | §4.4 churn input |
+| `file_contents_billing` · `file_contents_checkout` | base64 of the committed head files | S2 on-demand fetch |
+| `file_contents_404` | 404 for a file that does not exist | S2 degradation (§8.1) |
+| `review_created` | 200, `event: COMMENT` | AC-14, AC-17 |
+| `review_422_out_of_hunk` | 422 naming the offending comment | E2 / AC-18 |
+| `review_403_forbidden` | 403 without a rate-limit header | E17 / AC-24 |
+| `rate_limit_403` | 403 with `x-ratelimit-remaining: 0` and a reset inside the wait budget | E27 |
+| `check_run_403_app_only` | Check Runs rejects a PAT — expected, not an error | E18, gate rung 1 |
+| `commit_status_created` | 201 commit status, `prguard/merge-gate` | Gate rung 2 |
+| `pr_review_comments_existing` | The comments run 1 posted, with fingerprint markers | E3 / AC-7 |
+| `pr_detail_force_push` · `pr_files_force_push` | The PR at head 2, bug 40 lines lower | E3, AC-6, AC-7 |
+| `pr_detail_closed` | Merged mid-run | E19 |
+| `pr_404_not_found` | Private repo or missing PR — indistinguishable by design | E16 |
+| `pr_large_files` | 47 files, 20 384 changed lines, one with no `patch` | E5/E6, AC-26 |
+| `pr_detail_prompt_injection` · `pr_files_prompt_injection` | Hostile title, body, diff, filenames | E15 / AC-25 |
 
 ## Repo fixtures
 
