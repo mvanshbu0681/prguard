@@ -5,11 +5,14 @@ transcribed default, so the tests below assert the defaults literally.
 """
 
 import json
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from prguard.config import DEFAULT_SEVERITY_WEIGHTS, Settings, get_settings
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_weights_must_sum_to_one() -> None:
@@ -91,6 +94,23 @@ def test_get_settings_is_cached() -> None:
     get_settings.cache_clear()
     assert get_settings() is get_settings()
     get_settings.cache_clear()
+
+
+def test_env_example_lists_only_real_settings_and_parses() -> None:
+    """`.env.example` is the operator-facing copy of §4.8; it must not drift."""
+    text = (REPO_ROOT / ".env.example").read_text(encoding="utf-8")
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, _, value = stripped.partition("=")
+        values[key] = value
+
+    unknown = sorted(set(values) - set(Settings.model_fields))
+    assert unknown == [], f".env.example names settings that do not exist: {unknown}"
+    # Every documented default must survive validation.
+    assert Settings(**values).SEVERITY_WEIGHTS == DEFAULT_SEVERITY_WEIGHTS
 
 
 def test_database_url_dialect_helpers() -> None:
