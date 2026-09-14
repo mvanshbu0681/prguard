@@ -24,6 +24,7 @@ and instantly, which is what keeps VERIFY under §9.4's time budget.
 from __future__ import annotations
 
 import asyncio
+import base64
 import random
 from collections.abc import Awaitable, Callable
 from email.utils import parsedate_to_datetime
@@ -195,6 +196,22 @@ class GitHubClient:
         payload = await self._request("GET", f"/repos/{owner}/{repo}/pulls/{number}/files")
         body = payload.json()
         return list(body) if isinstance(body, list) else []
+
+    async def get_file_contents(self, owner: str, repo: str, path: str, *, ref: str) -> str:
+        """``GET /repos/{o}/{r}/contents/{path}?ref=`` — S2's on-demand fetch (§4.1).
+
+        Returns the decoded text. A 404 is a real answer here (the file is new at head, or the
+        path was renamed) and arrives as :class:`GitHubNotFoundError` for S2 to degrade on;
+        anything that is not a base64 text blob — a directory listing, a submodule — comes back
+        as the empty string rather than as a lie about the file's contents.
+        """
+        body = await self._json(
+            "GET", f"/repos/{owner}/{repo}/contents/{path}", params={"ref": ref}
+        )
+        if body.get("encoding") != "base64":
+            return str(body.get("content") or "")
+        raw = base64.b64decode(str(body.get("content") or ""))
+        return raw.decode("utf-8", errors="replace")
 
     async def list_review_comments(
         self, owner: str, repo: str, number: int

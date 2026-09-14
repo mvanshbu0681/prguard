@@ -78,6 +78,10 @@ class DeliveryStatus(StrEnum):
     POSTED = "posted"
     DEGRADED = "degraded"
     DRY_RUN = "dry_run"
+    #: §7 E19 — the pull request closed or merged mid-run, so nothing was posted. Seventeen
+    #: characters, which is why `delivery_status` is `String(24)` and not §5.1's 16
+    #: (migration 0002).
+    SKIPPED_PR_CLOSED = "skipped_pr_closed"
 
 
 class Category(StrEnum):
@@ -345,7 +349,7 @@ class ReviewRun(Base):
     findings_blocking: Mapped[int] = mapped_column(sa.Integer(), nullable=False, default=0)
     gate_conclusion: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)
     gate_delivery: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)
-    delivery_status: Mapped[str | None] = mapped_column(sa.String(16), nullable=True)
+    delivery_status: Mapped[str | None] = mapped_column(sa.String(24), nullable=True)
     github_review_id: Mapped[int | None] = mapped_column(sa.BigInteger(), nullable=True)
     # The exact payload we posted, or would have posted.
     review_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONType, nullable=True)

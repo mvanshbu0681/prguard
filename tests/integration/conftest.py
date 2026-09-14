@@ -1,0 +1,214 @@
+"""Integration fixtures — the whole pipeline, wired to the offline corpus.
+
+Root `tests/conftest.py` is frozen (plan §9.3 rule 2), so everything wave 3 needs lives here.
+Nothing below reaches the network or the Docker daemon: GitHub is `respx` replaying T3's
+recorded responses, the model is `FakeLLMClient` reading T3's recorded completions, and the
+sandbox is the subprocess runner over a committed fixture repo (§9.1, X7).
+"""
+
+from __future__ import annotations
+
+import base64
+from collections.abc import Iterator, Mapping, Sequence
+from pathlib import Path
+from typing import Any
+
+import httpx
+import pytest
+import respx
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from prguard.config import Settings
+from prguard.core.delivery.github_client import GitHubClient
+from prguard.core.pipeline import Pipeline, PipelineDeps
+from prguard.core.proof.deps import NullInstaller
+from prguard.core.proof.runner import SandboxSelection
+from prguard.core.proof.subprocess_runner import SubprocessRunner
+from prguard.core.proof.workspace import LocalPathSource
+from prguard.llm.client import FakeLLMClient
+from tests.fixtures.loader import github_response, llm_fixture, repo_tree
+
+OWNER = "octocat"
+REPO = "hello-world"
+PR_NUMBER = 42
+API_BASE = "https://api.github.com"
+HEAD_SHA = "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d"
+BASE_SHA = "1f0b2c3d4e5f60718293a4b5c6d7e8f901234567"
+#: The head SHA of the force-pushed revision (`pr_detail_force_push`).
+FORCE_PUSH_SHA = "3c5e7a9b1d3f5a7c9e1b3d5f7a9c1e3b5d7f9a1c"
+
+PR_URL = f"https://github.com/{OWNER}/{REPO}/pull/{PR_NUMBER}"
+
+#: Nothing here waits on a real clock: §9.4 budgets the whole suite at 120 s.
+TEST_PROOF_TIMEOUT_SECONDS = 30
+
+#: T8's prompt markers → T3's recorded completions. Each prompt carries exactly one of them,
+#: so four specialists running under `asyncio.gather` still resolve deterministically.
+FIXTURE_ROUTES: dict[str, str] = {
+    "Reviewer: bugs": "specialist_bugs_valid",
+    "Reviewer: security": "specialist_bugs_empty",
+    "Reviewer: tests": "specialist_tests_hallucinated_path",
+    "Reviewer: quality": "specialist_bugs_empty",
+    "Coordinator": "coordinator_valid",
+    "proof_generator:": "proof_generator_billing_none_rate",
+}
+
+
+def recorded(name: str) -> httpx.Response:
+    """Replay a recorded GitHub response as an httpx response, headers and all."""
+    fixture = github_response(name)
+    return httpx.Response(fixture.status, headers=fixture.headers, json=fixture.body)
+
+
+def contents_response(tree: str, path: str, ref: str = "head") -> httpx.Response:
+    """A `GET /contents/{path}` body built from a committed fixture tree.
+
+    The corpus records `app/billing.py` and `app/checkout.py` at head 1 only; the force-push
+    revision has no recorded body, so it is assembled here from `repos/buggy_calc_drift`,
+    which is the same committed data the recorded one was generated from.
+    """
+    raw = (repo_tree(tree, ref) / path).read_bytes()
+    return httpx.Response(
+        200,
+        json={
+            "name": path.rsplit("/", 1)[-1],
+            "path": path,
+            "sha": "0" * 40,
+            "size": len(raw),
+            "type": "file",
+            "encoding": "base64",
+            "content": base64.b64encode(raw).decode("ascii"),
+        },
+    )
+
+
+def recorded_routes() -> dict[str, str]:
+    """Each marker mapped to the raw text the provider returned, replayed verbatim.
+
+    `response_text` rather than the fixture file: a recorded malformed response has to arrive
+    malformed, and the file around it is our bookkeeping, not the model's answer.
+    """
+    return {marker: llm_fixture(name).response_text for marker, name in FIXTURE_ROUTES.items()}
+
+
+def fake_llm(overrides: Mapping[str, str] | None = None) -> FakeLLMClient:
+    """T3's recorded completions, addressed by T8's prompt markers."""
+    routes: dict[str, str] = recorded_routes()
+    routes.update(overrides or {})
+    return FakeLLMClient(routes=routes)
+
+
+def local_workspace_source(name: str = "buggy_calc") -> LocalPathSource:
+    """A workspace source that answers the run's real SHAs from a committed tree."""
+    return LocalPathSource(
+        trees={
+            HEAD_SHA: repo_tree(name, "head"),
+            BASE_SHA: repo_tree(name, "base"),
+            FORCE_PUSH_SHA: repo_tree(name, "head"),
+        }
+    )
+
+
+def make_settings(settings: Settings, **overrides: Any) -> Settings:
+    """A re-validated variant of the test settings — a bad override fails loudly."""
+    return Settings(**{**settings.model_dump(), **overrides})
+
+
+def make_pipeline(
+    *,
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+    llm: FakeLLMClient | None = None,
+    github: GitHubClient | None = None,
+    workspace_source: Any | None = None,
+    sandbox: SandboxSelection | None = None,
+    **deps: Any,
+) -> Pipeline:
+    """The real pipeline, with every outside edge pointed at the offline corpus."""
+    return Pipeline(
+        settings=settings,
+        session_factory=session_factory,
+        deps=PipelineDeps(
+            llm_client=llm if llm is not None else fake_llm(),
+            github_client=github if github is not None else make_github_client(),
+            workspace_source=(
+                workspace_source if workspace_source is not None else local_workspace_source()
+            ),
+            sandbox=sandbox
+            if sandbox is not None
+            else SandboxSelection(
+                runner=SubprocessRunner(timeout_seconds=TEST_PROOF_TIMEOUT_SECONDS),
+                degradations=("sandbox_degraded",),
+                reason="docker unavailable; running locally with rlimits (isolation=degraded)",
+            ),
+            # The fixture repos carry a manifest; installing it would need the network, which
+            # E8/E10 already cover in the proof suite.
+            installer=NullInstaller(),
+            **deps,
+        ),
+    )
+
+
+def make_github_client(**kwargs: Any) -> GitHubClient:
+    """A client whose clock is fake — no integration test ever really sleeps."""
+
+    async def _no_sleep(seconds: float) -> None:
+        return None
+
+    return GitHubClient(
+        token="ghp_test_token",
+        base_url=API_BASE,
+        sleep=_no_sleep,
+        jitter=lambda: 0.0,
+        **kwargs,
+    )
+
+
+def mock_pull_request(
+    router: respx.Router,
+    *,
+    detail: str = "pr_detail",
+    files: str = "pr_42_files",
+    tree: str = "buggy_calc",
+    ref: str = "head",
+    contents: Sequence[str] = ("app/billing.py", "app/checkout.py"),
+) -> None:
+    """Register the S1/S2 reads for one revision of the fixture PR."""
+    router.get(f"/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}").mock(return_value=recorded(detail))
+    router.get(f"/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/files").mock(
+        return_value=recorded(files)
+    )
+    for path in contents:
+        router.get(f"/repos/{OWNER}/{REPO}/contents/{path}").mock(
+            return_value=contents_response(tree, path, ref)
+        )
+
+
+def mock_delivery(router: respx.Router) -> dict[str, respx.Route]:
+    """Register the S8 writes: existing comments, the one review, and the gate ladder."""
+    return {
+        "comments": router.get(f"/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/comments").mock(
+            return_value=httpx.Response(200, json=[])
+        ),
+        "review": router.post(f"/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/reviews").mock(
+            return_value=recorded("review_created")
+        ),
+        "check_run": router.post(f"/repos/{OWNER}/{REPO}/check-runs").mock(
+            return_value=recorded("check_run_403_app_only")
+        ),
+        "status": router.post(f"/repos/{OWNER}/{REPO}/statuses/{HEAD_SHA}").mock(
+            return_value=recorded("commit_status_created")
+        ),
+    }
+
+
+@pytest.fixture
+def github_mock() -> Iterator[respx.Router]:
+    """A respx router over the GitHub API base; routes are registered per test."""
+    with respx.mock(base_url=API_BASE, assert_all_called=False) as router:
+        yield router
+
+
+@pytest.fixture
+def workspace_root(tmp_path: Path) -> Path:
+    return tmp_path / "workspaces"
