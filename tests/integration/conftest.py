@@ -9,15 +9,17 @@ sandbox is the subprocess runner over a committed fixture repo (§9.1, X7).
 from __future__ import annotations
 
 import base64
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import AsyncIterator, Iterator, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
 import respx
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from prguard.api.deps import get_db_session, get_job_queue, get_settings_dep
 from prguard.config import Settings
 from prguard.core.delivery.github_client import GitHubClient
 from prguard.core.pipeline import Pipeline, PipelineDeps
@@ -25,7 +27,9 @@ from prguard.core.proof.deps import NullInstaller
 from prguard.core.proof.runner import SandboxSelection
 from prguard.core.proof.subprocess_runner import SubprocessRunner
 from prguard.core.proof.workspace import LocalPathSource
+from prguard.core.queue import SyncJobQueue
 from prguard.llm.client import FakeLLMClient
+from prguard.main import create_app
 from tests.fixtures.loader import github_response, llm_fixture, repo_tree
 
 OWNER = "octocat"
@@ -149,6 +153,47 @@ def make_pipeline(
     )
 
 
+def app_for(
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+    queue: Any,
+) -> AsyncClient:
+    """The real app, with the real routers, over the test database and ``queue``."""
+    app = create_app(settings=settings, job_queue=queue)
+
+    async def _session() -> AsyncIterator[AsyncSession]:
+        async with session_factory() as db_session:
+            yield db_session
+
+    app.dependency_overrides[get_db_session] = _session
+    app.dependency_overrides[get_job_queue] = lambda: queue
+    app.dependency_overrides[get_settings_dep] = lambda: settings
+    return AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver")
+
+
+async def trigger_review(
+    settings: Settings,
+    session_factory: async_sessionmaker[AsyncSession],
+    pipeline: Pipeline,
+    *,
+    pr_url: str = PR_URL,
+    headers: Mapping[str, str] | None = None,
+) -> str:
+    """Drive a run through the real API door with an inline queue; return the run id.
+
+    `SyncJobQueue` runs the pipeline inside `POST /v1/reviews` rather than in a worker task,
+    which is the only reason these tests are deterministic — the door and the machine are
+    otherwise exactly the ones production uses (G6).
+    """
+    queue = SyncJobQueue(pipeline.run)
+    async with app_for(settings, session_factory, queue) as client:
+        response = await client.post(
+            "/v1/reviews", json={"pr_url": pr_url}, headers=dict(headers or {})
+        )
+    assert response.status_code == 202, response.text
+    return str(response.json()["review_id"])
+
+
 def make_github_client(**kwargs: Any) -> GitHubClient:
     """A client whose clock is fake — no integration test ever really sleeps."""
 
@@ -212,3 +257,14 @@ def github_mock() -> Iterator[respx.Router]:
 @pytest.fixture
 def workspace_root(tmp_path: Path) -> Path:
     return tmp_path / "workspaces"
+
+
+@pytest.fixture
+def settings(settings: Settings) -> Settings:
+    """The root test settings plus a write token.
+
+    §4.8's `GITHUB_DELIVERY_MODE=auto` means "post if we can", and "can" is a token. Without
+    one every integration run would exercise the dry-run path and nothing here would prove
+    that a review is ever actually sent.
+    """
+    return make_settings(settings, GITHUB_TOKEN="ghp_test_token")
