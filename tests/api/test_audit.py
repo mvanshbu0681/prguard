@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 
+import pytest
 import sqlalchemy as sa
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -169,6 +170,46 @@ async def test_concurrent_appends_keep_one_unbroken_chain(
         .all()
     )
     assert [event.seq for event in events] == list(range(1, 9))
+    assert audit.verify_chain(list(events)).verified is True
+
+
+@pytest.mark.parametrize("attempt", [1, 2])
+async def test_concurrent_appends_survive_a_second_event_loop(
+    session_factory: async_sessionmaker[AsyncSession],
+    session: AsyncSession,
+    default_tenant: models.Tenant,
+    attempt: int,
+) -> None:
+    """The writer lock outlives the loop that first contended on it.
+
+    Migration 0001 seeds the `default` tenant with a *fixed* id, so its lock is reused by
+    every process — and every test. An `asyncio.Lock` raises "bound to a different event
+    loop" the second time it is contended on a new loop, which is exactly what a worker
+    pool in T9's integration tests would do. Running this case twice reproduces it.
+    """
+
+    async def write(index: int) -> None:
+        async with session_factory() as writer:
+            await audit.append(
+                writer,
+                tenant_id=default_tenant.id,
+                event_type=AuditEventType.REVIEW_STAGE_COMPLETED,
+                actor_type=ActorType.SYSTEM,
+                payload={"index": index, "attempt": attempt},
+            )
+
+    await asyncio.gather(*(write(index) for index in range(4)))
+
+    events = (
+        (
+            await session.execute(
+                sa.select(models.AuditEvent).order_by(models.AuditEvent.seq)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [event.seq for event in events] == [1, 2, 3, 4]
     assert audit.verify_chain(list(events)).verified is True
 
 

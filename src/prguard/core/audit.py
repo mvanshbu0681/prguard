@@ -27,6 +27,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from weakref import WeakKeyDictionary
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,8 +35,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from prguard.db.base import as_utc, new_uuid, utcnow
 from prguard.db.models import ActorType, AuditEvent, AuditEventType
 
-#: One lock per tenant, held across the whole allocate-and-commit window (E30, spec R10).
-_TENANT_LOCKS: dict[str, asyncio.Lock] = {}
+#: One lock per (event loop, tenant), held across the whole allocate-and-commit window
+#: (E30, spec R10). The loop is part of the key because an `asyncio.Lock` binds to the loop
+#: it first contends on and raises on any other one: the service has a single loop, but a
+#: test suite builds a fresh loop per test and the seeded `default` tenant's id never
+#: changes, so a process-wide lock would be reused across loops and blow up under
+#: contention. Entries die with their loop.
+_TENANT_LOCKS: WeakKeyDictionary[asyncio.AbstractEventLoop, dict[str, asyncio.Lock]] = (
+    WeakKeyDictionary()
+)
 
 
 @dataclass(frozen=True)
@@ -184,10 +192,15 @@ def _are_neighbours(previous: AuditEvent, event: AuditEvent) -> bool:
 
 
 def _tenant_lock(tenant_id: str) -> asyncio.Lock:
-    lock = _TENANT_LOCKS.get(tenant_id)
+    loop = asyncio.get_running_loop()
+    per_loop = _TENANT_LOCKS.get(loop)
+    if per_loop is None:
+        per_loop = {}
+        _TENANT_LOCKS[loop] = per_loop
+    lock = per_loop.get(tenant_id)
     if lock is None:
         lock = asyncio.Lock()
-        _TENANT_LOCKS[tenant_id] = lock
+        per_loop[tenant_id] = lock
     return lock
 
 
