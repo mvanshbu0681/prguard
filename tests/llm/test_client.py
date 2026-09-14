@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from prguard.llm.anthropic import AnthropicClient
 from prguard.llm.client import (
-    AnthropicClient,
     FakeLLMClient,
     FixtureNotFoundError,
     LLMResponse,
@@ -205,17 +205,13 @@ def test_build_client_rejects_an_unknown_provider() -> None:
 
 
 # ---------------------------------------------------------------------------
-# The real provider is a typed stub until T8 lands
+# The real provider — live behaviour is pinned in test_anthropic.py
 # ---------------------------------------------------------------------------
 
 
-async def test_anthropic_client_is_an_explicit_stub() -> None:
+def test_constructing_the_real_provider_opens_no_connection() -> None:
+    """Startup and `build_client` must stay free of the SDK, and of credentials."""
     client = AnthropicClient(api_key="sk-ant-test")
-    with pytest.raises(NotImplementedError):
-        await client.complete(
-            model="claude-sonnet-5",
-            system=SYSTEM,
-            messages=[Message(role="user", content=PROMPT)],
-            max_tokens=8000,
-            temperature=0.0,
-        )
+
+    assert client.max_retries == 0, "a silent SDK retry hides a failure from the breaker"
+    assert client._sdk_client is None
