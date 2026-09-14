@@ -6,13 +6,14 @@ are the whole of the track:
 
 * **Order.** Nine stages, in §4.1's sequence. Before each one the run records `stage`,
   `stage_started_at` and `heartbeat_at`, so `GET /v1/reviews/{id}` can say "stage 3 of 9,
-  12s since last output" while it happens; after each one an `review.stage_completed` event
+  12s since last output" while it happens; after each one a `review.stage_completed` event
   lands in the audit chain. Every boundary is also a cancellation check (§4.2, E3).
 * **Failure policy.** §8.1, literally. S1 is fatal, S2 and S8 degrade, all specialists
   failing is fatal (`LLM_UNAVAILABLE`), a dead coordinator falls back to a deterministic
   merge, and **S7 never fails a run** — proof is the product's claim, not its dependency.
-  Nothing escapes :meth:`Pipeline.run`: a worker that dies takes the pool with it, and the
-  reaper is the recovery of last resort, not the first.
+  Nothing escapes :meth:`Pipeline.run`: an exception that got out would take the worker —
+  and every run queued behind it — with it, so the reaper is the recovery of last resort
+  rather than the first.
 * **Persistence.** The DB is the source of truth (§4.2). Findings are written the moment
   they have an identity, proofs the moment they have a verdict, and the review payload
   whether or not GitHub accepted it (E17) — so `/result` can carry the demo even when the
@@ -266,7 +267,6 @@ class RunState:
     findings: list[CanonicalFinding] = field(default_factory=list)
     rows: dict[str, models.Finding] = field(default_factory=dict)
     outcomes: dict[str, ProofOutcome] = field(default_factory=dict)
-    artifacts: list[models.ProofArtifact] = field(default_factory=list)
     delivery: ReviewDelivery | None = None
     gate: GateDecision | None = None
     degradations: list[str] = field(default_factory=list)
@@ -305,6 +305,7 @@ class Pipeline:
         self.settings = settings
         self.session_factory = session_factory
         self.deps = deps or PipelineDeps()
+        self._failback: LLMClient | None = None
         self._stages: tuple[tuple[str, _StageHandler], ...] = (
             ("ingest", self._stage_ingest),
             ("context", self._stage_context),
@@ -1068,7 +1069,6 @@ class Pipeline:
             **columns,
         )
         session.add(artifact)
-        state.artifacts.append(artifact)
 
     def _secrets(self) -> tuple[str, ...]:
         """Literal values E26 must never let out of the sandbox into a persisted artifact."""
@@ -1102,6 +1102,9 @@ class Pipeline:
 
         published = state.published()
         existing = await self._existing_comments(state)
+        # The same pure plan `post_review` makes internally. It is recomputed rather than
+        # returned because the finding→comment mapping is ours to persist (E3) and the
+        # delivery result only carries the comment ids it managed to update.
         reuse = plan_comment_reuse(published, existing)
         delivery = await post_review(
             client=self.deps.github_client,
@@ -1402,13 +1405,22 @@ class Pipeline:
     # -----------------------------------------------------------------------------------
     @property
     def llm(self) -> LLMClient:
-        """The model client, behind the §8.1 circuit breaker and failback chain."""
-        client = self.deps.llm_client
-        if client is None:
-            raise FatalStage(ERROR_LLM_UNAVAILABLE, "No LLM client is configured.")
-        if isinstance(client, FailbackClient):
-            return client
-        return FailbackClient(client, chain=self.settings.MODEL_FAILBACK_CHAIN)
+        """The model client, behind the §8.1 circuit breaker and failback chain.
+
+        Wrapped **once** and cached: the breaker counts five failures in sixty seconds, so a
+        fresh wrapper per call would be a breaker that never trips. One pipeline serves the
+        whole process, which is the scope §8.1 describes.
+        """
+        if self._failback is None:
+            client = self.deps.llm_client
+            if client is None:
+                raise FatalStage(ERROR_LLM_UNAVAILABLE, "No LLM client is configured.")
+            self._failback = (
+                client
+                if isinstance(client, FailbackClient)
+                else FailbackClient(client, chain=self.settings.MODEL_FAILBACK_CHAIN)
+            )
+        return self._failback
 
     def _snapshot(self, run: models.ReviewRun, *, models_used: bool = False) -> dict[str, Any]:
         """Merge, never replace: T7 already put `requested_options` in here (§6.1)."""
