@@ -187,7 +187,10 @@ async def list_suppressions(
         )
 
     # Totals describe the same slice of the ledger *before* the `active` filter, so a
-    # dashboard can say "1 active, 1 expired, 1 revoked" from one request.
+    # dashboard can say "1 active, 1 expired, 1 revoked" from one request. Counted in
+    # Python over the tenant's ledger rather than in SQL, so that `_is_active` stays the
+    # single definition of "active" — three hand-written COUNT predicates would be faster
+    # and would eventually disagree with it.
     totals = _totals(list((await session.execute(statement)).scalars().all()))
 
     if active:
