@@ -12,7 +12,6 @@ No test here sleeps: the clock is injected.
 from __future__ import annotations
 
 from email.utils import parsedate_to_datetime
-from typing import Any
 
 import httpx
 import pytest
@@ -28,29 +27,19 @@ from prguard.core.delivery.github_client import (
     GitHubUnavailableError,
     GitHubValidationError,
 )
-from tests.delivery.conftest import API_BASE, HEAD_SHA, OWNER, PR_NUMBER, REPO, recorded
+from tests.delivery.conftest import (
+    API_BASE,
+    HEAD_SHA,
+    OWNER,
+    PR_NUMBER,
+    REPO,
+    SleepRecorder,
+    make_client,
+    recorded,
+)
 
 #: The `date` header on the recorded rate-limit 403 — the clock every wait is measured against.
 RECORDED_DATE = "Mon, 14 Sep 2026 23:39:35 GMT"
-
-
-class SleepRecorder:
-    """Stands in for `asyncio.sleep` so backoff is observable and instant."""
-
-    def __init__(self) -> None:
-        self.waits: list[float] = []
-
-    async def __call__(self, seconds: float) -> None:
-        self.waits.append(seconds)
-
-
-def make_client(sleep: SleepRecorder | None = None, **kwargs: Any) -> GitHubClient:
-    return GitHubClient(
-        token="ghp_test_token",
-        sleep=sleep or SleepRecorder(),
-        jitter=lambda: 0.0,
-        **kwargs,
-    )
 
 
 async def test_get_pull_request_returns_the_recorded_body(github_mock: respx.Router) -> None:

@@ -23,24 +23,40 @@ posted is returned for persistence in ``review_runs.review_payload`` and served 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Final, Literal
 
 from prguard.core.delivery.comment_ladder import (
     COMMENT_SIDE,
     FILE_SUBJECT_TYPE,
+    NEAREST_LINE_MAX_DISTANCE,
     LadderBreakdown,
     RungAssignment,
+    assert_conservation,
+    assign_rungs,
+    demote,
+    demote_to_summary,
     nearest_line_note,
 )
-from prguard.core.types import CanonicalFinding, Side
+from prguard.core.delivery.github_client import (
+    GitHubClient,
+    GitHubError,
+    GitHubValidationError,
+)
+from prguard.core.types import CanonicalFinding, LineMap, Side
 
 #: Spec §4.7. The only review event this product will ever send. Not configurable, by design.
 REVIEW_EVENT: Final[Literal["COMMENT"]] = "COMMENT"
 
 #: §7 E2 — the review is retried exactly once after a 422 (§11.2.14).
 MAX_REVIEW_RETRIES: Final[int] = 1
+
+#: The initial post, the one retry, and a final post of the survivors after they demote to
+#: ``summary_only`` (§4.7: "remaining failures demote to summary_only **and post**"). That last
+#: call is not a retry of the rejected payload — it is a different, comment-free review body,
+#: and it exists because a finding that reached rung 4 is only delivered once the body ships.
+MAX_POST_ATTEMPTS: Final[int] = MAX_REVIEW_RETRIES + 2
 
 #: Recorded in ``review_runs.degradations`` when the 422 path was taken (§7 E2).
 DEGRADATION_422: Final[str] = "review_422_demoted"
@@ -195,6 +211,7 @@ def build_review_payload(
     commit_id: str | None = None,
     event: str = REVIEW_EVENT,
     result_url: str | None = None,
+    skip_comment_for: Collection[str] = (),
 ) -> ReviewPayload:
     """Build the single review payload for a run — spec §4.7, AC-14, E24.
 
@@ -204,17 +221,22 @@ def build_review_payload(
 
     Zero findings is a good outcome, not an empty template to fill (E24): the body says so in
     one line and no comment is manufactured.
+
+    ``skip_comment_for`` names findings already delivered by updating an existing comment
+    (E3/AC-7a). They keep their rung — conservation is over the assignment table, not over the
+    comments array — they simply are not posted twice.
     """
     if event != REVIEW_EVENT:
         raise ReviewEventError(
             f"prguard posts {REVIEW_EVENT} reviews only; refusing to build event {event!r}"
         )
 
+    reused = set(skip_comment_for)
     by_id = {finding.id: finding for finding in findings}
     comments = tuple(
         _build_comment(by_id[finding_id], assignment)
         for finding_id, assignment in assignments.items()
-        if finding_id in by_id and assignment.mode != "summary_only"
+        if finding_id in by_id and assignment.mode != "summary_only" and finding_id not in reused
     )
     summary_rows = [
         (by_id[finding_id], assignment)
@@ -254,6 +276,274 @@ def plan_comment_reuse(
         else:
             updates[finding.id] = comment_id
     return ReusePlan(updates=updates, fresh=tuple(fresh))
+
+
+async def post_review(
+    *,
+    client: GitHubClient | None,
+    owner: str,
+    repo: str,
+    pr_number: int,
+    findings: Sequence[CanonicalFinding],
+    line_maps: Mapping[str, LineMap],
+    files_reviewed: int,
+    commit_id: str | None = None,
+    existing_comments: Sequence[ExistingComment] = (),
+    result_url: str | None = None,
+    dry_run: bool = False,
+    max_distance: int = NEAREST_LINE_MAX_DISTANCE,
+    event: str = REVIEW_EVENT,
+) -> ReviewDelivery:
+    """Stage S8 — build the ladder, post exactly one review, degrade rather than fail.
+
+    The sequence, and why each step is where it is:
+
+    1. **Assign rungs and assert conservation** before a single byte goes over the wire. A
+       finding that has no rung must fail here, loudly, not silently vanish into a payload.
+    2. **Re-read the PR.** Cheap, and the only way to notice it was merged while we were
+       thinking (E19). We do not comment on a closed PR.
+    3. **Update before posting.** A fingerprint that already has a live comment is updated, not
+       re-posted (E3/AC-7a) — and if the update fails, that finding falls back into the review
+       so it is still delivered.
+    4. **Post once.** On 422, demote what GitHub named, re-assert conservation, retry once;
+       then send survivors to rung 4 and post the body. On 403/404/rate limit, stop: the payload
+       is persisted and served from ``/result`` (E17), and the run still succeeds.
+
+    ``client=None`` or ``dry_run=True`` builds everything and posts nothing, which is what
+    ``GITHUB_DELIVERY_MODE=dry_run`` and a missing token both mean (§4.8, X4).
+    """
+    if event != REVIEW_EVENT:
+        raise ReviewEventError(
+            f"prguard posts {REVIEW_EVENT} reviews only; refusing event {event!r}"
+        )
+
+    published_ids = [finding.id for finding in findings]
+    assignments = assign_rungs(findings, line_maps, max_distance=max_distance)
+    breakdown = assert_conservation(published_ids, assignments)
+
+    def payload_for(skip: Collection[str] = ()) -> ReviewPayload:
+        return build_review_payload(
+            findings=findings,
+            assignments=assignments,
+            files_reviewed=files_reviewed,
+            commit_id=commit_id,
+            result_url=result_url,
+            skip_comment_for=skip,
+        )
+
+    if client is None or dry_run:
+        return ReviewDelivery(
+            status="dry_run",
+            payload=payload_for(),
+            ladder_breakdown=breakdown,
+            assignments=assignments,
+            detail="delivery mode is dry_run" if client else "no GitHub client configured",
+        )
+
+    try:
+        pull_request = await client.get_pull_request(owner, repo, pr_number)
+    except GitHubError as error:
+        return _degraded(payload_for(), breakdown, assignments, detail=str(error))
+
+    if _is_closed(pull_request):
+        # E19: the analysis is still worth keeping; the conversation is over.
+        return ReviewDelivery(
+            status="skipped_pr_closed",
+            payload=payload_for(),
+            ladder_breakdown=breakdown,
+            assignments=assignments,
+            detail=f"pull request is {pull_request.get('state', 'closed')}",
+        )
+
+    reuse = plan_comment_reuse(findings, existing_comments)
+    updated, degradations = await _apply_updates(
+        client, owner, repo, reuse, findings, assignments
+    )
+    payload = payload_for(skip=updated_finding_ids(reuse, updated))
+
+    for attempt in range(1, MAX_POST_ATTEMPTS + 1):
+        try:
+            response = await client.create_review(owner, repo, pr_number, payload.as_payload())
+        except GitHubValidationError as invalid:
+            moved = _demote_rejected(
+                invalid,
+                payload,
+                assignments,
+                line_maps,
+                to_summary=attempt > MAX_REVIEW_RETRIES,
+            )
+            if not moved or attempt == MAX_POST_ATTEMPTS:
+                return _degraded(
+                    payload,
+                    breakdown,
+                    assignments,
+                    updated=updated,
+                    degradations=degradations,
+                    attempts=attempt,
+                    detail=str(invalid),
+                )
+            if DEGRADATION_422 not in degradations:
+                degradations.append(DEGRADATION_422)
+            # The table just changed under us — AC-18's whole point is that this still holds.
+            breakdown = assert_conservation(published_ids, assignments)
+            payload = payload_for(skip=updated_finding_ids(reuse, updated))
+        except GitHubError as error:
+            return _degraded(
+                payload,
+                breakdown,
+                assignments,
+                updated=updated,
+                degradations=degradations,
+                attempts=attempt,
+                detail=str(error),
+            )
+        else:
+            return ReviewDelivery(
+                status="posted",
+                payload=payload,
+                ladder_breakdown=breakdown,
+                assignments=assignments,
+                github_review_id=_as_int(response.get("id")),
+                updated_comment_ids=tuple(updated),
+                degradations=tuple(degradations),
+                attempts=attempt,
+            )
+
+    raise AssertionError("unreachable: every post attempt returns or degrades")
+
+
+def updated_finding_ids(reuse: ReusePlan, updated: Sequence[int]) -> tuple[str, ...]:
+    """The findings whose existing comment was successfully updated this run (E3)."""
+    done = set(updated)
+    return tuple(
+        finding_id for finding_id, comment_id in reuse.updates.items() if comment_id in done
+    )
+
+
+async def _apply_updates(
+    client: GitHubClient,
+    owner: str,
+    repo: str,
+    reuse: ReusePlan,
+    findings: Sequence[CanonicalFinding],
+    assignments: Mapping[str, RungAssignment],
+) -> tuple[list[int], list[str]]:
+    """PATCH each reused comment. A failure is not fatal — the finding rejoins the review."""
+    by_id = {finding.id: finding for finding in findings}
+    updated: list[int] = []
+    degradations: list[str] = []
+    for finding_id, comment_id in reuse.updates.items():
+        finding = by_id.get(finding_id)
+        assignment = assignments.get(finding_id)
+        if finding is None or assignment is None:
+            continue
+        try:
+            await client.update_review_comment(
+                owner, repo, comment_id, _comment_body(finding, assignment)
+            )
+        except GitHubError:
+            if DEGRADATION_UNPOSTED not in degradations:
+                degradations.append(DEGRADATION_UNPOSTED)
+        else:
+            updated.append(comment_id)
+    return updated, degradations
+
+
+def _demote_rejected(
+    invalid: GitHubValidationError,
+    payload: ReviewPayload,
+    assignments: dict[str, RungAssignment],
+    line_maps: Mapping[str, LineMap],
+    *,
+    to_summary: bool,
+) -> tuple[str, ...]:
+    """Demote the comments GitHub named in a 422 — spec §7 E2. Mutates ``assignments``.
+
+    GitHub names an offending comment by ``path`` and ``line``. When two findings share that
+    anchor — which happens exactly when both were relocated onto the same nearest in-hunk line —
+    the error cannot say which one it meant, so the one with the **weakest claim** to the anchor
+    gives it up: the finding whose real line is furthest from it. The other keeps its inline
+    comment; if GitHub refuses again, it follows on the next attempt.
+
+    Returns the finding ids that moved. Empty means the 422 was about something we cannot fix
+    by demotion, and the caller must degrade rather than retry an identical request.
+    """
+    moved: list[str] = []
+    for path, line in invalid.rejected_comments:
+        comment = _weakest_claim(payload, assignments, path, line)
+        if comment is None:
+            continue
+        assignment = assignments.get(comment.finding_id)
+        if assignment is None:
+            continue
+        assignments[comment.finding_id] = (
+            demote_to_summary(assignment)
+            if to_summary
+            else demote(assignment, line_maps.get(assignment.file_path))
+        )
+        moved.append(comment.finding_id)
+    return tuple(moved)
+
+
+def _weakest_claim(
+    payload: ReviewPayload,
+    assignments: Mapping[str, RungAssignment],
+    path: str,
+    line: int | None,
+) -> ReviewComment | None:
+    candidates = [
+        comment
+        for comment in payload.comments
+        if comment.path == path and comment.line == line and comment.finding_id in assignments
+    ]
+    if not candidates:
+        return None
+
+    def distance(comment: ReviewComment) -> tuple[int, int, str]:
+        assignment = assignments[comment.finding_id]
+        anchor = assignment.anchor_line if assignment.anchor_line is not None else assignment.line
+        return (abs(assignment.line - anchor), assignment.line, comment.finding_id)
+
+    return max(candidates, key=distance)
+
+
+def _degraded(
+    payload: ReviewPayload,
+    breakdown: LadderBreakdown,
+    assignments: Mapping[str, RungAssignment],
+    *,
+    updated: Sequence[int] = (),
+    degradations: Sequence[str] = (),
+    attempts: int = 0,
+    detail: str = "",
+) -> ReviewDelivery:
+    """E17: GitHub said no. Keep the payload, degrade the delivery, let the run succeed."""
+    recorded = list(degradations)
+    if DEGRADATION_UNPOSTED not in recorded:
+        recorded.append(DEGRADATION_UNPOSTED)
+    return ReviewDelivery(
+        status="degraded",
+        payload=payload,
+        ladder_breakdown=breakdown,
+        assignments=assignments,
+        updated_comment_ids=tuple(updated),
+        degradations=tuple(recorded),
+        attempts=attempts,
+        detail=detail,
+    )
+
+
+def _is_closed(pull_request: Mapping[str, Any]) -> bool:
+    """E19: merged or closed while the run was in flight."""
+    state = str(pull_request.get("state", "open")).lower()
+    return state != "open" or bool(pull_request.get("merged"))
+
+
+def _as_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _build_comment(finding: CanonicalFinding, assignment: RungAssignment) -> ReviewComment:
@@ -369,6 +659,7 @@ __all__ = [
     "DEGRADATION_422",
     "DEGRADATION_UNPOSTED",
     "FINGERPRINT_MARKER",
+    "MAX_POST_ATTEMPTS",
     "MAX_REVIEW_RETRIES",
     "REVIEW_EVENT",
     "SUMMARY_SECTION_HEADING",
@@ -382,4 +673,5 @@ __all__ = [
     "build_review_payload",
     "fingerprint_of_comment",
     "plan_comment_reuse",
+    "post_review",
 ]

@@ -16,6 +16,7 @@ import httpx
 import pytest
 import respx
 
+from prguard.core.delivery.github_client import GitHubClient
 from prguard.core.types import CanonicalFinding, LineMap
 from tests.fixtures.loader import github_response, ladder_rungs
 
@@ -102,3 +103,24 @@ def recorded(name: str) -> httpx.Response:
     """Replay a recorded GitHub response as an httpx response, headers and all."""
     fixture = github_response(name)
     return httpx.Response(fixture.status, headers=fixture.headers, json=fixture.body)
+
+
+class SleepRecorder:
+    """Stands in for `asyncio.sleep` so backoff is observable and instant."""
+
+    def __init__(self) -> None:
+        self.waits: list[float] = []
+
+    async def __call__(self, seconds: float) -> None:
+        self.waits.append(seconds)
+
+
+def make_client(sleep: SleepRecorder | None = None, **kwargs: Any) -> GitHubClient:
+    """A client whose clock is fake — no test in this package ever really sleeps."""
+    return GitHubClient(
+        token="ghp_test_token",
+        base_url=API_BASE,
+        sleep=sleep or SleepRecorder(),
+        jitter=lambda: 0.0,
+        **kwargs,
+    )

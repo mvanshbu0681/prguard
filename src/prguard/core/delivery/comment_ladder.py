@@ -215,6 +215,15 @@ def demote(assignment: RungAssignment, line_map: LineMap | None) -> RungAssignme
     )
 
 
+def demote_to_summary(assignment: RungAssignment) -> RungAssignment:
+    """Send a finding straight to rung 4 — spec §4.7, "remaining failures demote to summary_only".
+
+    Used when a comment has already failed twice: there is no point trying a middle rung GitHub
+    has effectively told us it will refuse, and the body always accepts the row.
+    """
+    return _to_summary(assignment)
+
+
 def _assign_one(
     finding: CanonicalFinding, line_map: LineMap | None, max_distance: int
 ) -> RungAssignment:
@@ -272,6 +281,7 @@ __all__ = [
     "assert_conservation",
     "assign_rungs",
     "demote",
+    "demote_to_summary",
     "ladder_breakdown",
     "nearest_line_note",
 ]
