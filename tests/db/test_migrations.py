@@ -20,6 +20,10 @@ from alembic.config import Config
 from prguard.db.base import Base
 from prguard.db.session import alembic_config
 
+#: `alembic upgrade head` must land here. Bumped by T9's 0002, which widens
+#: `review_runs.delivery_status` for E19's `skipped_pr_closed`.
+HEAD_REVISION = "0002"
+
 EXPECTED_TABLES = {
     "tenants",
     "installations",
@@ -66,7 +70,7 @@ def test_upgrade_head_on_sqlite(tmp_path: Path) -> None:
         with engine.connect() as conn:
             version = conn.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one()
             slugs = conn.execute(sa.text("SELECT slug FROM tenants")).scalars().all()
-        assert version == "0001"
+        assert version == HEAD_REVISION
         assert slugs == ["default"], "migration 0001 must seed the default tenant (spec §5)"
     finally:
         engine.dispose()
