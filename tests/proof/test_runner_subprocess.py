@@ -24,6 +24,7 @@ from prguard.core.proof.runner import (
     ProofPolicy,
     apply_outcome,
     artifact_columns,
+    is_head_only,
     proof_confidence,
     run_proof,
 )
@@ -291,6 +292,14 @@ async def test_require_baseline_false_is_the_documented_head_only_shortcut(
 
     assert outcome.status == "proven"
     assert outcome.baseline_mode == "skipped"
+    assert is_head_only(outcome) is True
+
+
+async def test_a_compared_proof_is_not_labelled_head_only(materialise_repo: Any) -> None:
+    """§4.6: the label exists so a shortcut cannot be mistaken for the full claim."""
+    outcome = await execute(materialise_repo, "buggy_calc", "proof_generator_billing_none_rate")
+    assert outcome.baseline_mode == "compared"
+    assert is_head_only(outcome) is False
 
 
 async def test_a_request_that_waives_the_baseline_is_honoured(materialise_repo: Any) -> None:

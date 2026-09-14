@@ -284,6 +284,17 @@ def proof_confidence(status: ProofStatus) -> float:
     return PROOF_CONFIDENCE[status]
 
 
+def is_head_only(outcome: ProofOutcome) -> bool:
+    """Whether §4.6's ``head_only`` label applies: a proof run with no baseline comparison.
+
+    Defined here rather than at the API layer so that "did we actually compare two revisions?"
+    has one answer. ``PROOF_REQUIRE_BASELINE=false`` halves demo latency and costs exactly this:
+    the claim becomes "it fails at head" instead of "it started failing at head", and the
+    response has to say so.
+    """
+    return outcome.baseline_mode != "compared" and outcome.base is None
+
+
 #: Human-readable half of :data:`REASON_OUTCOME`, persisted as ``ProofOutcome.detail``.
 REASON_DETAIL: Final[Mapping[ProofReason, str]] = MappingProxyType(
     {
