@@ -1,17 +1,64 @@
 """Background-work seam — spec §4.2.
 
 The DB is the source of truth and the queue is a hint, so the queue surface is three
-methods wide. `AsyncioJobQueue` is a typed stub here; T9 fills in the worker pool, the
-startup re-enqueue and the stale-run reaper behind this exact protocol.
+methods wide. `AsyncioJobQueue` is the in-process backend: `REVIEW_WORKERS` tasks over an
+`asyncio.Queue`, bounded by `REVIEW_MAX_CONCURRENCY`, plus the reaper.
+
+Three recovery mechanisms live here rather than in the pipeline, because each one is about a
+run **nobody is currently executing**:
+
+* :func:`requeue_pending` — on startup every `status=queued` run goes back on the queue. A
+  process restart loses the in-memory queue and loses nothing else (E22).
+* :func:`reap_stale_runs` — a `running` run whose heartbeat is older than
+  `RUN_STALE_SECONDS` is `failed` with `error_code=STALE_RUN`. No run is left running
+  forever, and the failure is written into the audit chain like any other ending (E22).
+* :func:`supersede_older_runs` — the §4.2 supersede rule. The API door cannot apply it at
+  enqueue time because the head SHA is resolved inside the worker (§4.2), so the pipeline
+  calls this the moment S1 knows the SHA, and every stage boundary re-checks whether *this*
+  run was the one superseded (E3).
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
 from collections.abc import Awaitable, Callable
-from typing import Protocol, runtime_checkable
+from datetime import datetime, timedelta
+from typing import Final, Protocol, runtime_checkable
+
+import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from prguard.core import audit
+from prguard.db import models
+from prguard.db.base import utcnow
+
+logger = logging.getLogger(__name__)
 
 #: What a queue hands to the pipeline: a `review_runs.id`, never a payload.
 JobHandler = Callable[[str], Awaitable[None]]
+
+#: `review_runs.error_code` for a run the reaper recovered (§4.2, E22).
+ERROR_STALE_RUN: Final[str] = "STALE_RUN"
+
+#: `review_runs.error_code` for a run a newer head SHA replaced (§4.2, E3).
+ERROR_SUPERSEDED: Final[str] = "SUPERSEDED"
+
+#: The statuses a run can still be superseded or reaped out of.
+IN_FLIGHT: Final[tuple[str, ...]] = (
+    models.RunStatus.QUEUED.value,
+    models.RunStatus.RUNNING.value,
+)
+
+#: How often the reaper sweeps. Well under `RUN_STALE_SECONDS` so a stale run is noticed in
+#: the same order of magnitude as it went quiet, `[ASSUMED]` — the spec fixes the threshold,
+#: not the sweep.
+DEFAULT_REAPER_INTERVAL_SECONDS: Final[float] = 30.0
+
+#: How long `stop()` lets work in flight finish before it cancels. Tearing a transaction in
+#: half at shutdown is how a run ends up half-written, `[ASSUMED]`.
+DEFAULT_SHUTDOWN_GRACE_SECONDS: Final[float] = 5.0
 
 
 @runtime_checkable
@@ -23,6 +70,12 @@ class JobQueue(Protocol):
     async def start(self) -> None: ...
 
     async def stop(self) -> None: ...
+
+
+class Enqueuer(Protocol):
+    """The half of :class:`JobQueue` that :func:`requeue_pending` needs."""
+
+    async def enqueue(self, review_run_id: str) -> None: ...
 
 
 class NullJobQueue:
@@ -73,11 +126,145 @@ class SyncJobQueue:
         return 0
 
 
-class AsyncioJobQueue:
-    """In-process `asyncio.Queue` + `REVIEW_WORKERS` workers + reaper — **stub**.
+# ---------------------------------------------------------------------------------------
+# Recovery — the three things that happen to a run nobody is executing
+# ---------------------------------------------------------------------------------------
+async def requeue_pending(session: AsyncSession, queue: Enqueuer) -> tuple[str, ...]:
+    """Push every `status=queued` run back onto ``queue``, oldest first (spec §4.2, E22)."""
+    statement = (
+        sa.select(models.ReviewRun.id)
+        .where(models.ReviewRun.status == models.RunStatus.QUEUED.value)
+        .order_by(models.ReviewRun.created_at.asc(), models.ReviewRun.id.asc())
+    )
+    pending = tuple((await session.execute(statement)).scalars().all())
+    for review_run_id in pending:
+        await queue.enqueue(review_run_id)
+    if pending:
+        logger.info("re-enqueued %d queued review run(s) on startup", len(pending))
+    return pending
 
-    T9 implements this in wave 3 (plan §9.2); the constructor already takes everything
-    §4.2 calls for so callers do not change when it lands.
+
+async def reap_stale_runs(
+    session: AsyncSession,
+    *,
+    stale_after_seconds: int,
+    now: datetime | None = None,
+) -> tuple[str, ...]:
+    """Fail every `running` run that stopped beating — spec §4.2, §7 E22.
+
+    "Stopped beating" falls back through `heartbeat_at → started_at → created_at`: a worker
+    that died between claiming a run and its first heartbeat leaves no heartbeat at all, and
+    that is exactly the crash this exists to recover from.
+
+    The failure is appended to the audit chain, because a run that ended silently is
+    indistinguishable from a run that is still thinking.
+    """
+    moment = now or utcnow()
+    cutoff = moment - timedelta(seconds=stale_after_seconds)
+    last_sign_of_life = sa.func.coalesce(
+        models.ReviewRun.heartbeat_at,
+        models.ReviewRun.started_at,
+        models.ReviewRun.created_at,
+    )
+    statement = (
+        sa.select(models.ReviewRun)
+        .where(
+            models.ReviewRun.status == models.RunStatus.RUNNING.value,
+            last_sign_of_life < cutoff,
+        )
+        .order_by(models.ReviewRun.created_at.asc(), models.ReviewRun.id.asc())
+    )
+    stale = list((await session.execute(statement)).scalars().all())
+
+    reaped: list[str] = []
+    for run in stale:
+        run.status = models.RunStatus.FAILED.value
+        run.error_code = ERROR_STALE_RUN
+        run.error_message = (
+            f"No heartbeat for more than {stale_after_seconds}s; the worker executing this "
+            "run did not survive."
+        )
+        run.finished_at = moment
+        # Commits the row and the event together — see `audit.append`.
+        await audit.append(
+            session,
+            tenant_id=run.tenant_id,
+            event_type=models.AuditEventType.REVIEW_FAILED,
+            actor_type=models.ActorType.SYSTEM,
+            actor_id="reaper",
+            review_run_id=run.id,
+            payload={
+                "error_code": ERROR_STALE_RUN,
+                "stage": run.stage,
+                "stale_after_seconds": stale_after_seconds,
+            },
+        )
+        reaped.append(run.id)
+
+    if reaped:
+        logger.warning("reaped %d stale review run(s): %s", len(reaped), ", ".join(reaped))
+    return tuple(reaped)
+
+
+async def supersede_older_runs(
+    session: AsyncSession,
+    *,
+    pull_request_id: str,
+    head_sha: str,
+    keep_run_id: str,
+    now: datetime | None = None,
+) -> tuple[str, ...]:
+    """Cancel every in-flight run for this PR that is not on ``head_sha`` — spec §4.2, E3.
+
+    A run whose `head_sha` is still `null` is superseded too: it was triggered through the API
+    door, which does not resolve the SHA on the request path, so "unresolved" can only mean
+    "older than the run that has already resolved one".
+
+    Commits, like every other decision about a run's lifecycle: the cancelled run may be read
+    by another worker a millisecond later, and it has to read as cancelled.
+    """
+    moment = now or utcnow()
+    statement = sa.select(models.ReviewRun).where(
+        models.ReviewRun.pull_request_id == pull_request_id,
+        models.ReviewRun.id != keep_run_id,
+        models.ReviewRun.status.in_(IN_FLIGHT),
+        sa.or_(
+            models.ReviewRun.head_sha.is_(None),
+            models.ReviewRun.head_sha != head_sha,
+        ),
+    )
+    superseded = list((await session.execute(statement)).scalars().all())
+    for run in superseded:
+        run.status = models.RunStatus.CANCELLED.value
+        run.error_code = ERROR_SUPERSEDED
+        run.error_message = f"Superseded by a newer head SHA ({head_sha})."
+        run.finished_at = moment
+    if superseded:
+        await session.commit()
+    return tuple(run.id for run in superseded)
+
+
+async def is_cancelled(session: AsyncSession, review_run_id: str) -> bool:
+    """Whether this run has been cancelled underneath us — the stage-boundary check (§4.2).
+
+    Read straight from the database rather than from the in-memory row: the cancellation was
+    written by a different session, in a different task, and the whole point is to notice it.
+    """
+    status = await session.scalar(
+        sa.select(models.ReviewRun.status).where(models.ReviewRun.id == review_run_id)
+    )
+    return status == models.RunStatus.CANCELLED.value
+
+
+# ---------------------------------------------------------------------------------------
+# The in-process backend (spec §4.2)
+# ---------------------------------------------------------------------------------------
+class AsyncioJobQueue:
+    """In-process `asyncio.Queue` + `REVIEW_WORKERS` workers + the reaper (spec §4.2).
+
+    ``session_factory`` is optional so a unit test can exercise the pool without a database;
+    without it there is no startup re-enqueue and no reaper, and the queue is then genuinely
+    just a queue.
     """
 
     def __init__(
@@ -87,17 +274,135 @@ class AsyncioJobQueue:
         workers: int = 2,
         max_concurrency: int = 2,
         stale_after_seconds: int = 600,
+        session_factory: async_sessionmaker[AsyncSession] | None = None,
+        reaper_interval_seconds: float = DEFAULT_REAPER_INTERVAL_SECONDS,
+        shutdown_grace_seconds: float = DEFAULT_SHUTDOWN_GRACE_SECONDS,
     ) -> None:
         self._handler = handler
-        self.workers = workers
-        self.max_concurrency = max_concurrency
+        self.workers = max(1, workers)
+        self.max_concurrency = max(1, max_concurrency)
         self.stale_after_seconds = stale_after_seconds
+        self.session_factory = session_factory
+        self.reaper_interval_seconds = reaper_interval_seconds
+        self.shutdown_grace_seconds = shutdown_grace_seconds
+        #: `None` is the shutdown sentinel: it wakes a worker parked on `get()` so a clean
+        #: stop does not have to cancel one mid-run.
+        self._queue: asyncio.Queue[str | None] = asyncio.Queue()
+        self._semaphore = asyncio.Semaphore(self.max_concurrency)
+        self._stopping = asyncio.Event()
+        self._workers: list[asyncio.Task[None]] = []
+        self._reaper: asyncio.Task[None] | None = None
+        self.started = False
+
+    # -- JobQueue -----------------------------------------------------------------------
 
     async def enqueue(self, review_run_id: str) -> None:
-        raise NotImplementedError("AsyncioJobQueue is implemented in T9 (spec §4.2)")
+        """Hand a run id to the pool. Never blocks: the queue is unbounded, the DB is the log."""
+        self._queue.put_nowait(review_run_id)
 
     async def start(self) -> None:
-        raise NotImplementedError("AsyncioJobQueue is implemented in T9 (spec §4.2)")
+        """Bring the pool up, then recover whatever the last process left behind (E22)."""
+        if self.started:
+            return
+        self.started = True
+        self._stopping = asyncio.Event()
+        self._semaphore = asyncio.Semaphore(self.max_concurrency)
+        self._workers = [
+            asyncio.create_task(self._work(index), name=f"prguard-worker-{index}")
+            for index in range(self.workers)
+        ]
+        if self.session_factory is not None:
+            self._reaper = asyncio.create_task(self._reap(), name="prguard-reaper")
+        await self.recover()
 
     async def stop(self) -> None:
-        raise NotImplementedError("AsyncioJobQueue is implemented in T9 (spec §4.2)")
+        """Ask every task to finish, wait out the grace period, then cancel what is left.
+
+        Idempotent — shutdown runs on every path, including the one where start() never did.
+        """
+        self.started = False
+        self._stopping.set()
+        for _ in self._workers:
+            self._queue.put_nowait(None)
+        pending = [task for task in self.tasks if not task.done()]
+        if pending:
+            await asyncio.wait(pending, timeout=self.shutdown_grace_seconds)
+        for task in self.tasks:
+            task.cancel()
+        if self.tasks:
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+        self._workers = []
+        self._reaper = None
+
+    # -- introspection, for the lifespan and for tests ----------------------------------
+
+    @property
+    def depth(self) -> int:
+        return self._queue.qsize()
+
+    @property
+    def tasks(self) -> tuple[asyncio.Task[None], ...]:
+        return (*self._workers, *((self._reaper,) if self._reaper is not None else ()))
+
+    @property
+    def reaper(self) -> asyncio.Task[None] | None:
+        return self._reaper
+
+    async def join(self) -> None:
+        """Wait until every enqueued run has been handled. Used by tests, not by the app."""
+        await self._queue.join()
+
+    async def recover(self) -> tuple[str, ...]:
+        """Re-enqueue every `queued` run. The DB is the source of truth, this is the hint."""
+        if self.session_factory is None:
+            return ()
+        try:
+            async with self.session_factory() as session:
+                return await requeue_pending(session, self)
+        except Exception:
+            # §8.1: a database that is down at startup must not stop the app from serving
+            # `/readyz` with the truth. The next reaper sweep picks the work back up.
+            logger.exception("could not re-enqueue pending runs at startup")
+            return ()
+
+    # -- tasks ---------------------------------------------------------------------------
+
+    async def _work(self, index: int) -> None:
+        while True:
+            review_run_id = await self._queue.get()
+            if review_run_id is None:
+                self._queue.task_done()
+                return
+            try:
+                async with self._semaphore:
+                    await self._handler(review_run_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # §8.1: "never crashes a worker". The pipeline already owns every failure it
+                # can name; anything arriving here is a bug, and it costs one run, not the
+                # pool. The reaper recovers the row.
+                logger.exception("worker %d: review run %s failed", index, review_run_id)
+            finally:
+                self._queue.task_done()
+
+    async def _reap(self) -> None:
+        assert self.session_factory is not None
+        while not self._stopping.is_set():
+            with contextlib.suppress(TimeoutError):
+                await asyncio.wait_for(
+                    self._stopping.wait(), timeout=self.reaper_interval_seconds
+                )
+            if self._stopping.is_set():
+                return
+            try:
+                async with self.session_factory() as session:
+                    await reap_stale_runs(
+                        session, stale_after_seconds=self.stale_after_seconds
+                    )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # A database blip must not take the reaper with it — it is the only thing
+                # standing between a crashed worker and a run that says `running` forever.
+                logger.exception("the reaper sweep failed; retrying on the next interval")
