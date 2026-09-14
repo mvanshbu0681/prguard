@@ -60,11 +60,21 @@ DEFINITIONS: dict[str, str] = {
     "self_caught_false_positive_rate": (
         "disproven / attempted — findings the system itself refuted before publishing"
     ),
+    # §6.9 writes both denominators as "published". Taken literally that is not the
+    # population the numerator is drawn from, and the published number stops being a rate:
+    # suppressing a published finding moves it *off* `published`, so a dismissal adds to
+    # the numerator and takes away from the denominator (4 published, 3 suppressed → 3.0),
+    # and an `addressed` finding on a PR whose second run falls outside the window is
+    # counted while its PR is excluded (→ 2.0). The strings below say which population each
+    # ratio actually divides by, because a definition that does not match the arithmetic is
+    # worse than no definition.
     "human_dismissal_rate": (
-        "findings with a finding_outcomes row of 'dismissed' / published"
+        "findings with a finding_outcomes row of 'dismissed' / findings that were ever "
+        "published (published now, plus those a human dismissed off that set)"
     ),
     "addressed_rate": (
-        "findings whose fingerprint disappeared on a later run of the same PR / published"
+        "findings whose fingerprint disappeared on a later run of the same PR / published "
+        "findings on PRs run more than once inside the window"
     ),
 }
 
@@ -156,7 +166,7 @@ async def compute_report(
     runs = await _run_totals(session, run_ids)
     findings = await _finding_totals(session, run_ids, run_count=runs.total)
     proof = await _proof_totals(session, run_ids)
-    proxies = await _precision_proxies(session, run_ids, proof=proof, published=findings.published)
+    proxies = await _precision_proxies(session, run_ids, proof=proof)
     gate = await _gate_totals(session, run_ids, tenant_id=tenant_id)
 
     return AccuracyReport(
@@ -279,7 +289,6 @@ async def _precision_proxies(
     run_ids: sa.Select[tuple[str]],
     *,
     proof: ProofTotals,
-    published: int,
 ) -> dict[str, Metric]:
     executed_and_published = await _counts_by(
         session,
@@ -290,11 +299,18 @@ async def _precision_proxies(
         ),
     )
     executed = sum(executed_and_published.values())
-    dismissed = await _distinct_outcome_findings(session, run_ids, OutcomeKind.DISMISSED)
-    addressed = await _distinct_outcome_findings(session, run_ids, OutcomeKind.ADDRESSED)
+
+    # Each ratio below takes its numerator and its denominator from *one* population, so a
+    # subset is being divided by its superset and the result cannot exceed 1.0.
+    ever_published = _ever_published(run_ids)
+    dismissed = await _outcome_findings(session, ever_published, OutcomeKind.DISMISSED)
+    dismissal_denominator = await _count_of(session, ever_published)
+
     # The caveat says single-run PRs are excluded from `addressed_rate`'s n, so they are:
     # a fingerprint cannot be observed to disappear if there was never a second run.
-    addressed_denominator = await _published_on_rerun_prs(session, run_ids)
+    addressable = _published_on_rerun_prs(run_ids)
+    addressed = await _outcome_findings(session, addressable, OutcomeKind.ADDRESSED)
+    addressed_denominator = await _count_of(session, addressable)
 
     return {
         "execution_verified_precision": Metric(
@@ -308,8 +324,8 @@ async def _precision_proxies(
             definition=DEFINITIONS["self_caught_false_positive_rate"],
         ),
         "human_dismissal_rate": Metric(
-            value=ratio(dismissed, published),
-            n=published,
+            value=ratio(dismissed, dismissal_denominator),
+            n=dismissal_denominator,
             definition=DEFINITIONS["human_dismissal_rate"],
         ),
         "addressed_rate": Metric(
@@ -346,43 +362,70 @@ async def _gate_totals(
     )
 
 
-async def _distinct_outcome_findings(
-    session: AsyncSession, run_ids: sa.Select[tuple[str]], outcome: OutcomeKind
+async def _outcome_findings(
+    session: AsyncSession, finding_ids: sa.Select[tuple[str]], outcome: OutcomeKind
 ) -> int:
-    """Findings, not outcome rows: two `addressed` rows for one finding are one finding."""
+    """Findings, not outcome rows: two `addressed` rows for one finding are one finding.
+
+    `finding_ids` is the metric's population, so the count returned is always a subset of
+    :func:`_count_of` over the same select.
+    """
     total = await session.scalar(
         sa.select(sa.func.count(sa.distinct(FindingOutcome.finding_id))).where(
             FindingOutcome.outcome == outcome.value,
-            FindingOutcome.finding_id.in_(
-                sa.select(Finding.id).where(Finding.review_run_id.in_(run_ids))
-            ),
+            FindingOutcome.finding_id.in_(finding_ids),
         )
     )
     return int(total or 0)
 
 
-async def _published_on_rerun_prs(
-    session: AsyncSession, run_ids: sa.Select[tuple[str]]
-) -> int:
-    """Published findings on PRs that were run more than once inside the window."""
+def _ever_published(run_ids: sa.Select[tuple[str]]) -> sa.Select[tuple[str]]:
+    """`human_dismissal_rate`'s population: findings that were ever published.
+
+    Suppressing a finding moves it off `published` (§6.6), so the rows still *in* that
+    status are the ones nobody dismissed — dividing by them would shrink the denominator by
+    exactly the findings the numerator counts.
+    """
+    return sa.select(Finding.id).where(
+        Finding.review_run_id.in_(run_ids),
+        sa.or_(
+            Finding.status == FindingStatus.PUBLISHED.value,
+            Finding.id.in_(
+                sa.select(FindingOutcome.finding_id).where(
+                    FindingOutcome.outcome == OutcomeKind.DISMISSED.value
+                )
+            ),
+        ),
+    )
+
+
+def _published_on_rerun_prs(run_ids: sa.Select[tuple[str]]) -> sa.Select[tuple[str]]:
+    """`addressed_rate`'s population: published findings on PRs run more than once here.
+
+    A fingerprint cannot be observed to disappear without a second run inside the window,
+    and a finding that was never published cannot have been addressed — so both halves of
+    the ratio come from this one select, not from two different readings of "published".
+    """
     rerun_pr_ids = (
         sa.select(ReviewRun.pull_request_id)
         .where(ReviewRun.id.in_(run_ids))
         .group_by(ReviewRun.pull_request_id)
         .having(sa.func.count() > 1)
     )
+    return sa.select(Finding.id).where(
+        Finding.status == FindingStatus.PUBLISHED.value,
+        Finding.review_run_id.in_(
+            sa.select(ReviewRun.id).where(
+                ReviewRun.id.in_(run_ids),
+                ReviewRun.pull_request_id.in_(rerun_pr_ids),
+            )
+        ),
+    )
+
+
+async def _count_of(session: AsyncSession, finding_ids: sa.Select[tuple[str]]) -> int:
     total = await session.scalar(
-        sa.select(sa.func.count())
-        .select_from(Finding)
-        .where(
-            Finding.status == FindingStatus.PUBLISHED.value,
-            Finding.review_run_id.in_(
-                sa.select(ReviewRun.id).where(
-                    ReviewRun.id.in_(run_ids),
-                    ReviewRun.pull_request_id.in_(rerun_pr_ids),
-                )
-            ),
-        )
+        sa.select(sa.func.count()).select_from(finding_ids.subquery())
     )
     return int(total or 0)
 
