@@ -86,17 +86,19 @@ class ReviewTask:
     truncation_note: str = ""
 
 
-def _fenced(source: str, body: str) -> str:
+def fence_untrusted(source: str, body: str) -> str:
+    """Wrap one block of user-controlled text in its boundary tags (E15).
+
+    The tag name is deliberately the one ``core/sanitize.py`` neutralises inside the body, so a
+    forged closing tag in a diff cannot end the fence early.
+    """
     return f'<untrusted_content source="{source}">\n{body}\n</untrusted_content>'
 
 
-def build_user_prompt(task: ReviewTask, *, specialist: str) -> str:
-    """Assemble the request. Every untrusted block is fenced; empty blocks are omitted.
-
-    An empty fence is worse than no fence: it teaches the model that the tags are decoration.
-    """
+def context_header(task: ReviewTask) -> str:
+    """The trusted preamble: which pull request this is, and which paths exist."""
     paths = "\n".join(f"- {path}" for path in task.supplied_files)
-    sections: list[str] = [
+    lines = [
         f"Repository: {task.repository}",
         f"Pull request: #{task.pull_request_number}",
         f"Risk tier: {task.risk_tier}",
@@ -105,8 +107,16 @@ def build_user_prompt(task: ReviewTask, *, specialist: str) -> str:
         paths,
     ]
     if task.truncation_note:
-        sections.append(f"\nContext note: {task.truncation_note}")
+        lines.append(f"\nContext note: {task.truncation_note}")
+    return "\n".join(lines)
 
+
+def untrusted_sections(task: ReviewTask) -> list[str]:
+    """Every fenced block this task carries, empty ones omitted.
+
+    An empty fence is worse than no fence: it teaches the model that the tags are decoration.
+    """
+    sections: list[str] = []
     metadata = "\n".join(
         part
         for part in (
@@ -116,14 +126,19 @@ def build_user_prompt(task: ReviewTask, *, specialist: str) -> str:
         if part
     )
     if metadata:
-        sections.append("\n" + _fenced("pr_metadata", metadata))
+        sections.append(fence_untrusted("pr_metadata", metadata))
     if task.diff:
-        sections.append("\n" + _fenced("pr_diff", task.diff))
+        sections.append(fence_untrusted("pr_diff", task.diff))
     if task.file_context:
-        sections.append("\n" + _fenced("file_bodies", task.file_context))
+        sections.append(fence_untrusted("file_bodies", task.file_context))
     if task.conventions:
-        sections.append("\n" + _fenced("repo_conventions", task.conventions))
+        sections.append(fence_untrusted("repo_conventions", task.conventions))
+    return sections
 
+
+def build_user_prompt(task: ReviewTask, *, specialist: str) -> str:
+    """Assemble one specialist's request: the trusted preamble, then the fenced evidence."""
+    sections = [context_header(task), *untrusted_sections(task)]
     sections.append(
         f"\nReview this change as the `{specialist}` reviewer and return the single JSON object "
         "your instructions describe. No prose, no fences, no commentary. An empty findings list "
