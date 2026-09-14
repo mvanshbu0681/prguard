@@ -151,6 +151,10 @@ DOCKER_PROBE_CACHE_SECONDS: Final[float] = 60.0
 #: not become a hung review.
 DOCKER_PROBE_TIMEOUT_SECONDS: Final[float] = 5.0
 
+#: The probe itself. A CLI call, not a docker-SDK client — §11.2 assumption 8 is explicit that
+#: the SDK is not a dependency, and plan §9.3 rule 1 freezes ``pyproject.toml`` against adding it.
+DOCKER_INFO_COMMAND: Final[tuple[str, ...]] = ("docker", "info", "--format", "{{.ServerVersion}}")
+
 
 # ---------------------------------------------------------------------------------------
 # The §4.6 table — pure, and the only path to `proven` in the codebase
@@ -420,10 +424,19 @@ class DockerProbe:
     up mid-demo. 60 s is the spec's number.
     """
 
-    def __init__(self, *, cache_seconds: float = DOCKER_PROBE_CACHE_SECONDS) -> None:
+    def __init__(
+        self,
+        *,
+        command: Sequence[str] = DOCKER_INFO_COMMAND,
+        cache_seconds: float = DOCKER_PROBE_CACHE_SECONDS,
+        timeout_seconds: float = DOCKER_PROBE_TIMEOUT_SECONDS,
+    ) -> None:
+        self.command = tuple(command)
         self.cache_seconds = cache_seconds
+        self.timeout_seconds = timeout_seconds
         self._available: bool | None = None
         self._checked_at = 0.0
+        self.probes = 0
 
     def reset(self) -> None:
         """Drop the cached answer. Tests call this; so does a long-lived worker on demand."""
@@ -441,12 +454,13 @@ class DockerProbe:
 
     def _probe(self) -> bool:
         """Shell out to the ``docker`` CLI. The docker SDK is deliberately not a dependency."""
+        self.probes += 1
         try:
             completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-                ["docker", "info", "--format", "{{.ServerVersion}}"],
+                list(self.command),
                 capture_output=True,
                 text=True,
-                timeout=DOCKER_PROBE_TIMEOUT_SECONDS,
+                timeout=self.timeout_seconds,
                 env=_probe_env(),
             )
         except (OSError, subprocess.SubprocessError):
@@ -557,6 +571,22 @@ def skipped_outcome(*, reason: str = "") -> ProofOutcome:
     )
 
 
+def errored_outcome(runner: SandboxRunner | None, detail: str) -> ProofOutcome:
+    """The artifact for a proof whose machinery broke (S7: "degrading on: everything").
+
+    §4.6's fourth row — "any | collection error → inconclusive" — is the right home for it: the
+    attempt happened and produced nothing usable. Advisory, never blocking, never a failed run.
+    """
+    return ProofOutcome(
+        status="inconclusive",
+        outcome="error",
+        runner=runner.name if runner is not None else "subprocess",
+        isolation=runner.isolation if runner is not None else "degraded",
+        baseline_mode="skipped",
+        detail=detail,
+    )
+
+
 async def run_proof(
     *,
     request: ProofRequest,
@@ -568,6 +598,11 @@ async def run_proof(
 ) -> ProofOutcome:
     """Execute one repro at base and at head and classify the pair. Never raises.
 
+    "Never raises" is the stage's contract, not a convenience: S7 degrades on *everything* and
+    proof never fails a run (§4.1). A repro is generated code running against a repository we
+    did not write, so the interesting failures are the ones nobody predicted — hence the
+    catch-all, which downgrades to ``inconclusive`` rather than propagating.
+
     The order matters for latency, not for correctness: the head run is the one that decides
     whether there is anything to prove, but the baseline is what makes the claim mean
     "passing-to-failing", so both are always run unless ``PROOF_REQUIRE_BASELINE`` is off.
@@ -575,10 +610,31 @@ async def run_proof(
     Everything persisted passes through the redactor and the ``PROOF_OUTPUT_MAX_BYTES``
     truncation first (E26, §4.6).
     """
-    settings = policy or ProofPolicy()
     if runner is None:
         return skipped_outcome()
+    try:
+        return await _run_proof(
+            request=request,
+            workspace=workspace,
+            runner=runner,
+            policy=policy,
+            installer=installer,
+            secrets=secrets,
+        )
+    except Exception as exc:  # noqa: BLE001 - S7 degrades on everything, by design
+        return errored_outcome(runner, f"the proof runner failed: {type(exc).__name__}: {exc}")
 
+
+async def _run_proof(
+    *,
+    request: ProofRequest,
+    workspace: ProofWorkspace,
+    runner: SandboxRunner,
+    policy: ProofPolicy | None,
+    installer: DependencyInstaller | None,
+    secrets: Sequence[str],
+) -> ProofOutcome:
+    settings = policy or ProofPolicy()
     started = time.monotonic()
     effective_installer = installer if installer is not None else NullInstaller()
     base_applicable = workspace.base_tree is not None
