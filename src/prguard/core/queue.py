@@ -101,7 +101,3 @@ class AsyncioJobQueue:
 
     async def stop(self) -> None:
         raise NotImplementedError("AsyncioJobQueue is implemented in T9 (spec §4.2)")
-
-    @property
-    def depth(self) -> int:
-        raise NotImplementedError("AsyncioJobQueue is implemented in T9 (spec §4.2)")

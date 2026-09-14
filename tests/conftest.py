@@ -146,8 +146,9 @@ async def client(
 class RowFactory:
     """`rows.review_run(tenant, pull_request=pr, status="running")` and friends.
 
-    Each method adds the row to the session and flushes, so the returned object has its
-    id populated; the caller commits when it wants a transaction boundary.
+    Each method commits, because the `client` fixture's request sessions share this
+    in-memory database and roll back on any error path: uncommitted seed rows would
+    vanish the first time a test asserted a 404.
     """
 
     def __init__(self, session: AsyncSession) -> None:
@@ -155,7 +156,7 @@ class RowFactory:
 
     async def add(self, row: Any) -> Any:
         self.session.add(row)
-        await self.session.flush()
+        await self.session.commit()
         return row
 
     async def tenant(self, **kw: Any) -> models.Tenant:

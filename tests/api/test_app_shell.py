@@ -8,9 +8,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+import sqlalchemy as sa
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from pydantic import BaseModel, ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from prguard import __version__
 from prguard.api import (
@@ -33,7 +35,9 @@ from prguard.api.errors import (
 )
 from prguard.config import Settings
 from prguard.core.queue import NullJobQueue
+from prguard.db.models import Repository, Tenant
 from prguard.main import ROUTERS, create_app
+from tests.conftest import RowFactory
 
 #: Spec §6.0, code → HTTP status, verbatim.
 SPEC_REGISTRY = {
@@ -197,6 +201,27 @@ async def test_method_not_allowed_still_returns_an_envelope(settings: Settings) 
 
     assert response.status_code == 405
     _assert_envelope(response.json(), code="METHOD_NOT_ALLOWED")
+
+
+async def test_seeded_rows_survive_a_request_session_closing(
+    session: AsyncSession,
+    session_factory: async_sessionmaker[AsyncSession],
+    rows: RowFactory,
+    tenant_a: Tenant,
+) -> None:
+    """The frozen conftest's contract: a request must not discard seed data.
+
+    The in-memory engine hands every session the same connection, and a request session
+    rolls back when it closes or when a handler raises. `RowFactory` therefore commits —
+    without that, the first 404 test in T7 would eat its own fixtures.
+    """
+    repository = await rows.repository(tenant_a)
+
+    async with session_factory() as request_session:
+        await request_session.execute(sa.select(Repository))
+
+    surviving = await session.execute(sa.select(Repository).where(Repository.id == repository.id))
+    assert surviving.scalars().one().id == repository.id
 
 
 async def test_openapi_schema_is_servable(client: AsyncClient) -> None:
