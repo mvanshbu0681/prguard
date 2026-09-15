@@ -18,11 +18,49 @@ from sqlalchemy import Connection, pool
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from prguard.config import get_settings
 from prguard.db import models as _models  # noqa: F401  - registers every table
 from prguard.db.base import Base
 
 config = context.config
 target_metadata = Base.metadata
+
+
+def _ini_default_url() -> str | None:
+    """The URL `alembic.ini` ships with, read fresh so a caller's override is detectable."""
+    ini = config.config_file_name
+    if not ini:
+        return None
+    from alembic.config import Config as _Config
+
+    return _Config(ini).get_main_option("sqlalchemy.url")
+
+
+def _resolve_url() -> str:
+    """The database this migration runs against.
+
+    Precedence: `-x url=...` > a URL a caller set explicitly > `DATABASE_URL` > `alembic.ini`.
+
+    Two callers matter and they want opposite things. `prguard.db.session.alembic_config`
+    sets `sqlalchemy.url` on purpose (the test suite migrates a temp SQLite file, and renders
+    offline DDL for a dialect it names), so an explicit value must win. The bare
+    `alembic upgrade head` CLI sets nothing, and there `alembic.ini`'s SQLite default must NOT
+    win over a configured `DATABASE_URL` -- it silently migrated the local SQLite file while
+    reporting success, leaving the real Postgres database empty.
+
+    The two are told apart by comparing against the value `alembic.ini` itself ships.
+    """
+    override = context.get_x_argument(as_dictionary=True).get("url")
+    if override:
+        return override
+    current = config.get_main_option("sqlalchemy.url")
+    if current and current != _ini_default_url():
+        return current
+    configured = get_settings().DATABASE_URL
+    if configured:
+        return configured
+    assert current is not None, "no database URL: set DATABASE_URL or sqlalchemy.url"
+    return current
 
 
 def _configure(connection: Connection | None = None, **extra: Any) -> None:
@@ -37,8 +75,7 @@ def _configure(connection: Connection | None = None, **extra: Any) -> None:
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
-    assert url is not None, "sqlalchemy.url must be set for offline migrations"
+    url = _resolve_url()
     # The async driver name is irrelevant offline; strip it so the dialect resolves.
     dialect_name = make_url(url).get_backend_name()
     context.configure(
@@ -60,8 +97,10 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
+    section = dict(config.get_section(config.config_ini_section, {}))
+    section["sqlalchemy.url"] = _resolve_url()
     connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
