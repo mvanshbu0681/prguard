@@ -271,7 +271,7 @@ def build_deps(settings: Settings) -> PipelineDeps:
 
     return PipelineDeps(
         llm_client=build_client(
-            provider=settings.LLM_PROVIDER, api_key=settings.ANTHROPIC_API_KEY
+            provider=settings.LLM_PROVIDER, api_key=settings.llm_api_key
         ),
         github_client=GitHubClient(
             token=settings.GITHUB_TOKEN, base_url=settings.GITHUB_API_BASE

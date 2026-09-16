@@ -251,8 +251,13 @@ def build_client(
         from prguard.llm.anthropic import AnthropicClient
 
         return AnthropicClient(api_key=api_key)
+    if normalised == "gemini":
+        # Imported here for the same reason as above: the offline path never pays for it.
+        from prguard.llm.gemini import GeminiClient
+
+        return GeminiClient(api_key=api_key)
     raise UnknownProviderError(
-        f"unknown LLM_PROVIDER {provider!r}; expected one of: anthropic, fake"
+        f"unknown LLM_PROVIDER {provider!r}; expected one of: anthropic, gemini, fake"
     )
 
 

@@ -67,7 +67,8 @@ class Settings(BaseSettings):
 
     # --- LLM ---
     ANTHROPIC_API_KEY: str | None = None
-    LLM_PROVIDER: Literal["anthropic", "fake"] = "anthropic"
+    GEMINI_API_KEY: str | None = None
+    LLM_PROVIDER: Literal["anthropic", "gemini", "fake"] = "anthropic"
     MODEL_SPECIALIST: str = "claude-sonnet-5"
     MODEL_COORDINATOR: str = "claude-opus-5"
     MODEL_PROOF_GENERATOR: str = "claude-opus-5"
@@ -114,6 +115,20 @@ class Settings(BaseSettings):
     REVIEW_DRAFT_PRS: bool = False
     NEAREST_LINE_MAX_DISTANCE: int = 10
     GATE_CONTEXT_NAME: str = "prguard/merge-gate"
+
+    @property
+    def llm_api_key(self) -> str | None:
+        """The credential for whichever provider ``LLM_PROVIDER`` names.
+
+        One place decides this. Passing ``ANTHROPIC_API_KEY`` to a Gemini client is the kind
+        of mismatch that surfaces as an unauthenticated 401 halfway through a review rather
+        than at startup, so the mapping lives next to the keys themselves.
+        """
+        if self.LLM_PROVIDER == "gemini":
+            return self.GEMINI_API_KEY
+        if self.LLM_PROVIDER == "anthropic":
+            return self.ANTHROPIC_API_KEY
+        return None
 
     @field_validator("MODEL_FAILBACK_CHAIN", mode="before")
     @classmethod
