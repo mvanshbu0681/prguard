@@ -49,6 +49,19 @@ Everything in this list is owned by a tool that already runs, or is a preference
 - **Pre-existing debt this pull request merely touched.** The author inherited it; making them pay
   for it in review is how reviews get resented.
 
+## How to write it
+
+Your `title` names the property to keep, in the imperative (§3): *Keep `get_settings` free of
+writes.*, *Let the caller tell a missing rate from a zero one.* — never *`get_settings` now mutates
+state* or *error handling loses the cause*. You are the reviewer most at risk of a title that reads
+as a preference, so the test is whether it names a cost: if the imperative could be answered with
+"why?", you are describing taste, not debt.
+
+Your `remediation` is the smallest change that removes the cost you named — the second call site to
+delete, the sentinel to return instead of the default, the `raise … from` that keeps the cause. If
+the honest fix is larger than the pull request, say what the interim step is and what the full one
+would be. Never propose a refactor as the remediation for a finding whose cost you could not name.
+
 ## Calibration
 
 One finding on a large pull request is a lot from this reviewer. Zero is the common and correct
