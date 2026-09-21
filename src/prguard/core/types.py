@@ -181,6 +181,12 @@ class SpecialistFinding:
     Constraints enforced here rather than at every call site: ``0 <= confidence <= 1`` and
     ``start_line <= end_line``. ``severity_hint`` is captured and **never** used for ranking
     (§4.4) — the coordinator stores it as ``llm_severity_hint``.
+
+    ``remediation`` is the one or two concrete options that close the finding, and it is
+    **optional on purpose**. A finding without a fix is homework, so ``SHARED.md`` demands one;
+    but a specialist that omits it must degrade to a body-only comment rather than have its
+    whole angle on the pull request thrown away by a schema violation (§6.12, E23). Making it
+    required would turn a presentation regression into a lost finding.
     """
 
     rule_key: str
@@ -195,6 +201,7 @@ class SpecialistFinding:
     confidence: Annotated[float, Field(ge=0.0, le=1.0)] = 0.5
     provable: bool = False
     repro_hint: str | None = None
+    remediation: str | None = None
     evidence: tuple[Evidence, ...] = ()
 
     @model_validator(mode="after")
@@ -263,6 +270,9 @@ class CanonicalFinding:
     confidence: float = 0.5
     provable: bool = False
     repro_hint: str | None = None
+    #: §6.12's ``remediation``, carried from the specialist through to the review comment.
+    #: ``None`` is the honest "no fix was offered" and renders as today's body-only comment.
+    remediation: str | None = None
     evidence: list[Evidence] = field(default_factory=list)
     severity: SeverityResult | None = None
     fingerprint: str | None = None

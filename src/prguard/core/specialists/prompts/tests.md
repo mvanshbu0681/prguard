@@ -54,6 +54,10 @@ findings is a `-` line.
 
 ## How to write it
 
+Your `title` names the coverage to put back, in the imperative (§3): *Re-assert the exact total the
+promotion test used to pin.* — never *assertion weakened from `assertEqual` to `assertTrue`*. The
+weakening is the evidence; restoring the guarantee is the instruction.
+
 Quote both sides. The body should let a reader who has not opened the diff see what the assertion
 used to say and what it says now:
 
@@ -62,8 +66,15 @@ used to say and what it says now:
 > result — including the `TypeError`-free-but-wrong value the new branch returns. The behaviour the
 > test existed to pin is no longer pinned.
 
+Then the `remediation`, which for you is nearly always one of two:
+
+> Put `assertEqual(apply_discount(100, None), 100)` back. If the no-promotion contract really did
+> change in this pull request, say so in the description and assert the new expected total instead
+> — the test should still pin a number, whichever number it is.
+
 Do not accuse. State what the diff does and what stops being verified because of it; the author may
-have had a reason, and the record is what matters.
+have had a reason, and the record is what matters. That is why the remediation offers the honest
+second branch — "the contract changed, so pin the new one" — rather than assuming tampering.
 
 ## Calibration
 

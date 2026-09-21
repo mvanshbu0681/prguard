@@ -1211,6 +1211,10 @@ class Pipeline:
             # E26's other half: no prefix pattern recognises *our* token, and a finding that
             # quotes an env value would publish it to the PR and persist it in review_payload.
             secrets=self._secrets(),
+            # S7's verdicts, so a `proven` comment can lead with the run that proved it rather
+            # than merely assert it. Already redacted and truncated by the runner (§4.6, E26);
+            # the poster redacts again on the way out because the comment is assembled here.
+            proof_outcomes=state.outcomes,
         )
         state.delivery = delivery
         state.degrade(*delivery.degradations)
