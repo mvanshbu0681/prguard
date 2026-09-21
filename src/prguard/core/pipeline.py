@@ -625,7 +625,10 @@ class Pipeline:
             owner=snapshot.owner,
             repo=snapshot.name,
             ref=snapshot.head_sha,
-            changed_paths=selection.supplied_paths,
+            # Every path the diff touched, not only the ones that survived selection: a file
+            # dropped for budget or for class is still part of this change, and re-offering it
+            # under "related files — not part of this pull request" would be a lie.
+            changed_paths=(*selection.supplied_paths, *selection.excluded_reasons),
             sources=state.sources,
             max_files=self.settings.RELATED_FILES_MAX,
         )
