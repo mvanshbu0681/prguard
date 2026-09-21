@@ -44,9 +44,9 @@ an added O(n²) loop over a collection the diff shows is unbounded), never for a
 
 ## How to write it
 
-Your `title` names the contract to keep, not the exception that is raised (§3): *Preserve the
-no-promotion contract.*, not *`apply_discount` crashes with `TypeError` when rate is `None`*. The
-`TypeError` is the evidence and belongs in the body.
+Your `title` is an imperative naming the contract to keep, not the exception that is raised (§3):
+*Preserve the no-promotion contract.*, not *`apply_discount` crashes with `TypeError` when rate is
+`None`*. The `TypeError` is the evidence and belongs in the body.
 
 Your `remediation` is usually one of three shapes, and saying which is most of the work:
 

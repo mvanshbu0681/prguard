@@ -113,6 +113,42 @@ def test_the_shared_rules_state_the_three_things_that_keep_output_honest() -> No
     assert '"findings": []' in shared
 
 
+def test_the_shared_rules_demand_an_imperative_title_and_show_the_failure_mode() -> None:
+    """A rule with no worked example is a rule a model averages away.
+
+    The title is the whole difference between a comment that is read and one that is acted on,
+    so `SHARED.md` has to both state the rule and show the symptom restatement it replaces —
+    including the one this product actually shipped.
+    """
+    shared = load_prompt("SHARED")
+
+    assert "## 3. The title is an instruction, never a symptom" in shared
+    assert "imperative sentence addressed to the author" in shared
+    # The worked pair: our own regression on the left, their instruction on the right.
+    assert "Preserve the no-promotion contract." in shared
+    assert "`apply_discount` crashes with `TypeError` when rate is `None`." in shared
+    # And the hedges a title is rejected on.
+    assert '"consider"' in shared
+
+
+def test_the_shared_rules_require_a_remediation_on_every_finding() -> None:
+    """§6.12 makes the field optional; the prompt is where it stops being optional in practice."""
+    shared = load_prompt("SHARED")
+
+    assert '"remediation"' in shared
+    assert "## 4. Every finding carries its own fix" in shared
+    assert "write\n  it every time" in shared
+
+
+@pytest.mark.parametrize("name", (*SPECIALIST_NAMES, "coordinator"))
+def test_every_reviewer_is_told_what_its_own_fixes_look_like(name: str) -> None:
+    """A generic "name the fix" rule produces generic fixes; each angle gets its own shapes."""
+    agent = load_prompt(name)
+
+    assert "remediation" in agent
+    assert "imperative" in agent.lower()
+
+
 @pytest.mark.parametrize("name", SPECIALIST_NAMES)
 def test_every_reviewer_is_negative_prompted(name: str) -> None:
     """§3 Tier 3: telling a reviewer what *not* to flag is what gets to ~1.2 findings/review."""

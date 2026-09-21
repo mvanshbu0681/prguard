@@ -649,6 +649,88 @@ async def test_a_prose_coordinator_is_repaired_once_and_then_falls_back() -> Non
 
 
 # ---------------------------------------------------------------------------
+# §6.12's remediation, carried to delivery
+# ---------------------------------------------------------------------------
+
+
+async def test_the_remediation_reaches_the_canonical_finding() -> None:
+    """The fix is written by a model and rendered by delivery; S4 is the only bridge."""
+    remediation = (
+        "Restore the `if rate is None: return price` early return, or normalise both callers."
+    )
+    response = json.dumps(
+        {
+            "findings": [
+                {
+                    "rule_key": "unguarded_none_arithmetic",
+                    "category": "correctness",
+                    "title": "Preserve the no-promotion contract.",
+                    "body_markdown": "`apply_discount` evaluates `1 - rate` with `rate=None`.",
+                    "file_path": "app/billing.py",
+                    "start_line": 41,
+                    "end_line": 44,
+                    "remediation": remediation,
+                    "sources": ["bugs"],
+                }
+            ],
+            "dropped": [],
+        }
+    )
+
+    result = await run(FakeLLMClient(script=[response]), output("bugs", finding()))
+
+    assert [found.remediation for found in result.findings] == [remediation]
+
+
+async def test_a_coordinator_that_omits_the_remediation_loses_a_line_not_a_finding() -> None:
+    """§6.12 keeps the field optional; the recorded corpus predates it and must still pass."""
+    result = await run(coordinator_client(), *pr_42_outputs())
+
+    assert result.findings, "the recorded response still keeps findings"
+    assert all(found.remediation is None for found in result.findings)
+
+
+async def test_the_fallback_merge_carries_the_specialists_own_remediation() -> None:
+    """§8.1's dumb merge must not be the path that silently drops the fix."""
+    remediation = "Put the `None` guard back at the top of `apply_discount`."
+
+    class DeadClient:
+        async def complete(
+            self,
+            *,
+            model: str,
+            system: str,
+            messages: list[Message] | tuple[Message, ...],
+            max_tokens: int,
+            temperature: float,
+        ) -> LLMResponse:
+            raise LLMError("coordinator is down")
+
+    result = await coordinate(
+        DeadClient(),
+        outputs=(output("bugs", finding(remediation=remediation)),),
+        task=TASK,
+        tenant_id=TENANT,
+        repository_id=REPOSITORY,
+        model=MODEL,
+        max_tokens=8000,
+        temperature=0.0,
+    )
+
+    assert result.used_fallback
+    assert [found.remediation for found in result.findings] == [remediation]
+
+
+def test_the_coordinator_is_shown_the_remediation_it_is_asked_to_carry() -> None:
+    """It cannot merge two fixes into one, or notice a missing one, if it never sees them."""
+    prompt = build_coordinator_prompt(
+        TASK, [("bugs", finding(remediation="Restore the guard."))]
+    )
+
+    assert "remediation: Restore the guard." in prompt
+
+
+# ---------------------------------------------------------------------------
 # What the coordinator is shown
 # ---------------------------------------------------------------------------
 
