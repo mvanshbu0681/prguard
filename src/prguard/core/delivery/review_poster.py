@@ -956,12 +956,15 @@ def _proof_output(finding: CanonicalFinding, outcome: ProofOutcome | None) -> st
     """
     if finding.proof_status != "proven" or outcome is None or outcome.head is None:
         return ""
-    tail = _tail(outcome.head.stderr or outcome.head.stdout)
+    # pytest writes its report to stdout; stderr is where a runner-level crash lands, and that
+    # is not what a `proven` verdict was reached on.
+    tail = _tail(outcome.head.stdout or outcome.head.stderr)
     if not tail:
         return ""
+    fence = _fence_for(tail)
     return (
         f"<details><summary>{PROOF_OUTPUT_SUMMARY}</summary>\n\n"
-        f"```text\n{tail}\n```\n\n</details>"
+        f"{fence}text\n{tail}\n{fence}\n\n</details>"
     )
 
 
@@ -971,16 +974,31 @@ def _tail(output: str) -> str:
     text = "\n".join(line.rstrip() for line in lines).strip()
     if len(text) > PROOF_OUTPUT_MAX_CHARS:
         text = "…\n" + text[-PROOF_OUTPUT_MAX_CHARS:]
-    return text.replace("```", "``​`")
+    return text
+
+
+def _fence_for(text: str) -> str:
+    """A code fence longer than any backtick run inside ``text``.
+
+    A repro that prints a markdown fence would otherwise close ours early and spill the rest of
+    the run into the comment as prose. Lengthening the fence is CommonMark's own answer; editing
+    the quoted output to fit would make the receipt a paraphrase.
+    """
+    longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
+    return "`" * max(3, longest + 1)
 
 
 def _location_note(assignment: RungAssignment) -> str:
     """Where the issue is, whenever the comment is not sitting exactly on top of it.
 
     Rung 1 may anchor on the first touched line of a span rather than on the whole of it, and
-    rung 3 carries no line at all, so in both cases the reader is told the real range.
+    rung 3 carries no line at all, so in both cases the reader is told the real range. Rung 2
+    already opens with :func:`nearest_line_note`, and rung 4 is a row in a table that carries
+    its own location column; saying it twice on either is noise.
     """
-    if assignment.mode == "summary_only" or assignment.anchors_whole_span:
+    if assignment.mode == "summary_only" or assignment.is_relocated:
+        return ""
+    if assignment.anchors_whole_span:
         return ""
     return f"_Issue at `{assignment.file_path}:{_span(assignment.line, assignment.end_line)}`._"
 
@@ -1098,7 +1116,12 @@ def _footer(result_url: str | None) -> str:
 
 
 def _escape_cell(text: str) -> str:
-    return text.replace("|", r"\|")
+    """A model-written title, made safe for a markdown table row.
+
+    A pipe ends the cell and a newline ends the *table*, so a two-line title would take every
+    finding below it out of the review body. Both are model output; neither is worth a lost row.
+    """
+    return " ".join(text.split()).replace("|", r"\|")
 
 
 def _plural(count: int, noun: str) -> str:

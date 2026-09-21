@@ -277,6 +277,18 @@ def test_a_long_run_is_quoted_by_its_tail_where_pytest_puts_the_failure() -> Non
     assert len(quoted.splitlines()) <= PROOF_OUTPUT_MAX_LINES
 
 
+def test_a_run_that_printed_a_code_fence_cannot_close_ours_early() -> None:
+    """The quoted output is a receipt. Lengthening our fence is CommonMark's answer to a
+    backtick run inside it; editing the run would make the receipt a paraphrase."""
+    printed = "```\nsomething the repro echoed\n```\n" + FAILING_OUTPUT
+
+    comment = comment_for(finding(), outcome=proven_outcome(printed))
+
+    assert "````text" in comment
+    assert "something the repro echoed" in comment
+    assert comment.rstrip().endswith("-->")
+
+
 def test_a_proven_finding_with_no_recorded_run_still_leads_with_the_proof() -> None:
     """A dry run has the verdict and not the artifact; the claim is still the true one."""
     comment = comment_for(finding(), outcome=None)
@@ -369,12 +381,13 @@ def test_a_comment_covering_its_whole_span_does_not_repeat_the_location() -> Non
 
 
 def test_a_relocated_comment_still_leads_with_the_nearest_line_note() -> None:
-    """Rung 2 is a different claim from rung 1 and must keep saying so (§4.7)."""
+    """Rung 2 is a different claim from rung 1 and must keep saying so, once (§4.7)."""
     published = finding(start_line=30, end_line=30)
 
     comment = comment_for(published, line_map=LineMap(ORDERS, commentable_lines=frozenset({25})))
 
     assert comment.startswith("> Nearest reviewable line.")
+    assert "_Issue at" not in comment, "the banner already said where the issue is"
 
 
 # ---------------------------------------------------------------------------
@@ -424,6 +437,17 @@ def test_the_body_lists_every_finding_as_something_to_act_on() -> None:
     assert "| Act on | Where | Severity | Proof |" in body
     assert f"| {IMPERATIVE_TITLE} | `{ORDERS}:6-15` |" in body
     assert f"| Restore the tenant filter. | `{ORDERS}:9` |" in body
+
+
+def test_a_two_line_title_cannot_end_the_table_early() -> None:
+    """A newline in a model-written title would take every row below it out of the body."""
+    awkward = finding(title="Restore the guard\nand the test | that pinned it.")
+    second = finding(id="f-two", title="Keep the interval closed.", start_line=9, end_line=9)
+
+    body = body_for(awkward, second)
+
+    assert "Restore the guard and the test \\| that pinned it." in body
+    assert "Keep the interval closed." in body
 
 
 def test_the_gate_explanation_is_one_line_at_the_bottom() -> None:
