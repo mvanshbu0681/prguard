@@ -39,8 +39,10 @@ shape is fixed here and pinned by a test, in this order:
 
 1. **Proof first, when there is proof.** A finding whose generated repro passes at base and
    fails at head is the whole product thesis, and it led with nothing at all until now. It
-   leads, and the failing output ships with it. When nothing was proven the comment says which
-   of the §4.6 states it is in, in one plain clause, without apologising for it.
+   leads, and the failing output ships with it — minus the wall clock, which AC-20 will not
+   have in a payload it compares across triggers, and which says nothing about the diff. When
+   nothing was proven the comment says which of the §4.6 states it is in, in one plain clause,
+   without apologising for it.
 2. **The title**, which ``SHARED.md`` requires to be an imperative — the thing to do, not the
    thing that broke.
 3. **One metadata row**: category, severity band, and the measured inputs the band was computed
@@ -1017,8 +1019,9 @@ def _fence_for(text: str) -> str:
     """A code fence longer than any backtick run inside ``text``.
 
     A repro that prints a markdown fence would otherwise close ours early and spill the rest of
-    the run into the comment as prose. Lengthening the fence is CommonMark's own answer; editing
-    the quoted output to fit would make the receipt a paraphrase.
+    the run into the comment as prose. Lengthening the fence is CommonMark's own answer, and it
+    leaves the quoted bytes alone — the only thing the published copy edits out is the wall clock
+    (:data:`_ELAPSED_NOISE`), because that is the one part of a run the diff does not determine.
     """
     longest = max((len(run) for run in re.findall(r"`+", text)), default=0)
     return "`" * max(3, longest + 1)
