@@ -263,7 +263,33 @@ def test_the_failing_run_ships_with_the_finding_that_it_proved() -> None:
 
     assert "<details><summary>" in comment
     assert "TypeError: unsupported operand type(s)" in comment
-    assert "1 failed in 0.04s" in comment
+    assert "1 failed" in comment, "pytest's count survives; its wall clock does not (AC-20)"
+
+
+def test_two_runs_of_one_diff_produce_the_same_comment() -> None:
+    """AC-20: the review is a function of the pull request, so the wall clock cannot be in it.
+
+    Quoting the run put pytest's `in 0.02s` into `review_runs.review_payload`, which the trigger
+    parity check compares byte for byte across the API and webhook doors. Elapsed time is a
+    property of the machine, not of the diff; it comes out of the published copy, and the
+    artifact `/result` serves keeps the run verbatim.
+    """
+    quick = "=================== 1 failed in 0.01s ==================="
+    slow = "=================== 1 failed in 12.40s (0:00:12) ==================="
+
+    fast_comment = comment_for(finding(), outcome=proven_outcome(f"{FAILING_OUTPUT}\n{quick}"))
+    slow_comment = comment_for(finding(), outcome=proven_outcome(f"{FAILING_OUTPUT}\n{slow}"))
+
+    assert fast_comment == slow_comment
+    assert "1 failed" in fast_comment
+    assert "0.01s" not in fast_comment and "12.40s" not in slow_comment
+
+
+def test_the_traceback_keeps_its_alignment() -> None:
+    """pytest aligns a failure with runs of spaces; squeezing them costs the reader its shape."""
+    comment = comment_for(finding(), outcome=proven_outcome())
+
+    assert "E       TypeError: unsupported operand type(s)" in comment
 
 
 def test_a_long_run_is_quoted_by_its_tail_where_pytest_puts_the_failure() -> None:
@@ -271,7 +297,7 @@ def test_a_long_run_is_quoted_by_its_tail_where_pytest_puts_the_failure() -> Non
 
     comment = comment_for(finding(), outcome=proven_outcome(noisy))
 
-    assert "1 failed in 0.04s" in comment
+    assert "1 failed" in comment
     assert "collected line 0" not in comment
     quoted = comment.split("```text\n", 1)[1].split("\n```", 1)[0]
     assert len(quoted.splitlines()) <= PROOF_OUTPUT_MAX_LINES

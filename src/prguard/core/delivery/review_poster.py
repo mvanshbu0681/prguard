@@ -141,6 +141,23 @@ PROOF_OUTPUT_SUMMARY: Final[str] = "The failing run"
 PROOF_OUTPUT_MAX_LINES: Final[int] = 24
 PROOF_OUTPUT_MAX_CHARS: Final[int] = 1600
 
+#: The wall clock pytest prints in its terminal summary — ``in 0.42s``, plus the ``(0:01:05)`` a
+#: long run adds after it — taken out of the **quoted** copy of the run.
+#:
+#: AC-20: the review payload is a function of the pull request and of nothing else, and it is
+#: compared byte for byte across the two doors that can trigger a run. Elapsed time is a function
+#: of neither the pull request nor the door; two runs of one diff differ in exactly these bytes.
+#: Nothing else about the output is touched, and ``/result`` serves the run verbatim from the
+#: artifact (§4.6) — this is the published copy, not the record.
+#:
+#: The first pattern mirrors ``proof.runner.SUMMARY_DURATION``. It is written out rather than
+#: imported because delivery has no business importing the sandbox, and it is pytest's output
+#: convention rather than a contract of ours, so the two are not at risk of drifting apart.
+_ELAPSED_NOISE: Final[tuple[re.Pattern[str], ...]] = (
+    re.compile(r"\bin\s+\d+(?:\.\d+)?s\b"),
+    re.compile(r"\s*\(\d+:\d{2}:\d{2}\)"),
+)
+
 DeliveryStatus = Literal["posted", "degraded", "dry_run", "skipped_pr_closed"]
 
 #: How each §4.6 proof state reads on a comment. Stated, never apologised for: "we did not run
@@ -969,12 +986,31 @@ def _proof_output(finding: CanonicalFinding, outcome: ProofOutcome | None) -> st
 
 
 def _tail(output: str) -> str:
-    """The last few lines of a run, which is where pytest puts the failure it found."""
+    """The last few lines of a run, which is where pytest puts the failure it found.
+
+    Wall clock comes out on the way (:data:`_ELAPSED_NOISE`) so the payload stays a function of
+    the pull request; everything else is quoted as the sandbox wrote it.
+    """
     lines = output.strip().splitlines()[-PROOF_OUTPUT_MAX_LINES:]
-    text = "\n".join(line.rstrip() for line in lines).strip()
+    text = "\n".join(_stable(line) for line in lines).strip()
     if len(text) > PROOF_OUTPUT_MAX_CHARS:
         text = "…\n" + text[-PROOF_OUTPUT_MAX_CHARS:]
     return text
+
+
+def _stable(line: str) -> str:
+    """One output line with its elapsed time removed — AC-20. Untouched when it carried none.
+
+    The squeeze only runs on a line a pattern actually changed: pytest aligns a traceback with
+    runs of spaces, and collapsing those on every line would cost the reader the shape of the
+    failure to fix a problem that is only ever on the summary rule.
+    """
+    cleaned = line
+    for pattern in _ELAPSED_NOISE:
+        cleaned = pattern.sub("", cleaned)
+    if cleaned == line:
+        return line.rstrip()
+    return re.sub(r"[ \t]{2,}", " ", cleaned).rstrip()
 
 
 def _fence_for(text: str) -> str:
