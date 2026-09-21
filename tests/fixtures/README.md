@@ -52,6 +52,7 @@ respx_mock.get(recorded.url).mock(
 | `pr_42_commits` | 14 commits in 90 days ⇒ churn 0.7 | §4.4 churn input |
 | `file_contents_billing` · `file_contents_checkout` | base64 of the committed head files | S2 on-demand fetch |
 | `file_contents_404` | 404 for a file that does not exist | S2 degradation (§8.1) |
+| `git_tree_buggy_calc` | The recursive tree at the PR-42 head SHA, with real git object ids | S2 cross-file caller discovery (§4.4) |
 | `review_created` | 200, `event: COMMENT` | AC-14, AC-17 |
 | `review_422_out_of_hunk` | 422 naming the offending comment | E2 / AC-18 |
 | `review_403_forbidden` | 403 without a rate-limit header | E17 / AC-24 |

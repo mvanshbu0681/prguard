@@ -88,6 +88,27 @@ def contents_response(tree: str, path: str, ref: str = "head") -> httpx.Response
     )
 
 
+def tree_response(tree: str, ref: str = "head") -> httpx.Response:
+    """A `GET /git/trees/{ref}?recursive=1` body built from a committed fixture tree.
+
+    Generated rather than recorded so a drifted revision (`buggy_calc_drift`) lists its own
+    files: S2's caller discovery is only as honest as the listing it is given, and a listing
+    that describes a different tree would make these tests agree with nothing.
+    """
+    root = repo_tree(tree, ref)
+    entries = [
+        {
+            "path": str(item.relative_to(root)),
+            "mode": "040000" if item.is_dir() else "100644",
+            "type": "tree" if item.is_dir() else "blob",
+            "sha": "0" * 40,
+        }
+        for item in sorted(root.rglob("*"))
+        if "__pycache__" not in item.parts
+    ]
+    return httpx.Response(200, json={"sha": "0" * 40, "tree": entries, "truncated": False})
+
+
 def recorded_routes() -> dict[str, str]:
     """Each marker mapped to the raw text the provider returned, replayed verbatim.
 
@@ -226,12 +247,30 @@ def mock_pull_request(
     ref: str = "head",
     contents: Sequence[str] = ("app/billing.py", "app/checkout.py"),
 ) -> None:
-    """Register the S1/S2 reads for one revision of the fixture PR."""
+    """Register the S1/S2 reads for one revision of the fixture PR.
+
+    That includes the repository tree and a body for every committed file the diff does *not*
+    contain: S2 discovers the callers outside the diff from the tree and then fetches them, so
+    a run against this fixture makes those reads whether or not a given test cares about them.
+    The diff's own paths stay under `contents`, which is what lets a test make one of them 404.
+    """
     router.get(f"/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}").mock(return_value=recorded(detail))
     router.get(f"/repos/{OWNER}/{REPO}/pulls/{PR_NUMBER}/files").mock(
         return_value=recorded(files)
     )
     for path in contents:
+        router.get(f"/repos/{OWNER}/{REPO}/contents/{path}").mock(
+            return_value=contents_response(tree, path, ref)
+        )
+    router.get(path__regex=rf"/repos/{OWNER}/{REPO}/git/trees/[0-9a-f]+").mock(
+        return_value=tree_response(tree, ref)
+    )
+    changed = {str(entry["filename"]) for entry in github_response(files).body}
+    root = repo_tree(tree, ref)
+    for item in sorted(root.rglob("*")):
+        path = str(item.relative_to(root))
+        if not item.is_file() or "__pycache__" in item.parts or path in changed:
+            continue
         router.get(f"/repos/{OWNER}/{REPO}/contents/{path}").mock(
             return_value=contents_response(tree, path, ref)
         )

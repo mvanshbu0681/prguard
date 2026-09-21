@@ -79,6 +79,7 @@ def test_defaults_match_spec_section_4_8() -> None:
     assert settings.REVIEW_DRAFT_PRS is False
     assert settings.NEAREST_LINE_MAX_DISTANCE == 10
     assert settings.MAX_FILES == 300
+    assert settings.RELATED_FILES_MAX == 40
     assert settings.DEFAULT_TENANT_SLUG == "default"
 
 

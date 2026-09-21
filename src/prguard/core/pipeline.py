@@ -47,6 +47,7 @@ from prguard.core.context import (
     ContextSelection,
     build_context,
     classify,
+    language_of,
     path_sensitivity,
 )
 from prguard.core.coordinator import coordinate
@@ -88,6 +89,7 @@ from prguard.core.proof.workspace import (
     materialise,
 )
 from prguard.core.queue import is_cancelled, supersede_older_runs
+from prguard.core.related import discover_related_files
 from prguard.core.specialists.base import ReviewTask, run_specialists
 from prguard.core.specialists.registry import specialists_for
 from prguard.core.types import (
@@ -179,6 +181,17 @@ GATE_DEGRADATION_EXEMPT: Final[frozenset[str]] = frozenset(
 
 #: How the untrusted head bodies are labelled inside the fenced `file_bodies` block (E15).
 _FILE_BLOCK = "### {path}\n```{language}\n{body}\n```"
+
+#: The heading the files S2 discovered outside the diff sit under. They exist so a finding can
+#: name the caller it breaks; they are not part of the change, and the model is told so in the
+#: same breath it is shown them — `supplied_files` remains the only set `file_path` may name.
+_RELATED_HEADER = (
+    "## Related files — NOT part of this pull request\n\n"
+    "These files are elsewhere in the repository and reference a symbol the diff changed. "
+    "They are here so you can name the callers a change breaks, with their line numbers. "
+    "Do not raise a finding against these paths: `file_path` must still be one of the files "
+    "supplied in context above."
+)
 
 #: Lines of context either side of a finding when the enclosing function cannot be parsed.
 _FALLBACK_WINDOW: Final[int] = 20
@@ -601,6 +614,27 @@ class Pipeline:
         state.sources = dict(fetched.contents)
         state.degrade(*fetched.degradations)
 
+        # §4.4: `blast_radius` and `reachability` are counted over the fetched context files,
+        # and the callers of a changed symbol are usually in files the diff never touches.
+        # Measuring over the diff alone reports zero callers for a function three modules
+        # depend on, which is not a conservative answer — it is the wrong one. One tree
+        # listing, a capped and ranked candidate set, and the bodies land in `sources`
+        # alongside the diff's own. Failing costs the search, never the run (§8.1).
+        related = await discover_related_files(
+            self.deps.github_client,
+            owner=snapshot.owner,
+            repo=snapshot.name,
+            ref=snapshot.head_sha,
+            # Every path the diff touched, not only the ones that survived selection: a file
+            # dropped for budget or for class is still part of this change, and re-offering it
+            # under "related files — not part of this pull request" would be a lie.
+            changed_paths=(*selection.supplied_paths, *selection.excluded_reasons),
+            sources=state.sources,
+            max_files=self.settings.RELATED_FILES_MAX,
+        )
+        state.sources.update(related.contents)
+        state.degrade(*related.degradations)
+
         run = state.run
         run.risk_tier = selection.risk_tier
         run.context_truncated = selection.truncated
@@ -612,6 +646,11 @@ class Pipeline:
                 "files_excluded": selection.files_excluded,
                 "excluded_reasons": dict(selection.excluded_reasons),
                 "unfetchable": dict(fetched.failures),
+                "related_files": list(related.contents),
+                "related_considered": list(related.considered),
+                "related_skipped": list(related.skipped),
+                "related_unfetchable": dict(related.failures),
+                "related_tree_error": related.tree_error,
             },
         }
 
@@ -1498,7 +1537,18 @@ class Pipeline:
         return snapshot
 
     def _file_bodies(self, state: RunState) -> str:
-        """The fetched head bodies, labelled per file, for the `file_bodies` fence (E15)."""
+        """The fetched head bodies, labelled per file, for the `file_bodies` fence (E15).
+
+        The files S2 discovered outside the diff follow, under their own heading. They are what
+        let a finding say "``app/orders.py`` lines 18-20 pass ``None`` here" instead of gesturing
+        at "callers" — but they are evidence *about* the change, not part of it, so the heading
+        says so and they are deliberately absent from ``supplied_files``: §6.12 must still drop
+        a finding raised against a path this pull request does not touch.
+
+        Everything here is untrusted (a repo tree is input, and so is the path inside it).
+        ``ReviewTask`` sanitises ``file_context`` on construction and ``fence_untrusted``
+        sanitises it again at the boundary, so this string is never handed to a model raw.
+        """
         selection = self._require_selection(state)
         blocks = [
             _FILE_BLOCK.format(
@@ -1509,6 +1559,15 @@ class Pipeline:
             for supplied in selection.files
             if supplied.path in state.sources
         ]
+        related = sorted(set(state.sources) - set(selection.supplied_paths))
+        if related:
+            blocks.append(_RELATED_HEADER)
+            blocks.extend(
+                _FILE_BLOCK.format(
+                    path=path, language=language_of(path), body=state.sources[path]
+                )
+                for path in related
+            )
         return "\n\n".join(blocks)
 
     @staticmethod

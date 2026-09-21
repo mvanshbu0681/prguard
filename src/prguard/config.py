@@ -103,6 +103,11 @@ class Settings(BaseSettings):
     # --- context (§4.1 S2, E5/E6) ---
     MAX_FILES: int = 300
     MAX_DIFF_BYTES: int = 2_000_000
+    #: How many files *outside* the diff S2 may fetch to find the callers of a changed symbol
+    #: (§4.4 `blast_radius`/`reachability`). One tree listing plus at most this many bodies, so
+    #: a monorepo cannot fan a single review out into thousands of requests. 0 turns the search
+    #: off; the review then measures callers over the diff alone and says so.
+    RELATED_FILES_MAX: int = 40
 
     # --- GitHub (§4.7, §6.10) ---
     GITHUB_TOKEN: str | None = None
