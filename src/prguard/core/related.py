@@ -96,15 +96,7 @@ def changed_symbols(sources: Mapping[str, str]) -> tuple[str, ...]:
 
     An unparsable file contributes nothing and raises nothing — E28 is a degradation here too.
     """
-    found: set[str] = set()
-    for path, body in sources.items():
-        if language_of(path) != "python":
-            continue
-        for qualified in symbols_in(body):
-            leaf = qualified.rsplit(".", 1)[-1]
-            if not leaf.startswith("_"):
-                found.add(leaf)
-    return tuple(sorted(found))
+    return tuple(sorted({leaf for leaves in _defined(sources).values() for leaf in leaves}))
 
 
 def rank_candidates(paths: Sequence[str], *, changed_paths: Sequence[str]) -> tuple[str, ...]:
@@ -176,20 +168,43 @@ async def discover_related_files(
 # ---------------------------------------------------------------------------
 
 
+def _defined(sources: Mapping[str, str]) -> dict[str, tuple[str, ...]]:
+    """Leaf definition names per changed file, omitting the files that define nothing.
+
+    The AST is the only symbol source this product has (§4.4, E28), so in practice this is the
+    Python half of the diff — which is also why the candidate set is restricted to the
+    languages named here rather than to every language in the diff. A TypeScript file cannot
+    reference a Python symbol, and letting it compete for a slot under ``RELATED_FILES_MAX``
+    would cost a real caller its place.
+    """
+    defined: dict[str, tuple[str, ...]] = {}
+    for path, body in sources.items():
+        if language_of(path) != "python":
+            continue
+        leaves = tuple(
+            leaf
+            for leaf in (qualified.rsplit(".", 1)[-1] for qualified in symbols_in(body))
+            if not leaf.startswith("_")
+        )
+        if leaves:
+            defined[path] = leaves
+    return defined
+
+
 def _candidates(
     tree: Sequence[str], *, changed_paths: Sequence[str], sources: Mapping[str, str]
 ) -> tuple[str, ...]:
-    """Every tree path that could plausibly reference a changed symbol, unranked."""
-    languages = {
-        language_of(path) for path in sources if language_of(path) != "unknown"
-    }
+    """Every tree path that could plausibly reference a changed symbol, unranked and unique."""
+    languages = {language_of(path) for path in _defined(sources)}
     already = set(changed_paths)
     return tuple(
-        path
-        for path in tree
-        if path not in already
-        and language_of(path) in languages
-        and not is_excluded(classify(path))
+        dict.fromkeys(
+            path
+            for path in tree
+            if path not in already
+            and language_of(path) in languages
+            and not is_excluded(classify(path))
+        )
     )
 
 

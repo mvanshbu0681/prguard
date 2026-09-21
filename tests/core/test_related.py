@@ -162,6 +162,39 @@ async def test_a_test_file_that_exercises_a_changed_symbol_is_kept(
     assert "tests/test_billing.py" in found.contents
 
 
+async def test_a_language_that_defines_no_symbols_wins_no_candidate_slots(
+    github_mock: respx.Router,
+) -> None:
+    """A TypeScript file cannot reference a Python symbol; letting it compete costs a caller.
+
+    The AST is the only symbol source this product has (§4.4, E28), so the candidate set
+    follows the languages that actually produced search terms, not every language in the diff.
+    """
+    mock_repo(github_mock)
+    github_mock.get(TREES_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "sha": HEAD_SHA,
+                "truncated": False,
+                "tree": [
+                    {"path": path, "type": "blob"}
+                    for path in ("app/orders.py", "app/checkout.ts", "web/cart.ts")
+                ],
+            },
+        )
+    )
+
+    async with make_github_client() as client:
+        found = await discover(
+            client,
+            changed_paths=(*CHANGED, "web/index.ts"),
+            sources={**changed_sources(), "web/index.ts": "export function total() {}"},
+        )
+
+    assert found.considered == ("app/orders.py",)
+
+
 async def test_an_excluded_class_is_never_a_candidate() -> None:
     """E9 keeps vendored and generated paths out of context; they are not callers either."""
     tree = (
