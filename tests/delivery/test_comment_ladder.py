@@ -153,6 +153,47 @@ def test_a_multi_line_finding_whose_end_left_the_hunk_anchors_on_its_start() -> 
     assert assignment.anchor_line == 41
 
 
+def test_a_finding_anchors_on_the_changed_line_inside_its_span() -> None:
+    """The `def` line is untouched context; the edit is three rows below it.
+
+    Anchoring on `start_line` alone relocated this to rung 2 and stamped the comment with the
+    "nearest reviewable line" banner, for a comment GitHub was always going to accept.
+    """
+    line_map = LineMap(file_path="app/orders.py", commentable_lines=frozenset({9, 10, 11}))
+    finding = make_finding(file_path="app/orders.py", start_line=6, end_line=15)
+
+    assignment = assign_rungs([finding], {"app/orders.py": line_map})[finding.id]
+
+    assert assignment.mode == "inline_exact"
+    assert assignment.anchor_line == 9
+    assert assignment.anchor_start_line is None
+    assert not assignment.is_relocated
+    assert not assignment.anchors_whole_span
+    assert (assignment.line, assignment.end_line) == (6, 15)
+
+
+def test_a_changed_line_inside_the_span_beats_a_nearer_line_before_it() -> None:
+    """Rung 2 measured from `start_line`, so it could pull the comment *above* the finding."""
+    line_map = LineMap(file_path="app/orders.py", commentable_lines=frozenset({5, 12}))
+    finding = make_finding(file_path="app/orders.py", start_line=6, end_line=15)
+
+    assignment = assign_rungs([finding], {"app/orders.py": line_map})[finding.id]
+
+    assert assignment.anchor_line == 12, "line 5 is nearer to line 6, but it is not the finding"
+
+
+def test_a_span_with_no_touched_line_still_falls_to_the_nearest_rung() -> None:
+    """The span preference adds a rung-1 case; it must not take rung 2 away (≤10 unchanged)."""
+    line_map = LineMap(file_path="app/orders.py", commentable_lines=frozenset({4}))
+    finding = make_finding(file_path="app/orders.py", start_line=6, end_line=15)
+
+    assignment = assign_rungs([finding], {"app/orders.py": line_map})[finding.id]
+
+    assert assignment.mode == "inline_nearest"
+    assert assignment.anchor_line == 4
+    assert assignment.is_relocated
+
+
 def test_assignment_is_deterministic(
     ladder_findings: list[CanonicalFinding], ladder_line_maps: dict[str, LineMap]
 ) -> None:
