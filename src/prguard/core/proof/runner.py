@@ -145,6 +145,11 @@ COLLECTION_FAILURE_MARKERS: Final[tuple[str, ...]] = (
     "INTERNALERROR",
     "ModuleNotFoundError",
     "ImportError while importing test module",
+    # The interpreter could not find pytest at all. Seen live: the sandbox image had no
+    # test framework and the run is `--network none`, so both refs failed identically and
+    # the verdict read as "fails at base too" rather than "the sandbox is broken".
+    # A missing framework is an environment failure and must never look like a test result.
+    "No module named pytest",
     NO_TESTS_RAN_MARKER,
 )
 

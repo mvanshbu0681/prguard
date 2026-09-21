@@ -1256,7 +1256,7 @@ class Pipeline:
             repo=snapshot.name,
             head_sha=snapshot.head_sha,
             decision=decision,
-            result_url=f"/v1/reviews/{state.run.id}/result",
+            result_url=self._result_url(state.run.id),
             # E18: the Check Runs API rejects a PAT, so rung 1 is only attempted when this
             # deployment actually has an App installation. Skipping it saves a call, not a
             # capability — the ladder still falls through to commit status and dry run.
@@ -1298,6 +1298,11 @@ class Pipeline:
             for comment in comments
             if comment.get("id") is not None
         )
+
+    def _result_url(self, run_id: str) -> str | None:
+        """An absolute link to the run, or None. GitHub rejects a relative one with 422."""
+        base = (self.settings.PUBLIC_BASE_URL or "").rstrip("/")
+        return f"{base}/v1/reviews/{run_id}/result" if base else None
 
     def _dry_run(self) -> bool:
         """§4.8 `GITHUB_DELIVERY_MODE`: `dry_run` always, `auto` when there is no token."""

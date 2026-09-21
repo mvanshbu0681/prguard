@@ -117,6 +117,11 @@ class Settings(BaseSettings):
     ALLOW_UNSIGNED_WEBHOOKS: bool = False
     GITHUB_DELIVERY_MODE: DeliveryModeSetting = "auto"
     GITHUB_API_BASE: str = "https://api.github.com"
+    #: Public origin of this deployment, used to build an absolute link back to a run.
+    #: GitHub rejects a relative `target_url` with 422 ("must use http(s) scheme"), which
+    #: knocked the gate off the commit-status rung all the way to dry_run. Unset means the
+    #: verdict still publishes -- it just carries no link.
+    PUBLIC_BASE_URL: str | None = None
     REVIEW_DRAFT_PRS: bool = False
     NEAREST_LINE_MAX_DISTANCE: int = 10
     GATE_CONTEXT_NAME: str = "prguard/merge-gate"

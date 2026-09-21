@@ -36,8 +36,28 @@ from prguard.core.proof.subprocess_runner import (
 )
 from prguard.core.types import ProofIsolation, ProofRequest, ProofRunner, RunResult
 
-#: Spec §4.6 / §11.2 assumption 8. Pre-pulling it is a demo checklist item, not a dependency.
-DEFAULT_IMAGE: Final[str] = "python:3.12-slim"
+#: The base the sandbox is built from. Spec §4.6 / §11.2 assumption 8.
+BASE_IMAGE: Final[str] = "python:3.12-slim"
+
+#: The image a repro actually runs in.
+#:
+#: It cannot be ``python:3.12-slim`` itself. That image has no pytest, and the run is
+#: ``--network none`` on purpose, so nothing can be installed once the container is up --
+#: every repro failed with "No module named pytest" at *both* refs, which reads as
+#: "the test fails at base too" and correctly but uselessly classifies as `inconclusive`.
+#: The framework therefore has to be in the image before the network is taken away.
+#: Building has network; running does not. Built once, lazily, then reused.
+DEFAULT_IMAGE: Final[str] = "prguard-sandbox:py312"
+
+#: Kept deliberately tiny: a test framework and nothing else. Anything a repro needs beyond
+#: the standard library is the installer's job (§4.6, E8/E10), not the image's.
+SANDBOX_DOCKERFILE: Final[str] = f"""\
+FROM {BASE_IMAGE}
+RUN pip install --no-cache-dir pytest>=8.0
+"""
+
+#: How long the one-time image build may take.
+BUILD_TIMEOUT_SECONDS: Final[float] = 300.0
 
 #: Where the workspace is mounted inside the container.
 MOUNT_POINT: Final[str] = "/ws"
@@ -123,7 +143,51 @@ class DockerRunner:
         """
         return await asyncio.to_thread(self._execute, tree, request)
 
+    def ensure_image(self) -> str | None:
+        """Build the sandbox image if it is not present yet. Returns an error, or None.
+
+        Idempotent and cheap after the first call: `docker image inspect` is a local
+        lookup. The build is the one step in the proof path that needs a network, and it
+        happens here rather than inside the run so the run itself stays `--network none`.
+        """
+        try:
+            inspect = subprocess.run(  # noqa: S603 - fixed argv, no shell
+                [self.docker_executable, "image", "inspect", self.image],
+                capture_output=True,
+                text=True,
+            )
+            if inspect.returncode == 0:
+                return None
+
+            build = subprocess.run(  # noqa: S603 - fixed argv, no shell
+                [self.docker_executable, "build", "-t", self.image, "-"],
+                input=SANDBOX_DOCKERFILE,
+                capture_output=True,
+                text=True,
+                timeout=BUILD_TIMEOUT_SECONDS,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            # No docker binary, no daemon, or a build that overran. Every one of these is a
+            # string for the caller to turn into a RunResult -- `execute` never raises.
+            return f"{type(exc).__name__}: {exc}"[:500]
+
+        if build.returncode != 0:
+            return (build.stderr or build.stdout or "docker build failed").strip()[:500]
+        return None
+
     def _execute(self, tree: Path, request: ProofRequest) -> RunResult:
+        started_build = time.monotonic()
+        build_error = self.ensure_image()
+        if build_error is not None:
+            # An unbuildable sandbox is an environment failure, never a failing test:
+            # classify() must not be able to read this as "the repro failed at head".
+            return RunResult(
+                exit_code=SPAWN_FAILURE_EXIT_CODE,
+                stderr=f"could not prepare the sandbox image {self.image}: {build_error}",
+                duration_ms=_elapsed_ms(started_build),
+                command=f"{self.docker_executable} build -t {self.image} -",
+            )
+
         container = self.container_name()
         command = self.command(tree=tree, request=request, container_name=container)
         timeout = request.timeout_seconds or self.timeout_seconds
