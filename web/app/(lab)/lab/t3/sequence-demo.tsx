@@ -66,7 +66,7 @@ export function SequenceDemo() {
         </LabButton>
         <LabButton onClick={play}>{reduced ? "end frame" : "play"}</LabButton>
         <Readouts
-          className="ml-auto"
+          className="md:ml-auto"
           items={[
             { label: "state", value: isPlaying ? "playing" : "idle" },
             { label: "progress", value: progress.toFixed(3) },

@@ -63,7 +63,7 @@ export function DrawDemo() {
       </div>
       <div className="space-y-4 border-t border-rule-1 p-5 md:border-t-0 md:border-l">
         <p className="type-label text-text-dim">
-          replay · <U>data-draw</U> a / b · <U>{DUR.enter}ms</U>
+          replay · <U>data-draw a / b</U> · <U>{DUR.enter}ms</U>
         </p>
         <div ref={replay}>
           <Figure firstAppearance={false} label="Six paths redrawn on demand" />

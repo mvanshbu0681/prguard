@@ -5,6 +5,7 @@
 // the 6th item. "mount rows" proves content mounted later is revealed too; with the
 // runtime blocked those rows force-reveal 1600ms after they mount instead.
 import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "@/motion/reduced";
 import { pendingReveals, replayReveal } from "@/motion/reveal";
 import { DUR, STAGGER, staggerDelay } from "@/motion/tokens";
 import { LabButton, Readouts } from "./lab-ui";
@@ -22,6 +23,7 @@ function RevealRow({ n, rise }: { n: number; rise: boolean }) {
 }
 
 export function RevealDemo() {
+  const reduced = useReducedMotion(); // reduced motion: the same reveal over --dur-1, opacity only
   const list = useRef<HTMLUListElement>(null);
   const [extra, setExtra] = useState(0);
   const [status, setStatus] = useState({ revealed: 0, total: FIRST, pending: 0 });
@@ -52,12 +54,12 @@ export function RevealDemo() {
         <LabButton onClick={() => list.current && replayReveal(list.current.querySelectorAll("[data-anim]"))}>replay reveal</LabButton>
         <LabButton onClick={() => setExtra((n) => n + MORE)}>mount {MORE} rows</LabButton>
         <Readouts
-          className="ml-auto"
+          className="md:ml-auto"
           items={[
             { label: "visible", value: `${status.revealed} / ${status.total}` },
             { label: "waiting", value: String(status.pending) },
             { label: "stagger", value: `${STAGGER.sibling}ms · cap ${staggerDelay(STAGGER.cap)}ms` },
-            { label: "duration", value: `${DUR.enter}ms` },
+            { label: "duration", value: reduced ? `${DUR.hover}ms · reduced` : `${DUR.enter}ms` },
           ]}
         />
       </div>

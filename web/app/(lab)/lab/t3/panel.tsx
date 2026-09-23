@@ -19,10 +19,11 @@ export function useAnimReady(): AnimReady | null {
 
 const MODE_LABEL: Record<RuntimeMode, ReactNode> = {
   ok: "runtime loads",
+  // One inline run: inside the inline-flex link, a bare text node would lose its trailing space.
   late: (
-    <>
+    <span>
       loads at <U>{LATE_MS}ms</U>
-    </>
+    </span>
   ),
   blocked: "runtime blocked",
 };
@@ -52,7 +53,7 @@ export function MotionPanel({ mode }: { mode: RuntimeMode }) {
         <Readouts
           items={[
             { label: "handshake", value: ready ? `ready · ${ready.runtime ?? "runtime"}` : mode === "blocked" ? "armed · never disarmed" : "armed" },
-            { label: "disarmed at", value: ready ? ms(ready.at) : `force-reveal at ${FORCE_REVEAL_MS}ms` },
+            ready ? { label: "disarmed at", value: ms(ready.at) } : { label: "force-reveal", value: `${FORCE_REVEAL_MS}ms` },
             { label: "kept static", value: ready ? String(ready.kept) : "—" },
             { label: "reduced motion", value: reducedLabel },
           ]}

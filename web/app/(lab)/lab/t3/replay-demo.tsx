@@ -68,7 +68,7 @@ export function ReplayDemo({ ids }: { ids: BenchIds }) {
           pause
         </LabButton>
         <Readouts
-          className="ml-auto"
+          className="md:ml-auto"
           items={[
             { label: "state", value: isPlaying ? "playing" : "idle" },
             { label: "progress", value: progress.toFixed(3) },

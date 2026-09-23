@@ -72,7 +72,7 @@ export interface ReplayOptions {
   inViewThreshold?: number;
   /** Fires when a run reaches its end (including a reduced-motion jump or the last beat). */
   onEnd?: () => void;
-  /** Update `progress` every frame while playing (re-renders the caller per frame; off by default). */
+  /** Update `progress` and `beat` every frame while playing (re-renders the caller per frame; off by default). */
   trackProgress?: boolean;
   /** Rebuild the timeline when these change (layout-derived positions, data). Keep the length stable. */
   dependencies?: unknown[];
@@ -155,13 +155,19 @@ export function useReplay<T extends HTMLElement = HTMLElement>(build: ReplayBuil
         },
       };
       build(tl, api);
-      const beats = stopsOf(tl).length;
+      const stops = stopsOf(tl);
+      const beats = stops.length;
       tl.eventCallback("onComplete", () => {
         setState({ isPlaying: false, progress: 1, beat: beats, beats });
         optionsRef.current.onEnd?.();
       });
       if (optionsRef.current.trackProgress) {
-        tl.eventCallback("onUpdate", () => setState((s) => ({ ...s, progress: tl.progress() })));
+        tl.eventCallback("onUpdate", () => {
+          const progress = tl.progress();
+          const now = tl.time();
+          const beat = stops.filter((t) => t <= now + EPSILON).length;
+          setState((s) => (s.progress === progress && s.beat === beat ? s : { ...s, progress, beat }));
+        });
       }
       // Park on the end frame: the static frame and the end state are the same frame.
       tl.progress(1, true);
