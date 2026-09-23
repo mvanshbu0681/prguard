@@ -24,7 +24,11 @@
 //
 // --check <dir> also writes verification renders (not committed): the avatar
 // downscaled to 20px on GitHub's light and dark canvases at 1x and 2x, and
-// both favicon frames, each enlarged with nearest-neighbour sampling.
+// both favicon frames, each enlarged with nearest-neighbour sampling. It also
+// renders the avatar with the spec's literal "3px stroke on the base bar"
+// (3px of 512) at 20px — the evidence for brand-gaps §C's own fallback: that
+// stroke is 0.12px at 20px, the hollow/solid distinction dies, so the shipped
+// avatar thickens it to 2px-at-20px (51.2px of 512; ./geometry.ts, circle crop).
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -105,6 +109,14 @@ async function main() {
       }
       await writeFile(path.join(checkDir, 'favicon-16-x8.png'), await inspect(browser, faviconPng(TAB_GEOMETRY), 16, BRAND_HEX.ink0, 1, false));
       await writeFile(path.join(checkDir, 'favicon-32-x8.png'), await inspect(browser, faviconPng(scaleGeometry(TAB_GEOMETRY, 2)), 32, BRAND_HEX.ink0, 1, false));
+      // The literal reading, for comparison only: a 3px base stroke at 512.
+      const literal = markGeometry(512, { crop: 'circle' });
+      literal.base = { ...literal.base, stroke: 3 };
+      const literalPng = await png(page, solidMarkSvg(literal), 512);
+      for (const theme of ['light', 'dark'] as const) {
+        const canvas = theme === 'light' ? '#FFFFFF' : '#0D1117';
+        await writeFile(path.join(checkDir, `avatar-literal-3px-20px-${theme}@1x.png`), await inspect(browser, literalPng, 20, canvas, 1, true));
+      }
     }
   } finally {
     await browser.close();
