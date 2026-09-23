@@ -14,8 +14,10 @@
 //
 // So if every script fails (a bundle 404 on venue wifi), [data-anim] content appears in
 // its final state at t = 1600ms. markAnimReady() is called by the runtime entries ONLY
-// after GSAP (src/motion/gsap.ts: its first ticker frame) or Motion
-// (src/motion/motion.tsx: the features chunk loaded, then one frame) actually ran.
+// after GSAP (src/motion/gsap.ts: the first ticker frame after <GsapRuntime /> or a
+// useReplay mounted) or Motion (src/motion/motion.tsx: the features chunk loaded, then
+// one frame) actually ran, and always after hydration, because it writes attributes on
+// server-rendered elements.
 //
 // A late runtime never flashes content. markAnimReady() checks every pending
 // [data-anim] element's own force-reveal: one that already fired (or is within

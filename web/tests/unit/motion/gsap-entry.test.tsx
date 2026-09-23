@@ -3,7 +3,7 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { easeFn } from "@/motion/bezier";
-import { ensureGsap, gsap, MEDIA, motionMedia, ScrollTrigger, sweepScrollTriggers, useGSAP, type MotionConditions } from "@/motion/gsap";
+import { disarmHandshakeOnNextFrame, ensureGsap, gsap, MEDIA, motionMedia, ScrollTrigger, sweepScrollTriggers, useGSAP, type MotionConditions } from "@/motion/gsap";
 import { GsapRuntime } from "@/motion/GsapRuntime";
 import { ANIM_READY_CLASS, ANIM_RUNTIME_ATTR } from "@/motion/handshake";
 import { MOTION_ATTR, REDUCED_QUERY } from "@/motion/reduced";
@@ -75,18 +75,12 @@ describe("ensureGsap", () => {
     expect(config).toHaveBeenCalledWith({ ignoreMobileResize: true });
   });
 
-  it("disarms the handshake on its first ticker frame, not before", async () => {
+  it("loading the module disarms nothing: registration is its only side effect", async () => {
     html.classList.remove(ANIM_READY_CLASS);
     html.removeAttribute(ANIM_RUNTIME_ATTR);
-    delete g.__prguardGsap;
-    ensureGsap();
-    expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false); // synchronously: nothing yet
-    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
     await frame();
     await frame();
-    expect(html.getAttribute(ANIM_RUNTIME_ATTR)).toBe("gsap");
-    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
-    stopAutoReveal();
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false); // never mid-hydration
   });
 
   it("if registration fails, leaves the handshake armed so content force-reveals", async () => {
@@ -99,11 +93,25 @@ describe("ensureGsap", () => {
     });
     expect(ensureGsap()).toBe(false);
     expect(g.__prguardGsap).toBe("failed");
+    disarmHandshakeOnNextFrame(); // a mounted runtime asks, but there is no runtime
     await frame();
     await frame();
     expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
     expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false);
     g.__prguardGsap = "ok";
+  });
+
+  it("disarms the handshake on the first GSAP frame after it is asked (from an effect), not before", async () => {
+    html.classList.remove(ANIM_READY_CLASS);
+    html.removeAttribute(ANIM_RUNTIME_ATTR);
+    disarmHandshakeOnNextFrame();
+    expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false); // synchronously: nothing yet
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
+    await frame();
+    await frame();
+    expect(html.getAttribute(ANIM_RUNTIME_ATTR)).toBe("gsap");
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
+    stopAutoReveal();
   });
 });
 

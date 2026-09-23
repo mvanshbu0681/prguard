@@ -3,19 +3,25 @@
 //
 //   <GsapRuntime />
 //
-// Loads the GSAP entry (registration + handshake disarm, see ./gsap), and on every
-// client-side route change sweeps ScrollTriggers orphaned by the old page and
-// refreshes the rest (start positions depend on the new page's height).
-// Renders nothing.
+// Loads the GSAP entry (registration, see ./gsap), disarms the fallback handshake on the
+// first GSAP frame after hydration, and on every client-side route change sweeps the
+// ScrollTriggers orphaned by the old page and refreshes the rest (start positions depend
+// on the new page's height). Renders nothing.
+//
+// Without it (or a useReplay on the page) the handshake is never disarmed and every
+// [data-anim] element force-reveals at 1600ms: degraded, never invisible.
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { ensureGsap, ScrollTrigger, sweepScrollTriggers } from "./gsap";
+import { disarmHandshakeOnNextFrame, ensureGsap, ScrollTrigger, sweepScrollTriggers } from "./gsap";
 
 export function GsapRuntime(): null {
   const pathname = usePathname();
   useEffect(() => {
-    ensureGsap();
+    disarmHandshakeOnNextFrame();
+  }, []);
+  useEffect(() => {
+    if (!ensureGsap()) return;
     const id = requestAnimationFrame(() => {
       sweepScrollTriggers();
       ScrollTrigger.refresh();

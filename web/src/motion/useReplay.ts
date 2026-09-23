@@ -33,9 +33,9 @@
 // - Positions and durations are GSAP seconds: use DUR_S and EASE[…].gsap from ./tokens.
 // - Everything is created inside useGSAP, so unmount and route changes revert it.
 
-import { useCallback, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { useAutoplay, type Autoplay } from "./autoplay";
-import { gsap, ScrollTrigger, useGSAP } from "./gsap";
+import { disarmHandshakeOnNextFrame, gsap, ScrollTrigger, useGSAP } from "./gsap";
 import { useKeyBinding, type KeySpec } from "./keys";
 import { useReducedMotion } from "./reduced";
 import { retrigger as retriggerEl, type RetriggerAttr } from "./stamp";
@@ -127,6 +127,9 @@ export function useReplay<T extends HTMLElement = HTMLElement>(build: ReplayBuil
     optionsRef.current = options;
   });
   const [state, setState] = useState<ReplayState>({ isPlaying: false, progress: 1, beat: 0, beats: 0 });
+
+  // A replay on the page means the runtime is here: disarm the handshake after hydration.
+  useEffect(() => disarmHandshakeOnNextFrame(), []);
 
   useGSAP(
     () => {

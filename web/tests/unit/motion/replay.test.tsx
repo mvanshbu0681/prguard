@@ -244,4 +244,11 @@ describe("useReplay", () => {
   it("re-exports the engine-free useSequence", () => {
     expect(typeof useSequence).toBe("function");
   });
+
+  it("a mounted replay disarms the handshake on a GSAP frame after mount (never at import)", async () => {
+    render(<Bench />);
+    await act(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
+    expect(document.documentElement.classList.contains("anim-ready")).toBe(true);
+    expect(document.documentElement.getAttribute("data-anim-runtime")).toBe("gsap");
+  });
 });

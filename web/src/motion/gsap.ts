@@ -14,10 +14,14 @@
 //     (./bezier), and sets gsap.defaults to --dur-4 / instrument so an unspecified
 //     tween still lands on the grid. Scroll-scrubbed values use ease "none" (linear).
 //   - document.fonts.ready → ScrollTrigger.refresh() (start positions depend on type).
-//   - On the first ticker frame: markAnimReady("gsap") disarms the fallback handshake
-//     and starts the page's revealer (./reveal). Scroll reveals are therefore automatic:
-//     mark an element `data-anim` + className "reveal" and do NOT write a
-//     ScrollTrigger.batch for it.
+//
+// Disarming the handshake is NOT a module side effect: <GsapRuntime />, useReplay and
+// useMotionMedia call disarmHandshakeOnNextFrame() from an effect, so the first GSAP
+// frame after React has hydrated runs markAnimReady("gsap"). (At module scope the
+// ticker could fire mid-hydration, and the revealer's attributes on server-rendered
+// [data-anim] elements would be a hydration mismatch.) markAnimReady starts the page's
+// revealer (./reveal), so scroll reveals are automatic: mark an element `data-anim` +
+// className "reveal" and do NOT write a ScrollTrigger.batch for it.
 //
 // Cleanup: create animations inside useGSAP (re-exported here), useMotionMedia or
 // useReplay; their gsap.context() reverts every tween and ScrollTrigger on unmount,
@@ -65,17 +69,28 @@ export function ensureGsap(): boolean {
     () => ScrollTrigger.refresh(),
     () => {},
   );
+  return true;
+}
 
-  // "Only after the runtime actually loaded and a first frame ran" (design §4.7).
+ensureGsap();
+
+let disarmScheduled = false;
+
+/**
+ * Disarm the fallback handshake on GSAP's next ticker frame: "only after the runtime
+ * actually loaded and a first frame ran" (design §4.7). Call it from an effect (after
+ * hydration), never at module scope; the hooks in this module and useReplay do.
+ * Idempotent; does nothing if GSAP failed to register (content then force-reveals).
+ */
+export function disarmHandshakeOnNextFrame(): void {
+  if (disarmScheduled || !ensureGsap()) return;
+  disarmScheduled = true;
   const firstFrame = () => {
     gsap.ticker.remove(firstFrame);
     markAnimReady("gsap");
   };
   gsap.ticker.add(firstFrame);
-  return true;
 }
-
-ensureGsap();
 
 /** Media conditions for motionMedia(). */
 export const MEDIA = {
@@ -146,6 +161,7 @@ export function useMotionMedia(build: MotionMediaBuild, config: { scope?: RefObj
   const { scope, dependencies = [] } = config;
   useGSAP(
     () => {
+      disarmHandshakeOnNextFrame();
       const handle = motionMedia(build, scope?.current ?? undefined);
       return () => handle.revert();
     },

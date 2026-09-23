@@ -1,7 +1,8 @@
 "use client";
-// OWNER: T3 (wave 1). useReplay on the lab bench, bound to P. Loading this module is
-// what loads GSAP (src/motion/gsap.ts), whose first frame disarms the handshake, so
-// ./runtime.tsx imports it lazily: never in ?runtime=blocked, at 2.5s in ?runtime=late.
+// OWNER: T3 (wave 1). useReplay on the lab bench, bound to P. This module is what loads
+// GSAP (src/motion/gsap.ts), and its useReplay disarms the handshake on the first GSAP
+// frame after it mounts, so ./runtime.tsx imports it lazily: never in ?runtime=blocked,
+// at 2.5s in ?runtime=late.
 //
 // The proven sequence (motion spec §4.6.2), every number from src/motion/tokens:
 //   0          the scan line travels the bench (--dur-5 on --ease-mass, the .scan helper)
