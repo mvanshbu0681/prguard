@@ -140,7 +140,7 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
           <>
             <C>stroke-dashoffset</C> on paths with <C>pathLength=&quot;1&quot;</C>, over {DUR.enter}ms on <C>--ease-instrument</C>. At rest a path
             has no dash, so a scaled hairline is solid; the dash is measured when a draw starts. At most six paths draw at once. Press{" "}
-            <Kbd>W</Kbd> to replay the right-hand figure.
+            <Kbd>W</Kbd> to redraw the second figure.
           </>
         }
       >

@@ -77,7 +77,7 @@ export function Bench({ ids, ref }: { ids: BenchIds; ref?: Ref<HTMLDivElement> }
         <span data-caption className="type-small text-alarm-text">
           → blocks merge
         </span>
-        <span className="ml-auto type-data text-text-dim">passes at base · fails at head</span>
+        <span className="type-data text-text-dim md:ml-auto">passes at base · fails at head</span>
       </div>
     </div>
   );
