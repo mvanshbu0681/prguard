@@ -8,10 +8,15 @@
 * ``9c2d4b1`` (second push, the demo head) — the same ``charge()`` three lines lower with a
   local renamed, plus ``get_rate()`` raising ``UnsupportedCurrency``.
 
-These are real, importable Python modules. ``scripts/fixtures/README.md`` shows how the repro
-tests below were executed against the base and head trees with pytest; the captured terminal
-text lives in ``demo_story.py``. The fingerprint of every demo finding is computed by
-``prguard.core.fingerprint.compute`` over the head text here, so the identity is authentic.
+These are real, importable Python modules. ``scripts/fixtures/check_pytest_text.py`` writes the
+base and head trees to disk, runs the three repro tests below with the sandbox's exact command,
+and compares pytest's real output with the text ``pytest_text.py`` renders for the corpus. The
+fingerprint of every demo finding is computed by ``prguard.core.fingerprint.compute`` over the
+head text here, so the identity is authentic.
+
+The repository configures ``addopts = "-rN"``: pytest prints no short test summary, so a failing
+repro's output ends on the traceback's location line and the count, which is the tail the hero
+and the OG card quote.
 """
 
 from __future__ import annotations
@@ -29,6 +34,18 @@ client = None
 '''
 
 PACKAGE_INIT = ""
+
+#: The repository's pytest configuration. ``-rN`` turns the short test summary off.
+PYPROJECT = '''\
+[project]
+name = "checkout-service"
+version = "0.41.0"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+addopts = "-rN"
+testpaths = ["tests"]
+'''
 
 # ---------------------------------------------------------------------------------------
 # app/billing/accounts.py
@@ -666,6 +683,7 @@ def test_zero_decimal_currency_settles_in_cents():
 def base_tree() -> dict[str, str]:
     """Every file at ``7c41a09``."""
     return {
+        "pyproject.toml": PYPROJECT,
         "app/__init__.py": PACKAGE_INIT,
         "app/billing/__init__.py": PACKAGE_INIT,
         "app/billing/gateway.py": GATEWAY,

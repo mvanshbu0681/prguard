@@ -10,6 +10,35 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from corpus.synth import FileSpec
+
+
+@dataclass(frozen=True)
+class RepoSpec:
+    """One repository the tenant reviews.
+
+    ``app_installed`` decides the gate ladder's first rung: the deployment has a GitHub App
+    configured, so ``deliver_gate`` always tries a check run, and GitHub refuses it on a
+    repository the App is not installed on — the verdict then lands as a commit status.
+    ``churn_available=False`` is a repository whose commits API the deployment cannot read, so
+    churn scores 0.0 with the backend's own note (§4.4, E27). ``short_summary=False`` is a
+    repository whose pytest config sets ``-rN``.
+    """
+
+    key: str
+    owner: str
+    name: str
+    default_branch: str = "main"
+    app_installed: bool = False
+    churn_available: bool = True
+    short_summary: bool = True
+    is_private: bool = True
+    files: tuple[FileSpec, ...] = ()
+
+    @property
+    def slug(self) -> str:
+        return f"{self.owner}/{self.name}"
+
 
 @dataclass(frozen=True)
 class Facts:
@@ -28,7 +57,7 @@ class Facts:
 
 @dataclass(frozen=True)
 class FailureSpec:
-    """How pytest reports the failing assertion of a repro (``pytest_text.Failure``)."""
+    """How pytest reports the failing statement of a repro (``pytest_text.Failure``)."""
 
     exception: str
     explanation: tuple[str, ...]
@@ -50,17 +79,20 @@ class Proof:
     * ``wrong_signal`` — fails at head, but not with ``signal``.
     * ``deps_failed`` — passes at base, fails at head, but a dependency did not install.
     * ``nothing_collected`` — the repro skipped itself at module level at both SHAs.
+    * ``gen_fail`` — the generator never produced a test (§8.1: ``not_attempted``).
     """
 
     kind: str
-    test_name: str
-    test_code: str
-    signal: str
+    test_name: str = ""
+    test_code: str = ""
+    signal: str = ""
     failure: FailureSpec | None = None
     base_seconds: float = 0.31
     head_seconds: float = 0.29
     #: The module a ``collection_error`` repro failed to import.
     missing_module: str | None = None
+    #: Where the generator wrote the file; defaults to ``tests/test_repro_<hex6>.py``.
+    test_file_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -77,9 +109,9 @@ class Template:
     span: tuple[int, int]
     title: str
     body: str
-    remediation: str
     hint: str
     confidence: float
+    remediation: str = ""
     provable: bool = False
     facts: Facts = field(default_factory=Facts)
     #: Named repro variants. ``"default"`` is used unless a run names another.
@@ -148,7 +180,21 @@ class Revoke:
 
 @dataclass(frozen=True)
 class RunSpec:
-    """One review run. ``at`` is when it was queued (UTC, minute precision)."""
+    """One review run.
+
+    ``at`` is when it was queued (UTC). Minute precision gets a seeded sub-minute offset; a
+    value with seconds is used as written (the demo story pins its two overlapping runs).
+
+    ``outcome``: ``succeeded`` · ``failed:<stage>:<code>:<message>`` (the stage raised) ·
+    ``stale:<stage>`` (the worker died inside ``stage`` and the reaper failed the run). A run
+    is *cancelled* by nothing in its own spec: a later push to the same PR, landing while it is
+    in flight, supersedes it — exactly as ``enqueue_review`` and S1 do (§4.2).
+
+    ``review``: ``posted`` · ``forbidden`` (403, E17) · ``comments_unreadable`` (§8.1 S8) ·
+    ``422:<template key>`` (that comment is refused once and demoted, E2) · ``dry_run``.
+    ``gate``: ``auto`` (the repository's ladder) · ``unreachable`` (both GitHub rungs refused;
+    the verdict is persisted as ``dry_run``). ``sandbox``: ``docker`` · ``subprocess`` · ``none``.
+    """
 
     key: str
     repo: str
@@ -158,24 +204,29 @@ class RunSpec:
     at: str
     uses: tuple[Use, ...] = ()
     trigger: str = "webhook"
+    #: The tier the plan expects. ``build_context`` computes the real one; they must agree.
     tier: str = "standard"
     extra_files: tuple[str, ...] = ()
     excluded: tuple[str, ...] = ()
-    #: ``succeeded`` · ``failed:<stage>:<code>:<message>`` · ``cancelled:<next stage>``
     outcome: str = "succeeded"
-    #: ``posted`` · ``forbidden`` (403, E17) · ``comments_unreadable`` · ``dry_run``
-    review: str | None = None
-    #: The gate ladder rung that took the verdict, when it differs from the repo default.
-    gate_rung: str | None = None
-    #: ``none`` when no sandbox could run a repro at all (``PROOF_ALLOW_SUBPROCESS=false``).
-    sandbox: str | None = None
+    review: str = "posted"
+    gate: str = "auto"
+    sandbox: str = "docker"
     suppress: tuple[Suppress, ...] = ()
     head_ref: str | None = None
-    #: Seconds a stage took, when the plan pins them (the demo run does).
+    #: Milliseconds each stage took, when the plan pins them (the demo run does).
     stage_ms: tuple[int, ...] | None = None
-    #: The specialist lanes inside S3, when pinned.
-    lane_ms: dict[str, int] | None = None
     #: Extra degradations this run recorded (besides the ones the backend derives).
     degradations: tuple[str, ...] = ()
     #: PR state at "now" for the pull_requests row.
     pr_state: str = "open"
+    #: Pin identifiers the manifest binds (the demo run); generated otherwise.
+    review_id: str | None = None
+    head_sha: str | None = None
+    base_sha: str | None = None
+    #: ``finding template key -> finding id`` for ids the manifest binds.
+    finding_ids: dict[str, str] = field(default_factory=dict)
+    #: Changed lines per synthesised file beyond the finding hunks (risk-tier arithmetic).
+    padding_lines: int = 0
+    #: ``files[].patch`` omitted: an oversized diff the budget truncates (E5).
+    oversized: tuple[str, ...] = ()

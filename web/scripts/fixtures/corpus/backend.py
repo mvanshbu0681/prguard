@@ -19,31 +19,36 @@ except ModuleNotFoundError as missing:  # pragma: no cover - operator error
         "  PYTHONPATH=<backend>/src <venv>/bin/python scripts/fixtures/gen_fixtures.py"
     ) from missing
 
-from prguard.api import routes_accuracy, routes_audit, routes_findings, routes_reviews
-from prguard.api import routes_suppressions, schemas
-from prguard.api.deps import TenantScope
-from prguard.config import Settings
-from prguard.core import accuracy, audit, context, fingerprint, severity, suppression
-from prguard.core.delivery import comment_ladder, gate
-from prguard.core.delivery import review_poster
-from prguard.core.proof import runner, selector
-from prguard.core.specialists import registry
-from prguard.core import types as core_types
-from prguard.db import models
-
 assert sys.dont_write_bytecode, "gen_fixtures.py must disable bytecode before importing prguard"
 
+from prguard.api import routes_accuracy, routes_audit, routes_findings, routes_reviews  # noqa: E402
+from prguard.api import routes_suppressions, schemas  # noqa: E402
+from prguard.api.deps import TenantScope  # noqa: E402
+from prguard.config import Settings  # noqa: E402
+from prguard.core import accuracy, audit, context, coordinator, fingerprint  # noqa: E402
+from prguard.core import pipeline, severity, suppression  # noqa: E402
+from prguard.core import types as core_types  # noqa: E402
+from prguard.core.delivery import comment_ladder, gate, github_client  # noqa: E402
+from prguard.core.proof import runner, selector  # noqa: E402
+from prguard.core.specialists import registry  # noqa: E402
+from prguard.db import models  # noqa: E402
+from prguard.db.base import Base, as_utc  # noqa: E402
+
 __all__ = [
+    "Base",
+    "as_utc",
     "accuracy",
     "audit",
     "comment_ladder",
     "context",
+    "coordinator",
     "core_types",
     "fingerprint",
     "gate",
+    "github_client",
     "models",
+    "pipeline",
     "registry",
-    "review_poster",
     "routes_accuracy",
     "routes_audit",
     "routes_findings",

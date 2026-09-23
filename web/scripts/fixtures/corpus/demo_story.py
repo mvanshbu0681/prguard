@@ -6,10 +6,11 @@ Three runs tell it:
    ``_line()`` in ``app/api/checkout.py`` for formatting money with float division. It is
    published, and priya-raman suppresses it that afternoon with ``scope=file``. That ledger row
    is the one that later suppresses a demo-run finding.
-2. ``co-4821-a`` (2026-09-23, first push ``3e5a1c8``) — superseded 32 seconds in by the second
-   push, after S6 had persisted its findings with ``status: proposed``. Its ``charge()`` finding
-   is the first sighting of the fingerprint the demo run's proven finding carries, which is why
-   that finding's history reads ``occurrence_count: 2``.
+2. ``co-4821-a`` (2026-09-23, first push ``3e5a1c8``) — superseded 25 seconds in by the second
+   push, while S6 was persisting its findings with ``status: proposed``; it stops at the next
+   stage boundary. Its ``charge()`` finding is the first sighting of the fingerprint the demo
+   run's proven finding carries — the local is named ``cur`` there and the function sits two
+   lines higher — which is why that finding's history reads ``occurrence_count: 2``.
 3. ``co-4821`` (the demo run, head ``9c2d4b1``) — 12 raised, 4 dropped at the coordinator,
    3 deduplicated, 1 suppressed by the existing rule, and of the 3 findings the selector sent
    to the sandbox: 1 proven, 1 disproven, 1 inconclusive (a pre-existing failure at base).
@@ -45,22 +46,13 @@ PR_TITLE = "Resolve account currency at charge time"
 PR_AUTHOR = "mhollis"
 
 #: The demo run's nine stage durations (ms). They sum to 41 200: "succeeded in 41.2s".
+#: S3's four specialists run in parallel, so the stage lasts as long as the slowest lane.
 DEMO_STAGE_MS = (1840, 3120, 14260, 6480, 90, 310, 12870, 1960, 270)
-#: S3's four lanes run in parallel; the stage lasts as long as the slowest (§4.1).
-DEMO_LANE_MS = {"bugs": 9140, "security": 14260, "tests": 4410, "quality": 6790}
+assert sum(DEMO_STAGE_MS) == 41_200
 
-# ---------------------------------------------------------------------------------------
-# Source trees, per revision
-# ---------------------------------------------------------------------------------------
-
-#: What ``co-4790`` reviewed: the demo PR's base revision of these files.
-PR4790_SOURCES = {
-    "app/api/checkout.py": src.CHECKOUT_BASE,
-    "app/billing/accounts.py": src.ACCOUNTS_BASE,
-}
-RUN_A_SOURCES = src.run_a_tree()
-DEMO_SOURCES = src.head_tree()
-BASE_SOURCES = src.base_tree()
+#: The first push's run, pinned for its first six stages so the second push lands inside S6:
+#: the superseded run has persisted its findings (``status: proposed``) and stops before S7.
+RUN_A_STAGE_MS = (1910, 2980, 13840, 6120, 80, 290, 0, 0, 0)
 
 # ---------------------------------------------------------------------------------------
 # What the specialists wrote
@@ -76,13 +68,11 @@ CHARGE_NONE = Template(
     span=(3, 6),
     title="charge() dereferences a None currency when the account has no default",
     body=(
-        "`charge()` now reads the settlement currency from `account.default_currency` "
-        "(line {start}), and accounts created before the account-settings page have no default. "
-        "For those accounts `currency` is `None`, and lines {mid}-{end} return `None` from a "
-        "function annotated `-> Charge`. `create_order()` in `app/api/checkout.py` reads "
-        "`result.id` on the very next line, so the first checkout on a legacy account raises "
-        "`AttributeError` instead of charging it. At base the currency came from "
-        "`account.currency`, which signup always sets."
+        "`charge()` now takes the settlement currency from `account.default_currency` "
+        "(line {start}), which is `None` for every account created before the account-settings "
+        "page. On that path lines {mid}-{end} return `None` from a function annotated "
+        "`-> Charge`, and `create_order()` in `app/api/checkout.py` reads `result.id` on the "
+        "next line. At base the currency came from `account.currency`, which signup always sets."
     ),
     remediation=(
         "Fall back to `account.currency` when `default_currency` is `None`, as the base "
@@ -100,6 +90,7 @@ CHARGE_NONE = Template(
             kind="fails_at_head",
             test_name="test_charge_uses_account_currency",
             test_code=src.REPRO_PROVEN,
+            test_file_path=src.REPRO_PROVEN_PATH,
             signal="AttributeError",
             failure=raised(
                 "AttributeError",
@@ -143,6 +134,7 @@ RATE_NONE = Template(
             kind="passes_both",
             test_name="test_get_rate_never_returns_none_for_an_unsupported_code",
             test_code=src.REPRO_DISPROVEN,
+            test_file_path=src.REPRO_DISPROVEN_PATH,
             signal="AssertionError",
             base_seconds=0.58,
             head_seconds=0.61,
@@ -182,6 +174,7 @@ JPY_SCALE = Template(
             kind="fails_both",
             test_name="test_zero_decimal_currency_settles_in_cents",
             test_code=src.REPRO_INCONCLUSIVE,
+            test_file_path=src.REPRO_INCONCLUSIVE_PATH,
             signal="AssertionError",
             failure=eq_call("0", "808", "_to_settlement(1200, 'jpy')"),
             base_seconds=0.47,
@@ -408,7 +401,9 @@ RUN_A = RunSpec(
     pr=PR_NUMBER,
     title=PR_TITLE,
     author=PR_AUTHOR,
-    at="2026-09-23T11:46",
+    # Pinned to the millisecond: its S6 runs 11:46:01.760-11:46:02.050, and the second push
+    # (DEMO_RUN) is enqueued at 11:46:01.902 — inside it.
+    at="2026-09-23T11:45:36.418",
     tier="full",
     uses=(
         Use("demo.charge_none"),
@@ -418,8 +413,10 @@ RUN_A = RunSpec(
         Use("demo.dup.charge_test", fate="dup:demo.charge_none", specialist="tests"),
         Use("demo.drop.settlement_name", fate="drop", file="app/billing/charge.py", symbol="_to_settlement", specialist="quality"),
     ),
-    outcome="cancelled:proof",
     head_ref="mhollis/currency-at-charge-time",
+    head_sha=FIRST_PUSH_SHA,
+    base_sha=BASE_SHA,
+    stage_ms=RUN_A_STAGE_MS,
 )
 
 DEMO_RUN = RunSpec(
@@ -428,8 +425,16 @@ DEMO_RUN = RunSpec(
     pr=PR_NUMBER,
     title=PR_TITLE,
     author=PR_AUTHOR,
-    at="2026-09-23T11:46",
+    at="2026-09-23T11:46:01.902",
     tier="full",
+    review_id=DEMO_REVIEW_ID,
+    head_sha=HEAD_SHA,
+    base_sha=BASE_SHA,
+    finding_ids={
+        "demo.charge_none": PROVEN_FINDING_ID,
+        "demo.rate_none": DISPROVEN_FINDING_ID,
+        "demo.jpy_scale": INCONCLUSIVE_FINDING_ID,
+    },
     uses=(
         Use("demo.charge_none", anchor="exact"),
         Use("demo.rate_none", anchor="exact"),
@@ -446,9 +451,10 @@ DEMO_RUN = RunSpec(
     ),
     excluded=("uv.lock",),
     stage_ms=DEMO_STAGE_MS,
-    lane_ms=DEMO_LANE_MS,
     head_ref="mhollis/currency-at-charge-time",
 )
+
+RUNS = (PR4790, RUN_A, DEMO_RUN)
 
 #: Files each demo-story run changed, relative to its base, with real contents.
 CHANGED = {
@@ -476,4 +482,11 @@ CHANGED = {
             "migrations/versions/0142_account_default_currency.py",
         )
     },
+}
+
+#: The whole head tree each demo-story run reviewed (unchanged files included).
+TREES = {
+    "co-4790": src.base_tree(),
+    "co-4821-a": src.run_a_tree(),
+    "co-4821": src.head_tree(),
 }

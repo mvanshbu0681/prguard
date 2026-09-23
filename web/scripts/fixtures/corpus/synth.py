@@ -212,6 +212,18 @@ def _json(spec: FileSpec) -> SourceFile:
     return SourceFile(path=spec.path, text="\n".join(lines) + "\n", spans=spans)
 
 
+def oversized_file(path: str, entries: int = 14_000) -> str:
+    """A translation catalogue big enough that S2's token budget cannot hold its patch (E5)."""
+    rng = stream(f"oversized:{path}")
+    lines = ["{"]
+    for index in range(entries):
+        comma = "," if index < entries - 1 else ""
+        key = f"{rng.choice(_VERBS)}.{rng.choice(_NOUNS)}.{index:05d}"
+        lines.append(f'  "{key}": "{rng.getrandbits(96):024x} {rng.choice(_NOUNS)} {rng.choice(_ATTRS)}"{comma}')
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
 def synthesise(spec: FileSpec) -> SourceFile:
     if spec.path.endswith(".py"):
         return _python(spec)
