@@ -169,11 +169,12 @@ export function copyText(
   count: number,
   textOf: (index: number, scope: string | undefined) => string | null,
   all: boolean,
+  every?: () => string,
 ): string | null {
   if (selection.rangeCount === 0 || selection.isCollapsed) return null;
   const range = selection.getRangeAt(0);
   if (!body.contains(range.startContainer) || !body.contains(range.endContainer)) return null;
-  if (all) return allText((i) => textOf(i, undefined), count);
+  if (all) return every ? every() : allText((i) => textOf(i, undefined), count);
   const start = resolvePoint(body, range.startContainer, range.startOffset, "start");
   const end = resolvePoint(body, range.endContainer, range.endOffset, "end");
   if (!start || !end || start.scope !== end.scope) return null;
@@ -190,6 +191,9 @@ export interface UseWindowCopyOptions {
   /** Row text as captured; `scope` is the split diff's side, undefined for select-all.
    *  Null for anything that is not a row (it contributes nothing to a copy). */
   textOf: (index: number, scope: string | undefined) => string | null;
+  /** What select-all copies, when it is not every item's textOf (the diff: every row of the
+   *  diff in unified order, in either view). */
+  allText?: () => string;
 }
 
 export interface WindowCopy {
@@ -207,13 +211,13 @@ function isSelectAll(event: { key: string; metaKey: boolean; ctrlKey: boolean; a
   return (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "a";
 }
 
-export function useWindowCopy({ bodyRef, count, textOf }: UseWindowCopyOptions): WindowCopy {
+export function useWindowCopy({ bodyRef, count, textOf, allText: every }: UseWindowCopyOptions): WindowCopy {
   const [pinned, setPinned] = useState<readonly number[]>(NO_PINS);
   // "Every line" mode: entered by select-all inside the region, left by any new selection.
   const all = useRef(false);
-  const latest = useRef({ count, textOf });
+  const latest = useRef({ count, textOf, every });
   useIsomorphicLayoutEffect(() => {
-    latest.current = { count, textOf };
+    latest.current = { count, textOf, every };
   });
 
   useEffect(() => {
@@ -243,7 +247,8 @@ export function useWindowCopy({ bodyRef, count, textOf }: UseWindowCopyOptions):
       const body = bodyRef.current;
       const selection = document.getSelection();
       if (!body || !selection || !event.clipboardData) return;
-      const text = copyText(body, selection, latest.current.count, latest.current.textOf, all.current);
+      const current = latest.current;
+      const text = copyText(body, selection, current.count, current.textOf, all.current, current.every);
       if (text === null) return;
       event.clipboardData.setData("text/plain", text);
       event.preventDefault();

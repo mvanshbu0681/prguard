@@ -14,9 +14,10 @@
 //      opacity) and the removed marker is an ASCII hyphen, not U+2212.
 //   4. SSR. Rows are built in useEffect, so the server renders an empty table unless a
 //      pre-built DiffFile is threaded through.
-// Swapping back (or to react-diff-view) touches this file only; nothing else in the
-// codebase imports a diff library. package.json still lists @git-diff-view/react (frozen);
-// nothing imports it.
+// Swapping back (or to react-diff-view) touches this file only: parse.ts, rows.tsx and
+// DiffWindow.tsx are this renderer's internals and would simply stop being imported; nothing
+// else in the codebase imports a diff library. package.json still lists @git-diff-view/react
+// (frozen); nothing imports it.
 // ────────────────────────────────────────────────────────────────────────────────────────
 //
 // Rows: added text --diff-add-text on the 8% --diff-add-bg, removed text --diff-del-text on
@@ -29,6 +30,12 @@
 // A highlighted (accused) row: 2px rail in `tone`, the row one rung up, and the band colour
 // (`fill`, default `tone`) at 10% in place of the diff tint (dashboard §4).
 //
+// Past 400 rows (unified) or row pairs (split) the viewport is <DiffWindow> (client,
+// shared/windowing.ts): the same sheet, only the rows near the view, between aria-hidden
+// spacers; rows carry data-index and annotations are measured. A copy inside one side is
+// answered from the diff text and select-all inside the region copies every row.
+// Line numbers past 999 widen the number columns (--prg-digits) instead of colliding.
+//
 // DOM contract (the root is its own stacking context, isolation: isolate, see code.css):
 //   .prg-diff[data-view]
 //     div.prg-diff__header                 path · +N −M
@@ -39,36 +46,16 @@
 //             span.prg-diff__gutter > span.prg-diff__num[data-n] (aria-hidden) · span.prg-diff__marker
 //             hunk rows: span.prg-diff__range (the @@ range, label style) + the section heading
 //         div.prg-diff__annotation[role=note]   hung beneath its line, pinned to the visible width
-import { Fragment, useId, useMemo, type ReactNode } from "react";
+import { Fragment, useId, useMemo, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import { describeRange, inHighlight, type LineHighlight, type RailTone } from "../shared/types";
+import { describeRange } from "../shared/types";
 import { Viewport } from "../shared/Viewport";
-import { pairRows, parseUnifiedDiff, type DiffRow, type SplitCell, type SplitPair } from "./parse";
+import { digitsOf, shouldWindow } from "../shared/windowing";
+import { DiffWindow } from "./DiffWindow";
+import { pairRows, parseUnifiedDiff, type DiffRow, type SplitPair } from "./parse";
+import { Annotation, annotationsAfter, highlightOf, lineOn, Row, type DiffAnnotation, type DiffHighlight, type DiffSide } from "./rows";
 
-export type DiffSide = "old" | "new";
-
-/** A highlighted range on one side. FindingLocation.side: LEFT → "old", RIGHT → "new".
- *  `tone` is the 2px rail; `fill` is the row fill at 10%, which replaces the diff tint
- *  (dashboard §4). For a finding: `fill` is its severity band, and `tone` is the same band,
- *  or `alarm` when the finding is blocking ("the rail is --alarm regardless of band"). */
-export interface DiffHighlight extends LineHighlight {
-  /** Default "new". */
-  side?: DiffSide;
-  /** Row fill tone, drawn at 10% alpha in place of the diff tint. Default: `tone`. */
-  fill?: RailTone;
-}
-
-/** Content hung beneath a line: the inline finding card (T9) mounts here. */
-export interface DiffAnnotation {
-  /** Default "new". */
-  side?: DiffSide;
-  line: number;
-  content: ReactNode;
-  /** Optional 2px rail, usually the highlighted line's tone. */
-  tone?: RailTone;
-  /** Accessible name of the note, e.g. "finding a91f3c2e". */
-  label?: string;
-}
+export { lineOn, type DiffAnnotation, type DiffHighlight, type DiffSide };
 
 export interface PRGuardDiffProps {
   /** One file's unified diff: `git diff` output or GitHub's `patch` field. */
@@ -87,95 +74,6 @@ export interface PRGuardDiffProps {
   maxHeight?: number;
   id?: string;
   className?: string;
-}
-
-/** The line number `row` carries on `side`, or undefined when it has none there. */
-export function lineOn(row: DiffRow, side: DiffSide): number | undefined {
-  if (side === "new") return row.kind === "add" || row.kind === "context" ? row.newLine : undefined;
-  return row.kind === "del" || row.kind === "context" ? row.oldLine : undefined;
-}
-
-function highlightOf(row: DiffRow, highlights: readonly DiffHighlight[] | undefined, only?: DiffSide): DiffHighlight | undefined {
-  return highlights?.find((h) => {
-    const side = h.side ?? "new";
-    if (only && side !== only) return false;
-    const line = lineOn(row, side);
-    return line !== undefined && inHighlight(h, line);
-  });
-}
-
-function annotationsAfter(row: DiffRow, annotations: readonly DiffAnnotation[] | undefined, only?: DiffSide): DiffAnnotation[] {
-  if (!annotations?.length) return [];
-  return annotations.filter((a) => {
-    const side = a.side ?? "new";
-    return (!only || side === only) && lineOn(row, side) === a.line;
-  });
-}
-
-/** Number columns (two in unified view, one per side in split) + the 16px marker cell.
- *  Every row has the same gutter geometry; only add/del rows get a glyph (code.css). */
-function Gutter({ numbers, silent }: { numbers: (number | undefined)[]; silent: boolean }) {
-  return (
-    <span className="prg-diff__gutter" aria-hidden={silent ? "true" : undefined}>
-      {numbers.map((n, i) => (
-        <span key={i} className="prg-diff__num" aria-hidden="true" data-n={n} />
-      ))}
-      <span className="prg-diff__marker" />
-    </span>
-  );
-}
-
-function Row({ cell, view, side, hl }: { cell: SplitCell; view: "unified" | "split"; side?: DiffSide; hl?: DiffHighlight }) {
-  const columns = view === "unified" ? 2 : 1;
-  if (cell.kind === "empty") {
-    return (
-      <span className="prg-diff__row" data-kind="empty">
-        <Gutter numbers={Array.from({ length: columns }, () => undefined)} silent />
-      </span>
-    );
-  }
-  const numbered = cell.kind === "context" || cell.kind === "add" || cell.kind === "del";
-  const numbers = !numbered
-    ? Array.from({ length: columns }, () => undefined)
-    : view === "unified"
-      ? [cell.oldLine, cell.newLine]
-      : [side === "old" ? cell.oldLine : cell.newLine];
-  // In split view the hunk header prints once, on the old side; the new side keeps the band.
-  const showText = !(view === "split" && side === "new" && cell.kind === "hunk");
-  return (
-    <span
-      className="prg-diff__row"
-      data-kind={cell.kind}
-      data-old={cell.oldLine}
-      data-new={cell.newLine}
-      data-hl={hl?.tone}
-      data-fill={hl ? (hl.fill ?? hl.tone) : undefined}
-    >
-      <Gutter numbers={numbers} silent={cell.kind !== "add" && cell.kind !== "del"} />
-      {!showText ? null : cell.kind === "hunk" ? <HunkText text={cell.text} /> : cell.text}
-    </span>
-  );
-}
-
-/** `@@ -32,11 +32,13 @@ def charge(…)`: the range is set as a label, the section heading
- *  stays code (code.css). Two spans, same characters: a copy still yields the line. */
-function HunkText({ text }: { text: string }) {
-  const close = text.indexOf("@@", 2);
-  const cut = close === -1 ? text.length : close + 2;
-  return (
-    <>
-      <span className="prg-diff__range">{text.slice(0, cut)}</span>
-      {text.slice(cut)}
-    </>
-  );
-}
-
-function Annotation({ a }: { a: DiffAnnotation }) {
-  return (
-    <div className="prg-diff__annotation" role="note" aria-label={a.label} data-hl={a.tone}>
-      {a.content}
-    </div>
-  );
 }
 
 type Segment<T> = { kind: "rows"; items: T[] } | { kind: "note"; annotation: DiffAnnotation };
@@ -205,6 +103,60 @@ function Lines({ children }: { children: ReactNode[] }) {
   ));
 }
 
+/** The largest line number any row prints. */
+function maxLineNumber(rows: readonly DiffRow[]): number {
+  let max = 0;
+  for (const row of rows) max = Math.max(max, row.oldLine ?? 0, row.newLine ?? 0);
+  return max;
+}
+
+function fullSplit(pairs: readonly SplitPair[], highlight: readonly DiffHighlight[] | undefined, annotations: readonly DiffAnnotation[] | undefined) {
+  const segments = segment<SplitPair>(pairs, (p) => [
+    ...(p.left.kind === "empty" ? [] : annotationsAfter(p.left, annotations, "old")),
+    ...(p.right.kind === "empty" ? [] : annotationsAfter(p.right, annotations, "new")),
+  ]);
+  return segments.map((seg, s) =>
+    seg.kind === "note" ? (
+      <Annotation key={s} a={seg.annotation} />
+    ) : (
+      <Fragment key={s}>
+        {(["old", "new"] as const).map((side) => (
+          <pre key={side} className="prg-diff__pre" data-side={side}>
+            <code className="prg-diff__code">
+              <Lines>
+                {seg.items.map((p, i) => {
+                  const cell = side === "old" ? p.left : p.right;
+                  const hl = cell.kind === "empty" ? undefined : highlightOf(cell, highlight, side);
+                  return <Row key={i} cell={cell} view="split" side={side} hl={hl} />;
+                })}
+              </Lines>
+            </code>
+          </pre>
+        ))}
+      </Fragment>
+    ),
+  );
+}
+
+function fullUnified(rows: readonly DiffRow[], highlight: readonly DiffHighlight[] | undefined, annotations: readonly DiffAnnotation[] | undefined) {
+  const segments = segment<DiffRow>(rows, (row) => annotationsAfter(row, annotations));
+  return segments.map((seg, s) =>
+    seg.kind === "note" ? (
+      <Annotation key={s} a={seg.annotation} />
+    ) : (
+      <pre key={s} className="prg-diff__pre">
+        <code className="prg-diff__code">
+          <Lines>
+            {seg.items.map((row, i) => (
+              <Row key={i} cell={row} view="unified" hl={highlightOf(row, highlight)} />
+            ))}
+          </Lines>
+        </code>
+      </pre>
+    ),
+  );
+}
+
 export function PRGuardDiff({
   diff,
   filePath,
@@ -219,6 +171,7 @@ export function PRGuardDiff({
   className,
 }: PRGuardDiffProps) {
   const parsed = useMemo(() => parseUnifiedDiff(diff), [diff]);
+  const pairs = useMemo(() => (view === "split" ? pairRows(parsed.rows) : null), [parsed, view]);
   const descriptionId = useId();
   // A bare `patch` field names no file: then the header prints only the counts.
   const path = filePath ?? parsed.newPath ?? parsed.oldPath ?? null;
@@ -230,56 +183,12 @@ export function PRGuardDiff({
         })
         .join("; ")
     : null;
-
-  let body: ReactNode;
-  if (view === "split") {
-    const pairs = pairRows(parsed.rows);
-    const segments = segment<SplitPair>(pairs, (p) => [
-      ...(p.left.kind === "empty" ? [] : annotationsAfter(p.left, annotations, "old")),
-      ...(p.right.kind === "empty" ? [] : annotationsAfter(p.right, annotations, "new")),
-    ]);
-    body = segments.map((seg, s) =>
-      seg.kind === "note" ? (
-        <Annotation key={s} a={seg.annotation} />
-      ) : (
-        <Fragment key={s}>
-          {(["old", "new"] as const).map((side) => (
-            <pre key={side} className="prg-diff__pre" data-side={side}>
-              <code className="prg-diff__code">
-                <Lines>
-                  {seg.items.map((p, i) => {
-                    const cell = side === "old" ? p.left : p.right;
-                    const hl = cell.kind === "empty" ? undefined : highlightOf(cell, highlight, side);
-                    return <Row key={i} cell={cell} view="split" side={side} hl={hl} />;
-                  })}
-                </Lines>
-              </code>
-            </pre>
-          ))}
-        </Fragment>
-      ),
-    );
-  } else {
-    const segments = segment<DiffRow>(parsed.rows, (row) => annotationsAfter(row, annotations));
-    body = segments.map((seg, s) =>
-      seg.kind === "note" ? (
-        <Annotation key={s} a={seg.annotation} />
-      ) : (
-        <pre key={s} className="prg-diff__pre">
-          <code className="prg-diff__code">
-            <Lines>
-              {seg.items.map((row, i) => (
-                <Row key={i} cell={row} view="unified" hl={highlightOf(row, highlight)} />
-              ))}
-            </Lines>
-          </code>
-        </pre>
-      ),
-    );
-  }
+  const regionLabel = label ?? (path ? `Diff of ${path}` : "Diff");
+  const windowed = shouldWindow(pairs ? pairs.length : parsed.rows.length);
+  const digits = digitsOf(maxLineNumber(parsed.rows));
 
   return (
-    <div id={id} className={cn("prg-diff", className)} data-view={view}>
+    <div id={id} className={cn("prg-diff", className)} data-view={view} style={digits > 3 ? ({ "--prg-digits": digits } as CSSProperties) : undefined}>
       {header ? (
         <div className="prg-diff__header">
           <span className="prg-diff__path">{path ?? ""}</span>
@@ -294,17 +203,30 @@ export function PRGuardDiff({
           </span>
         </div>
       ) : null}
-      <Viewport
-        className="prg-diff__viewport"
-        label={label ?? (path ? `Diff of ${path}` : "Diff")}
-        describedBy={described ? descriptionId : undefined}
-        height={height}
-        maxHeight={maxHeight}
-      >
-        <div className="prg-diff__sheet" data-view={view}>
-          {body}
-        </div>
-      </Viewport>
+      {windowed ? (
+        <DiffWindow
+          rows={parsed.rows}
+          view={view}
+          highlight={highlight}
+          annotations={annotations}
+          label={regionLabel}
+          describedBy={described ? descriptionId : undefined}
+          height={height}
+          maxHeight={maxHeight}
+        />
+      ) : (
+        <Viewport
+          className="prg-diff__viewport"
+          label={regionLabel}
+          describedBy={described ? descriptionId : undefined}
+          height={height}
+          maxHeight={maxHeight}
+        >
+          <div className="prg-diff__sheet" data-view={view}>
+            {pairs ? fullSplit(pairs, highlight, annotations) : fullUnified(parsed.rows, highlight, annotations)}
+          </div>
+        </Viewport>
+      )}
       {described ? (
         <p id={descriptionId} className="sr-only">
           Highlighted {described}.

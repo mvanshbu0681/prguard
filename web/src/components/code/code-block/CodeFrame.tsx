@@ -13,12 +13,18 @@
 //           span.prg-syn-<role> …            the tokens
 //     p.sr-only                     the highlighted lines, read to assistive technology
 // Highlighted finding lines: a 2px left rail in the caller's tone + an --ink-3 row.
-import { Fragment, useId, type ReactNode } from "react";
+// Past 400 lines the viewport is <CodeWindow> (client, shared/windowing.ts): the same rows,
+// only those near the view, each with data-index; copy and select-all answer from the source.
+// Line numbers past 999 widen the gutter (--prg-digits) instead of overflowing it.
+import { Fragment, useId, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { describeRange, highlightFor, type LineHighlight } from "../shared/types";
 import { Viewport } from "../shared/Viewport";
+import { digitsOf, shouldWindow } from "../shared/windowing";
 import { LANGUAGE_LABEL, type SupportedLanguage } from "../shiki/languages";
 import type { CodeLine } from "../shiki/tokens";
+import { CodeRow } from "./CodeRow";
+import { CodeWindow } from "./CodeWindow";
 
 export interface CodeFrameProps {
   lines: readonly CodeLine[];
@@ -39,18 +45,6 @@ export interface CodeFrameProps {
   state: "plain" | "highlighted";
   id?: string;
   className?: string;
-}
-
-function Tokens({ line }: { line: CodeLine }) {
-  return line.map((token, i) =>
-    token.role === "plain" ? (
-      <Fragment key={i}>{token.text}</Fragment>
-    ) : (
-      <span key={i} className={`prg-syn-${token.role}`}>
-        {token.text}
-      </span>
-    ),
-  );
 }
 
 export function CodeFrame({
@@ -76,6 +70,7 @@ export function CodeFrame({
     ? highlight.map((h) => (h.label ? `${describeRange(h)}: ${h.label}` : describeRange(h))).join("; ")
     : null;
   const lastIndex = lines.length - 1;
+  const digits = lineNumbers ? digitsOf(startLine + lastIndex) : 0;
 
   return (
     <div
@@ -84,6 +79,7 @@ export function CodeFrame({
       data-gutter={lineNumbers ? "numbers" : undefined}
       data-state={state}
       data-lang={language ?? undefined}
+      style={digits > 3 ? ({ "--prg-digits": digits } as CSSProperties) : undefined}
     >
       {showHeader ? (
         <div className="prg-code__header">
@@ -98,31 +94,40 @@ export function CodeFrame({
           </span>
         </div>
       ) : null}
-      <Viewport
-        className="prg-code__viewport"
-        label={label}
-        describedBy={described ? descriptionId : undefined}
-        height={height}
-        maxHeight={maxHeight}
-      >
-        <pre className="prg-code__pre">
-          <code className="prg-code__code">
-            {lines.map((line, i) => {
-              const number = startLine + i;
-              const hl = highlightFor(highlight, number);
-              return (
-                <Fragment key={number}>
-                  <span className="prg-code__line" data-line={number} data-hl={hl?.tone}>
-                    <span className="prg-code__gutter" aria-hidden="true" data-ln={lineNumbers ? number : undefined} />
-                    <Tokens line={line} />
-                  </span>
-                  {i < lastIndex ? "\n" : null}
-                </Fragment>
-              );
-            })}
-          </code>
-        </pre>
-      </Viewport>
+      {shouldWindow(lines.length) ? (
+        <CodeWindow
+          lines={lines}
+          startLine={startLine}
+          numbered={lineNumbers}
+          highlight={highlight}
+          label={label}
+          describedBy={described ? descriptionId : undefined}
+          height={height}
+          maxHeight={maxHeight}
+        />
+      ) : (
+        <Viewport
+          className="prg-code__viewport"
+          label={label}
+          describedBy={described ? descriptionId : undefined}
+          height={height}
+          maxHeight={maxHeight}
+        >
+          <pre className="prg-code__pre">
+            <code className="prg-code__code">
+              {lines.map((line, i) => {
+                const number = startLine + i;
+                return (
+                  <Fragment key={number}>
+                    <CodeRow line={line} number={number} numbered={lineNumbers} tone={highlightFor(highlight, number)?.tone} />
+                    {i < lastIndex ? "\n" : null}
+                  </Fragment>
+                );
+              })}
+            </code>
+          </pre>
+        </Viewport>
+      )}
       {described ? (
         <p id={descriptionId} className="sr-only">
           Highlighted {described}.

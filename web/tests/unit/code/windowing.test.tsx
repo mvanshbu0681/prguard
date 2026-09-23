@@ -2,7 +2,7 @@
 // then the windowed DOM and its copy fidelity for each surface.
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PYTEST_TONES, TerminalBlock } from "@/components/code";
+import { CodeBlock, PRGuardDiff, PYTEST_TONES, TerminalBlock } from "@/components/code";
 import {
   WINDOW_THRESHOLD,
   allText,
@@ -215,5 +215,118 @@ describe("<TerminalBlock> windowed", () => {
     expect((container.querySelector(".prg-terminal") as HTMLElement).style.getPropertyValue("--prg-digits")).toBe("4");
     const short = render(<TerminalBlock text={"a\nb"} label="t" lineNumbers />);
     expect(short.container.querySelector(".prg-terminal")).not.toHaveAttribute("style");
+  });
+});
+
+// ------------------------------------------------------------------ code block
+
+const SOURCE = Array.from({ length: 900 }, (_, i) => `value_${i} = compute(${i})  # line ${i + 1}`).join("\n");
+
+describe("<CodeBlock> windowed", () => {
+  it("renders the rows near the view with their numbers, offsets and highlights", async () => {
+    const { container } = render(
+      await CodeBlock({
+        code: SOURCE,
+        lang: "text",
+        startLine: 1001,
+        label: "long source",
+        highlight: [{ start: 1003, tone: "alarm", label: "finding a91f3c2e" }],
+      }),
+    );
+    const region = screen.getByRole("region", { name: "long source" });
+    expect(region).toHaveAttribute("data-windowed");
+    // the highlighted-lines description and the windowing note both describe the region
+    expect(region).toHaveAccessibleDescription(/Highlighted line 1003: finding a91f3c2e\. 900 lines, rendered as they scroll into view\./);
+    const rows = [...container.querySelectorAll<HTMLElement>(".prg-code__line")];
+    expect(rows.length).toBeLessThan(100);
+    expect(rows[0]).toHaveAttribute("data-line", "1001");
+    expect(rows[0]).toHaveAttribute("data-index", "0");
+    expect(container.querySelector('[data-line="1003"]')).toHaveAttribute("data-hl", "alarm");
+    // four-digit numbers widen the gutter
+    expect((container.querySelector(".prg-code") as HTMLElement).style.getPropertyValue("--prg-digits")).toBe("4");
+    expect(container.querySelectorAll(".prg-code__spacer")).toHaveLength(2);
+  });
+
+  it("copies exactly the source between two points, and every line after select-all", async () => {
+    const { container } = render(await CodeBlock({ code: SOURCE, lang: "text", label: "long source" }));
+    const lines = SOURCE.split("\n");
+    selectRows(container, [10, 0], [12, 5]);
+    expect(copy().text).toBe([lines[10], lines[11], lines[12].slice(0, 5)].join("\n"));
+    fireEvent.keyDown(screen.getByRole("region"), { key: "a", ctrlKey: true });
+    expect(copy().text).toBe(SOURCE);
+  });
+});
+
+// ------------------------------------------------------------------ diff
+
+function longDiff(changes: number): string {
+  const body: string[] = [];
+  for (let i = 0; i < changes; i++) body.push(` context ${i}`, `-removed ${i}`, `+added ${i}`);
+  return ["--- a/big.py", "+++ b/big.py", `@@ -1000,${changes * 2} +1000,${changes * 2} @@ def big():`, ...body].join("\n");
+}
+
+describe("<PRGuardDiff> windowed", () => {
+  const DIFF = longDiff(300); // 1 hunk row + 900 rows
+
+  it("renders the rows near the view in one pre, with the accused row's rail and fill", () => {
+    const { container } = render(
+      <PRGuardDiff diff={DIFF} highlight={[{ side: "new", start: 1001, tone: "alarm", fill: "high", label: "finding a91f3c2e" }]} />,
+    );
+    const region = screen.getByRole("region", { name: "Diff of big.py" });
+    expect(region).toHaveAttribute("data-windowed");
+    const rows = [...container.querySelectorAll<HTMLElement>(".prg-diff__row")];
+    expect(rows.length).toBeLessThan(100);
+    expect(rows[0]).toHaveAttribute("data-kind", "hunk");
+    expect(rows[0]).toHaveAttribute("data-index", "0");
+    const accused = container.querySelector('.prg-diff__row[data-kind="add"][data-new="1001"]');
+    expect(accused).toHaveAttribute("data-hl", "alarm");
+    expect(accused).toHaveAttribute("data-fill", "high");
+    expect(container.querySelectorAll(".prg-diff__spacer")).toHaveLength(2);
+    expect(container.querySelector(".prg-diff__sheet")?.getAttribute("style")).toContain("--prg-cols");
+    expect((container.querySelector(".prg-diff") as HTMLElement).style.getPropertyValue("--prg-digits")).toBe("4");
+  });
+
+  it("hangs an annotation in the window as a measured note, and a copy across it yields rows only", () => {
+    const { container } = render(
+      <PRGuardDiff diff={DIFF} annotations={[{ side: "new", line: 1000, label: "finding a91f3c2e", content: <p>card text</p> }]} />,
+    );
+    const note = screen.getByRole("note", { name: "finding a91f3c2e" });
+    // items: 0 hunk, 1 context 0 (new 1000), 2 the note, 3 removed 0, 4 added 0, 5 context 1
+    expect(note).toHaveAttribute("data-index", "2");
+    const pres = container.querySelectorAll("pre");
+    expect(pres).toHaveLength(2);
+    expect(pres[0].nextElementSibling).toBe(note);
+    selectRows(container, [1, 0], [4, 5]);
+    expect(copy().text).toBe(["context 0", "removed 0", "added"].join("\n"));
+    // a selection inside the card is the card's own text: the browser copies it
+    const cardText = note.querySelector("p")?.firstChild as Node;
+    document.getSelection()?.setBaseAndExtent(cardText, 0, cardText, 4);
+    expect(copy().prevented).toBe(false);
+  });
+
+  it("windows split view by row pairs, copies one side, and select-all copies every row", () => {
+    const { container } = render(<PRGuardDiff diff={DIFF} view="split" />);
+    const [left, right] = [...container.querySelectorAll("pre")];
+    expect(left).toHaveAttribute("data-side", "old");
+    expect(right).toHaveAttribute("data-side", "new");
+    const indices = (pre: Element) => [...pre.querySelectorAll<HTMLElement>(".prg-diff__row")].map((r) => r.dataset.index);
+    expect(indices(left)).toEqual(indices(right));
+    // pairs: 0 hunk, 1 context 0, 2 removed 0 | added 0, 3 context 1 …
+    const range = document.createRange();
+    range.setStart(left.querySelector('[data-index="1"]') as Node, 0);
+    range.setEnd((left.querySelector('[data-index="2"]') as HTMLElement).lastChild as Node, 2);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(range);
+    expect(copy().text).toBe(["context 0", "re"].join("\n"));
+    fireEvent.keyDown(screen.getByRole("region"), { key: "a", ctrlKey: true });
+    const all = copy().text ?? "";
+    expect(all.split("\n")).toHaveLength(901);
+    expect(all.startsWith("@@ -1000,600 +1000,600 @@ def big():\ncontext 0\nremoved 0\nadded 0\n")).toBe(true);
+  });
+
+  it("stays in full at or below the threshold", () => {
+    const { container } = render(<PRGuardDiff diff={longDiff(100)} />);
+    expect(container.querySelector("[data-windowed]")).toBeNull();
+    expect(container.querySelectorAll(".prg-diff__row")).toHaveLength(301);
   });
 });

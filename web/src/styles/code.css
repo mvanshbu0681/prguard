@@ -422,10 +422,23 @@
     border-inline-start: 1px solid var(--rule-1);
   }
 
-  /* Gutter: old | new (32px each) + the 16px marker cell; split view shows one number. */
+  /* Gutter: old | new (32px each) + the 16px marker cell; split view shows one number.
+     Past line 999 the component sets --prg-digits and each number column grows by whole
+     digits (1ch on the 12.5px gutter), so 1234 and 1236 never run into each other. */
   .prg-diff {
-    --prg-diff-num-w: var(--sp-8); /* 32px */
+    --prg-diff-num-w: max(var(--sp-8), calc(var(--prg-digits, 0) * 1ch + var(--sp-2))); /* 32px */
     --prg-diff-marker-w: var(--sp-4); /* 16px: a 12px glyph column + 4px before the text */
+  }
+  /* Windowed (shared/windowing.ts): the sheet keeps the widest row's width (--prg-cols), and
+     a spacer spans both columns of the split grid. */
+  .prg-diff__sheet[data-windowed] {
+    min-inline-size: max(100%, calc(var(--prg-cols, 0) * 1ch + 2 * var(--prg-diff-num-w) + var(--prg-diff-marker-w) + var(--sp-4)));
+  }
+  .prg-diff__sheet[data-windowed][data-view="split"] {
+    min-inline-size: max(100%, calc(2 * (var(--prg-cols, 0) * 1ch + var(--prg-diff-num-w) + var(--prg-diff-marker-w) + var(--sp-4)) + 1px));
+  }
+  .prg-diff__sheet[data-view="split"] > .prg-diff__spacer {
+    grid-column: 1 / -1;
   }
   .prg-diff__gutter {
     --prg-gutter-w: calc(2 * var(--prg-diff-num-w) + var(--prg-diff-marker-w));
