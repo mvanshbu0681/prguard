@@ -1,0 +1,20 @@
+{
+  "_stub": true,
+  "_owner": "t2b (wave 1). Stub from the integrator: the IDS below are FINAL and binding; everything else is replaced by the generator.",
+  "generator": { "script": "scripts/fixtures/gen_fixtures.py", "backend_commit": "eeb1be8", "version": 0 },
+  "ids": {
+    "tenant_id": "7f3c9a21-5b8e-4d6f-9a0c-2e4b6d8f1a3c",
+    "demo_review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+    "proven_finding_id": "a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d",
+    "disproven_finding_id": "5d20b7f4-9c1a-4e8b-a6d3-1f7e9b2c4a60",
+    "inconclusive_finding_id": "c83e61a9-2d4f-4b7a-9e05-6a1d3f8c2b97",
+    "base_sha": "7c41a09e3b5d2f8a1c6e4b9d7f0a2c5e8b3d6f19",
+    "head_sha": "9c2d4b1f6a8e3c5d7b9f1a2e4c6d8b0f3a5c7e92",
+    "repository": { "owner": "acme", "name": "checkout-service" },
+    "pr_number": 4821,
+    "repro_test_path": "tests/test_repro_7e3f1a.py",
+    "failing_test": "test_charge_uses_account_currency",
+    "tamper_demo_seq": 1428
+  },
+  "counts": {}
+}

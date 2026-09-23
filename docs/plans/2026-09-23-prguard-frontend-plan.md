@@ -822,3 +822,22 @@ with a live fallback that lists runs this browser has created. Nothing else is i
 Playwright sessions. Worktrees get `node_modules` by APFS clone (`cp -cR`, near-zero disk), never a
 fresh install. Each track uses its own dev port (§7 briefs). Dev servers are stopped when a track
 finishes.
+
+**A13 — The severity worked example was also impossible.** The blueprints' `0.810` example sums
+correctly only with inputs the backend can never emit (`reachability 0.9`, `coverage_gap 0.8`,
+`proof_confidence 0.95` — all three are discrete in `core/severity.py`), and the spec's §6.4
+example claims `0.81` while summing to `0.89`. The fixture uses valid inputs that genuinely score
+`0.810` through the backend's own `severity.compute`: reachability `1.0`, blast_radius `0.7`,
+path_sensitivity `1.0`, coverage_gap `0.5`, churn `0.3`, proof_confidence `1.0`. Every surface
+renders the fixture; the blueprint table is not to be copied.
+
+**A14 — Wave 1 is split seven ways, not three.** T1 → t1a (chrome, evidence frame, brand),
+t1b (UI primitives), t1c (semantic badges + all icons), t1d (code, terminal, diff surfaces).
+T2 → t2a (typed client, providers, hooks, fixture resolver) and t2b (fixture corpus generator).
+T3 unchanged. The t2a/t2b interface is `web/public/fixtures/README.md` plus the binding ids in
+`manifest.json`; `src/lib/api-types.ts` is the one import point for API shapes.
+
+**A15 — Toolchain facts from T0.** ESLint is 9.39.5 (10 crashes eslint-plugin-react), TypeScript
+6.0.3 (typescript-eslint caps below 6.1), React 19.2.8 (what Next 16.3.6 is tested with; the
+19.2.0 pin existed only for an R3F peer range that does not apply). Google Sans Code lacks
+`↻ ▶ ▣ ✓ ✗ Σ ⋯ ‖ ⚠` — those are drawn as inline SVG, never left to a fallback font.

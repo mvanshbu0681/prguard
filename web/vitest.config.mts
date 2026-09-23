@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
+      "@fixtures": path.resolve(import.meta.dirname, "public/fixtures"),
       // next/font is a compile-time transform; give layout tests an inert stand-in.
       "next/font/local": path.resolve(import.meta.dirname, "tests/mocks/next-font-local.ts"),
     },
