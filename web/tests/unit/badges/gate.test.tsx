@@ -2,6 +2,7 @@
 // --alarm is FILL-ONLY. It may paint geometry (a 2px rule, a border, the ■ glyph) but never
 // the background behind text and never the text itself.
 import { render } from "@testing-library/react";
+import type React from "react";
 import { describe, expect, it } from "vitest";
 import { GateBlock, GateChip, type GateReading } from "@/components/badges";
 import { colorsOf, sameLiteral, tokenFor } from "./tokens";
@@ -63,12 +64,32 @@ describe("GateBlock", () => {
     expect(tokenFor(glyph, "text")).toBe("--alarm");
     expect(glyph.textContent).toBe("");
     expect(frame.textContent).toContain("GATE · BLOCKED");
-    expect(frame.textContent).toContain("1 blocking finding · check_run");
+    expect(frame.querySelector('[data-slot="gate-block-detail"]')!.textContent).toBe("1 blocking finding");
+    expect(frame.querySelector('[data-slot="gate-block-delivery"]')!.textContent).toBe("delivered by check_run");
+  });
+
+  it("says why in numbers or in the API's words, never in adjectives", () => {
+    const detail = (el: React.ReactElement) => render(el).container.querySelector('[data-slot="gate-block-detail"]')?.textContent ?? null;
+    expect(detail(<GateBlock conclusion="failure" blocking={2} announce={false} />)).toBe("2 blocking findings");
+    expect(detail(<GateBlock conclusion="success" blocking={0} announce={false} />)).toBe("0 blocking findings");
+    expect(detail(<GateBlock conclusion="neutral" reason="Nothing could be executed in this run." announce={false} />)).toBe("Nothing could be executed in this run.");
+    expect(detail(<GateBlock conclusion={null} blocking={3} announce={false} />)).toBeNull();
+    expect(detail(<GateBlock conclusion="failure" announce={false} />)).toBeNull();
+    const all = render(<GateBlock conclusion="failure" blocking={1} delivery="check_run" announce={false} />).container.textContent!;
+    expect(all).not.toMatch(/\bproven (bug|finding)/i);
   });
 
   it("keeps one box in every state: the 2px rule comes out of the padding", () => {
     const top = (reading: GateReading, withLine: boolean) => {
-      const { container } = render(<GateBlock conclusion={reading} blocking={withLine ? 1 : undefined} delivery={withLine ? "check_run" : null} announce={false} />);
+      const { container } = render(
+        <GateBlock
+          conclusion={reading}
+          blocking={withLine ? 1 : undefined}
+          reason={withLine ? "Nothing could be executed in this run." : undefined}
+          delivery={withLine ? "check_run" : null}
+          announce={false}
+        />,
+      );
       const frame = container.querySelector('[data-slot="gate-block-frame"]')!;
       const cls = [...frame.classList];
       const border = cls.includes("border-t-2") ? 2 : 1;
@@ -92,7 +113,7 @@ describe("GateBlock", () => {
     expect(frame.classList.contains("border-t-2")).toBe(false);
     expect(frame.querySelector("svg")!.getAttribute("data-glyph")).toBe("gate-success");
     expect(frame.textContent).not.toMatch(/[✓✔☑]/);
-    expect(frame.textContent).toContain("0 blocking findings · check_run");
+    expect(frame.querySelector('[data-slot="gate-block-detail"]')!.textContent).toBe("0 blocking findings");
   });
 
   it("paints NEUTRAL and RUNNING as --text-dim on --ink-2 with a 1px --rule-1 border", () => {

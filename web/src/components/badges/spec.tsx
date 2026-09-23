@@ -104,17 +104,20 @@ export const GATE: Record<GateGlyphState, GateSpec> = {
   },
 };
 
-/** Where the gate decision was delivered (GateInfo.delivery). */
+/** Where the gate decision was delivered (GateInfo.delivery): the gate ladder's rungs. */
 export type GateDelivery = "check_run" | "commit_status" | "dry_run";
 
-/** `n blocking finding(s) · check_run` — a count and a rung, no adjectives (brand-gaps §D). */
-export function gateDetail(state: GateGlyphState, blocking?: number, delivery?: GateDelivery | null, reason?: string): string | null {
-  const rung = delivery ? ` · ${delivery}` : "";
+/**
+ * The gate block's second line — why the gate reads what it reads, as a count or the API's
+ * own reason, never an adjective (brand-gaps §D: `1 blocking finding`, not `1 proven bug`).
+ * BLOCKED and CLEAR print gate.blocking_finding_ids.length; NEUTRAL prints gate.reason;
+ * RUNNING has nothing to say yet.
+ */
+export function gateDetail(state: GateGlyphState, blocking?: number, reason?: string): string | null {
   if (state === "failure" || state === "success") {
-    if (blocking === undefined) return delivery ?? null;
-    return `${blocking} blocking finding${blocking === 1 ? "" : "s"}${rung}`;
+    return blocking === undefined ? null : `${blocking} blocking finding${blocking === 1 ? "" : "s"}`;
   }
-  if (state === "neutral") return reason ? `${reason}${rung}` : (delivery ?? null);
+  if (state === "neutral") return reason || null;
   return null;
 }
 

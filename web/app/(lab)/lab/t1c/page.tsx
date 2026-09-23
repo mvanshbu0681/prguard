@@ -104,7 +104,7 @@ export default function T1cLab() {
           title="Mechanic marks"
           note="One stroke language: 1.25px on the 16 grid, 1.5px on the 24 grid, 1px on the hinted 12 grid that chips use. Butt caps, miter joins, currentColor. The grids on the right show each artboard at true stroke width."
         >
-          <Panel className="overflow-x-auto px-4 md:px-6">
+          <Panel className="w-fit max-w-full overflow-x-auto px-4 md:px-6">
             <table className="border-collapse">
               <caption className="sr-only">The four mechanic marks at every icon size</caption>
               <thead>
@@ -136,7 +136,7 @@ export default function T1cLab() {
           title="Station glyphs"
           note="StageGlyph for the nine STAGES. Severity, identity, proof and finalise are the mechanic marks themselves, so the pipeline and the mechanics read as one hand."
         >
-          <Panel className="overflow-x-auto px-4 md:px-6">
+          <Panel className="w-fit max-w-full overflow-x-auto px-4 md:px-6">
             <table className="border-collapse">
               <caption className="sr-only">The nine pipeline station glyphs at every icon size</caption>
               <thead>
@@ -161,7 +161,7 @@ export default function T1cLab() {
         </Section>
 
         <Section index="03" title="Chip glyphs" note="The glyphs the chips carry, so no state leans on colour: the ledger, the four gate shapes, and the delivery ladder with the rung that fired.">
-          <Panel className="overflow-x-auto px-4 md:px-6">
+          <Panel className="w-fit max-w-full overflow-x-auto px-4 md:px-6">
             <table className="border-collapse">
               <caption className="sr-only">Chip glyphs at every icon size</caption>
               <thead>

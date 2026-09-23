@@ -70,17 +70,22 @@ export type GateBlockProps = Omit<ComponentProps<"div">, "children"> & {
   announce?: boolean;
 };
 
-/** The gate block: 280px, top-right of every run view. `GATE · BLOCKED` over its reason. */
+/**
+ * The gate block: 280px, top-right of every run view.
+ *
+ *   ■ GATE · BLOCKED            check_run     the verdict, and the gate-ladder rung that carried it
+ *     1 blocking finding                      why: the count, or the API's reason for a neutral gate
+ */
 export function GateBlock({ conclusion, blocking, delivery, reason, detail, announce = true, className, ...rest }: GateBlockProps) {
   const state = stateOf(conclusion);
   const spec = GATE[state];
   const stamps = useStamp(state);
-  const line = detail ?? gateDetail(state, blocking, delivery, reason);
+  const line = detail ?? gateDetail(state, blocking, reason);
 
   // What the live regions say: set during render on a change, never at first paint.
   const [said, setSaid] = useState<{ state: GateGlyphState; alert: string; status: string }>({ state, alert: "", status: "" });
   if (said.state !== state) {
-    const words = typeof line === "string" ? ` · ${line}` : "";
+    const words = [typeof line === "string" ? line : null, delivery ?? null].filter(Boolean).map((w) => ` · ${w}`).join("");
     setSaid(
       state === "failure"
         ? { state, alert: `merge gate blocked${words}`, status: "" }
@@ -106,13 +111,23 @@ export function GateBlock({ conclusion, blocking, delivery, reason, detail, anno
           stamps > 0 && STAMP_CLASS,
         )}
       >
-        <span className="inline-flex items-center gap-2 type-badge">
+        <span className="flex min-w-0 items-center gap-2">
           <GateGlyph state={state} size={12} className={spec.glyph} />
-          <span>
+          <span className="type-badge">
             <span className="sr-only">merge </span>GATE · {spec.label}
           </span>
+          {delivery ? (
+            <span data-slot="gate-block-delivery" className="ms-auto truncate font-mono text-[11px] leading-[1.4]">
+              <span className="sr-only">delivered by </span>
+              {delivery}
+            </span>
+          ) : null}
         </span>
-        {line ? <span className="pl-5 font-mono text-[11px] leading-[1.4] [overflow-wrap:anywhere]">{line}</span> : null}
+        {line ? (
+          <span data-slot="gate-block-detail" className="pl-5 font-mono text-[11px] leading-[1.4] [overflow-wrap:anywhere]">
+            {line}
+          </span>
+        ) : null}
       </div>
       {announce ? (
         <>
