@@ -6,14 +6,18 @@
 // retrigger a CSS helper, set React state). CSS does the tweening; this only
 // decides the instant.
 //
-//   const seq = useSequence(
+//   const { ref, play, isPlaying, beat, beats } = useSequence<HTMLDivElement>(
 //     [
-//       { at: 0,    apply: () => bench.current?.setAttribute("data-phase", "scan") },
-//       { at: 2200, apply: () => setStatus("proven") },          // 0ms colour flip + stamp
-//       { at: 2400, apply: () => bench.current?.setAttribute("data-phase", "verdict") },
+//       { at: 0,    apply: () => setPhase("scan") },
+//       { at: 2200, apply: () => setStatus("proven") },   // 0ms colour flip + stamp (useStamp)
+//       { at: 2400, apply: () => setPhase("verdict") },
 //     ],
-//     { key: "p", hold: 4000, reset: () => setStatus("not_attempted") },
+//     { key: "p", hold: 4000, reset: () => { setPhase("start"); setStatus("not_attempted"); } },
 //   );
+//   <div ref={ref} data-phase={phase}>…</div>
+//
+// DESTRUCTURE the result, as above: `ref={seq.ref}` makes the React Compiler lint treat
+// the whole `seq` object as a ref (react-hooks/refs) and flags every `seq.x` read.
 //
 // Timing: a timer wakes one frame early, then requestAnimationFrame applies every
 // step that is due, so each beat lands on the frame nearest its time (±half a

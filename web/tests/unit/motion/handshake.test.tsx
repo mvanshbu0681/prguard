@@ -1,25 +1,53 @@
 // OWNER: T3. The fallback handshake's markup and markAnimReady's contract. The CSS
-// timing itself (hidden → visible at 1600ms) is proven in a real browser in
-// handshake.browser.test.ts.
+// timing itself (hidden → visible at 1600ms), the late-runtime path and the revealer are
+// proven in a real browser in handshake.browser.test.ts.
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  ANIM_LATE_CLASS,
+  ANIM_IN_ATTR,
   ANIM_READY_CLASS,
+  ANIM_RUNTIME_ATTR,
   AnimHandshake,
+  FORCE_REVEAL_KEYFRAME,
   FORCE_REVEAL_MS,
   HANDSHAKE_CSS,
-  LATE_MARGIN_MS,
   NOSCRIPT_CSS,
+  animReadyInfo,
   animReadyState,
+  forceRevealFired,
   markAnimReady,
   onAnimReady,
 } from "@/motion/handshake";
+import { pendingReveals, stopAutoReveal } from "@/motion/reveal";
+import { installIntersectionObserver, MockIntersectionObserver } from "./helpers";
 
 const html = document.documentElement;
+
+/** Give `el` a fake force-reveal timer at `currentTime` (jsdom has no Web Animations). */
+function withTimer(el: Element, currentTime: number | null, playState: AnimationPlayState = "running"): Element {
+  const timer = { animationName: FORCE_REVEAL_KEYFRAME, currentTime, playState } as unknown as CSSAnimation;
+  Object.defineProperty(el, "getAnimations", { configurable: true, value: () => [timer] });
+  return el;
+}
+
+function anim(id: string): HTMLElement {
+  const el = document.createElement("p");
+  el.id = id;
+  el.setAttribute("data-anim", "");
+  document.body.append(el);
+  return el;
+}
+
+let uninstall: () => void;
+beforeEach(() => {
+  uninstall = installIntersectionObserver();
+});
 afterEach(() => {
-  html.classList.remove(ANIM_READY_CLASS, ANIM_LATE_CLASS);
-  html.removeAttribute("data-anim-runtime");
+  stopAutoReveal();
+  html.classList.remove(ANIM_READY_CLASS);
+  html.removeAttribute(ANIM_RUNTIME_ATTR);
+  document.body.innerHTML = "";
+  uninstall();
   vi.restoreAllMocks();
 });
 
@@ -37,51 +65,85 @@ describe("<AnimHandshake />", () => {
     expect(HANDSHAKE_CSS).toContain("@keyframes prg-force-reveal{to{visibility:visible}}");
   });
 
-  it("lets html.anim-ready disarm it and the runtime reveal it", () => {
+  it("lets html.anim-ready disarm it and data-anim-in reveal it", () => {
     expect(HANDSHAKE_CSS).toContain("html.anim-ready [data-anim]{animation:none}");
     expect(HANDSHAKE_CSS).toContain("html.anim-ready [data-anim][data-anim-in]{visibility:visible}");
   });
 
-  it("keeps a late runtime static, and prints everything", () => {
-    expect(HANDSHAKE_CSS).toContain("html.anim-late [data-anim]{visibility:visible;animation:none}");
+  it("prints everything, and never hides anything with JS disabled", () => {
     expect(HANDSHAKE_CSS).toContain("@media print{[data-anim]{visibility:visible!important;animation:none!important}}");
+    expect(NOSCRIPT_CSS).toBe("[data-anim]{visibility:visible!important;animation:none!important}");
+  });
+});
+
+describe("forceRevealFired", () => {
+  it("reads the element's own timer", () => {
+    expect(forceRevealFired(withTimer(document.createElement("p"), 200))).toBe(false);
+    expect(forceRevealFired(withTimer(document.createElement("p"), FORCE_REVEAL_MS - 150))).toBe(false);
+    expect(forceRevealFired(withTimer(document.createElement("p"), FORCE_REVEAL_MS - 50))).toBe(true); // a frame away counts as fired
+    expect(forceRevealFired(withTimer(document.createElement("p"), FORCE_REVEAL_MS, "finished"))).toBe(true);
   });
 
-  it("never hides anything with JS disabled", () => {
-    expect(NOSCRIPT_CSS).toBe("[data-anim]{visibility:visible!important;animation:none!important}");
+  it("treats an element with no timer (not rendered) as pending", () => {
+    const el = document.createElement("p");
+    Object.defineProperty(el, "getAnimations", { configurable: true, value: () => [] });
+    expect(forceRevealFired(el)).toBe(false);
+  });
+
+  it("falls back to the page clock without the Web Animations API", () => {
+    const el = document.createElement("p");
+    expect(typeof el.getAnimations).not.toBe("function"); // jsdom
+    expect(forceRevealFired(el, 400)).toBe(false);
+    expect(forceRevealFired(el, FORCE_REVEAL_MS)).toBe(true);
   });
 });
 
 describe("markAnimReady", () => {
   it("is pending until a runtime calls it", () => {
     expect(animReadyState()).toBe("pending");
+    expect(animReadyInfo()).toBeNull();
     expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
   });
 
-  it("disarms the force-reveal when the runtime is on time", () => {
+  it("disarms the force-reveal and hands every pending element to the revealer", () => {
     vi.spyOn(performance, "now").mockReturnValue(420);
-    expect(markAnimReady("gsap")).toBe("ready");
+    const a = withTimer(anim("a"), 380);
+    const b = withTimer(anim("b"), 12);
+    const ready = markAnimReady("gsap");
+    expect(ready).toEqual({ runtime: "gsap", at: 420, kept: 0 });
     expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
-    expect(html.classList.contains(ANIM_LATE_CLASS)).toBe(false);
-    expect(html.getAttribute("data-anim-runtime")).toBe("gsap");
+    expect(html.getAttribute(ANIM_RUNTIME_ATTR)).toBe("gsap");
     expect(animReadyState()).toBe("ready");
+    expect(animReadyInfo()).toEqual(ready);
+    expect([a, b].map((el) => el.hasAttribute(ANIM_IN_ATTR))).toEqual([false, false]); // hidden until seen
+    expect(pendingReveals()).toBe(2);
+    expect(MockIntersectionObserver.instances.at(-1)?.targets).toEqual(new Set([a, b]));
   });
 
-  it("marks the page late (static, no flash back to hidden) once the timer may have fired", () => {
-    vi.spyOn(performance, "now").mockReturnValue(FORCE_REVEAL_MS - LATE_MARGIN_MS);
-    expect(markAnimReady("motion")).toBe("late");
-    expect(html.classList.contains(ANIM_LATE_CLASS)).toBe(true);
-    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
+  it("a late runtime keeps every already force-revealed element as it is (static), never re-hidden", () => {
+    vi.spyOn(performance, "now").mockReturnValue(2400);
+    const shown = withTimer(anim("shown"), FORCE_REVEAL_MS, "finished");
+    const later = withTimer(anim("later"), 300); // mounted later: its own timer has not fired
+    const ready = markAnimReady("motion");
+    expect(ready?.kept).toBe(1);
+    expect(shown.getAttribute(ANIM_IN_ATTR)).toBe("static");
+    expect(later.hasAttribute(ANIM_IN_ATTR)).toBe(false);
+    expect(pendingReveals()).toBe(1);
   });
 
   it("is idempotent: the first runtime decides", () => {
-    vi.spyOn(performance, "now").mockReturnValue(100);
     const seen: string[] = [];
-    const off = onAnimReady((state, runtime) => seen.push(`${state}:${runtime}`));
-    expect(markAnimReady("gsap")).toBe("ready");
-    expect(markAnimReady("motion")).toBe("ready");
+    const off = onAnimReady((r) => seen.push(String(r.runtime)));
+    expect(markAnimReady("gsap")).not.toBeNull();
+    expect(markAnimReady("motion")).toBeNull();
     off();
-    expect(seen).toEqual(["ready:gsap"]);
-    expect(html.getAttribute("data-anim-runtime")).toBe("gsap");
+    expect(seen).toEqual(["gsap"]);
+    expect(html.getAttribute(ANIM_RUNTIME_ATTR)).toBe("gsap");
+  });
+
+  it("the runtime name is optional", () => {
+    expect(markAnimReady()?.runtime).toBeNull();
+    expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false);
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
   });
 });

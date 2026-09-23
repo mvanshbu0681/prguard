@@ -3,15 +3,22 @@
 // GSAP (./gsap). Dashboard code and components that also render on the dashboard
 // use useSequence (re-exported below, engine-free) or take `progress` from the route.
 //
-//   const bench = useReplay<HTMLDivElement>((tl, { q, flip, retrigger, beat, reduced }) => {
+//   const { ref, play, isPlaying } = useReplay<HTMLDivElement>((tl, { q, flip, retrigger, beat, reduced }) => {
 //     if (!reduced) tl.fromTo(q("[data-scan]"), { y: 0 }, { y: 420, duration: DUR_S.scan, ease: EASE.mass.gsap }, 0);
-//     tl.fromTo(q("[data-rail=a]"), { scaleY: 0 }, { scaleY: 1, duration: DUR_S.enter, ease: "instrument" }, 0.4);
+//     tl.fromTo(q("[data-rail=a]"), { scaleY: 0 }, { scaleY: 1, duration: DUR_S.enter, ease: EASE.instrument.gsap }, 0.4);
+//     beat("rails", 0.82);
 //     flip(q("[data-verdict]"), "data-state", "not_attempted", "proven", 2.2);  // 0ms colour
 //     retrigger(q("[data-verdict]"), "data-stamp", 2.2);                       // 180ms scale
 //     beat("verdict", 2.52);
 //     tl.to({}, { duration: 4 });                                                // the hold
 //   }, { key: "p" });
-//   <div ref={bench.ref}>…the END frame, server-rendered…</div>
+//   <div ref={ref}>…the END frame, server-rendered…
+//     <span className="stamp" data-stamp="rest" data-verdict data-state="proven">PROVEN</span>
+//   </div>
+//
+// DESTRUCTURE the result, as above. Writing `ref={replay.ref}` makes the React Compiler
+// lint (react-hooks/refs) treat the whole `replay` object as a ref, and every later
+// `replay.isPlaying` read during render becomes an error.
 //
 // Semantics:
 // - Built paused, then parked on its last frame: the server-rendered end state IS

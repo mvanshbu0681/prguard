@@ -3,10 +3,11 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { easeFn } from "@/motion/bezier";
-import { ensureGsap, gsap, MEDIA, motionMedia, revealBatch, ScrollTrigger, sweepScrollTriggers, useGSAP, type MotionConditions } from "@/motion/gsap";
+import { ensureGsap, gsap, MEDIA, motionMedia, ScrollTrigger, sweepScrollTriggers, useGSAP, type MotionConditions } from "@/motion/gsap";
 import { GsapRuntime } from "@/motion/GsapRuntime";
-import { ANIM_IN_ATTR, ANIM_LATE_CLASS, ANIM_READY_CLASS } from "@/motion/handshake";
+import { ANIM_READY_CLASS, ANIM_RUNTIME_ATTR } from "@/motion/handshake";
 import { MOTION_ATTR, REDUCED_QUERY } from "@/motion/reduced";
+import { stopAutoReveal } from "@/motion/reveal";
 import { DUR_S, EASE } from "@/motion/tokens";
 
 // A controllable matchMedia, installed before gsap.ts registers ScrollTrigger (jsdom has none).
@@ -75,20 +76,22 @@ describe("ensureGsap", () => {
   });
 
   it("disarms the handshake on its first ticker frame, not before", async () => {
-    html.classList.remove(ANIM_READY_CLASS, ANIM_LATE_CLASS);
-    html.removeAttribute("data-anim-runtime");
+    html.classList.remove(ANIM_READY_CLASS);
+    html.removeAttribute(ANIM_RUNTIME_ATTR);
     delete g.__prguardGsap;
     ensureGsap();
-    expect(html.hasAttribute("data-anim-runtime")).toBe(false); // synchronously: nothing yet
+    expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false); // synchronously: nothing yet
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
     await frame();
     await frame();
-    expect(html.getAttribute("data-anim-runtime")).toBe("gsap");
-    expect(html.classList.contains(ANIM_READY_CLASS) || html.classList.contains(ANIM_LATE_CLASS)).toBe(true);
+    expect(html.getAttribute(ANIM_RUNTIME_ATTR)).toBe("gsap");
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
+    stopAutoReveal();
   });
 
   it("if registration fails, leaves the handshake armed so content force-reveals", async () => {
-    html.classList.remove(ANIM_READY_CLASS, ANIM_LATE_CLASS);
-    html.removeAttribute("data-anim-runtime");
+    html.classList.remove(ANIM_READY_CLASS);
+    html.removeAttribute(ANIM_RUNTIME_ATTR);
     delete g.__prguardGsap;
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(gsap, "registerPlugin").mockImplementation(() => {
@@ -99,7 +102,7 @@ describe("ensureGsap", () => {
     await frame();
     await frame();
     expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
-    expect(html.classList.contains(ANIM_LATE_CLASS)).toBe(false);
+    expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false);
     g.__prguardGsap = "ok";
   });
 });
@@ -146,21 +149,6 @@ describe("ScrollTrigger helpers", () => {
     el.remove();
     expect(sweepScrollTriggers()).toBe(1);
     expect(ScrollTrigger.getAll()).not.toContain(st);
-  });
-
-  it("revealBatch: one batched trigger, once, at top 84%; entries reveal with stagger indices", () => {
-    const batch = vi.spyOn(ScrollTrigger, "batch");
-    const els = [document.createElement("li"), document.createElement("li")];
-    els.forEach((el) => document.body.append(el));
-    revealBatch(els);
-    const vars = batch.mock.calls[0][1];
-    expect(vars).toMatchObject({ start: "top 84%", once: true });
-    vars.onEnter?.(els, []);
-    expect(els.map((el) => [el.hasAttribute(ANIM_IN_ATTR), el.style.getPropertyValue("--reveal-index")])).toEqual([
-      [true, "0"],
-      [true, "1"],
-    ]);
-    els.forEach((el) => el.remove());
   });
 
   it("<GsapRuntime /> sweeps and refreshes after a route change frame", async () => {

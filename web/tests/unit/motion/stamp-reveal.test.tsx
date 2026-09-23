@@ -1,16 +1,16 @@
-// OWNER: T3. The restartable helpers (stamp / draw / scan), reveals and the
-// pooled in-view observer.
-import { fireEvent, render } from "@testing-library/react";
+// OWNER: T3. The stamp (controlled and imperative), the restartable helpers, reveals,
+// the document revealer and the pooled in-view observer.
+import { act, fireEvent, render } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ANIM_IN_ATTR } from "@/motion/handshake";
 import { onceInView } from "@/motion/in-view";
-import { REVEAL_INDEX_VAR, replayReveal, revealNow, useReveal } from "@/motion/reveal";
+import { pendingReveals, REVEAL_INDEX_VAR, replayReveal, revealNow, showStatic, startAutoReveal, stopAutoReveal } from "@/motion/reveal";
 import { retrigger, retriggerAll, settle, useStamp } from "@/motion/stamp";
 import { installIntersectionObserver, MockIntersectionObserver, observerOf } from "./helpers";
 
-describe("retrigger", () => {
-  it("flips a ↔ b so the CSS animation restarts", () => {
+describe("retrigger / settle", () => {
+  it("flips a ↔ b so the CSS animation restarts; rest or absent starts at a", () => {
     const el = document.createElement("span");
     retrigger(el);
     expect(el.getAttribute("data-stamp")).toBe("a");
@@ -18,10 +18,12 @@ describe("retrigger", () => {
     expect(el.getAttribute("data-stamp")).toBe("b");
     retrigger(el);
     expect(el.getAttribute("data-stamp")).toBe("a");
+    settle(el, "data-stamp");
+    expect(el.getAttribute("data-stamp")).toBe("rest"); // never removed: a bare .stamp would stamp again
+    retrigger(el);
+    expect(el.getAttribute("data-stamp")).toBe("a");
     retrigger(el, "data-draw");
     expect(el.getAttribute("data-draw")).toBe("a");
-    settle(el, "data-draw");
-    expect(el.hasAttribute("data-draw")).toBe(false);
   });
 
   it("retriggerAll restarts every match", () => {
@@ -34,10 +36,10 @@ describe("retrigger", () => {
 
 function Verdict() {
   const [status, setStatus] = useState("not_attempted");
-  const ref = useStamp<HTMLSpanElement>(status);
+  const stamp = useStamp(status);
   return (
     <>
-      <span ref={ref} className="stamp" data-state={status} data-testid="chip">
+      <span className="stamp" data-stamp={stamp} data-state={status} data-testid="chip">
         {status}
       </span>
       <button onClick={() => setStatus("proven")}>proven</button>
@@ -48,17 +50,18 @@ function Verdict() {
 }
 
 describe("useStamp", () => {
-  it("never stamps on the first render, then stamps on every change", () => {
+  it("rests on the first render, then alternates a / b on every change, in the same commit as the colour", () => {
     const { getByTestId, getByText } = render(<Verdict />);
     const chip = getByTestId("chip");
-    expect(chip.hasAttribute("data-stamp")).toBe(false);
+    expect(chip.getAttribute("data-stamp")).toBe("rest");
     fireEvent.click(getByText("same"));
-    expect(chip.hasAttribute("data-stamp")).toBe(false);
+    expect(chip.getAttribute("data-stamp")).toBe("rest");
     fireEvent.click(getByText("proven"));
-    expect(chip.getAttribute("data-state")).toBe("proven");
-    expect(chip.getAttribute("data-stamp")).toBe("a");
+    expect([chip.getAttribute("data-state"), chip.getAttribute("data-stamp")]).toEqual(["proven", "a"]);
     fireEvent.click(getByText("disproven"));
-    expect(chip.getAttribute("data-stamp")).toBe("b");
+    expect([chip.getAttribute("data-state"), chip.getAttribute("data-stamp")]).toEqual(["disproven", "b"]);
+    fireEvent.click(getByText("proven"));
+    expect(chip.getAttribute("data-stamp")).toBe("a");
   });
 });
 
@@ -66,21 +69,96 @@ describe("reveals", () => {
   it("revealNow sets data-anim-in and a stagger index capped at the 6th item", () => {
     const els = Array.from({ length: 8 }, () => document.createElement("li"));
     els.forEach((el, i) => revealNow(el, i));
-    expect(els.every((el) => el.hasAttribute(ANIM_IN_ATTR))).toBe(true);
+    expect(els.every((el) => el.getAttribute(ANIM_IN_ATTR) === "")).toBe(true);
     expect(els.map((el) => el.style.getPropertyValue(REVEAL_INDEX_VAR))).toEqual(["0", "1", "2", "3", "4", "5", "5", "5"]);
+    const odd = document.createElement("li");
+    revealNow(odd, Number.NaN);
+    expect(odd.style.getPropertyValue(REVEAL_INDEX_VAR)).toBe("0");
+  });
+
+  it("showStatic reveals without animating", () => {
+    const el = document.createElement("li");
+    showStatic(el);
+    expect(el.getAttribute(ANIM_IN_ATTR)).toBe("static");
   });
 
   it("replayReveal hides then reveals again with fresh batch indices", () => {
     const els = [document.createElement("li"), document.createElement("li")];
     els.forEach((el) => {
-      el.setAttribute(ANIM_IN_ATTR, "");
+      el.setAttribute(ANIM_IN_ATTR, "static");
       el.style.setProperty(REVEAL_INDEX_VAR, "4");
     });
     replayReveal(els);
-    expect(els.map((el) => [el.hasAttribute(ANIM_IN_ATTR), el.style.getPropertyValue(REVEAL_INDEX_VAR)])).toEqual([
-      [true, "0"],
-      [true, "1"],
+    expect(els.map((el) => [el.getAttribute(ANIM_IN_ATTR), el.style.getPropertyValue(REVEAL_INDEX_VAR)])).toEqual([
+      ["", "0"],
+      ["", "1"],
     ]);
+  });
+});
+
+describe("the document revealer", () => {
+  let uninstall: () => void;
+  beforeEach(() => {
+    uninstall = installIntersectionObserver();
+  });
+  afterEach(() => {
+    stopAutoReveal();
+    document.body.innerHTML = "";
+    uninstall();
+  });
+
+  const item = (id: string, attrs = "data-anim") => `<li id="${id}" ${attrs} class="reveal">${id}</li>`;
+  const byId = (id: string) => document.getElementById(id)!;
+  /** Let the MutationObserver deliver its records. */
+  const flush = () => act(async () => void (await Promise.resolve()));
+
+  it("reveals every pending [data-anim] element once, batched and ordered by position", () => {
+    document.body.innerHTML = `<ul>${item("a")}${item("b")}${item("c")}${item("done", 'data-anim data-anim-in="static"')}</ul>`;
+    startAutoReveal();
+    expect(pendingReveals()).toBe(3);
+    const io = observerOf(byId("a"));
+    expect(io.rootMargin).toBe("0px 0px -16% 0px"); // top crosses 84% of the viewport (§4.5)
+    expect(io.targets.has(byId("done"))).toBe(false);
+    io.enter([byId("b"), byId("a")], [120, 40]);
+    expect(["a", "b", "c"].map((id) => byId(id).getAttribute(ANIM_IN_ATTR))).toEqual(["", "", null]);
+    expect(["a", "b"].map((id) => byId(id).style.getPropertyValue(REVEAL_INDEX_VAR))).toEqual(["0", "1"]);
+    expect(pendingReveals()).toBe(1);
+  });
+
+  it("is one revealer per document", () => {
+    const stop = startAutoReveal();
+    expect(startAutoReveal()).toBe(stop);
+  });
+
+  it("picks up content mounted later, and lets go of content removed before it was seen", async () => {
+    startAutoReveal();
+    expect(pendingReveals()).toBe(0);
+    const list = document.createElement("ul");
+    list.innerHTML = item("late1") + item("late2");
+    document.body.append(list);
+    await flush();
+    expect(pendingReveals()).toBe(2);
+    byId("late2").remove();
+    await flush();
+    expect(pendingReveals()).toBe(1);
+    const plain = document.createElement("p");
+    plain.id = "flag";
+    document.body.append(plain);
+    await flush();
+    plain.setAttribute("data-anim", "");
+    await flush();
+    expect(pendingReveals()).toBe(2);
+    observerOf(byId("late1")).enter([byId("late1"), byId("flag")]);
+    expect([byId("late1"), byId("flag")].map((el) => el.getAttribute(ANIM_IN_ATTR))).toEqual(["", ""]);
+  });
+
+  it("stop releases every observer", () => {
+    document.body.innerHTML = `<ul>${item("a")}</ul>`;
+    startAutoReveal();
+    const io = observerOf(byId("a"));
+    stopAutoReveal();
+    expect(io.targets.size).toBe(0);
+    expect(pendingReveals()).toBe(0);
   });
 });
 
@@ -100,7 +178,6 @@ describe("in view", () => {
     const io = observerOf(a);
     expect(observerOf(b)).toBe(io);
     expect(MockIntersectionObserver.instances).toHaveLength(1);
-    expect(io.rootMargin).toBe("0px 0px -16% 0px"); // top crosses 84% of the viewport (§4.5)
     io.enter([b, a], [200, 100]); // b is lower on screen, so a is index 0
     expect(order).toEqual(["a0", "b1"]);
     io.enter([a]); // once only
@@ -115,30 +192,5 @@ describe("in view", () => {
     onceInView(document.createElement("div"), (_e, i) => seen.push(i));
     expect(seen).toEqual([0]);
     uninstall = installIntersectionObserver();
-  });
-
-  function Cards({ n }: { n: number }) {
-    const reveal = useReveal<HTMLLIElement>();
-    return (
-      <ul>
-        {Array.from({ length: n }, (_, i) => (
-          <li key={i} ref={reveal} data-anim="" className="reveal" data-testid={`card-${i}`}>
-            card {i}
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  it("useReveal reveals each element once, staggered within its batch, and unobserves on unmount", () => {
-    const { getByTestId, unmount } = render(<Cards n={3} />);
-    const cards = [0, 1, 2].map((i) => getByTestId(`card-${i}`));
-    expect(cards.some((c) => c.hasAttribute(ANIM_IN_ATTR))).toBe(false);
-    const io = observerOf(cards[0]);
-    io.enter([cards[1], cards[0]], [10, 0]);
-    expect(cards.map((c) => c.getAttribute(ANIM_IN_ATTR))).toEqual(["", "", null]);
-    expect(cards.map((c) => c.style.getPropertyValue(REVEAL_INDEX_VAR))).toEqual(["0", "1", ""]);
-    unmount();
-    expect(io.targets.size).toBe(0);
   });
 });

@@ -3,9 +3,10 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { MotionConfigContext } from "motion/react";
 import { useContext } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ANIM_LATE_CLASS, ANIM_READY_CLASS } from "@/motion/handshake";
+import { ANIM_READY_CLASS, ANIM_RUNTIME_ATTR } from "@/motion/handshake";
 import { m, MOTION_DEFAULT_TRANSITION, MotionProvider, transitions, useSequence } from "@/motion/motion";
 import { MOTION_ATTR, setMotionOverride } from "@/motion/reduced";
+import { stopAutoReveal } from "@/motion/reveal";
 import { CEILING, dampingRatio, DUR_S, EASE } from "@/motion/tokens";
 
 const html = document.documentElement;
@@ -19,16 +20,18 @@ afterEach(() => html.removeAttribute(MOTION_ATTR));
 
 describe("MotionProvider", () => {
   it("loads the deferred features, then disarms the handshake after one Motion frame", async () => {
-    html.classList.remove(ANIM_READY_CLASS, ANIM_LATE_CLASS);
-    html.removeAttribute("data-anim-runtime");
+    html.classList.remove(ANIM_READY_CLASS);
+    html.removeAttribute(ANIM_RUNTIME_ATTR);
     render(
       <MotionProvider>
         <m.div data-testid="row" initial={{ opacity: 0 }} animate={{ opacity: 1 }} />
       </MotionProvider>,
     );
     expect(screen.getByTestId("row")).toBeInTheDocument();
-    await waitFor(() => expect(html.getAttribute("data-anim-runtime")).toBe("motion"));
-    expect(html.classList.contains(ANIM_READY_CLASS) || html.classList.contains(ANIM_LATE_CLASS)).toBe(true);
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false); // not before the chunk and a frame
+    await waitFor(() => expect(html.getAttribute(ANIM_RUNTIME_ATTR)).toBe("motion"));
+    expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
+    stopAutoReveal();
   });
 
   it("defaults to reducedMotion 'user' and a --dur-2 / --ease-snap tween (no springs)", () => {

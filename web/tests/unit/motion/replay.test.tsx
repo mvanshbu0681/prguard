@@ -2,11 +2,12 @@
 // P restarts frame-identically, reduced motion yields the end frame (and beat
 // stepping), autoplay never gates visibility, unmount reverts everything.
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { gsap } from "@/motion/gsap";
 import { MOTION_ATTR, setMotionOverride } from "@/motion/reduced";
 import { DUR_S, EASE } from "@/motion/tokens";
-import { useReplay, useSequence, type Replay } from "@/motion/useReplay";
+import { useReplay, useSequence } from "@/motion/useReplay";
 import { endFrame, installIntersectionObserver, observerOf } from "./helpers";
 
 // ScrollTrigger registers through window.matchMedia, which jsdom lacks. Hoisted above the imports.
@@ -17,42 +18,51 @@ vi.hoisted(() => {
   }
 });
 
-let handle: Replay<HTMLDivElement> | null = null;
+interface BenchApi {
+  timeline: () => gsap.core.Timeline | null;
+  reduced: boolean;
+}
 
-function Bench({ onEnd, autoplay }: { onEnd?: () => void; autoplay?: "none" | "mount" | "in-view" }) {
-  const replay = useReplay<HTMLDivElement>(
-    (tl, { q, flip, retrigger, beat, reduced }) => {
-      if (!reduced) {
+let api: BenchApi | null = null;
+const capture = (next: BenchApi) => {
+  api = next;
+};
+
+function Bench({ onEnd, autoplay, onApi = capture }: { onEnd?: () => void; autoplay?: "none" | "mount" | "in-view"; onApi?: (api: BenchApi) => void }) {
+  // Destructured: the pattern the React Compiler lint accepts (see src/motion/useReplay.ts).
+  const { ref, play, isPlaying, beat, beats, reduced, timeline } = useReplay<HTMLDivElement>(
+    (tl, { q, flip, retrigger, beat: mark, reduced: calm }) => {
+      if (!calm) {
         tl.fromTo(q("[data-scan]"), { autoAlpha: 0.6, y: 0 }, { y: 120, duration: DUR_S.scan, ease: EASE.mass.gsap }, 0);
         tl.to(q("[data-scan]"), { autoAlpha: 0, duration: DUR_S.hover }, DUR_S.scan);
       }
       tl.fromTo(q("[data-row]"), { opacity: 0.35 }, { opacity: 1, duration: DUR_S.hover, ease: EASE.instrument.gsap, stagger: 0.12 }, 0);
       tl.fromTo(q("[data-rail]"), { scaleY: 0 }, { scaleY: 1, duration: DUR_S.enter, ease: EASE.instrument.gsap }, 0.4);
-      beat("rails", 0.82);
+      mark("rails", 0.82);
       flip(q("[data-chip]"), "data-state", "not_attempted", "proven", 2.2);
       retrigger(q("[data-chip]"), "data-stamp", 2.2);
-      beat("stamp", 2.38);
+      mark("stamp", 2.38);
       tl.fromTo(q("[data-caption]"), { autoAlpha: 0 }, { autoAlpha: 1, duration: DUR_S.hover }, 2.4);
-      beat("verdict", 2.52);
+      mark("verdict", 2.52);
       tl.to({}, { duration: 4 }, 2.52); // the hold
     },
     { key: "p", onEnd, autoplay },
   );
-  handle = replay;
+  useEffect(() => onApi({ timeline, reduced }));
   return (
     <>
-      <div ref={replay.ref} data-testid="bench">
+      <div ref={ref} data-testid="bench">
         <span data-scan="" aria-hidden style={{ visibility: "hidden" }} />
         <p data-row="">row 1</p>
         <p data-row="">row 2</p>
         <i data-rail="" />
-        <span data-chip="" className="stamp" data-state="proven">
+        <span data-chip="" className="stamp" data-stamp="rest" data-state="proven">
           PROVEN
         </span>
         <span data-caption="">blocks merge</span>
       </div>
-      <output data-testid="state">{`${replay.isPlaying ? "playing" : "idle"} ${replay.beat}/${replay.beats}`}</output>
-      <button onClick={replay.play}>play</button>
+      <output data-testid="state">{`${isPlaying ? "playing" : "idle"} ${beat}/${beats}`}</output>
+      <button onClick={play}>play</button>
       <textarea aria-label="notes" />
     </>
   );
@@ -61,7 +71,7 @@ function Bench({ onEnd, autoplay }: { onEnd?: () => void; autoplay?: "none" | "m
 const chip = () => screen.getByTestId("bench").querySelector("[data-chip]")!;
 const caption = () => screen.getByTestId("bench").querySelector<HTMLElement>("[data-caption]")!;
 const rows = () => [...screen.getByTestId("bench").querySelectorAll<HTMLElement>("[data-row]")];
-const tl = () => handle!.timeline()!;
+const tl = () => api!.timeline()!;
 
 /** The visible end state, minus the scan line (decoration that exists only while it moves). */
 function visibleState(): string {
@@ -71,7 +81,7 @@ function visibleState(): string {
 }
 
 afterEach(() => {
-  handle = null;
+  api = null;
   document.documentElement.removeAttribute(MOTION_ATTR);
 });
 
@@ -81,7 +91,7 @@ describe("useReplay", () => {
     expect(tl().paused()).toBe(true);
     expect(tl().progress()).toBe(1);
     expect(chip().getAttribute("data-state")).toBe("proven");
-    expect(chip().hasAttribute("data-stamp")).toBe(false); // nothing fired while parking
+    expect(chip().getAttribute("data-stamp")).toBe("rest"); // nothing fired while parking
     expect(rows().map((r) => r.style.opacity)).toEqual(["1", "1"]);
     expect(screen.getByTestId("state").textContent).toBe("idle 3/3");
   });
@@ -99,7 +109,7 @@ describe("useReplay", () => {
     // time(t, false) moves the playhead the way playback does, firing callbacks (seek() suppresses them).
     act(() => void tl().time(2.19, false));
     expect(chip().getAttribute("data-state")).toBe("not_attempted");
-    expect(chip().hasAttribute("data-stamp")).toBe(false);
+    expect(chip().getAttribute("data-stamp")).toBe("rest");
     act(() => void tl().time(2.2001, false));
     expect(chip().getAttribute("data-state")).toBe("proven"); // the instant, not a tween
     expect(chip().getAttribute("data-stamp")).toBe("a"); // the paired 180ms scale
@@ -141,7 +151,7 @@ describe("useReplay", () => {
     const full = render(<Bench />);
     fireEvent.keyDown(document.body, { key: "p" });
     act(() => void tl().progress(1));
-    const animated = visibleState();
+    const animated = visibleState(); // endFrame() drops data-stamp: a trigger, not state
     full.unmount();
 
     setMotionOverride("reduced");
@@ -153,7 +163,7 @@ describe("useReplay", () => {
     expect(tl().isActive()).toBe(false); // nothing tweens
     expect(onEnd).toHaveBeenCalledTimes(1);
     expect(visibleState()).toBe(animated);
-    expect(chip().hasAttribute("data-stamp")).toBe(false); // the scale is dropped under reduced motion
+    expect(chip().getAttribute("data-stamp")).toBe("rest"); // the scale is dropped under reduced motion
   });
 
   it("reduced motion: P steps beat by beat with zero tweening, then wraps", () => {
@@ -175,7 +185,7 @@ describe("useReplay", () => {
     fireEvent.keyDown(document.body, { key: "p" });
     expect(screen.getByTestId("state").textContent).toBe("idle 1/3");
     expect(tl().isActive()).toBe(false);
-    expect(chip().hasAttribute("data-stamp")).toBe(false); // seeks never fire callbacks
+    expect(chip().getAttribute("data-stamp")).toBe("rest"); // seeks never fire callbacks
   });
 
   it("switching reduced motion on mid-run lands on the end frame", async () => {
@@ -183,7 +193,7 @@ describe("useReplay", () => {
     fireEvent.keyDown(document.body, { key: "p" });
     act(() => void tl().seek(1));
     await act(async () => setMotionOverride("reduced"));
-    await vi.waitFor(() => expect(handle?.reduced).toBe(true));
+    await vi.waitFor(() => expect(api?.reduced).toBe(true));
     expect(tl().progress()).toBe(1);
     expect(chip().getAttribute("data-state")).toBe("proven");
     expect(screen.getByTestId("state").textContent).toBe("idle 3/3");

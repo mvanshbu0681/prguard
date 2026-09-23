@@ -1,6 +1,6 @@
 // OWNER: T3. useSequence: timed beats with no animation engine (the dashboard's replay).
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { useRef } from "react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MOTION_ATTR, setMotionOverride } from "@/motion/reduced";
 import { createSequencer, useSequence, type SequenceClock, type SequenceStep } from "@/motion/useSequence";
@@ -185,23 +185,24 @@ describe("createSequencer", () => {
 // --- the hook ------------------------------------------------------------------
 
 function Bench({ autoplay }: { autoplay?: "none" | "in-view" }) {
-  const root = useRef<HTMLDivElement>(null);
-  const phase = (p: string) => () => root.current?.setAttribute("data-phase", p);
-  const seq = useSequence<HTMLDivElement>(
+  // Beats set React state (the recommended form); the server render is the end frame.
+  const [phase, setPhase] = useState("verdict");
+  // Destructured: the pattern the React Compiler lint accepts (see src/motion/useSequence.ts).
+  const { ref, play, isPlaying, beat, beats, progress } = useSequence<HTMLDivElement>(
     [
-      { at: 0, apply: phase("scan") },
-      { at: 1400, apply: phase("rails") },
-      { at: 2200, apply: phase("verdict") },
+      { at: 0, apply: () => setPhase("scan") },
+      { at: 1400, apply: () => setPhase("rails") },
+      { at: 2200, apply: () => setPhase("verdict") },
     ],
-    { key: "p", hold: 4000, reset: phase("start"), autoplay },
+    { key: "p", hold: 4000, reset: () => setPhase("start"), autoplay },
   );
   return (
-    <section ref={seq.ref}>
-      <div ref={root} data-testid="bench" data-phase="verdict">
+    <section ref={ref}>
+      <div data-testid="bench" data-phase={phase}>
         bench
       </div>
-      <output data-testid="state">{`${seq.isPlaying ? "playing" : "idle"} ${seq.beat}/${seq.beats} ${seq.progress.toFixed(3)}`}</output>
-      <button onClick={seq.play}>play</button>
+      <output data-testid="state">{`${isPlaying ? "playing" : "idle"} ${beat}/${beats} ${progress.toFixed(3)}`}</output>
+      <button onClick={play}>play</button>
       <input aria-label="search" />
     </section>
   );

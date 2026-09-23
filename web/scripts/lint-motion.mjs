@@ -11,7 +11,8 @@
 //                         text-decoration-color, fill, stroke, gradient stops).
 //                         Documented exceptions: `visibility` (discrete; the fallback
 //                         handshake's force-reveal, design §4.7 / motion §3.5) and `height`
-//                         on the ⌘K list only (--cmdk-list-height, motion §4.3).
+//                         on the ⌘K list only (motion §4.3): a rule whose own `height` is
+//                         var(--cmdk-list-height), or a selector naming cmdk-list.
 //                         `transition: all`, Tailwind's `transition-all` and the bare
 //                         `transition` utility (it includes box-shadow and backdrop-filter)
 //                         are violations.
@@ -162,10 +163,21 @@ const ENGINE_GSAP_ENTRIES = new Set(["gsap", "useReplay", "GsapRuntime"]);
 const ENGINE_MOTION_ENTRIES = new Set(["motion", "motion-features"]);
 const MOTION_IMPORT = /^(gsap|@gsap\/|motion$|motion\/|framer-motion|@\/motion(\/|$))/;
 
-export function allowedProperty(prop, selector = "") {
+const CMDK_HEIGHT = /var\(\s*--cmdk-list-height\b/;
+
+/**
+ * Is `prop` allowed to transition / animate? `selector` and `ruleDecls` (the other
+ * declarations of the same rule) identify the one layout exception: the ⌘K list, whose
+ * height is var(--cmdk-list-height) (motion §4.3).
+ * @param {string} prop
+ * @param {string} [selector]
+ * @param {{ prop: string, value: string }[]} [ruleDecls]
+ * @returns {boolean}
+ */
+export function allowedProperty(prop, selector = "", ruleDecls = []) {
   const p = prop.trim().toLowerCase();
   if (COMPOSITOR.has(p) || BOUNDED.has(p) || COLOUR_FAMILY.has(p) || DISCRETE.has(p)) return true;
-  if (p === "height" && /cmdk-list/.test(selector)) return true; // motion §4.3, the one layout exception
+  if (p === "height") return /cmdk-list/.test(selector) || ruleDecls.some((d) => d.prop === "height" && CMDK_HEIGHT.test(d.value));
   return false;
 }
 
@@ -325,9 +337,19 @@ function nest(parent, child) {
 }
 
 /**
- * Parse CSS into declarations: { prop, value, important, line, col, selector,
- * atRules: [{ name, params }], keyframes: name | null, ruleId }.
- * `lineOffset` / `colOffset` place CSS that lives inside a TS string.
+ * @typedef {{ name: string, params: string }} CssAtRule
+ * @typedef {{ prop: string, value: string, important: boolean, line: number, col: number,
+ *   selector: string, ruleId: number, atRules: CssAtRule[], keyframes: string | null }} CssDecl
+ * @typedef {{ prop: string, line: number, col: number }} CssKeyframeProp
+ * @typedef {{ name: string, line: number, col: number, props: CssKeyframeProp[] }} CssKeyframes
+ */
+
+/**
+ * Parse CSS into declarations (with selector, at-rule context and line numbers) and
+ * keyframe blocks. `lineOffset` / `colOffset` place CSS that lives inside a TS string.
+ * @param {string} text
+ * @param {{ lineOffset?: number, colOffset?: number }} [options]
+ * @returns {{ decls: CssDecl[], keyframes: CssKeyframes[] }}
  */
 export function parseCss(text, { lineOffset = 0, colOffset = 0 } = {}) {
   const pos = lineIndex(text);
@@ -495,7 +517,7 @@ function checkCssDecls(parsed, file, report, keyframeIndex) {
       for (const p of props) {
         if (p === "all") report({ ...where, rule: "compositor", token: "all", message: "`transition: all` transitions layout properties too; name the compositor properties (motion §6.1)" });
         else if (p === "none") continue;
-        else if (!allowedProperty(p, d.selector)) report({ ...where, rule: "compositor", token: p, message: `transition of \`${p}\`; only transform, opacity, clip-path, filter (and bounded colour / stroke-dashoffset) may transition (motion §6.1)` });
+        else if (!allowedProperty(p, d.selector, byRule.get(d.ruleId) ?? [])) report({ ...where, rule: "compositor", token: p, message: `transition of \`${p}\`; only transform, opacity, clip-path, filter (and bounded colour / stroke-dashoffset) may transition (motion §6.1)` });
       }
       if (isVerdictSelector(d.selector) && props.some((p) => p === "all" || COLOUR_PROPS.has(p))) {
         report({ ...where, rule: "stamp-colour", token: d.prop, message: `\`${d.selector}\` transitions its colour; verdict and gate colours flip in 0ms with no transition (plan §2 rule 3)` });

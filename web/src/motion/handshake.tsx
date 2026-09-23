@@ -2,60 +2,60 @@
 // "Degraded, never invisible." (brand-gaps §D, fixed copy.)
 //
 // app/layout.tsx renders <AnimHandshake /> inside <head>. It is CSS only (no inline
-// script, so there is nothing for React to warn about and nothing to hydrate):
+// script, so nothing for React to warn about and nothing to hydrate):
 //
-//   [data-anim]                      visibility: hidden, plus a 0s animation that
-//                                    turns it visible at 1600ms (forwards)
-//   html.anim-ready [data-anim]      the runtime loaded: the timer is disarmed and the
-//                                    runtime owns the reveal
-//   html.anim-ready [data-anim][data-anim-in]   revealed by the runtime
-//   html.anim-late [data-anim]       the runtime arrived after the timer fired: stay
-//                                    static and visible (no flash back to hidden)
-//   <noscript>                       JS disabled: everything visible, no timer
-//   @media print                     everything visible
+//   [data-anim]                                hidden, with a 0s animation that turns it
+//                                              visible at 1600ms (fill: forwards)
+//   html.anim-ready [data-anim]                a runtime loaded: the timer is disarmed
+//   html.anim-ready [data-anim][data-anim-in]  revealed (animated by .reveal / .draw in
+//                                              src/styles/motion.css, or "static")
+//   <noscript>                                 JS disabled: nothing is ever hidden
+//   @media print                               nothing is ever hidden
 //
-// So if every script fails (bundle 404 on venue wifi), [data-anim] content appears
-// in its final state at t = 1600ms. `markAnimReady()` is called by the runtime
-// entries ONLY after GSAP (src/motion/gsap.ts: first gsap.ticker tick) or Motion
-// (src/motion/motion.tsx: features chunk loaded + one frame) actually ran.
+// So if every script fails (a bundle 404 on venue wifi), [data-anim] content appears in
+// its final state at t = 1600ms. markAnimReady() is called by the runtime entries ONLY
+// after GSAP (src/motion/gsap.ts: its first ticker frame) or Motion
+// (src/motion/motion.tsx: the features chunk loaded, then one frame) actually ran.
 //
-// Usage rule: [data-anim] goes on elements whose FIRST appearance the runtime
-// animates (scroll reveals, draws). Never on the hero, the <h1>, or anything a judge
-// must read in the first three seconds: those render in their final state at frame 0
-// (motion spec §4.4.1). Do not nest [data-anim] (a revealed child would show through
-// a hidden parent). Reveal with src/motion/reveal.ts (engine-free) or revealBatch()
-// in src/motion/gsap.ts; both set `data-anim-in`.
+// A late runtime never flashes content. markAnimReady() checks every pending
+// [data-anim] element's own force-reveal: one that already fired (or is within
+// FIRED_MARGIN_MS of firing) is marked data-anim-in="static" and stays exactly as it
+// is; the rest are disarmed and handed to the revealer (./reveal), which reveals every
+// [data-anim] element in the document, including ones mounted later, as it scrolls
+// into view. Components never wire a reveal themselves.
+//
+// This module is imported by the root layout (a server component): it must never
+// import React hooks or anything with browser side effects at module scope.
 
-import { HANDSHAKE } from "./tokens";
+import {
+  ANIM_READY_CLASS,
+  ANIM_RUNTIME_ATTR,
+  FIRED_MARGIN_MS,
+  FORCE_REVEAL_KEYFRAME,
+  FORCE_REVEAL_MS,
+  ANIM_ATTR,
+  ANIM_IN_ATTR,
+} from "./attrs";
+import { PENDING_SELECTOR, showStatic, startAutoReveal } from "./reveal";
 
-/** Content is never invisible for longer than this, even if every script fails. */
-export const FORCE_REVEAL_MS = HANDSHAKE.forceRevealMs;
+export {
+  ANIM_ATTR,
+  ANIM_IN_ATTR,
+  ANIM_IN_STATIC,
+  ANIM_PROPS,
+  ANIM_READY_CLASS,
+  ANIM_RUNTIME_ATTR,
+  FIRED_MARGIN_MS,
+  FORCE_REVEAL_KEYFRAME,
+  FORCE_REVEAL_MS,
+} from "./attrs";
 
-/** The attribute that marks an element whose first appearance the runtime animates. */
-export const ANIM_ATTR = "data-anim";
-/** Set by the runtime to reveal a [data-anim] element. */
-export const ANIM_IN_ATTR = "data-anim-in";
-/** Classes written on <html>. */
-export const ANIM_READY_CLASS = "anim-ready";
-export const ANIM_LATE_CLASS = "anim-late";
-
-/** Spread onto an element: `<div {...ANIM_PROPS} className="reveal">`. */
-export const ANIM_PROPS = { [ANIM_ATTR]: "" } as const;
-
-/**
- * If the runtime is ready later than this, the timer may already have fired (or will
- * fire before the class applies), so the page is marked late instead of ready. The
- * margin covers the frame between writing the class and the style recalc.
- */
-export const LATE_MARGIN_MS = 100;
-
-/** The inline stylesheet, byte-for-byte what the browser receives. */
+/** The inline stylesheet, byte for byte what the browser receives. */
 export const HANDSHAKE_CSS = [
-  `[${ANIM_ATTR}]{visibility:hidden;animation:prg-force-reveal 0s ${FORCE_REVEAL_MS}ms forwards}`,
-  `@keyframes prg-force-reveal{to{visibility:visible}}`,
+  `[${ANIM_ATTR}]{visibility:hidden;animation:${FORCE_REVEAL_KEYFRAME} 0s ${FORCE_REVEAL_MS}ms forwards}`,
+  `@keyframes ${FORCE_REVEAL_KEYFRAME}{to{visibility:visible}}`,
   `html.${ANIM_READY_CLASS} [${ANIM_ATTR}]{animation:none}`,
   `html.${ANIM_READY_CLASS} [${ANIM_ATTR}][${ANIM_IN_ATTR}]{visibility:visible}`,
-  `html.${ANIM_LATE_CLASS} [${ANIM_ATTR}]{visibility:visible;animation:none}`,
   `@media print{[${ANIM_ATTR}]{visibility:visible!important;animation:none!important}}`,
 ].join("");
 
@@ -73,45 +73,78 @@ export function AnimHandshake() {
 }
 
 export type AnimRuntime = "gsap" | "motion";
-export type AnimReadyState = "pending" | "ready" | "late";
+export type AnimReadyState = "pending" | "ready";
 
-type ReadyListener = (state: AnimReadyState, runtime: AnimRuntime) => void;
-const readyListeners = new Set<ReadyListener>();
+export interface AnimReady {
+  /** The runtime that disarmed the handshake, when the caller named it. */
+  runtime: AnimRuntime | null;
+  /** performance.now() at the moment it was disarmed (ms since navigation start). */
+  at: number;
+  /** [data-anim] elements whose force-reveal had already fired: kept visible, never re-hidden. */
+  kept: number;
+}
 
-/** Where the handshake stands on this document: pending, ready (runtime owns reveals) or late (static). */
+type ReadyListener = (ready: AnimReady) => void;
+const listeners = new Set<ReadyListener>();
+let info: AnimReady | null = null;
+
+const pageNow = () => (typeof performance !== "undefined" ? performance.now() : 0);
+
+/** Pending until a runtime disarms the handshake; the class on <html> is the source of truth. */
 export function animReadyState(): AnimReadyState {
   if (typeof document === "undefined") return "pending";
-  const cl = document.documentElement.classList;
-  if (cl.contains(ANIM_READY_CLASS)) return "ready";
-  if (cl.contains(ANIM_LATE_CLASS)) return "late";
-  return "pending";
+  return document.documentElement.classList.contains(ANIM_READY_CLASS) ? "ready" : "pending";
+}
+
+/** What markAnimReady() recorded, or null before it ran (lab readouts). */
+export function animReadyInfo(): AnimReady | null {
+  return animReadyState() === "ready" ? info : null;
+}
+
+/**
+ * True when `el`'s force-reveal has fired or is about to: it is (or is a frame from
+ * being) visible, so it must be shown statically rather than hidden for a reveal.
+ * Without the Web Animations API it falls back to the page clock, which is
+ * conservative: an element's timer never starts before navigation does.
+ */
+export function forceRevealFired(el: Element, now: number = pageNow()): boolean {
+  if (typeof el.getAnimations !== "function") return now >= FORCE_REVEAL_MS - FIRED_MARGIN_MS;
+  const timer = el.getAnimations().find((a) => (a as CSSAnimation).animationName === FORCE_REVEAL_KEYFRAME);
+  if (!timer) return false; // not rendered (display: none, a closed <details>): the revealer shows it when it appears
+  if (timer.playState === "finished") return true;
+  return Number(timer.currentTime ?? 0) >= FORCE_REVEAL_MS - FIRED_MARGIN_MS;
 }
 
 /**
  * Disarm the force-reveal. Call ONLY from a runtime entry, after the runtime has
  * loaded and a first frame ran (gsap.ts and motion.tsx do; nothing else should).
- * Idempotent: the first call per document decides.
- *
- * Returns "ready" when the runtime now owns reveals, or "late" when the 1600ms timer
- * could already have fired: the page then stays static, so content that became
- * visible never flashes back to hidden.
+ * Idempotent: the first call per document decides, later calls return null.
  */
-export function markAnimReady(runtime: AnimRuntime): AnimReadyState {
-  const current = animReadyState();
-  if (typeof document === "undefined" || current !== "pending") return current;
+export function markAnimReady(runtime?: AnimRuntime): AnimReady | null {
+  if (typeof document === "undefined") return null;
   const html = document.documentElement;
-  const now = typeof performance !== "undefined" ? performance.now() : Number.POSITIVE_INFINITY;
-  const state: AnimReadyState = now < FORCE_REVEAL_MS - LATE_MARGIN_MS ? "ready" : "late";
-  html.classList.add(state === "ready" ? ANIM_READY_CLASS : ANIM_LATE_CLASS);
-  html.setAttribute("data-anim-runtime", runtime);
-  readyListeners.forEach((l) => l(state, runtime));
-  return state;
+  if (html.classList.contains(ANIM_READY_CLASS)) return null;
+  const at = pageNow();
+  let kept = 0;
+  document.querySelectorAll(PENDING_SELECTOR).forEach((el) => {
+    if (!forceRevealFired(el, at)) return;
+    showStatic(el);
+    kept++;
+  });
+  // Same task as the static marks above: no frame can paint between them.
+  html.classList.add(ANIM_READY_CLASS);
+  if (runtime) html.setAttribute(ANIM_RUNTIME_ATTR, runtime);
+  startAutoReveal();
+  const ready: AnimReady = { runtime: runtime ?? null, at, kept };
+  info = ready;
+  listeners.forEach((listener) => listener(ready));
+  return ready;
 }
 
-/** Observe the first markAnimReady() (lab readouts, tests). */
+/** Observe the first markAnimReady() (lab readouts, tests). Returns an unsubscribe. */
 export function onAnimReady(listener: ReadyListener): () => void {
-  readyListeners.add(listener);
+  listeners.add(listener);
   return () => {
-    readyListeners.delete(listener);
+    listeners.delete(listener);
   };
 }

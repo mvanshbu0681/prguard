@@ -34,6 +34,7 @@ html.x { animation: hue 1s infinite; }                           /* @expect root
 .k {
   &.stamp { transition: color 120ms; }                           /* @expect stamp-colour */
 }
+.list { height: 40px; transition: height var(--dur-2) var(--ease-snap); } /* @expect compositor */
 `,
   "src/styles/good.css": `
 .a { transition: opacity var(--dur-3) var(--ease-instrument), transform var(--dur-3) var(--ease-instrument); }
@@ -43,6 +44,7 @@ html.x { animation: hue 1s infinite; }                           /* @expect root
 .stamp { transition: none !important; }
 .stamp[data-stamp="a"] { animation: prg-stamp-a var(--dur-2) var(--ease-snap); }
 [cmdk-list] { height: var(--cmdk-list-height); transition: height var(--dur-2) var(--ease-snap); }
+.ui-command__list { height: var(--cmdk-list-height); max-height: 296px; transition: height var(--ui-list-dur) var(--ease-snap); }
 @keyframes prg-stamp-a { from { scale: 1.045; } to { scale: 1; } }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes force-reveal { to { visibility: visible; } }
