@@ -9,8 +9,11 @@
 //
 // Sizes come from ICON_SIZES (12 · 14 · 16 · 20 · 24) or their names (xs … xl). Everything
 // is currentColor and aria-hidden unless given a `title` / `label`.
-export { ARTBOARD_STROKE, GLYPH_CELL, GLYPH_STROKE, ICON_SIZES, ICON_SIZE_NAMES, artboardFor, iconPx } from "./svg";
-export type { Art, Artboard, IconSize, IconSizeName } from "./svg";
+//
+// MarkSvg renders any of the exported *_ART drawings (e.g. STAGE_ART[stage]) at a size from
+// the scale; it is exported for composition, not for drawing new icons outside this folder.
+export { ARTBOARD_STROKE, GLYPH_CELL, GLYPH_STROKE, ICON_SIZES, ICON_SIZE_NAMES, MarkSvg, artboardFor, iconPx } from "./svg";
+export type { Art, Artboard, IconSize, IconSizeName, MarkSvgProps } from "./svg";
 
 export { FingerprintMark, GovernanceMark, LEVEL_ART, ProofMark, RIDGE_ART, SEAL_ART, SeverityMark, VIAL_ART, VIAL_FOR_STATUS } from "./marks";
 export type { VialState } from "./marks";
