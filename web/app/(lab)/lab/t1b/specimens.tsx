@@ -5,7 +5,7 @@
 // applies exactly the declarations of the real pseudo-class (src/styles/ui.css),
 // so a still image carries it. Mono readouts are measured in the browser.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, XAxis, YAxis } from "recharts";
 import { CopyIcon, DownloadIcon, GitCommitHorizontalIcon } from "lucide-react";
 import { SEVERITY_THRESHOLDS } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
@@ -1054,15 +1054,15 @@ function ChartSection() {
       id="chart"
       index="13"
       title="Chart container"
-      note="The chart layer charts build on: 11px mono axes, the graticule for grid lines, the tooltip spec, and a 180ms opacity fade as the only mount animation. Data: the four severity band floors from src/lib/contracts."
+      note="The chart layer charts build on: 11px mono caps axes, the graph paper as the only grid, the tooltip spec, and a 180ms opacity fade as the only mount animation. Data: the four severity band floors from src/lib/contracts."
     >
       <SurfacePair>
         {() => (
           <ChartContainer config={BAND_CONFIG} className="h-56 w-full max-w-[560px]">
-            <BarChart data={BAND_FLOORS} margin={{ top: 8, right: 8, bottom: 0, left: -16 }} accessibilityLayer>
-              <CartesianGrid vertical={false} />
+            {/* No CartesianGrid: the graph paper is the gridline system (dashboard §7). */}
+            <BarChart data={BAND_FLOORS} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} accessibilityLayer>
               <XAxis dataKey="band" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis domain={[0, 1]} ticks={[0, ...Object.values(SEVERITY_THRESHOLDS), 1]} tickFormatter={(v: number) => v.toFixed(3)} tickLine={false} axisLine={false} width={48} />
+              <YAxis domain={[0, 1]} ticks={[0, ...Object.values(SEVERITY_THRESHOLDS), 1]} tickFormatter={(v: number) => v.toFixed(3)} tickLine={false} axisLine={false} tickMargin={8} width={48} />
               <ChartTooltip cursor={false} defaultIndex={2} active content={<ChartTooltipContent indicator="line" />} />
               <Bar dataKey="floor" fill="var(--color-floor)" isAnimationActive={false} maxBarSize={48} />
             </BarChart>

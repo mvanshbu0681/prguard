@@ -575,8 +575,10 @@
     @apply type-micro;
     margin-top: var(--sp-1);
   }
+  /* A hint is content, so it needs Lc 60: --text-body (78), never --text-dim
+     (43.6, eyebrows and column heads only — design §8.1). */
   .ui-field__hint {
-    color: var(--text-dim);
+    color: var(--text-body);
   }
   .ui-field__error {
     display: flex;
@@ -943,20 +945,33 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-4);
+    min-width: 0; /* as a flex item it may shrink below its tabs; the list then scrolls */
   }
   .ui-tabs[data-orientation="vertical"] {
     flex-direction: row;
   }
+  /* A list wider than its container scrolls sideways (a phone, a narrow panel)
+     instead of pushing the page wider. The 1px rule is a background, not a
+     border, so it lies inside the scroll box: the 2px bar sits on it and the
+     inset focus ring is never clipped. */
   .ui-tabs__list {
     position: relative;
     display: flex;
     align-items: stretch;
-    border-bottom: var(--border-hairline) solid var(--rule-hair);
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    background: linear-gradient(var(--rule-hair), var(--rule-hair)) left bottom / 100% var(--border-hairline) no-repeat;
+  }
+  .ui-tabs__list::-webkit-scrollbar {
+    display: none;
   }
   .ui-tabs__list[data-orientation="vertical"] {
     flex-direction: column;
-    border-right: var(--border-hairline) solid var(--rule-hair);
-    border-bottom-width: 0;
+    overflow: visible;
+    background-position: right top;
+    background-size: var(--border-hairline) 100%;
   }
   .ui-tabs__trigger {
     position: relative;
@@ -996,6 +1011,11 @@
     color: var(--text-disabled);
     cursor: not-allowed;
   }
+  /* Inset ring: an outset one would be clipped by the scrolling list and would
+     cross the neighbouring tab's bar. */
+  .ui-tabs__trigger:is(:focus-visible, [data-force~="focus"]) {
+    outline-offset: -2px;
+  }
   .ui-tabs__trigger svg {
     width: 14px;
     height: 14px;
@@ -1006,7 +1026,7 @@
     content: "";
     position: absolute;
     right: 0;
-    bottom: calc(-1 * var(--border-hairline));
+    bottom: 0;
     left: 0;
     height: 2px;
     background-color: transparent;
@@ -1014,7 +1034,7 @@
   }
   .ui-tabs__list[data-orientation="vertical"] .ui-tabs__trigger::after {
     top: 0;
-    right: calc(-1 * var(--border-hairline));
+    right: 0;
     bottom: 0;
     left: auto;
     width: 2px;
@@ -1028,7 +1048,7 @@
   }
   .ui-tabs__indicator {
     position: absolute;
-    bottom: calc(-1 * var(--border-hairline));
+    bottom: 0;
     left: 0;
     display: none;
     width: 1px;
@@ -1641,7 +1661,10 @@
   .ui-chart {
     animation: ui-fade-in var(--ui-overlay-dur) var(--ease-snap);
   }
-  .ui-chart .recharts-cartesian-axis-tick text,
+  /* recharts 3 renders tick text as text.recharts-cartesian-axis-tick-value
+     (inside g.recharts-cartesian-axis-tick-label); it measures that element's
+     computed font-size to space the ticks, so the size must be set here. */
+  .ui-chart .recharts-cartesian-axis-tick-value,
   .ui-chart .recharts-label {
     fill: var(--chart-axis);
     font-family: var(--font-mono);
@@ -1932,6 +1955,14 @@
   }
   .ui-table tbody tr:is([data-state="selected"], [aria-selected="true"]) > :first-child {
     border-left: 2px solid Highlight;
+  }
+  /* Forced colours drop background gradients, which is how the tab rule is drawn. */
+  .ui-tabs__list {
+    border-bottom: 1px solid GrayText;
+  }
+  .ui-tabs__list[data-orientation="vertical"] {
+    border-bottom: 0;
+    border-right: 1px solid GrayText;
   }
   .ui-skeleton {
     border: 1px dashed CanvasText;

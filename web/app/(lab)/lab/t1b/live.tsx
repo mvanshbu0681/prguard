@@ -101,7 +101,7 @@ export function LiveOverlays({ data }: { data: LabData }) {
         </DropdownMenuContent>
       </DropdownMenu>
       <div className="w-40">
-        <ScopeSelect data={data} open={open === "listbox"} onOpenChange={toggle("listbox")} />
+        <ScopeSelect data={data} size="sm" aria-label="Suppression scope" open={open === "listbox"} onOpenChange={toggle("listbox")} />
       </div>
       <Button variant="ghost" size="sm" onClick={sendToasts}>
         Toasts <Kbd>T</Kbd>

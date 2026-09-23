@@ -5,11 +5,13 @@
 // the trigger edge, 180ms --ease-snap; no slide, no blur).
 //
 // The selected option carries a filled 6px --signal square, not a checkmark.
-// `container` portals the listbox into a specific element (e.g. a
-// data-surface wrapper) instead of document.body.
+// Inside a <Field> the trigger takes the field's id and aria wiring, so the label
+// names it and an error describes it. `container` portals the listbox into a
+// specific element (e.g. a data-surface wrapper) instead of document.body.
 import * as React from "react";
 import { Select as SelectPrimitive } from "radix-ui";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { useFieldControl } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
 function Select(props: React.ComponentProps<typeof SelectPrimitive.Root>) {
@@ -33,12 +35,14 @@ function SelectTrigger({
   /** md = 32px (default), sm = 26px. "default" is the shadcn name for md. */
   size?: "sm" | "md" | "default";
 }) {
+  // Inside a <Field>: the label's id target, aria-describedby, aria-invalid.
+  const wired = useFieldControl(props);
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size === "sm" ? "sm" : "md"}
       className={cn("ui-input ui-select-trigger", className)}
-      {...props}
+      {...wired}
     >
       {children}
       <SelectPrimitive.Icon asChild>

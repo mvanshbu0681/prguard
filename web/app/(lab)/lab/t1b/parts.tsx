@@ -2,6 +2,7 @@
 
 // OWNER: T1b (wave 1). Overlay bodies shared by the contained specimens (§10)
 // and the live, portaled overlays, so both render exactly the same markup.
+import type { ComponentProps } from "react";
 import { ArchiveIcon, DownloadIcon, EyeOffIcon, LinkIcon, ListIcon, RowsIcon, ScaleIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut } from "@/components/ui/command";
@@ -49,10 +50,22 @@ export function SuppressDialogBody({ data, reason }: { data: LabData; reason?: s
   );
 }
 
-export function ScopeSelect({ data, open, onOpenChange }: { data: LabData; open?: boolean; onOpenChange?: (open: boolean) => void }) {
+export function ScopeSelect({
+  data,
+  open,
+  onOpenChange,
+  size = "md",
+  ...triggerProps
+}: {
+  data: LabData;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** sm (26px) beside sm buttons; md (32px) in a form. */
+  size?: "sm" | "md";
+} & Omit<ComponentProps<typeof SelectTrigger>, "size" | "children">) {
   return (
     <Select defaultValue={data.suppressScopes[1] ?? data.suppressScopes[0]} open={open} onOpenChange={onOpenChange}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger size={size} className="w-full" {...triggerProps}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

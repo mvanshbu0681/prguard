@@ -3,7 +3,9 @@
 // contract (openapi/openapi.json). Nothing in the specimens is typed by hand
 // that a fixture or the API already provides.
 import manifest from "@fixtures/manifest.json";
+import suppressionsFixture from "@fixtures/suppressions/index.json";
 import openapi from "../../../../openapi/openapi.json";
+import type { ProofStatus, SeverityBand } from "@/lib/contracts";
 import { shortHash, shortSha } from "./format";
 
 type Operation = { responses?: Record<string, unknown> };
@@ -53,7 +55,7 @@ export interface LabData {
   };
   rows: LabRow[];
   suppressScopes: string[];
-  filters: { bands: string[]; proofStatuses: string[] };
+  filters: { bands: SeverityBand[]; proofStatuses: ProofStatus[] };
   categories: string[];
   endpoints: {
     suppressCreated: LabEndpoint;
@@ -64,12 +66,26 @@ export interface LabData {
   operations: string[];
 }
 
+/**
+ * The first suppression id in the fixture corpus (t2b), or null while the corpus
+ * is still the stub. The shape is read loosely: the file is generated in parallel.
+ */
+export function firstSuppressionId(fixture: unknown): string | null {
+  const items = (fixture as { items?: unknown } | null)?.items;
+  if (!Array.isArray(items)) return null;
+  const id = (items[0] as { suppression_id?: unknown } | undefined)?.suppression_id;
+  return typeof id === "string" && id.length > 0 ? id : null;
+}
+
 export function buildLabData(): LabData {
   const suppressPath = "/v1/findings/{finding_id}/suppress";
   const rerunPath = "/v1/reviews/{review_id}/rerun";
   const revokePath = "/v1/suppressions/{suppression_id}";
   const repository = `${ids.repository.owner}/${ids.repository.name}`;
   const suppressAt = suppressPath.replace("{finding_id}", ids.proven_finding_id);
+  // No suppression exists until t2b's corpus lands; until then the path stays a template.
+  const suppressionId = firstSuppressionId(suppressionsFixture);
+  const revokeAt = suppressionId ? revokePath.replace("{suppression_id}", suppressionId) : revokePath;
 
   const enumOf = (schema: string, property: string): string[] => {
     const values = api.components.schemas[schema]?.properties?.[property]?.enum;
@@ -104,7 +120,11 @@ export function buildLabData(): LabData {
       { field: "tamper_demo_seq", value: String(ids.tamper_demo_seq), form: String(ids.tamper_demo_seq) },
     ],
     suppressScopes: scopes,
-    filters: { bands: enumOf("FindingSeverity", "band"), proofStatuses: enumOf("FindingProof", "status") },
+    // Values from the API contract, typed by src/lib/contracts (the enum's owner).
+    filters: {
+      bands: enumOf("FindingSeverity", "band") as SeverityBand[],
+      proofStatuses: enumOf("FindingProof", "status") as ProofStatus[],
+    },
     categories: enumOf("Finding", "category"),
     endpoints: {
       suppressCreated: { method: "POST", path: suppressAt, status: firstCode("POST", suppressPath, (c) => c >= 200 && c < 300) },
@@ -114,7 +134,7 @@ export function buildLabData(): LabData {
         path: rerunPath.replace("{review_id}", ids.demo_review_id),
         status: firstCode("POST", rerunPath, (c) => c >= 200 && c < 300),
       },
-      revoke: { method: "DELETE", path: revokePath, status: firstCode("DELETE", revokePath, (c) => c >= 200 && c < 300) },
+      revoke: { method: "DELETE", path: revokeAt, status: firstCode("DELETE", revokePath, (c) => c >= 200 && c < 300) },
     },
     operations: Object.entries(api.paths).flatMap(([path, ops]) => Object.keys(ops).map((m) => `${m.toUpperCase()} ${path}`)),
   };
