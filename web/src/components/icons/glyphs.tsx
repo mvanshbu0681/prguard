@@ -1,5 +1,5 @@
 // OWNER: t1c (wave 1). Inline replacements for the characters Google Sans Code does not
-// contain: ▶ ↻ ✓ ✗ ⚠ ⋯ Σ ‖ (plan A15; verified against app/fonts/GoogleSansCode-VF-latin.woff2).
+// contain: ▶ ↻ ✓ ✗ ⚠ ⋯ Σ ‖ ▣ (plan A15; verified against app/fonts/GoogleSansCode-VF-latin.woff2).
 // Left to the browser, each of these falls back to a system font mid-line: a different
 // weight, a different width, and a broken monospace column. Drawn here instead.
 //
@@ -9,6 +9,7 @@
 // column and matches the text's weight at any size.
 //
 // Usage: <Play /> PLAY · <Restore /> restore · <Sigma /> · prev_hash <DoubleBar /> canonical_json
+//        <SquareDot /> inline_exact (the rung that fired) over □ inline_nearest (the font's own □)
 // `✓` marks a computed equality (chain verified). It is never a "pass" mark on a gate or a
 // proof chip — those states have their own glyphs (GateGlyph, ProofMark).
 import type { ReactNode } from "react";
@@ -93,6 +94,16 @@ export const GLYPH_DEFS = {
     speak: true,
     draw: <path d="M4.25 0V20M7.75 0V20" />,
   },
+  squareDot: {
+    // ▣ — the rung that fired, in a mono ladder listing (`▣ inline_exact  9`). Its outline
+    // copies GSC's own □ (U+25A1) exactly — outer 0.96–11.04 × 5.30–15.38, a 0.062em wall —
+    // so it pairs with the font's □ for the rungs that did not fire. (▢ U+25A2 is missing
+    // from GSC too: use □.) Solid even-odd shape: box, hole, then the small square.
+    char: "▣",
+    name: "square-dot",
+    speak: true,
+    draw: <path {...FILL} fillRule="evenodd" d="M0.96 5.3H11.04V15.38H0.96ZM2.2 6.51H9.8V14.17H2.2ZM3.6 7.94H8.4V12.74H3.6Z" />,
+  },
 } satisfies Record<string, GlyphDef>;
 
 export type GlyphName = keyof typeof GLYPH_DEFS;
@@ -126,3 +137,5 @@ export const Ellipsis = make("ellipsis");
 export const Sigma = make("sigma");
 /** ‖ — concatenation in `sha256(prev_hash ‖ canonical_json)`. Keeps the character for copy-paste. */
 export const DoubleBar = make("doubleBar");
+/** ▣ — the delivery / gate ladder rung that fired; pair it with the font's own □. Keeps the character. */
+export const SquareDot = make("squareDot");

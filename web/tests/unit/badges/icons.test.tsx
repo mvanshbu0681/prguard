@@ -32,6 +32,7 @@ import {
   STAGE_ART,
   SeverityMark,
   Sigma,
+  SquareDot,
   StageGlyph,
   VIAL_ART,
   Warn,
@@ -201,10 +202,11 @@ describe("text glyphs — the characters Google Sans Code does not have", () => 
     ["⋯", Ellipsis],
     ["Σ", Sigma],
     ["‖", DoubleBar],
+    ["▣", SquareDot],
   ];
 
   it("covers exactly plan A15's list", () => {
-    expect(Object.values(GLYPH_DEFS).map((d) => d.char).sort()).toEqual(["↻", "▶", "✓", "✗", "Σ", "⋯", "‖", "⚠"].sort());
+    expect(Object.values(GLYPH_DEFS).map((d) => d.char).sort()).toEqual(["↻", "▶", "▣", "✓", "✗", "Σ", "⋯", "‖", "⚠"].sort());
   });
 
   it("sits in mono text: 1em tall, one 0.6em cell wide, vertical-align -0.125em, currentColor", () => {
@@ -221,7 +223,7 @@ describe("text glyphs — the characters Google Sans Code does not have", () => 
     }
   });
 
-  it("keeps the real character for copy-paste where it is data (⋯ Σ ‖), not where it decorates a label", () => {
+  it("keeps the real character for copy-paste where it is data (⋯ Σ ‖ ▣), not where it decorates a label", () => {
     const spoken = (G: (p: { speak?: boolean }) => ReactNode, speak?: boolean) => {
       const { container, unmount } = render(<>{G(speak === undefined ? {} : { speak })}</>);
       const text = container.querySelector(".sr-only")?.textContent ?? null;
@@ -233,6 +235,7 @@ describe("text glyphs — the characters Google Sans Code does not have", () => 
     expect(spoken(Ellipsis)).toBe("⋯");
     expect(spoken(Sigma)).toBe("Σ");
     expect(spoken(DoubleBar)).toBe("‖");
+    expect(spoken(SquareDot)).toBe("▣");
     expect(spoken(Play)).toBeNull();
     expect(spoken(Check)).toBeNull();
     expect(spoken(Check, true)).toBe("✓");

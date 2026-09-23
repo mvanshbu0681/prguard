@@ -28,6 +28,7 @@ import {
   STAGE_ART,
   SeverityMark,
   Sigma,
+  SquareDot,
   StageGlyph,
   VIAL_ART,
   VIAL_FOR_STATUS,
@@ -74,6 +75,7 @@ const GLYPH_ROWS = [
   { name: "Ellipsis", char: "⋯", G: Ellipsis },
   { name: "Sigma", char: "Σ", G: Sigma },
   { name: "DoubleBar", char: "‖", G: DoubleBar },
+  { name: "SquareDot", char: "▣", G: SquareDot },
 ];
 
 const LUCIDE = [
@@ -196,7 +198,7 @@ export default function T1cLab() {
         <Section
           index="04"
           title="Text glyphs"
-          note="Google Sans Code has none of these eight characters. Each replacement is one monospace cell (0.6em) wide and sits on the text baseline, so a column of data keeps its alignment. Its stroke tracks the text size."
+          note="Google Sans Code has none of these nine characters. Each replacement is one monospace cell (0.6em) wide and sits on the text baseline, so a column of data keeps its alignment. Its stroke tracks the text size."
         >
           <Panel className="overflow-x-auto px-4 md:px-6">
             <table className="w-full border-collapse">
@@ -246,7 +248,14 @@ export default function T1cLab() {
                   == event_hash <Check /> verified <Cross /> mismatch <Ellipsis />
                 </div>
                 <div className="text-text-dim">== event_hash v verified x mismatch .</div>
+                <div>
+                  <SquareDot /> inline_exact{"    "}9
+                </div>
+                <div>□ inline_nearest{"  "}2</div>
               </div>
+              <p className="mt-3 type-small text-text-dim">
+                The last two lines set the drawn SquareDot above the font&apos;s own white square (U+25A1), whose outline it copies.
+              </p>
             </Panel>
             <Panel className="p-4">
               <p className="mb-3 type-label text-text-dim">in labels · 11px mono caps</p>
@@ -265,8 +274,8 @@ export default function T1cLab() {
                 </span>
               </div>
               <p className="mt-4 type-small text-text-dim">
-                Sigma, Ellipsis and DoubleBar keep the real character beside the drawing, visually hidden, so a copied line and a screen reader get it. Play,
-                Restore, Check, Cross and Warn decorate a label that already says the thing, so they stay silent.
+                Sigma, Ellipsis, DoubleBar and SquareDot keep the real character beside the drawing, visually hidden, so a copied line and a screen
+                reader get it. Play, Restore, Check, Cross and Warn decorate a label that already says the thing, so they stay silent.
               </p>
             </Panel>
           </div>

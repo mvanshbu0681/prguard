@@ -4,7 +4,7 @@
 //   Stations         StageGlyph({ stage }) for each of the nine STAGES
 //   Chip glyphs      LedgerGlyph · GateGlyph({ state }) · RungGlyph({ rung })
 //   Text glyphs      Play ▶ · Restore ↻ · Check ✓ · Cross ✗ · Warn ⚠ · Ellipsis ⋯ · Sigma Σ · DoubleBar ‖
-//                    (Google Sans Code has none of these; each is one mono cell wide, 1em tall)
+//                    · SquareDot ▣ (Google Sans Code has none of these; each is one mono cell wide, 1em tall)
 //   Utility chrome   Icon({ icon }) wraps lucide-react at stroke 1.5 and refuses §6.5's banned set
 //
 // Sizes come from ICON_SIZES (12 · 14 · 16 · 20 · 24) or their names (xs … xl). Everything
@@ -24,7 +24,7 @@ export type { Stage } from "./stages";
 export { GATE_ART, GateGlyph, LEDGER_ART, LedgerGlyph, RUNG_ART, RungGlyph } from "./chip-glyphs";
 export type { GateGlyphState, Rung } from "./chip-glyphs";
 
-export { Check, Cross, DoubleBar, Ellipsis, GLYPH_DEFS, Play, Restore, Sigma, Warn } from "./glyphs";
+export { Check, Cross, DoubleBar, Ellipsis, GLYPH_DEFS, Play, Restore, Sigma, SquareDot, Warn } from "./glyphs";
 export type { GlyphName } from "./glyphs";
 
 export { BANNED_ICON_PATTERNS, Icon, LUCIDE_STROKE, bannedIconReason } from "./lucide";
