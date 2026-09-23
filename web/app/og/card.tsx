@@ -124,11 +124,16 @@ function LockupB() {
   );
 }
 
-/** The filled vial (M1, proven) as a flat glyph: a lip over a full tube. Butt ends, no rounding. */
+/**
+ * The proof badge's glyph for PROVEN (design §5.4: filled vial, M1) as a flat
+ * silhouette on the 16 grid: a cap, a one-unit neck, and a tube filled to the
+ * top. Square corners, no rounding. (A lip fused to the tube read as a nail
+ * at 20px.)
+ */
 function FilledVial({ size, color }: { size: number; color: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16">
-      <path d="M3.5 1.5H12.5V3H11V14.5H5V3H3.5Z" fill={color} />
+      <path d="M4 1H12V3.5H4ZM5 4.5H11V15H5Z" fill={color} />
     </svg>
   );
 }

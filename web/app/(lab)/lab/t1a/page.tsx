@@ -170,6 +170,7 @@ export default function T1aLab() {
               <p className="type-data text-text-primary [overflow-wrap:anywhere]">
                 {ids.repro_test_path}
                 <span className="text-text-dim">::</span>
+                <wbr />
                 {ids.failing_test}
               </p>
             </Exhibit>

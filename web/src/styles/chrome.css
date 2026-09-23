@@ -13,8 +13,10 @@
    05-motion-spec.md §4.2.1, §6.5, §7 (hover classes A/B/F); 06-brand-gaps §A–§C.
 
    Rules this file keeps (grep before changing):
-   - Tokens by short name (var(--ink-2)); never var(--color-*), never a literal
-     colour except the ink tone's 14% black (brand-gaps §A colour table).
+   - Tokens by short name (var(--ink-2)); never var(--color-*). The only
+     literal colours: the ink tone's 14% black (brand-gaps §A colour table),
+     and the mobile graph-paper line, which restates --grid's own formula
+     (core.css layer B) with its alpha capped at 0.02 (motion §6.5).
    - Zero drop shadows. The only box-shadow here is `inset 0 1px 0 var(--inset-hi)`.
    - No backdrop-filter. No transition longer than --dur-1, and only on colour.
    - Every hover rule sits inside @media (hover: hover) (motion §7).
@@ -101,7 +103,7 @@
     }
     :root:not([data-contrast="high"]) .prg-graph-paper,
     :root:not([data-contrast="high"]) .prg-hero-backdrop::before {
-      --prg-grid-line: rgb(255 255 255 / min(var(--grid-alpha), 0.02));
+      --prg-grid-line: oklch(1 0 0 / min(var(--grid-alpha), 0.02));
     }
   }
 
