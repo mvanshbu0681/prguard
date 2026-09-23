@@ -182,12 +182,16 @@
         level-2 Surface has, plus the index strip (28px), the provenance strip
         (24px) and four 8px L-shaped registration marks.
      ------------------------------------------------------------------------ */
+  /* isolation: the marks' z-index (and a .gradient-border ring) stay inside
+     the frame's own stacking context, so they never paint over a consumer's
+     sticky header or overlay. */
   .prg-exhibit {
     --prg-host-border: 1px;
     --prg-exhibit-inset: var(--sp-4);
     --prg-exhibit-index-h: 28px;
     --prg-exhibit-provenance-h: 24px;
     position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     min-width: 0;

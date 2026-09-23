@@ -6,7 +6,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Lockup, Mark } from '@/components/brand';
 import { Exhibit, IndexStrip, ProvenanceLine, ProvenanceStrip, SectionIndex, Surface } from '@/components/chrome';
-import { WEB } from './css';
+import { cssRules, readCss, WEB } from './css';
 
 const text = (el: Element | null) => (el?.textContent ?? '').replace(/ /g, ' ');
 const PROOF = 'GET /v1/reviews/4e8b1d0/result → findings[0].proof';
@@ -74,6 +74,42 @@ describe('<Exhibit>', () => {
     expect(frame).toHaveAttribute('data-density', 'compact');
     expect(frame).toHaveAttribute('data-radius', 'container');
     expect(frame.querySelector('.prg-exhibit__body')).toHaveAttribute('data-padded');
+  });
+});
+
+describe('chrome.css — the registration marks (design §4.5, motion §7 class A)', () => {
+  const rules = cssRules(readCss('src/styles/chrome.css'));
+  const decl = (selector: string, property: string) =>
+    rules.find((r) => r.selector === selector)?.declarations.find(([p]) => p === property)?.[1];
+
+  it('are 8px L-strokes, 1px, at --registration (0.10), easing over --dur-1', () => {
+    expect(decl('.prg-exhibit__mark', 'width')).toBe('8px');
+    expect(decl('.prg-exhibit__mark', 'height')).toBe('8px');
+    expect(decl('.prg-exhibit__mark', 'border')).toBe('0 solid var(--registration)');
+    expect(decl('.prg-exhibit__mark', 'pointer-events')).toBe('none');
+    expect(decl('.prg-exhibit__mark', 'transition')).toBe('border-color var(--dur-1) var(--ease-snap)');
+    const corners = { tl: ['top', 'left'], tr: ['top', 'right'], bl: ['bottom', 'left'], br: ['bottom', 'right'] } as const;
+    for (const [corner, [v, h]] of Object.entries(corners)) {
+      const selector = `.prg-exhibit__mark[data-corner="${corner}"]`;
+      expect(decl(selector, v)).toBe('-1px');
+      expect(decl(selector, h)).toBe('-1px');
+      expect(decl(selector, `border-${v}-width`)).toBe('1px');
+      expect(decl(selector, `border-${h}-width`)).toBe('1px');
+      // Traces the frame's own corner radius, so the L follows a rounded frame.
+      expect(decl(selector, `border-${v}-${h}-radius`)).toBe('inherit');
+    }
+  });
+
+  it('rise to --registration-hover (0.22) on hover and when the hover is held; the fill never changes', () => {
+    expect(decl('.prg-exhibit:hover > .prg-exhibit__mark', 'border-color')).toBe('var(--registration-hover)');
+    expect(decl('.prg-exhibit[data-hover] > .prg-exhibit__mark', 'border-color')).toBe('var(--registration-hover)');
+    expect(decl('.prg-exhibit:hover', 'border-color')).toBe('var(--rule-2)');
+    expect(decl('.prg-exhibit:hover', 'background-color')).toBeUndefined();
+  });
+
+  it('stay inside the frame: the Exhibit isolates its stacking context', () => {
+    expect(decl('.prg-exhibit', 'isolation')).toBe('isolate');
+    expect(decl('.prg-exhibit', 'box-shadow')).toBe('inset 0 1px 0 var(--inset-hi)');
   });
 });
 
