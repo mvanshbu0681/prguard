@@ -122,6 +122,9 @@ export const AUDIT_LIMIT_MAX = 500;
 export const POLL_INTERVAL_MS = 1200;
 /** Backoff after consecutive transient failures: 1.2s → 2.4s → 4.8s → 9.6s → cap. */
 export const POLL_BACKOFF_CAP_MS = 10_000;
+/** A run silent for longer than this is polled at POLL_STUCK_INTERVAL_MS instead (dashboard §5: do not hammer a stuck run). */
+export const POLL_STUCK_AFTER_SECONDS = 90;
+export const POLL_STUCK_INTERVAL_MS = 4000;
 /** Heartbeat age thresholds, seconds: the dot stops and turns --marker, then
  *  --alarm with [Re-run], then the stage rail dims ("run appears stalled"). */
 export const HEARTBEAT_STALE_SECONDS = 20;

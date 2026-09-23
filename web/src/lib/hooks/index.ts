@@ -36,10 +36,15 @@ export {
   applySuppressionToList,
   applySuppressionToPages,
   applySuppressionToResult,
+  findingTransition,
+  applyTransitionToResultCounts,
+  applyTransitionToRunCounts,
+  gateReason,
   PENDING_SUPPRESSION_PREFIX,
   type SuppressionPatch,
+  type FindingTransition,
 } from "./suppress-reducer";
-export { invalidateSuppressionAffected, SUPPRESSION_AFFECTED, OPERATION } from "./internal";
+export { invalidateSuppressionAffected, SUPPRESSION_AFFECTED, OPERATION, errorSummary, writeLine, type WriteHookOptions } from "./internal";
 
 // Query keys (generated style), for prefetching and precise invalidation.
 export {
@@ -56,7 +61,7 @@ export {
 } from "@/api/@tanstack/react-query.gen";
 export { listReviewsQueryKey, listReviewsOptions, getRememberedReviews, rememberCreatedReview } from "@/api/ext";
 
-// Errors: the one error type, and its guards.
-export { ApiError, isApiError, toApiError } from "@/api/errors";
+// Errors: the one error type, its guards, and plan A10's short ids for printing a path.
+export { ApiError, isApiError, toApiError, shortenPathIds } from "@/api/errors";
 // Polling helpers, for the live view.
 export { isTerminalStatus, isLiveStatus, isTransientError, reviewPollInterval, backoffDelay } from "@/lib/query";

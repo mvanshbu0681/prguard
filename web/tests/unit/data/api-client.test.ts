@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { client } from "@/api/client.gen";
 import { decodeCursor, encodeCursor, keysetPage } from "@/api/cursor";
-import { ApiError, isApiError } from "@/api/errors";
+import { ApiError, isApiError, shortenPathIds } from "@/api/errors";
 import { isLosslessNumber, parseLosslessJson, stringifyLosslessJson } from "@/api/lossless";
 import { API_ROUTES, matchRoute, routeLabel, stripBasePath } from "@/api/routes";
 import { getFinding, listFindings } from "@/api/sdk.gen";
@@ -35,6 +35,23 @@ describe("the generated client", () => {
     expect(isApiError(error)).toBe(true);
     expect(error).toMatchObject({ status: 409, code: "RESULT_NOT_READY", message: "not yet", details: { stage_index: 3 }, requestId: "req_1", method: "GET", path: "/v1/findings/abc" });
     expect((error as ApiError).label).toBe("GET /v1/findings/abc · 409");
+  });
+
+  it("prints plan A10's short ids: 7 characters for a review, 8 for anything else, UUIDs only", () => {
+    expect(shortenPathIds("/v1/reviews/4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41/result")).toBe("/v1/reviews/4e8b1d0/result");
+    expect(shortenPathIds("/v1/findings/a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d/suppress")).toBe("/v1/findings/a91f3c2e/suppress");
+    expect(shortenPathIds("/v1/suppressions/5D20B7F4-9C1A-4E8B-A6D3-1F7E9B2C4A60")).toBe("/v1/suppressions/5D20B7F4");
+    expect(shortenPathIds("/v1/findings/f-9c2e")).toBe("/v1/findings/f-9c2e");
+    const error = new ApiError({ status: 422, code: "VALIDATION_ERROR", message: "x", method: "post", path: "/v1/findings/a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d/suppress" });
+    expect(error.displayPath).toBe("/v1/findings/a91f3c2e/suppress");
+    expect(error.path).toBe("/v1/findings/a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d/suppress");
+  });
+
+  it("keeps the backend's validation envelope whole: details.errors survives for the UI", async () => {
+    const body = { error: { code: "VALIDATION_ERROR", message: "The request body failed validation.", details: { errors: [{ loc: ["body"], msg: "Value error, reason is required and must be non-empty", type: "value_error" }] }, request_id: "0f3a" } };
+    respond(422, JSON.stringify(body));
+    const error = (await getFinding({ path: { finding_id: "abc" }, throwOnError: true }).catch((e: unknown) => e)) as ApiError;
+    expect(error).toMatchObject({ status: 422, code: "VALIDATION_ERROR", requestId: "0f3a", details: body.error.details });
   });
 
   it("maps FastAPI's default 422 body and a non-JSON proxy page", async () => {

@@ -44,6 +44,14 @@ describe("policy (pure)", () => {
     for (const s of ["succeeded", "failed", "cancelled"] as const) expect(reviewPollInterval(s, null)).toBe(false);
     expect(reviewPollInterval(undefined, err(404))).toBe(false);
   });
+
+  it("slows to 4s once a run has been silent for more than 90s (dashboard §5), and back when it speaks", () => {
+    expect(reviewPollInterval("running", null, 12)).toBe(1200);
+    expect(reviewPollInterval("running", null, 90)).toBe(1200);
+    expect(reviewPollInterval("running", null, 91)).toBe(4000);
+    expect(reviewPollInterval("running", null, 0)).toBe(1200);
+    expect(reviewPollInterval("succeeded", null, 500)).toBe(false);
+  });
 });
 
 describe("useReviewStatus under fake timers", () => {

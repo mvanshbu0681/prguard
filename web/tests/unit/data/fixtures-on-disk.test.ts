@@ -111,9 +111,9 @@ describe("the resolver over the files on disk", () => {
       expect(finding.body.proof.status).toBe("proven");
       expect(accuracy.status).toBe(200);
     } else {
-      expect(status.body.error.code).toBe("REVIEW_NOT_FOUND");
+      expect(status.body.error).toMatchObject({ code: "REVIEW_NOT_FOUND", details: { review_id: DEMO_IDS.demo_review_id, fixture_stub: true } });
       expect(finding.body.error.code).toBe("FINDING_NOT_FOUND");
-      expect(accuracy.body.error).toMatchObject({ code: "INTERNAL_ERROR", details: { stub: true } });
+      expect(accuracy.body.error).toMatchObject({ code: "INTERNAL_ERROR", details: { fixture_stub: true } });
     }
   });
 });

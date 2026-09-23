@@ -19,6 +19,7 @@ import {
   useFindingsInfinite,
   useHealthz,
   useReadyz,
+  useRerunReview,
   useReviewList,
   useReviewResult,
   useReviewStatus,
@@ -29,7 +30,8 @@ import { makeQueryClient } from "@/lib/query";
 import { F1, F3, FINDINGS, REVIEW_A, queryWrapper, testResolver } from "./sample-corpus";
 
 const toastError = vi.hoisted(() => vi.fn());
-vi.mock("sonner", () => ({ toast: { error: toastError } }));
+const toastSuccess = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError, success: toastSuccess } }));
 
 let resolver: ReturnType<typeof testResolver>["resolver"];
 
@@ -38,6 +40,7 @@ beforeEach(() => {
   setTransportBase(resolver);
   localStorage.clear();
   toastError.mockReset();
+  toastSuccess.mockReset();
 });
 afterEach(() => setTransportBase(null));
 
@@ -114,13 +117,21 @@ describe("the ledger", () => {
     expect(result.current.revoke.data).toMatchObject({ suppression_id: target, active: false });
     await waitFor(() => expect(result.current.active.data?.totals).toEqual({ active: 1, expired: 1, revoked: 2 }));
     expect(result.current.inactive.data?.items?.map((s) => s.suppression_id)).toContain(target);
+    // Only UUID-shaped ids are shortened; the sample's `s1000000-…` is not hex, so it prints whole.
+    expect(toastSuccess).toHaveBeenCalledWith(
+      "SUPPRESSION REVOKED",
+      expect.objectContaining({ description: expect.stringMatching(new RegExp(`^DELETE /v1/suppressions/${target} · 200 · fx_\\w+$`)) }),
+    );
   });
 
-  it("a failed revoke raises `DELETE /v1/suppressions/{id} · 404`", async () => {
+  it("a failed revoke raises a toast carrying `DELETE /v1/suppressions/{id} · 404`", async () => {
     const { result } = render(() => useRevokeSuppression());
     act(() => result.current.mutate({ suppressionId: "s-missing" }));
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(toastError).toHaveBeenCalledWith("DELETE /v1/suppressions/s-missing · 404", expect.objectContaining({ description: expect.stringContaining("SUPPRESSION_NOT_FOUND") }));
+    expect(toastError).toHaveBeenCalledWith(
+      "SUPPRESSION NOT REVOKED",
+      expect.objectContaining({ description: expect.stringMatching(/^DELETE \/v1\/suppressions\/s-missing · 404 · fx_\w+ · SUPPRESSION_NOT_FOUND: No suppression with that id$/) }),
+    );
   });
 });
 
@@ -143,11 +154,28 @@ describe("runs", () => {
     expect(result.current.partial.data).toMatchObject({ status: "running", findings: [] });
   });
 
-  it("a failed create raises `POST /v1/reviews · 422` with the §6.0 code", async () => {
+  it("a failed create raises a toast carrying `POST /v1/reviews · 422` and the §6.0 code; a success stays quiet by default", async () => {
     const { result } = render(() => useCreateReview());
     act(() => result.current.mutate({ pr_url: "not a pull request" }));
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(toastError).toHaveBeenCalledWith("POST /v1/reviews · 422", expect.objectContaining({ description: expect.stringMatching(/^INVALID_PR_URL · /) }));
+    expect(toastError).toHaveBeenCalledWith(
+      "REVIEW NOT QUEUED",
+      expect.objectContaining({
+        description: expect.stringMatching(/^POST \/v1\/reviews · 422 · fx_\w+ · INVALID_PR_URL: Could not parse a GitHub pull request from the supplied URL$/),
+      }),
+    );
+    await act(() => result.current.mutateAsync({ pr_url: "acme/checkout-service#4821" }));
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("useRerunReview: 202, the run replays from stage 1, and `RE-RUN QUEUED` says so", async () => {
+    const { result } = render(() => ({ rerun: useRerunReview(), status: useReviewStatus(REVIEW_A) }));
+    await waitFor(() => expect(result.current.status.data?.status).toBe("succeeded"));
+    act(() => result.current.rerun.mutate({ reviewId: REVIEW_A }));
+    await waitFor(() => expect(result.current.rerun.isSuccess).toBe(true));
+    expect(result.current.rerun.data).toMatchObject({ review_id: REVIEW_A, trigger: "rerun" });
+    await waitFor(() => expect(result.current.status.data).toMatchObject({ status: "running", stage_index: 1 }));
+    expect(toastSuccess).toHaveBeenCalledWith("RE-RUN QUEUED", expect.objectContaining({ description: expect.stringMatching(/^POST \/v1\/reviews\/4e8b1d0\/rerun · 202 · fx_\w+$/) }));
   });
 
   it("useReviewList lists runs newest first", async () => {

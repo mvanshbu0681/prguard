@@ -4,17 +4,26 @@
 // they can be tested without a network:
 //   - never retry a 4xx: the request itself is wrong and repeating it cannot help;
 //   - retry a transient failure (no response, 5xx) twice, backing off;
-//   - poll a run every 1.2s while it is queued or running, stop at a terminal
-//     status, and after a transient failure back off 1.2s → 2.4s → 4.8s → 9.6s,
-//     capped at 10s, until a poll succeeds. A 4xx stops the poll (a missing run
-//     does not come back); 429 is the one 4xx that backs off instead, because the
-//     server is asking to be polled more slowly, not to be forgotten.
+//   - poll a run every 1.2s while it is queued or running (every 4s once it has
+//     been silent for 90s), stop at a terminal status, and after a transient
+//     failure back off 1.2s → 2.4s → 4.8s → 9.6s, capped at 10s, until a poll
+//     succeeds. A 4xx stops the poll (a missing run does not come back); 429 is
+//     the one 4xx that backs off instead, because the server is asking to be
+//     polled more slowly, not to be forgotten.
 // During a backoff the query keeps its last data and counts the misses in
 // `failureCount`, so the live view freezes at last-known state instead of
 // resetting (dashboard §5.1: "losing telemetry is not the run failing").
 import { QueryClient, isServer } from "@tanstack/react-query";
 import { isApiError } from "@/api/errors";
-import { LIVE_RUN_STATUSES, POLL_BACKOFF_CAP_MS, POLL_INTERVAL_MS, TERMINAL_RUN_STATUSES, type ReviewRunStatus } from "./contracts";
+import {
+  LIVE_RUN_STATUSES,
+  POLL_BACKOFF_CAP_MS,
+  POLL_INTERVAL_MS,
+  POLL_STUCK_AFTER_SECONDS,
+  POLL_STUCK_INTERVAL_MS,
+  TERMINAL_RUN_STATUSES,
+  type ReviewRunStatus,
+} from "./contracts";
 
 /** No response, a 5xx, or 429. Anything that is not an ApiError is not transient (a bug is not retried). */
 export function isTransientError(error: unknown): boolean {
@@ -53,12 +62,18 @@ export function isLiveStatus(status: ReviewRunStatus | null | undefined): boolea
 
 /**
  * The next poll of GET /v1/reviews/{id}, from what the query knows now:
- * 1.2s while queued or running (or before the first answer), false once the
- * run is terminal or a non-transient error ended it.
+ * 1.2s while queued or running (or before the first answer); 4s once the run
+ * has been silent for more than 90s (dashboard §5 — a stuck run is not
+ * hammered); false once the run is terminal or a non-transient error ended it.
  */
-export function reviewPollInterval(status: ReviewRunStatus | null | undefined, error: unknown): number | false {
+export function reviewPollInterval(
+  status: ReviewRunStatus | null | undefined,
+  error: unknown,
+  secondsSinceHeartbeat?: number | null,
+): number | false {
   if (isTerminalStatus(status)) return false;
   if (error && !isTransientError(error)) return false;
+  if (typeof secondsSinceHeartbeat === "number" && secondsSinceHeartbeat > POLL_STUCK_AFTER_SECONDS) return POLL_STUCK_INTERVAL_MS;
   return POLL_INTERVAL_MS;
 }
 

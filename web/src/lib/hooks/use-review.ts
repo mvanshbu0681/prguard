@@ -10,14 +10,17 @@ import { createReview, getReviewResult, getReviewStatus, rerunReview } from "@/a
 import type { CreateReviewRequest, ListReviewsQuery, ReviewAccepted, ReviewList, ReviewResult, ReviewStatus } from "@/lib/api-types";
 import { POLL_INTERVAL_MS } from "@/lib/contracts";
 import { backoffDelay, isLiveStatus, reviewPollInterval, shouldRetryPoll } from "@/lib/query";
-import { toastWriteFailure, unwrap } from "./internal";
+import { toastWriteFailure, toastWriteSuccess, unwrap, unwrapWrite, type WriteHookOptions } from "./internal";
 
 /**
  * GET /v1/reviews/{id}, polled every 1.2s while the run is queued or running
- * and never after it is terminal (dashboard §5). A transient failure keeps the
- * last status and retries on the backoff schedule (1.2s → 2.4s → 4.8s … 10s);
- * `failureCount` is the number of consecutive misses, which the live view
- * shows past three. A 404 stops the poll.
+ * (every 4s once it has been silent for 90s) and never after it is terminal
+ * (dashboard §5). A transient failure keeps the last status and retries on the
+ * backoff schedule (1.2s → 2.4s → 4.8s … 10s); `failureCount` is the number of
+ * consecutive misses and `failureReason` the last one, which the live view
+ * shows past three. A 404 stops the poll. seconds_since_heartbeat is the age at
+ * the moment of the poll: the live view advances it with its own 1Hz ticker
+ * (dashboard §5.1), anchored to `dataUpdatedAt`.
  */
 export function useReviewStatus(reviewId: string | null | undefined, options: { enabled?: boolean } = {}): UseQueryResult<ReviewStatus, ApiError> {
   const path = { review_id: reviewId ?? "" };
@@ -26,7 +29,7 @@ export function useReviewStatus(reviewId: string | null | undefined, options: { 
     queryFn: ({ signal }) => unwrap(getReviewStatus({ path, signal, throwOnError: true }), { method: "GET", path: `/v1/reviews/${path.review_id}` }),
     enabled: !!reviewId && (options.enabled ?? true),
     staleTime: 0,
-    refetchInterval: (query) => reviewPollInterval(query.state.data?.status, query.state.error),
+    refetchInterval: (query) => reviewPollInterval(query.state.data?.status, query.state.error, query.state.data?.seconds_since_heartbeat),
     refetchIntervalInBackground: false,
     retry: shouldRetryPoll,
     retryDelay: backoffDelay,
@@ -68,27 +71,36 @@ function onAccepted(queryClient: ReturnType<typeof useQueryClient>, accepted: Re
 /**
  * POST /v1/reviews → 202 ReviewAccepted. In fixture mode every submission
  * replays the demo run (plan A5). On failure: a toast carrying
- * `POST /v1/reviews · <status>`.
+ * `POST /v1/reviews · <status>`. No success toast by default — the caller
+ * navigates to the run, which is the confirmation; `notify: true` adds one.
  */
-export function useCreateReview(): UseMutationResult<ReviewAccepted, ApiError, CreateReviewRequest> {
+export function useCreateReview(options: WriteHookOptions = {}): UseMutationResult<ReviewAccepted, ApiError, CreateReviewRequest> {
   const queryClient = useQueryClient();
+  const notify = options.notify ?? false;
   return useMutation<ReviewAccepted, ApiError, CreateReviewRequest>({
     mutationKey: ["createReview"],
-    mutationFn: (body) => unwrap(createReview({ body, throwOnError: true }), { method: "POST", path: "/v1/reviews" }),
-    onSuccess: (accepted) => onAccepted(queryClient, accepted),
-    onError: toastWriteFailure,
+    mutationFn: (body) => unwrapWrite(createReview({ body, throwOnError: true }), { method: "POST", path: "/v1/reviews" }),
+    onSuccess: (accepted) => {
+      if (notify) toastWriteSuccess(accepted.deduplicated ? "REVIEW DEDUPLICATED" : "REVIEW QUEUED", "POST", "/v1/reviews", accepted);
+      return onAccepted(queryClient, accepted);
+    },
+    onError: (error) => toastWriteFailure("REVIEW NOT QUEUED", error),
   });
 }
 
-/** POST /v1/reviews/{id}/rerun → 202 ReviewAccepted. */
-export function useRerunReview(): UseMutationResult<ReviewAccepted, ApiError, { reviewId: string }> {
+/** POST /v1/reviews/{id}/rerun → 202 ReviewAccepted, with a `RE-RUN QUEUED` toast (`notify: false` drops it). */
+export function useRerunReview(options: WriteHookOptions = {}): UseMutationResult<ReviewAccepted, ApiError, { reviewId: string }> {
   const queryClient = useQueryClient();
+  const notify = options.notify ?? true;
   return useMutation<ReviewAccepted, ApiError, { reviewId: string }>({
     mutationKey: ["rerunReview"],
     mutationFn: ({ reviewId }) =>
-      unwrap(rerunReview({ path: { review_id: reviewId }, throwOnError: true }), { method: "POST", path: `/v1/reviews/${reviewId}/rerun` }),
-    onSuccess: (accepted) => onAccepted(queryClient, accepted),
-    onError: toastWriteFailure,
+      unwrapWrite(rerunReview({ path: { review_id: reviewId }, throwOnError: true }), { method: "POST", path: `/v1/reviews/${reviewId}/rerun` }),
+    onSuccess: (accepted, { reviewId }) => {
+      if (notify) toastWriteSuccess("RE-RUN QUEUED", "POST", `/v1/reviews/${reviewId}/rerun`, accepted);
+      return onAccepted(queryClient, accepted);
+    },
+    onError: (error) => toastWriteFailure("RE-RUN NOT QUEUED", error),
   });
 }
 

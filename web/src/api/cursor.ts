@@ -1,29 +1,35 @@
 // OWNER: t2a (wave 1). Hand-written — not produced by `npm run api:gen`.
 //
-// Opaque list cursors in the spec §6.5 form: base64 of a small JSON anchor
-// (`eyJpZCI6ImYtOWMyZSJ9` is `{"id":"f-9c2e"}`). Pagination is keyset, not
-// offset: a cursor names the last row of the previous page, and the next page is
-// every matching row that sorts after it. The anchor is located in the FULL
-// ordered list, so a row that stopped matching the filter between two pages (a
-// finding suppressed mid-scroll) neither skips nor repeats anything.
+// Opaque list cursors, byte-compatible with the backend (api/pagination.py at
+// eeb1be8): urlsafe base64, padding stripped, of a small key document written
+// with sorted keys and no whitespace. `eyJpZCI6ImYtOWMyZSJ9` is `{"id":"f-9c2e"}`.
+// Pagination is keyset, not offset: a cursor names the last row of the previous
+// page and the next page is every matching row that sorts after it, so a row that
+// stops matching between two pages (a finding suppressed mid-scroll) neither
+// skips nor repeats anything.
 
-function toBase64(text: string): string {
+function toBase64Url(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+/** Accepts the urlsafe and the standard alphabet, padded or not. */
 function fromBase64(encoded: string): string {
-  const binary = atob(encoded);
+  const normalised = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalised + "=".repeat((4 - (normalised.length % 4)) % 4);
+  const binary = atob(padded);
   const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
 export type CursorKey = string | number;
 
+/** Python's json.dumps(key, sort_keys=True, separators=(",", ":")), then urlsafe base64 without padding. */
 export function encodeCursor(anchor: Record<string, CursorKey>): string {
-  return toBase64(JSON.stringify(anchor));
+  const sorted = Object.fromEntries(Object.entries(anchor).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+  return toBase64Url(JSON.stringify(sorted));
 }
 
 /** The decoded anchor, or null when the cursor is not base64 JSON of an object. */
@@ -46,7 +52,8 @@ export interface KeysetPage<T> {
 /**
  * One page of `matching` (a subsequence of `ordered`, same order) after the row
  * keyed `after`. Returns null when `after` names no row in `ordered` — the
- * caller answers 422, as the backend does for a cursor it cannot decode.
+ * caller answers 422, as the backend does for a cursor whose anchor it cannot
+ * find (findings, suppressions).
  */
 export function keysetPage<T>(
   ordered: readonly T[],
@@ -64,6 +71,16 @@ export function keysetPage<T>(
     start = matching.findIndex((row) => (position.get(keyOf(row)) ?? -1) > anchor);
     if (start === -1) start = matching.length;
   }
+  return pageFrom(matching, start, limit, keyOf);
+}
+
+/** The audit trail's keyset: every row whose seq is greater than the cursor's (no anchor lookup, like the backend). */
+export function seqPage<T extends { seq: number }>(matching: readonly T[], afterSeq: number | null, limit: number): KeysetPage<T> {
+  const start = afterSeq === null ? 0 : matching.findIndex((row) => row.seq > afterSeq);
+  return pageFrom(matching, start === -1 ? matching.length : start, limit, (row) => row.seq);
+}
+
+function pageFrom<T>(matching: readonly T[], start: number, limit: number, keyOf: (row: T) => CursorKey): KeysetPage<T> {
   const items = matching.slice(start, start + limit);
   const hasMore = start + limit < matching.length;
   return { items, hasMore, nextKey: hasMore && items.length ? keyOf(items[items.length - 1]!) : null };

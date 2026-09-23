@@ -120,7 +120,13 @@ describe("the simulated run through the resolver", () => {
     vi.setSystemTime(T0 + DEMO_STARTS[3]! + 10);
     const notReady = await call(resolver, "GET", `/v1/reviews/${REVIEW_A}/result`);
     expect(notReady.status).toBe(409);
-    expect(notReady.json.error).toMatchObject({ code: "RESULT_NOT_READY", details: { review_id: REVIEW_A, status: "running", stage_index: 4 } });
+    // routes_reviews.py: the backend's own message, and only the run's status in details.
+    expect(notReady.json.error).toEqual({
+      code: "RESULT_NOT_READY",
+      message: "The run has not finished; retry, or pass ?partial=true.",
+      details: { status: "running" },
+      request_id: expect.stringMatching(/^fx_/),
+    });
     const partial = await call(resolver, "GET", `/v1/reviews/${REVIEW_A}/result?partial=true`);
     expect(partial.status).toBe(200);
     expect(partial.json).toMatchObject({ status: "running", gate: null, delivery: null, findings: [], review_payload: null, risk_tier: "full" });
@@ -146,8 +152,15 @@ describe("the simulated run through the resolver", () => {
     const { resolver } = testResolver();
     const bad = await call(resolver, "POST", "/v1/reviews", { pr_url: "https://gitlab.com/a/b/-/merge_requests/1" });
     expect(bad.status).toBe(422);
-    expect(bad.json.error).toMatchObject({ code: "INVALID_PR_URL", message: "Could not parse a GitHub pull request from the supplied URL." });
-    expect((await call(resolver, "POST", "/v1/reviews", {})).json.error.code).toBe("VALIDATION_ERROR");
+    expect(bad.json.error).toMatchObject({ code: "INVALID_PR_URL", message: "Could not parse a GitHub pull request from the supplied URL.", details: { pr_url: "https://gitlab.com/a/b/-/merge_requests/1" } });
+    expect((await call(resolver, "POST", "/v1/reviews", {})).json.error).toMatchObject({
+      code: "VALIDATION_ERROR",
+      details: { errors: [{ loc: ["body", "pr_url"], msg: "Field required", type: "missing" }] },
+    });
+    // routes_reviews.py accepts no scheme, `pulls`, any case, a trailing path, and the shorthand.
+    for (const pr_url of ["github.com/octocat/hello-world/pull/42", "https://GitHub.com/octocat/hello-world/pulls/42/files", " octocat/hello-world#42 "]) {
+      expect((await call(resolver, "POST", "/v1/reviews", { pr_url, options: { force: true } })).status, pr_url).toBe(202);
+    }
   });
 
   it("?stall=1 freezes the heartbeat at S3 so the >20s stale state can be seen", async () => {

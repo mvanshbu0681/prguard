@@ -68,6 +68,11 @@ export class ApiError extends Error {
     return `${this.method} ${this.path}`;
   }
 
+  /** The path with every id cut to its short form (plan A10): `/v1/findings/a91f3c2e/suppress`. For display; `path` keeps ids whole. */
+  get displayPath(): string {
+    return shortenPathIds(this.path);
+  }
+
   /** No response arrived at all. */
   get isNetworkError(): boolean {
     return this.status === 0;
@@ -86,6 +91,18 @@ export class ApiError extends Error {
 
 export function isApiError(value: unknown): value is ApiError {
   return value instanceof ApiError;
+}
+
+const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Plan A10's short ids in a route path: a review id keeps 7 characters
+ * (`/v1/reviews/4e8b1d0/result`), any other id 8 (`/v1/findings/a91f3c2e`).
+ * Only UUID-shaped segments are cut; everything else is left as sent.
+ */
+export function shortenPathIds(path: string): string {
+  const parts = path.split("/");
+  return parts.map((segment, i) => (UUID_SEGMENT.test(segment) ? segment.slice(0, parts[i - 1] === "reviews" ? 7 : 8) : segment)).join("/");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
