@@ -2,11 +2,11 @@
 // registration marks appear only through Exhibit, only on evidence frames.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { Lockup, Mark } from '@/components/brand';
 import { Exhibit, IndexStrip, ProvenanceLine, ProvenanceStrip, SectionIndex, Surface } from '@/components/chrome';
+import { WEB } from './css';
 
 const text = (el: Element | null) => (el?.textContent ?? '').replace(/ /g, ' ');
 const PROOF = 'GET /v1/reviews/4e8b1d0/result → findings[0].proof';
@@ -95,7 +95,7 @@ describe('registration marks never escape <Exhibit>', () => {
   });
 
   it('only Exhibit.tsx and chrome.css name them in source (misuse is grep-able)', () => {
-    const web = fileURLToPath(new URL('../../..', import.meta.url));
+    const web = WEB;
     const allowed = new Set([path.join('src', 'components', 'chrome', 'Exhibit.tsx'), path.join('src', 'styles', 'chrome.css')]);
     const offenders: string[] = [];
     const walk = (dir: string) => {

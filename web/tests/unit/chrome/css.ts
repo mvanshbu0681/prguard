@@ -1,10 +1,13 @@
-// OWNER: t1a (wave 1). Test helper: read src/styles/chrome.css as rules and
-// declarations. jsdom does not apply stylesheets (vitest runs with css: false),
-// so the chrome's styling contracts are asserted against the source itself.
+// OWNER: t1a (wave 1). Test helpers for the chrome suite.
+//
+// jsdom does not apply stylesheets (vitest runs with css: false), so the
+// chrome's styling contracts are asserted against the CSS source itself.
+// WEB comes from import.meta.dirname: under the jsdom environment the global
+// URL is jsdom's, which node:url's fileURLToPath rejects.
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-export const WEB = fileURLToPath(new URL('../../..', import.meta.url));
+export const WEB = path.resolve(import.meta.dirname, '../../..');
 
 export interface CssRule {
   selector: string;

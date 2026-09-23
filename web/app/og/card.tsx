@@ -21,6 +21,10 @@
 // tokens), the graph paper as real 1px divs, no grain and no glow, and fonts as
 // static TTF instances (app/og/fonts; Satori reads neither woff2 nor the
 // variable axis). Every div with more than one child is display:flex.
+//
+// No registration marks on the bench: they are drawn only by <Exhibit> (plan §2
+// hard rule 1), and the card cannot render <Exhibit>. The corner ticks inside
+// the mark are part of the mark (brand-gaps §A), not registration marks.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { CSSProperties, ReactNode } from 'react';
@@ -35,9 +39,6 @@ const W = OG_SIZE.width;
 const H = OG_SIZE.height;
 const EDGE = 64; // outer margin, on the first 64px grid line
 const FONT = 'Google Sans Code';
-
-// Evidence-frame registration marks at rest: 0.10 white over the frame's --rule-2 edge.
-const MARK_ON_EDGE = flattenWhite(1 - (1 - 0.14) * (1 - 0.1), BRAND_HEX.ink0);
 
 // Satori matches fonts only by the nine keyword weights (100…900) and ignores
 // the variable axis, so each static instance is registered under a keyword and
@@ -155,15 +156,6 @@ function Result({ text, verb, color }: { text: string; verb: 'passed' | 'failed'
   );
 }
 
-function Corner({ at }: { at: 'tl' | 'tr' | 'bl' | 'br' }) {
-  const s: CSSProperties = { position: 'absolute', width: 12, height: 12, borderColor: MARK_ON_EDGE, borderStyle: 'solid', borderWidth: 0 };
-  if (at[0] === 't') Object.assign(s, { top: -1, borderTopWidth: 1 });
-  else Object.assign(s, { bottom: -1, borderBottomWidth: 1 });
-  if (at[1] === 'l') Object.assign(s, { left: -1, borderLeftWidth: 1 });
-  else Object.assign(s, { right: -1, borderRightWidth: 1 });
-  return <div style={s} />;
-}
-
 // ---------------------------------------------------------------------------
 // Composition. The bench's top meets the headline's cap top, and the section
 // rule runs from the left margin straight into the bench's HEAD seam, so the
@@ -209,10 +201,6 @@ function Bench({ story }: { story: OgStory }) {
       <div style={{ ...pane(BRAND_HEX.alarm, BRAND_HEX.alarmTintLo), height: BENCH.paneB, borderBottomLeftRadius: 5, borderBottomRightRadius: 5 }}>
         <Result text={story.headResult} verb="failed" color={BRAND_HEX.alarmText} />
       </div>
-      <Corner at="tl" />
-      <Corner at="tr" />
-      <Corner at="bl" />
-      <Corner at="br" />
     </div>
   );
 }

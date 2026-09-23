@@ -13,11 +13,15 @@
 // The geometry is the 16px two-bar favicon form at 2x (./geometry), so the live
 // icon and the static one are the same pixels apart from the head bar.
 //
-// The tick mirrors the heartbeat dot (design §4.7, @keyframes tick): full
-// brightness for the first 12% of each period, then 0.35 until the next beat —
-// steps, not easing. Under reduced motion (the OS preference or
-// html[data-motion="reduced"]) nothing redraws: the running icon is drawn once
-// at full brightness, like the static heartbeat dot.
+// The tick mirrors the heartbeat dot (design §4.7 / motion §4.9.2):
+//   @keyframes tick { 0%, 100% { opacity: .35 } 12% { opacity: 1 } }  on steps(1, end)
+// steps(1, end) holds each keyframe interval at its STARTING value, so the dot
+// sits at 0.35 for the first 12% of every period and at full brightness for the
+// other 88%: a short dip on each beat, not a flash. The favicon draws exactly
+// that — the dim frame at t = 0, the bright frame at 12% — steps, never easing.
+// Under reduced motion (the OS preference or html[data-motion="reduced"])
+// nothing redraws: the running icon is drawn once at full brightness, like the
+// static heartbeat dot (motion §5).
 //
 // Framework-free so it is testable and reusable; useLiveFavicon is the React
 // binding. Every DOM access is guarded: without a 2D canvas it does nothing and
@@ -30,9 +34,9 @@ export type LiveFaviconState = MarkLiveState | null;
 export const LIVE_FAVICON_SIZE = 32;
 /** Matches --heartbeat-period and the API's heartbeat interval. Override per run with `periodMs`. */
 export const HEARTBEAT_PERIOD_MS = 1200;
-/** @keyframes tick: bright from 0% to 12% of the period… */
-export const HEARTBEAT_ON_FRACTION = 0.12;
-/** …then resting at opacity 0.35. */
+/** @keyframes tick on steps(1, end): the dim interval is the first 12% of each period… */
+export const HEARTBEAT_DIP_FRACTION = 0.12;
+/** …at opacity 0.35; the remaining 88% is full brightness. */
 export const HEARTBEAT_REST_OPACITY = 0.35;
 
 type Beat = 'on' | 'rest';
@@ -106,13 +110,13 @@ function restoreAttr(el: Element, name: string, value: string | null) {
 export function createLiveFavicon(options: LiveFaviconOptions = {}): LiveFaviconController {
   const doc = options.doc ?? (typeof document === 'undefined' ? undefined : document);
   const period = Math.max(240, options.periodMs ?? HEARTBEAT_PERIOD_MS);
-  const onFor = Math.round(period * HEARTBEAT_ON_FRACTION);
+  const dipFor = Math.round(period * HEARTBEAT_DIP_FRACTION);
 
   let saved: SavedLink[] | null = null;
   let created: HTMLLinkElement | null = null;
   let current: LiveFaviconState = null;
   let interval: ReturnType<typeof setInterval> | null = null;
-  let rest: ReturnType<typeof setTimeout> | null = null;
+  let lift: ReturnType<typeof setTimeout> | null = null;
   let ctx: CanvasRenderingContext2D | null | undefined;
   let canvas: HTMLCanvasElement | null = null;
   const urls = new Map<string, string>();
@@ -181,9 +185,9 @@ export function createLiveFavicon(options: LiveFaviconOptions = {}): LiveFavicon
 
   const stopBeat = () => {
     if (interval !== null) clearInterval(interval);
-    if (rest !== null) clearTimeout(rest);
+    if (lift !== null) clearTimeout(lift);
     interval = null;
-    rest = null;
+    lift = null;
   };
 
   const draw = (state: MarkLiveState, beat: Beat) => {
@@ -191,10 +195,11 @@ export function createLiveFavicon(options: LiveFaviconOptions = {}): LiveFavicon
     if (url) show(url);
   };
 
+  // One period: dim at 0%, bright from 12% until the next beat (see the header).
   const beat = () => {
-    draw('running', 'on');
-    if (rest !== null) clearTimeout(rest);
-    rest = setTimeout(() => draw('running', 'rest'), onFor);
+    draw('running', 'rest');
+    if (lift !== null) clearTimeout(lift);
+    lift = setTimeout(() => draw('running', 'on'), dipFor);
   };
 
   const set = (state: LiveFaviconState) => {

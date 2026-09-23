@@ -5,9 +5,11 @@
 import { useEffect, useState } from 'react';
 import { LIVE_FAVICON_SIZE, paintLiveFavicon, useLiveFavicon, type LiveFaviconState, type MarkLiveState } from '@/components/brand';
 
+// running: the dip frame shows for the first 12% of each 1200ms beat, the
+// bright frame for the other 88% (@keyframes tick on steps(1, end)).
 const STATES: { state: MarkLiveState; beat: 'on' | 'rest'; label: string }[] = [
-  { state: 'running', beat: 'on', label: 'running · beat' },
-  { state: 'running', beat: 'rest', label: 'running · rest 0.35' },
+  { state: 'running', beat: 'rest', label: 'running · dip 0.35, 0–12%' },
+  { state: 'running', beat: 'on', label: 'running · 12–100%' },
   { state: 'clear', beat: 'on', label: 'clear' },
   { state: 'blocked', beat: 'on', label: 'blocked' },
 ];
