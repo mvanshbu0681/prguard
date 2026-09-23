@@ -87,6 +87,60 @@ describe("the rendered toast", () => {
   });
 });
 
+/** [ids, classes/attributes/pseudo-classes, elements/pseudo-elements] for the simple selectors used here. */
+function specificity(selector: string): [number, number, number] {
+  const s = selector.replace(/:(not|is)\(/g, "(").replace(/"[^"]*"|'[^']*'/g, "");
+  const ids = (s.match(/#[\w-]+/g) ?? []).length;
+  const pseudoElements = (s.match(/::[\w-]+/g) ?? []).length;
+  const classes = (s.match(/\.[\w-]+/g) ?? []).length + (s.match(/\[[^\]]+\]/g) ?? []).length + (s.replace(/::[\w-]+/g, "").match(/:[\w-]+/g) ?? []).length;
+  const elements = (s.replace(/\[[^\]]+\]/g, "").match(/(^|[\s>+~(])[a-z][\w-]*/g) ?? []).length;
+  return [ids, classes, elements + pseudoElements];
+}
+const beats = (a: [number, number, number], b: [number, number, number]) => a[0] > b[0] || (a[0] === b[0] && (a[1] > b[1] || (a[1] === b[1] && a[2] > b[2])));
+
+describe("the toaster overrides outrank sonner's unlayered rules", () => {
+  const sonnerCss = readWebFile("node_modules/sonner/dist/styles.css").replace(/\s+/g, " ");
+  const ours = readWebFile("src/styles/ui.css");
+
+  it.each([
+    ["[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast] [data-close-button]", ".ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__close[data-close-button]"],
+    [
+      "[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast] [data-close-button]:hover",
+      ".ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__close[data-close-button]:hover",
+    ],
+    ["[data-sonner-toast][data-removed='true'][data-front='true'][data-swipe-out='false']", '.ui-toaster [data-sonner-toast][data-removed="true"][data-front="true"][data-swipe-out="false"]'],
+    [
+      "[data-sonner-toast][data-removed='true'][data-front='false'][data-swipe-out='false'][data-expanded='true']",
+      '.ui-toaster [data-sonner-toast][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"]',
+    ],
+    [".sonner-loader[data-visible='false']", '.ui-toaster .ui-toast__icon .sonner-loader[data-visible="false"]'],
+    ["[data-sonner-toaster][data-sonner-theme='dark'] [data-description]", ".ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__body"],
+    ["[data-sonner-toast]:focus-visible", ".ui-toaster [data-sonner-toast]:focus-visible"],
+    ["[data-sonner-toaster][data-lifted='true']", '.ui-toaster[data-sonner-toaster][data-lifted="true"]'],
+    [
+      "[data-sonner-toast][data-removed='true'][data-front='false'][data-swipe-out='false'][data-expanded='false']",
+      '.ui-toaster [data-sonner-toast][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"]',
+    ],
+    ["[data-sonner-toast][data-swipe-out='true'][data-y-position='bottom']", '.ui-toaster [data-sonner-toast][data-swipe-out="true"][data-y-position]'],
+    ["[data-sonner-toast]", ".ui-toaster [data-sonner-toast]"],
+  ])("%s", (sonnerSelector, ourSelector) => {
+    expect(sonnerCss, "the sonner rule this override answers is gone: re-check the override").toContain(sonnerSelector);
+    expect(ours.includes(`${ourSelector} {`) || ours.includes(`${ourSelector},`), `ui.css declares ${ourSelector}`).toBe(true);
+    expect(beats(specificity(ourSelector), specificity(sonnerSelector)), `${ourSelector} must outrank ${sonnerSelector}`).toBe(true);
+  });
+
+  it("computes specificity the way the cascade does", () => {
+    expect(specificity("[data-sonner-toaster][data-sonner-theme='dark'] [data-sonner-toast] [data-close-button]")).toEqual([0, 4, 0]);
+    expect(specificity('.ui-toaster [data-sonner-toast][data-y-position="bottom"]:not([data-mounted="true"])')).toEqual([0, 4, 0]);
+    expect(specificity(".ui-toast::before")).toEqual([0, 1, 1]);
+  });
+
+  it("keeps the tone bar off ::before, which sonner restyles on swipe and exit", () => {
+    expect(sonnerCss).toContain("[data-sonner-toast][data-swiping='false'][data-removed='true']::before");
+    expect(ours).not.toMatch(/\.ui-toast::before/);
+  });
+});
+
 describe("toast styling contract", () => {
   it("is an ink-2 card on a rule-2 hairline, 2px radius, no drop shadow", () => {
     expect(declValue(CSS, ".ui-toast", "background-color")).toBe("var(--ink-2)");
@@ -95,9 +149,10 @@ describe("toast styling contract", () => {
     expect(declValue(CSS, ".ui-toast", "box-shadow")).toBe("inset 0 1px 0 var(--inset-hi)");
   });
 
-  it("carries the tone as a 2px bar: ink-7, signal-lo (never green), marker, alarm", () => {
-    expect(declValue(CSS, ".ui-toast::before", "width")).toBe("2px");
-    expect(declValue(CSS, ".ui-toast::before", "background-color")).toBe("var(--ui-toast-bar, var(--ink-7))");
+  it("carries the tone as a 2px left border: ink-7, signal-lo (never green), marker, alarm", () => {
+    expect(declValue(CSS, ".ui-toast", "border-left")).toBe("2px solid var(--ui-toast-bar, var(--ink-7))");
+    // Never on ::before: sonner stretches the toast's ::before to inset 0 as it exits.
+    expect(declValue(CSS, ".ui-toast::before", "background-color")).toBeUndefined();
     expect(declValue(CSS, ".ui-toast--success", "--ui-toast-bar")).toBe("var(--signal-lo)");
     expect(declValue(CSS, ".ui-toast--caution", "--ui-toast-bar")).toBe("var(--marker)");
     expect(declValue(CSS, ".ui-toast--error", "--ui-toast-bar")).toBe("var(--alarm)");

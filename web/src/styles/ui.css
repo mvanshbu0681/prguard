@@ -514,6 +514,7 @@
     background-color: var(--ink-1);
     color: var(--text-body);
     @apply type-small;
+    text-overflow: ellipsis; /* a long placeholder or value ends in … at rest, never mid-glyph */
     transition-property: border-color;
     transition-duration: var(--dur-1);
     transition-timing-function: var(--ease-snap);
@@ -882,9 +883,11 @@
     @apply type-body;
     color: var(--text-body);
   }
+  /* Primary last, in the DOM and on screen: stacked full width on a phone (so
+     the focus order reads top to bottom), a right-aligned row from 640px. */
   .ui-dialog__footer {
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     gap: var(--sp-2);
   }
   @media (min-width: 640px) {
@@ -1499,6 +1502,7 @@
     background-color: transparent;
     color: var(--text-primary);
     @apply type-body;
+    text-overflow: ellipsis;
     outline: 2px solid transparent; /* the ring is drawn by the row above; a transparent
                                        outline still shows in forced-colors mode */
   }
@@ -1579,6 +1583,10 @@
 
   /* ---------- Toast card — design §5.14 + brief: ink-2, rule-2, mono caps
      title, the body carries the endpoint and status code ----------------- */
+  /* The tone is a 2px left bar (never green) plus the title text. The bar is the
+     left border, not a pseudo-element: sonner draws its swipe area and its exit
+     effect on the toast's ::before (inset 0, scaleY 2), which would stretch a
+     ::before bar across the whole card as it leaves. */
   .ui-toast {
     --ui-hover-ghost: var(--ink-3);
     position: relative;
@@ -1587,25 +1595,14 @@
     gap: var(--sp-3);
     width: var(--width, 360px);
     max-width: 100%;
-    padding: var(--sp-3) var(--sp-3) var(--sp-3) calc(var(--sp-3) + 2px);
+    padding: var(--sp-3);
     border: 1px solid var(--rule-2);
+    border-left: 2px solid var(--ui-toast-bar, var(--ink-7));
     border-radius: var(--radius-data);
     background-color: var(--ink-2);
     box-shadow: inset 0 1px 0 var(--inset-hi);
     color: var(--text-body);
     font-family: var(--font-sans);
-  }
-  /* The tone is a 2px left bar (never green) plus the title text. */
-  .ui-toast::before {
-    content: "";
-    position: absolute;
-    top: -1px;
-    bottom: -1px;
-    left: -1px;
-    width: 2px;
-    border-radius: var(--radius-data) 0 0 var(--radius-data);
-    background-color: var(--ui-toast-bar, var(--ink-7));
-    pointer-events: none;
   }
   .ui-toast--success { --ui-toast-bar: var(--signal-lo); }
   .ui-toast--caution { --ui-toast-bar: var(--marker); }
@@ -1631,9 +1628,15 @@
     font-variant-numeric: tabular-nums slashed-zero;
     overflow-wrap: anywhere;
   }
+  /* position: relative contains sonner's absolutely-centred .sonner-loader, which
+     holds the loading ellipsis. */
   .ui-toast__icon {
+    position: relative;
     display: flex;
+    flex-shrink: 0;
     align-items: center;
+    justify-content: center;
+    width: 14px;
     height: 15px;
     color: var(--text-dim);
   }
@@ -1651,6 +1654,9 @@
     background-color: transparent;
     color: var(--text-dim);
     cursor: pointer;
+    transition-property: background-color, color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
   }
   .ui-toast__close svg {
     width: 14px;
@@ -1837,10 +1843,14 @@
 
 
 /* ==========================================================================
-   5. TOASTER — sonner injects its stylesheet (unlayered) into <head> at
-      runtime, so these overrides are unlayered and one class more specific.
-      Positioning and stacking stay sonner's; timing, travel, shadow and
-      focus become ours.
+   5. TOASTER — sonner appends its stylesheet (unlayered) to the end of <head>
+      at runtime, so it beats anything layered, and wins ties on order. Even
+      with `unstyled: true` some of its rules still reach our cards: the
+      dark-theme close button and description colours, a drop shadow on focus,
+      off-grid exit and swipe timings, a lift, and its absolutely-centred
+      loader. Each override below is unlayered and strictly more specific than
+      the sonner rule it answers (noted as sonner's specificity → ours).
+      Positioning and stacking stay sonner's.
    ========================================================================== */
 .ui-toaster[data-sonner-toaster] {
   font-family: var(--font-sans);
@@ -1849,12 +1859,18 @@
   outline: 2px solid var(--signal-hi);
   outline-offset: 2px;
 }
+/* A lift is banned (motion §7); sonner lifts the stack only when expand is off. (0,2,0 → 0,3,0) */
+.ui-toaster[data-sonner-toaster][data-lifted="true"] {
+  transform: none;
+}
+/* Enter: opacity + translateY(6px → 0) in 180ms --ease-snap (motion §4.3); no height tween. (0,1,0 → 0,2,0) */
 .ui-toaster [data-sonner-toast] {
   transition: transform var(--ui-overlay-dur) var(--ease-snap), opacity var(--ui-overlay-dur) var(--ease-snap);
 }
 .ui-toaster [data-sonner-toast] > * {
   transition: opacity var(--ui-overlay-dur) var(--ease-snap);
 }
+/* sonner's focus ring is a drop shadow. (0,2,0 → 0,3,0) */
 .ui-toaster [data-sonner-toast]:focus-visible {
   box-shadow: inset 0 1px 0 var(--inset-hi);
   outline: 2px solid var(--signal-hi);
@@ -1866,6 +1882,7 @@
 .ui-toaster [data-sonner-toast][data-y-position="top"]:not([data-mounted="true"]) {
   --y: translateY(calc(-1 * var(--ui-toast-shift)));
 }
+/* Exit: opacity + translateY(4px) in 160ms --ease-exit. */
 .ui-toaster [data-sonner-toast][data-removed="true"] {
   transition-duration: var(--dur-exit);
   transition-timing-function: var(--ease-exit);
@@ -1876,9 +1893,38 @@
 .ui-toaster [data-sonner-toast][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
   --y: translateY(calc(var(--lift) * var(--offset) + var(--ui-toast-exit)));
 }
+/* sonner: transform 500ms, opacity 200ms, when a collapsed stack loses a toast. (0,5,0 → 0,6,0) */
+.ui-toaster [data-sonner-toast][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+  transition: transform var(--dur-exit) var(--ease-exit), opacity var(--dur-exit) var(--ease-exit);
+}
+/* sonner: 200ms ease-out for a swipe dismissal. (0,3,0 → 0,4,0) */
+.ui-toaster [data-sonner-toast][data-swipe-out="true"][data-y-position] {
+  animation-duration: var(--dur-exit);
+  animation-timing-function: var(--ease-exit);
+}
+/* The body is a provenance line in --text-dim; sonner's dark theme repaints it #E8E8E8. (0,3,0 → 0,4,0) */
+.ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__body {
+  color: var(--text-dim);
+}
+/* sonner's dark theme paints the close button black with a grey border. (0,4,0 → 0,5,0) */
+.ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__close[data-close-button] {
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--text-dim);
+}
+/* The loader slot: centred in our 14px icon box, no scale on hide, our exit timing. (0,1,0 → 0,3,0) */
+.ui-toaster .ui-toast__icon .sonner-loader {
+  transition-duration: var(--dur-exit);
+  transition-timing-function: var(--ease-exit);
+}
+.ui-toaster .ui-toast__icon .sonner-loader[data-visible="false"] {
+  transform: translate(-50%, -50%);
+}
 @media (hover: hover) {
-  .ui-toaster .ui-toast__close:hover,
+  /* (0,5,0 → 0,6,0) */
+  .ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__close[data-close-button]:hover,
   .ui-toast__close:hover {
+    border-color: transparent;
     background-color: var(--ui-hover-ghost);
     color: var(--text-body);
   }
@@ -1947,7 +1993,6 @@
   .ui-tabs__indicator,
   .ui-toggle[data-state="on"]::after,
   .ui-command__item[data-selected="true"]::before,
-  .ui-toast::before,
   .ui-item__fill,
   .ui-command__item-mark {
     forced-color-adjust: none;

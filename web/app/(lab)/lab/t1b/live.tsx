@@ -2,7 +2,8 @@
 
 // OWNER: T1b (wave 1). The real overlays — portaled to <body>, modal, focus-
 // trapped — opened by the buttons, by a key (D S K M L T, ⌘K), or by
-// ?open=dialog|sheet|palette|menu|listbox|toasts so a screenshot can hold one open.
+// ?open=dialog|sheet|palette|menu|listbox|toasts|pending so a screenshot can
+// hold one open.
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CommandDialog, Command } from "@/components/ui/command";
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Toaster, notifyWrite } from "@/components/ui/sonner";
+import { Toaster, notifyWrite, toast } from "@/components/ui/sonner";
 import type { LabData } from "./lab-data";
 import { FiltersSheetBody, PaletteRoot, ScopeSelect, SuppressDialogBody } from "./parts";
 
@@ -36,16 +37,23 @@ export function LiveOverlays({ data }: { data: LabData }) {
     notifyWrite({ tone: "error", title: "Suppress rejected", ...data.endpoints.suppressRejected });
   }, [data]);
 
+  // A write in flight: sonner's loading toast, which carries the stepped ellipsis.
+  const sendPending = useCallback(() => {
+    const { method, path } = data.endpoints.suppressCreated;
+    toast.loading("Suppressing", { description: `${method} ${path}` });
+  }, [data]);
+
   // ?open= acts once per page load, after the first paint. Strict Mode's dev
   // double-mount cancels the first frame in cleanup, so it still fires once.
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("open");
     const frame = requestAnimationFrame(() => {
       if (requested === "toasts") sendToasts();
+      else if (requested === "pending") sendPending();
       else if (requested && OVERLAYS.has(requested)) setOpen(requested as Overlay);
     });
     return () => cancelAnimationFrame(frame);
-  }, [sendToasts]);
+  }, [sendToasts, sendPending]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
