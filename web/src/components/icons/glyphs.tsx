@@ -55,16 +55,13 @@ export const GLYPH_DEFS = {
     draw: <path d={`M2 ${capMid - 4.5}L10 ${capMid + 4.5}M10 ${capMid - 4.5}L2 ${capMid + 4.5}`} />,
   },
   warn: {
+    // A solid triangle from the baseline to the cap height with the exclamation knocked
+    // out (even-odd), in GSC's own ▲ ■ vocabulary. An outlined triangle reads as Δ at the
+    // 11–12px sizes this glyph is used at (input errors, labels); the solid one reads as ⚠.
     char: "⚠",
     name: "warn",
     speak: false,
-    draw: (
-      <g>
-        <path d="M6 3.6L10.6 16.6H1.4Z" />
-        <rect {...FILL} x={5.3} y={9.5} width={1.4} height={3.4} />
-        <circle {...FILL} cx={6} cy={14.4} r={0.85} />
-      </g>
-    ),
+    draw: <path {...FILL} fillRule="evenodd" d="M6 3.2L11.2 17.5H0.8ZM5.1 7.6H6.9V12.8H5.1ZM5 15.1A1 1 0 1 0 7 15.1A1 1 0 1 0 5 15.1Z" />,
   },
   ellipsis: {
     char: "⋯",

@@ -102,7 +102,7 @@ export default function T1cLab() {
         <Section
           index="01"
           title="Mechanic marks"
-          note="One stroke language: 1.25px on the 16 grid, 1.5px on the 24 grid, 1px on the hinted 12 grid that chips use. Butt caps, miter joins, currentColor. The grids on the right show each artboard at true stroke width."
+          note="One stroke language: 1.25px on the 16 grid, 1.5px on the 24 grid, 1px on the hinted 12 grid that chips use. Butt caps, miter joins, currentColor. From 768px wide, the grids on the right show each artboard magnified, at true stroke width."
         >
           <Panel className="w-fit max-w-full overflow-x-auto px-4 md:px-6">
             <table className="border-collapse">
@@ -292,7 +292,7 @@ export default function T1cLab() {
               <p className="mb-3 type-label text-text-dim">banned · §6.5 and the hard rules</p>
               <ul className="type-data">
                 {BANNED_ICON_PATTERNS.map((b) => (
-                  <li key={b.pattern.source} className="grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-3 border-b border-rule-hair py-1.5 last:border-b-0">
+                  <li key={b.pattern.source} className="grid gap-1 border-b sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)] sm:gap-3 border-rule-hair py-1.5 last:border-b-0">
                     <code className="text-text-primary [overflow-wrap:anywhere]">/{b.pattern.source}/</code>
                     <span className="text-text-body">{b.reason}</span>
                   </li>

@@ -21,10 +21,13 @@ export function Panel({ children, className = "" }: { children: ReactNode; class
   );
 }
 
-// Every size table shares one column grid — a 16rem name column, then 48px per size — so
-// the 12 · 14 · 16 · 20 · 24 columns line up from table to table down the page.
-const NAME_COL = "w-64 min-w-64";
+// Every size table shares one column grid — a 16rem name column (10rem on a phone, where
+// names may wrap), then 48px per size — so the 12 · 14 · 16 · 20 · 24 columns line up from
+// table to table down the page. The magnified construction grids are a desktop inspection
+// tool: below md they are hidden rather than left to stretch every row to 112px.
+const NAME_COL = "w-40 min-w-40 md:w-64 md:min-w-64";
 const SIZE_COL = "w-12 min-w-12";
+const EXTRA_COL = "hidden md:table-cell";
 
 /** Column heads for a size table: the §6.3 scale. */
 export function SizeHeads({ first, extra = [] }: { first: string; extra?: string[] }) {
@@ -39,7 +42,7 @@ export function SizeHeads({ first, extra = [] }: { first: string; extra?: string
         </th>
       ))}
       {extra.map((e) => (
-        <th key={e} scope="col" className="py-2 pl-8 text-left type-label font-medium whitespace-nowrap text-text-dim">
+        <th key={e} scope="col" className={`${EXTRA_COL} py-2 pl-8 text-left type-label font-medium whitespace-nowrap text-text-dim`}>
           {e}
         </th>
       ))}
@@ -51,7 +54,7 @@ export function SizeHeads({ first, extra = [] }: { first: string; extra?: string
 export function SizeRow({ name, render, extra }: { name: ReactNode; render: (size: (typeof ICON_SIZES)[number]) => ReactNode; extra?: ReactNode[] }) {
   return (
     <tr className="border-b border-rule-hair last:border-b-0">
-      <th scope="row" className={`${NAME_COL} py-2 pr-6 text-left font-normal type-data whitespace-nowrap text-text-body`}>
+      <th scope="row" className={`${NAME_COL} py-2 pr-4 text-left font-normal type-data text-text-body md:pr-6 md:whitespace-nowrap`}>
         {name}
       </th>
       {ICON_SIZES.map((s) => (
@@ -60,7 +63,7 @@ export function SizeRow({ name, render, extra }: { name: ReactNode; render: (siz
         </td>
       ))}
       {extra?.map((e, i) => (
-        <td key={i} className="py-2 pl-8 align-middle">
+        <td key={i} className={`${EXTRA_COL} py-2 pl-8 align-middle`}>
           {e}
         </td>
       ))}
