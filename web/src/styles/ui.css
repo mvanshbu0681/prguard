@@ -1772,6 +1772,9 @@
       border-color: var(--ink-8);
     }
   }
+  .ui-input-group[data-force~="hover"] {
+    border-color: var(--ink-8);
+  }
   .ui-input-group:has(> textarea),
   .ui-input-group:has(> [data-align^="block"]) {
     flex-direction: column;

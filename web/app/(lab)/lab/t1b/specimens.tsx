@@ -6,7 +6,7 @@
 // so a still image carries it. Mono readouts are measured in the browser.
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
-import { CopyIcon, DownloadIcon, GitCommitHorizontalIcon } from "lucide-react";
+import { CopyIcon, DownloadIcon, GitCommitHorizontalIcon, SearchIcon, XIcon } from "lucide-react";
 import { SEVERITY_THRESHOLDS } from "@/lib/contracts";
 import { Badge } from "@/components/ui/badge";
 import { Button, LoadingEllipsis } from "@/components/ui/button";
@@ -23,10 +23,14 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Popover, PopoverContent, PopoverDescription, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -305,7 +309,7 @@ function InputSection({ data }: { data: LabData }) {
       id="input"
       index="03"
       title="Input, textarea, select"
-      note="A meaning-bearing 1px ink-7 outline (3.03:1). Focus adds the 2px signal-hi ring; an error flips the border in 0ms and carries a glyph and text, wired through aria-describedby."
+      note="A meaning-bearing 1px ink-7 outline (3.03:1). Focus adds the 2px signal-hi ring; an error flips the border in 0ms and carries a glyph and text, wired through aria-describedby. An input group carries all of it on the group."
     >
       <SurfacePair>
         {() => (
@@ -342,7 +346,7 @@ function InputSection({ data }: { data: LabData }) {
             <div className="flex flex-wrap items-end gap-4 md:col-span-2">
               <State label="select · hover">
                 <Select defaultValue={data.suppressScopes[0]}>
-                  <SelectTrigger data-force="hover">
+                  <SelectTrigger data-force="hover" aria-label="Scope, hover forced">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -356,7 +360,7 @@ function InputSection({ data }: { data: LabData }) {
               </State>
               <State label="select · focus">
                 <Select>
-                  <SelectTrigger data-force="focus">
+                  <SelectTrigger data-force="focus" aria-label="Scope, focus forced">
                     <SelectValue placeholder="Scope" />
                   </SelectTrigger>
                   <SelectContent>
@@ -370,7 +374,7 @@ function InputSection({ data }: { data: LabData }) {
               </State>
               <State label="select · sm · disabled">
                 <Select disabled defaultValue={data.suppressScopes[2]}>
-                  <SelectTrigger size="sm">
+                  <SelectTrigger size="sm" aria-label="Scope, disabled">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -383,10 +387,67 @@ function InputSection({ data }: { data: LabData }) {
                 </Select>
               </State>
             </div>
+            <InputGroupSpecimens data={data} />
           </div>
         )}
       </SurfacePair>
     </Section>
+  );
+}
+
+/** The input group: the group is the input, so its ring, border and error live on it. */
+function InputGroupSpecimens({ data }: { data: LabData }) {
+  return (
+    <div className="grid gap-6 md:col-span-2 md:grid-cols-2">
+      <State label="input group · rest" className="w-full">
+        <InputGroup>
+          <InputGroupAddon>
+            <SearchIcon strokeWidth={1.5} aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput aria-label="Filter findings" placeholder="file:line, fingerprint or text" />
+          <InputGroupAddon align="inline-end">
+            <Kbd>/</Kbd>
+          </InputGroupAddon>
+        </InputGroup>
+      </State>
+      <State label="input group · hover" className="w-full">
+        <InputGroup data-force="hover">
+          <InputGroupAddon>
+            <SearchIcon strokeWidth={1.5} aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput aria-label="Filter findings, hover forced" placeholder="file:line, fingerprint or text" />
+        </InputGroup>
+      </State>
+      <State label="input group · focus" className="w-full">
+        <InputGroup data-force="focus">
+          <InputGroupAddon>
+            <InputGroupText>sha</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput mono aria-label="Head SHA, focus forced" defaultValue={shortSha(data.ids.headSha)} />
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton aria-label="Clear the SHA">
+              <XIcon strokeWidth={1.5} aria-hidden="true" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
+      </State>
+      <Field label="Repository · error through Field" error={`No repository matches ${data.ids.repository.split("/")[0]}/.`} className="w-full">
+        <InputGroup>
+          <InputGroupAddon>
+            <InputGroupText>github.com/</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput mono defaultValue={`${data.ids.repository.split("/")[0]}/`} />
+        </InputGroup>
+      </Field>
+      <State label="input group · disabled" className="w-full">
+        <InputGroup>
+          <InputGroupAddon>
+            <SearchIcon strokeWidth={1.5} aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput aria-label="Filter findings, disabled" disabled placeholder="file:line, fingerprint or text" />
+        </InputGroup>
+      </State>
+    </div>
   );
 }
 
@@ -670,8 +731,9 @@ function TableSection({ data }: { data: LabData }) {
       <SurfacePair>
         {(s) => (
           <>
-            <State label="default · hover (row 2) · selected (row 3) · focus (row 4)" className="w-full">
-              <div className="w-full min-w-0">
+            <State label="default · forced rows" className="w-full">
+              <div className="flex w-full min-w-0 flex-col gap-2">
+                <p className="type-data text-text-body">row 2 hover · row 3 selected · row 4 focus</p>
                 <IdsTable data={data} density="default" surface={s} forced />
               </div>
             </State>
@@ -727,14 +789,14 @@ function BlocksSection({ data }: { data: LabData }) {
       <SurfacePair>
         {() => (
           <div className="grid gap-6 md:grid-cols-2">
-            <State label="skeleton · on the page" className="w-full">
+            <State label="skeleton · page" className="w-full">
               <div className="flex w-full flex-col gap-2">
                 <Skeleton className="h-3 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
                 <Skeleton className="h-8 w-full" />
               </div>
             </State>
-            <State label="skeleton · on an ink-2 panel" className="w-full">
+            <State label="skeleton · ink-2 panel" className="w-full">
               <div className="flex w-full flex-col gap-2 rounded-panel border border-rule-1 bg-ink-2 p-3 [--ui-skeleton:var(--ink-3)]">
                 <Skeleton className="h-3 w-2/3" />
                 <Skeleton className="h-3 w-5/6" />
@@ -752,7 +814,7 @@ function BlocksSection({ data }: { data: LabData }) {
                 <span className="type-data text-text-dim">{data.ids.repository}</span>
               </div>
             </State>
-            <State label="scroll area · the API's operations" className="w-full md:col-span-2">
+            <State label="scroll area · operations" className="w-full md:col-span-2">
               <ScrollArea type="always" className="h-40 w-full rounded-panel border border-rule-1 bg-ink-1">
                 <ul className="p-3">
                   {data.operations.map((op) => (
@@ -845,8 +907,9 @@ function InlineOverlays({ data }: { data: LabData }) {
           ) : null}
         </div>
       </State>
-      <State label="dropdown menu · hover (row 1) · focus (row 2)" className="w-full">
+      <State label="dropdown menu · forced" className="w-full">
         <div ref={setMenuBox} className="lab-inline flex flex-col items-start gap-1">
+          <p className="type-data text-text-body">item 1 hover · item 2 focus</p>
           {menuBox ? (
             <DropdownMenu open modal={false}>
               <DropdownMenuTrigger asChild>
@@ -876,6 +939,13 @@ function InlineOverlays({ data }: { data: LabData }) {
                   <DropdownMenuRadioItem value="compact">26px rows</DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
                 <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Copy evidence as</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem>Markdown</DropdownMenuItem>
+                    <DropdownMenuItem>JSON</DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem variant="destructive">Revoke suppression</DropdownMenuItem>
                 <DropdownMenuItem disabled>Re-run review</DropdownMenuItem>
               </DropdownMenuContent>
