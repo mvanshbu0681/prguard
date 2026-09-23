@@ -1,0 +1,806 @@
+/* ==========================================================================
+   app/tokens/core.css — PRGuard design tokens, shared by BOTH surfaces.
+
+   OWNER: T0 (wave 0). FROZEN once T0 merges: change a token only by raising
+   it with the T0 owner (plan §8). `npm run tokens:verify` gates this file
+   (APCA floors, sRGB gamut, oklch↔hex agreement, no-green, severity ramp).
+
+   Sources (authoritative, do not re-litigate here):
+     docs/design/02-design-system.md   §1 colour, §2 type, §3 space/radius/shadow, §4.7 motion
+     docs/design/04-dashboard-blueprint.md §0.1 surface + contrast overrides, §7 chart tokens
+     docs/design/05-motion-spec.md     §2 easing / duration / stagger tiers
+     docs/design/06-brand-gaps-and-corrections.md §2 rulings, §G font fallback chain
+
+   HOW THIS FILE WORKS — read before consuming or editing
+   1. Every token is a plain custom property with a SHORT name: --ink-0,
+      --text-body, --signal, --rule-1 … Hand-written CSS uses these names.
+   2. Tailwind utilities (bg-ink-0, text-signal, border-rule-1, text-text-body …)
+      come from the `@theme inline static` block, which maps --color-<name> to
+      var(--<name>). `inline` makes each utility emit var(--<name>) itself, so an
+      override on ANY element (data-contrast, data-surface) reaches utilities in
+      that subtree. `static` force-emits --color-* on :root for getComputedStyle.
+      In hand-written CSS prefer var(--signal) over var(--color-signal): the
+      --color-* copies resolve once, at :root, and miss nested overrides.
+   3. Five layers, in this order. The order is load-bearing (equal specificity):
+        A  primitives        :root                      literal values; hex in the comment
+        B  derived tokens    :root + theming roots      var() compositions, re-evaluated on
+                                                        every [data-surface]/[data-theme]/
+                                                        [data-contrast] element
+        C  hex fallbacks     @supports not (oklch)      real fallback declarations for A
+        D  surface override  [data-surface="app"]       dashboard §0.1
+        E  contrast override [data-contrast="high"]     design §7.3 projector variant
+   4. data-contrast belongs on <html>. data-surface belongs on the route group's
+      wrapper element: app/(app)/layout.tsx sets "app", app/(marketing)/layout.tsx
+      sets "marketing". A lab page opts in by wrapping its content in one.
+   5. Dark only (design §7). There is no light palette and no .dark class.
+
+   CORRECTIONS vs the design doc (found by tokens:verify, fixed here):
+   - --signal-tint-lo: doc oklch(0.211 0.021 216) renders #0D1B1F, but the token
+     is DEFINED as "5% signal over ink-1" = #111A1E (the doc's hex). Re-authored
+     as oklch(0.211 0.015 227), which round-trips to #111A1E exactly.
+   - --alarm-tint-hi: doc oklch(0.259 0.040 13) renders #351B1E; "16% alarm over
+     ink-1" = #341B1C. Re-authored as oklch(0.257 0.040 18).
+   - --ease-mass is cubic-bezier(0.52, 0, 0.08, 1) (brand-gaps §2 ruling 1).
+   - High-contrast --rule-3 follows design §7.3 oklch(0.560 0.012 250) = #6F757B;
+     dashboard §0.1's #6C7278 is superseded (design-system did the measurement).
+   ========================================================================== */
+
+
+/* ==========================================================================
+   A. PRIMITIVES — literal values. Hex fallbacks for every colour are in C.
+   ========================================================================== */
+:root {
+  /* @group Ink ladder — design §1.2 (hue 250, chroma 0.006–0.012, cold graphite) */
+  --ink-0: oklch(0.145 0.006 250); /* #080A0D page background, both surfaces */
+  --ink-1: oklch(0.178 0.007 250); /* #0F1114 panel, sidebar, terminal interior, sticky header */
+  --ink-2: oklch(0.212 0.008 250); /* #16191C card, panel header bar, table header, chip at rest */
+  --ink-3: oklch(0.248 0.008 250); /* #1E2125 row hover, button hover — exactly one rung, never two */
+  --ink-4: oklch(0.285 0.009 250); /* #272B2E pressed, selected row fill */
+  --ink-5: oklch(0.330 0.010 250); /* #32363A solid divider on non-interactive surfaces, disabled fill */
+  --ink-6: oklch(0.390 0.011 250); /* #41464B solid border, interactive at rest — structural, not meaning-bearing */
+  --ink-7: oklch(0.480 0.012 250); /* #595E64 meaning-bearing border floor (3.03:1); high-contrast hairline */
+  --ink-8: oklch(0.520 0.012 250); /* #646A70 disabled text, not_attempted, placeholder — never body copy */
+
+  /* @group Text — design §1.3. Never #FFFFFF (halation on near-black). */
+  --text-primary:  oklch(0.955 0.004 250); /* #EEF0F3 Lc −97.8 on ink-0 — headlines, readouts, emphasis */
+  --text-body:     oklch(0.860 0.008 250); /* #CDD1D6 Lc −78.2 — all body copy */
+  --text-dim:      oklch(0.660 0.012 250); /* #8D9399 Lc −43.6 — eyebrows, column heads, units, metadata ONLY */
+  --text-disabled: oklch(0.520 0.012 250); /* #646A70 Lc −24.3 — disabled only (exempt from SC 1.4.3) */
+
+  /* @group Hairlines and overlays — design §1.4 (alpha-white, composes over the hero glow) */
+  --grid-alpha:      0.028; /* graph-paper alpha. [data-surface="app"] drops it to 0.018 */
+  --grid-dash-alpha: 0.018; /* dashboard graticule alpha (charts, waterfall) */
+  --grain-opacity:   0;     /* grain is marketing-only: marketing.css raises it to 0.035 */
+  --rule-hair: oklch(1 0 0 / 0.055); /* over ink-0 #16171A — table separators. DECORATIVE ONLY */
+  --rule-1:    oklch(1 0 0 / 0.09);  /* over ink-0 #1E2023 — default panel border */
+  --rule-2:    oklch(1 0 0 / 0.14);  /* over ink-0 #2B2C2F — interactive border at rest, ghost outline */
+  --rule-3:    oklch(1 0 0 / 0.22);  /* over ink-0 #3E4042 — hover border, registration marks on hover */
+  --inset-hi:  oklch(1 0 0 / 0.06);  /* `inset 0 1px 0` top highlight — the entire "milled" effect */
+  --scrim:     oklch(0 0 0 / 0.60);  /* modal backdrop */
+  --registration: oklch(1 0 0 / 0.10); /* registration marks at rest (§4.5); hover = --registration-hover */
+  --hc-rule-3: oklch(0.560 0.012 250); /* #6F757B high-contrast hover border (§7.3) — used only by layer E */
+
+  /* @group Signal — instrument cyan, hue 205 — design §1.5 */
+  --signal-text:    oklch(0.880 0.105 205); /* #7AECF8 cyan BODY text: terminal `passed`, prose. Lc −84.6 */
+  --signal-hi:      oklch(0.860 0.115 205); /* #65E7F5 focus ring, hero scan line, live trace */
+  --signal:         oklch(0.780 0.125 205); /* #2ECEDD proof_status proven fill, active stage, brand. Labels ≥12px/600 only */
+  --signal-lo:      oklch(0.620 0.105 205); /* #0698A4 2px status rails, completed connector, base-SHA pane edge. FILL ONLY */
+  --signal-tint:    oklch(0.261 0.028 211); /* #13282C 12% signal over ink-1 — proven row, cleared gate */
+  --signal-tint-lo: oklch(0.211 0.015 227); /* #111A1E  5% signal over ink-1 — base-SHA terminal pane (corrected, see header) */
+
+  /* @group Alarm — hue 27 — design §1.5. --alarm is a FILL, never text (R2). */
+  --alarm-text:       oklch(0.860 0.075 27); /* #FFBFB7 red BODY text: failing traceback line, `1 failed`. Lc −76.7 */
+  --alarm-hi:         oklch(0.740 0.155 27); /* #FD8074 large text only (≥24px/400 or ≥18px/700), e.g. `→ blocks merge` at 20px */
+  --alarm:            oklch(0.660 0.205 27); /* #F64F47 FILL ONLY: 2px rails, gate bar border, meter segment, glyph squares */
+  --alarm-tint:       oklch(0.235 0.031 13); /* #2B181A 12% alarm over ink-1 — blocking-row surface */
+  --alarm-tint-hi:    oklch(0.257 0.040 18); /* #341B1C 16% alarm over ink-1 — BLOCKED chip / gate block (corrected, see header) */
+  --alarm-tint-lo:    oklch(0.222 0.021 9);  /* #241719  9% alarm over ink-1 — head-SHA terminal pane */
+  --alarm-tint-hover: oklch(0.276 0.050 19); /* #3D1D1E 20% alarm over ink-1 — danger button hover (§5.1) */
+
+  /* @group Marker — amber, hue 82 — caution, and only caution — design §1.5 */
+  --marker-text: oklch(0.870 0.115 82); /* #FACD78 amber body text. Lc −79.7 */
+  --marker:      oklch(0.800 0.130 82); /* #E7B551 proof_status inconclusive, degraded stage, stale heartbeat >20s */
+  --marker-tint: oklch(0.266 0.019 89); /* #29251B 12% marker over ink-1 — degraded row surface */
+
+  /* @group Severity — a chroma ramp that is a REDUNDANT cue (R3) — design §1.6 */
+  --sev-info:     oklch(0.620 0.008 250); /* #83878B < 0.15  C 0.008 */
+  --sev-low:      oklch(0.680 0.045 90);  /* #A39879 ≥ 0.15  C 0.045 */
+  --sev-medium:   oklch(0.740 0.105 78);  /* #CFA25A ≥ 0.35  C 0.105 */
+  --sev-high:     oklch(0.720 0.160 52);  /* #F18336 ≥ 0.55  C 0.160 */
+  --sev-critical: oklch(0.660 0.205 27);  /* #F64F47 ≥ 0.75  C 0.205 */
+
+  /* @group Diff — the one quarantined exemption: .prg-code descendants ONLY — design §1.10 */
+  --diff-add-text: oklch(0.855 0.120 168); /* #77E9C0 added line text. Lc −80.4 */
+  --diff-add:      oklch(0.800 0.130 168); /* #58D8AE `+` gutter glyph — the semantic channel */
+  --diff-add-bg:   oklch(0.800 0.130 168 / 0.08); /* 8% tint, not the category-standard 20% */
+  --diff-del-bg:   oklch(0.660 0.205 27 / 0.09);  /* 9% tint */
+
+  /* @group ANSI — anser `use_classes: true` mapping — design §1.12 (the rest are aliases in B) */
+  --ansi-blue: oklch(0.761 0.106 208); /* #4FC4D4 "--signal-lo lifted" (doc gives the hex only; Lc −61.9, see verify) */
+
+  /* @group Charts — dashboard §7 (the rest are aliases in B) */
+  --chart-disproven: oklch(0.780 0.020 205); /* #A9BBBD cyan, desaturated — the outline family */
+
+  /* @group Stage geometry — design §1.11 (dash arrays are in pathLength="1" user units) */
+  --stage-running-dash:   0.06 0.94; /* travelling packet */
+  --stage-degraded-dash:  0.01 0.02; /* marching ants */
+  --stage-running-period: 2600ms;    /* linear loop */
+
+  /* @group Space — 4px base — design §3.1. --sp-N equals Tailwind spacing step N (p-4 = --sp-4 = 16px) */
+  --sp-0: 0px;
+  --sp-px: 1px;
+  --sp-1: 4px;    /* icon↔label gap, chip padding-y */
+  --sp-2: 8px;    /* dense cell padding, graph-paper minor grid */
+  --sp-3: 12px;   /* table cell padding-x, button padding-x (sm) */
+  --sp-4: 16px;   /* card padding, mobile gutter, button padding-x (md) */
+  --sp-5: 20px;   /* panel padding */
+  --sp-6: 24px;   /* section inner padding, card padding (lg) */
+  --sp-8: 32px;   /* panel header height, block spacing */
+  --sp-10: 40px;  /* terminal gutter width */
+  --sp-12: 48px;  /* section spacing (dashboard) */
+  --sp-16: 64px;  /* graph-paper major grid */
+  --sp-20: 80px;  /* section spacing (marketing, tight) */
+  --sp-24: 96px;  /* section spacing (marketing, default) */
+  --sp-32: 128px; /* section spacing (marketing, hero) */
+
+  /* @group Radius and borders — design §3.2/§3.3 (Tailwind radii are registered in F) */
+  --radius: 4px;           /* shadcn/ui base radius (panel). Nothing is pill-shaped. */
+  --border-hairline: 1px;  /* 0.5px at ≥2dppx, below */
+
+  /* @group Type — design §2.3 + brand-gaps §2 ruling 3 (utilities: type-* in G) */
+  --fs-display-hero: clamp(2.25rem, 0.9rem + 3.9vw, 3.875rem); /* 36 → 62px. Hard cap 16 chars/line, 2 lines */
+  --fs-display-h2: 2.5rem;     /* 40px */
+  --fs-display-h3: 1.5rem;     /* 24px */
+  --fs-display-h4: 1.125rem;   /* 18px */
+  --fs-label: 0.6875rem;       /* 11px mono caps */
+  --fs-lead: 1.125rem;         /* 18px */
+  --fs-body: 0.9375rem;        /* 15px (dashboard body drops to --fs-small) */
+  --fs-small: 0.8125rem;       /* 13px */
+  --fs-micro: 0.6875rem;       /* 11px */
+  --fs-readout-xl: 3rem;       /* 48px severity score — snaps, never counts up */
+  --fs-readout: 1.25rem;       /* 20px metric-card values */
+  --fs-terminal: 0.8125rem;    /* 13px on a 22px line */
+  --lh-terminal: 22px;
+  --fs-data: 0.78125rem;       /* 12.5px dashboard table cells */
+  --fs-chip: 0.6875rem;        /* 11px chips, hashes */
+  --measure-lead: 58ch;
+  --measure-body: 62ch;
+  /* font-feature-settings REPLACES the inherited list, so every rule that adds
+     features merges this list first (§2.2). cv05 = tailed l, cv11 = single-storey a. */
+  --font-settings: "cv05" 1, "cv11" 1;
+
+  /* @group Motion — durations and staggers — motion spec §2.2/§2.3 (easings are registered in F) */
+  --dur-0: 0ms;       /* instant: verdict, gate and chain-verified colour flips. NO transition property */
+  --dur-1: 120ms;     /* fast: hover, focus, chip tint, registration-mark brighten */
+  --dur-2: 180ms;     /* base: state-flip scale 1.045→1, tooltip, dialog, dropdown */
+  --dur-3: 240ms;     /* settle: small reveal, underline draw, strike-through, opacity enter */
+  --dur-4: 420ms;     /* slow: element entrance, 2px rail wipe, section rule, chain-rail draw */
+  --dur-5: 1400ms;    /* cinematic: THE hero scan line, and nothing else */
+  --dur-exit: 160ms;  /* every exit / dismiss, with --ease-exit */
+  --dur-active: 90ms; /* :active press */
+  --stagger-sibling: 60ms;    /* chips, cards, rows, severity segments — cap 6 items / 360ms */
+  --stagger-stage: 120ms;     /* the nine pipeline stations */
+  --stagger-row-group: 120ms; /* terminal rows as three stepped groups at 0/120/240ms */
+  --heartbeat-period: 1200ms; /* matches the real poll interval; written at runtime on the dot, never on :root */
+}
+
+@media (min-resolution: 2dppx) {
+  :root { --border-hairline: 0.5px; }
+}
+
+
+/* ==========================================================================
+   B. DERIVED TOKENS — compositions of A. Declared on every theming root so an
+      override placed on a nested element is picked up by everything below it.
+   ========================================================================== */
+:root, [data-surface], [data-theme], [data-contrast] {
+  /* @group Graph paper — design §1.4 / §4.1 */
+  --grid:      oklch(1 0 0 / var(--grid-alpha));      /* 8px minor / 64px major lines */
+  --grid-dash: oklch(1 0 0 / var(--grid-dash-alpha)); /* dashboard graticule */
+  --registration-hover: var(--rule-3);                 /* registration marks 0.10 → 0.22 on hover */
+
+  /* @group Diff aliases — design §1.10 (red is the thing that breaks) */
+  --diff-del-text: var(--alarm-text); /* #FFBFB7 removed line text */
+  --diff-del:      var(--alarm);      /* #F64F47 `−` gutter glyph */
+
+  /* @group Code surface palette — design §1.12 (near-monochrome, no new hues) */
+  --syn-comment: var(--text-dim);     /* the one deliberate sub-floor value; high contrast promotes it */
+  --syn-plain:   var(--text-body);    /* punctuation / plain */
+  --syn-keyword: var(--signal-text);  /* keyword / operator */
+  --syn-string:  var(--marker-text);  /* string */
+  --syn-number:  var(--diff-add-text);/* number / constant */
+  --syn-entity:  var(--text-primary); /* function / entity, at weight 500 */
+
+  /* @group ANSI aliases — design §1.12 (normal and bright share a token) */
+  --ansi-black:   var(--ink-5);
+  --ansi-red:     var(--alarm-text);
+  --ansi-green:   var(--diff-add-text);
+  --ansi-yellow:  var(--marker-text);
+  --ansi-cyan:    var(--signal-text);
+  --ansi-magenta: var(--signal-hi);   /* collapses into the signal family: pytest essentially never emits it */
+  --ansi-white:   var(--text-primary);
+
+  /* @group Proof states — design §1.7 / §5.4. Colour never carries state alone: the glyph is mandatory. */
+  --proof-proven-bg:           var(--signal);
+  --proof-proven-fg:           var(--ink-0);      /* Lc 67.7 — valid for a 12px/600 caps label */
+  --proof-proven-border:       transparent;
+  --proof-disproven-bg:        transparent;
+  --proof-disproven-fg:        var(--signal-text);
+  --proof-disproven-border:    var(--signal);     /* 1px solid outline; + struck vial + `refuted by execution` */
+  --proof-inconclusive-bg:     var(--marker-tint);
+  --proof-inconclusive-fg:     var(--marker-text);
+  --proof-inconclusive-border: var(--marker);     /* 1px DASHED */
+  --proof-not-attempted-bg:    transparent;
+  --proof-not-attempted-fg:    var(--text-disabled); /* explicit token — never an opacity trick (R4) */
+  --proof-not-attempted-border: var(--rule-2);
+
+  /* @group Gate states — design §1.8 / §5.4 + brand-gaps ruling 2 */
+  --gate-failure-bg:     var(--alarm-tint-hi); /* the only chromatic gate state. At most once per screen */
+  --gate-failure-fg:     var(--alarm-text);    /* Lc −74.6 */
+  --gate-failure-border: var(--alarm);         /* border-top 2px (bar) / 1px (chip) */
+  --gate-neutral-bg:     var(--ink-2);         /* running / not yet decided */
+  --gate-neutral-fg:     var(--text-dim);
+  --gate-neutral-border: var(--rule-1);
+  --gate-success-bg:     var(--signal-tint-lo); /* ACHROMATIC clear: a needle at zero, not a green light */
+  --gate-success-fg:     var(--text-body);
+  --gate-success-border: var(--signal-lo);      /* border-bottom 1px */
+
+  /* @group Finding status — design §1.9 (border STYLE is the second channel) */
+  --status-proposed-fg:      var(--text-dim);
+  --status-proposed-border:  var(--rule-2);    /* 1px dotted */
+  --status-published-fg:     var(--text-body);
+  --status-published-rail:   var(--signal-lo); /* 2px left rail */
+  --status-suppressed-fg:    var(--text-dim);
+  --status-suppressed-border: var(--ink-7);    /* 1px dashed (1.5px at 1× DPR); row remains present */
+  --status-dropped-fg:       var(--text-dim);  /* strikethrough, no border */
+
+  /* @group Stage states — design §1.11 */
+  --stage-pending-node:       var(--ink-6);     /* hollow, 1px */
+  --stage-pending-connector:  var(--rule-1);
+  --stage-running-node:       var(--signal-hi); /* 1px ring */
+  --stage-running-connector:  var(--signal-hi); /* dash --stage-running-dash, travelling */
+  --stage-done-node:          var(--signal-lo); /* filled */
+  --stage-done-connector:     var(--signal-lo); /* solid, stroke-dashoffset 0 */
+  --stage-degraded-node:      var(--marker);    /* filled + `12s since last output` */
+  --stage-degraded-connector: var(--marker);    /* dash --stage-degraded-dash */
+  --stage-failed-node:        var(--alarm);
+  --stage-failed-connector:   var(--alarm);
+
+  /* @group Heartbeat — design §4.7: the one pulse in the product */
+  --heartbeat-live:  var(--signal);
+  --heartbeat-stale: var(--marker); /* past 20s of silence; the dot stops */
+
+  /* @group Charts — dashboard §7. Every chart colour comes from a --chart-* token. */
+  --chart-proven:        var(--signal);
+  --chart-inconclusive:  var(--marker);
+  --chart-not-attempted: var(--ink-8);
+  --chart-series:    var(--signal);    /* T0 addition: single-series bars/histograms */
+  --chart-axis:      var(--text-dim);  /* T0 addition: 11px mono caps axis labels */
+  --chart-grid:      var(--grid-dash); /* T0 addition: charts sit on the graticule */
+  --chart-reference: var(--ink-7);     /* T0 addition: p50/p95 lines, calibration diagonal (meaning-bearing, 3.03:1) */
+
+  /* @group Focus — design §3.5 / §8.3 (outline form lives in globals.css) */
+  --focus-ring: 0 0 0 2px var(--ink-0), 0 0 0 4px var(--signal-hi);
+
+  /* @group Motion aliases — design-system §4.7 names for the motion-spec tiers */
+  --dur-hover:  var(--dur-1); /* 120ms */
+  --dur-state:  var(--dur-2); /* 180ms — dashboard: 120ms (layer D) */
+  --dur-reveal: var(--dur-3); /* 240ms */
+  --dur-enter:  var(--dur-4); /* 420ms — dashboard: 180ms (layer D). Evidence components use --dur-4 directly (ruling 7) */
+  --dur-scan:   var(--dur-5); /* 1400ms */
+
+  /* @group shadcn/ui variables → PRGuard tokens (their light/dark palettes are deleted) */
+  --background:                 var(--ink-0);
+  --foreground:                 var(--text-body);
+  --card:                       var(--ink-1);
+  --card-foreground:            var(--text-body);
+  --popover:                    var(--ink-3);
+  --popover-foreground:         var(--text-body);
+  --primary:                    var(--signal);
+  --primary-foreground:         var(--ink-0);
+  --secondary:                  var(--ink-2);
+  --secondary-foreground:       var(--text-body);
+  --muted:                      var(--ink-2);
+  --muted-foreground:           var(--text-dim);
+  --accent:                     var(--ink-3);
+  --accent-foreground:          var(--text-primary);
+  --destructive:                var(--alarm);
+  --destructive-foreground:     var(--alarm-text);
+  --border:                     var(--rule-1);
+  --input:                      var(--ink-7);
+  --ring:                       var(--signal-hi);
+  --chart-1:                    var(--chart-proven);
+  --chart-2:                    var(--chart-disproven);
+  --chart-3:                    var(--chart-inconclusive);
+  --chart-4:                    var(--chart-not-attempted);
+  --chart-5:                    var(--chart-axis);
+  --sidebar:                    var(--ink-1);
+  --sidebar-foreground:         var(--text-body);
+  --sidebar-primary:            var(--signal);
+  --sidebar-primary-foreground: var(--ink-0);
+  --sidebar-accent:             var(--ink-3);
+  --sidebar-accent-foreground:  var(--text-primary);
+  --sidebar-border:             var(--rule-hair);
+  --sidebar-ring:               var(--signal-hi);
+}
+
+
+/* ==========================================================================
+   C. HEX FALLBACKS — real fallback declarations for every colour in A.
+      (A second declaration inside the same rule does NOT work for custom
+      properties: they accept any token stream, so the later one always wins
+      and an unsupported oklch() only fails later, at use. Hence @supports.)
+      Same selector list as B, so nested theming roots stay consistent.
+   ========================================================================== */
+@supports not (color: oklch(0 0 0)) {
+  :root, [data-surface], [data-theme], [data-contrast] {
+    --ink-0: #080A0D;
+    --ink-1: #0F1114;
+    --ink-2: #16191C;
+    --ink-3: #1E2125;
+    --ink-4: #272B2E;
+    --ink-5: #32363A;
+    --ink-6: #41464B;
+    --ink-7: #595E64;
+    --ink-8: #646A70;
+    --text-primary: #EEF0F3;
+    --text-body: #CDD1D6;
+    --text-dim: #8D9399;
+    --text-disabled: #646A70;
+    --rule-hair: rgba(255, 255, 255, 0.055);
+    --rule-1: rgba(255, 255, 255, 0.09);
+    --rule-2: rgba(255, 255, 255, 0.14);
+    --rule-3: rgba(255, 255, 255, 0.22);
+    --inset-hi: rgba(255, 255, 255, 0.06);
+    --scrim: rgba(0, 0, 0, 0.6);
+    --registration: rgba(255, 255, 255, 0.1);
+    --hc-rule-3: #6F757B;
+    --signal-text: #7AECF8;
+    --signal-hi: #65E7F5;
+    --signal: #2ECEDD;
+    --signal-lo: #0698A4;
+    --signal-tint: #13282C;
+    --signal-tint-lo: #111A1E;
+    --alarm-text: #FFBFB7;
+    --alarm-hi: #FD8074;
+    --alarm: #F64F47;
+    --alarm-tint: #2B181A;
+    --alarm-tint-hi: #341B1C;
+    --alarm-tint-lo: #241719;
+    --alarm-tint-hover: #3D1D1E;
+    --marker-text: #FACD78;
+    --marker: #E7B551;
+    --marker-tint: #29251B;
+    --sev-info: #83878B;
+    --sev-low: #A39879;
+    --sev-medium: #CFA25A;
+    --sev-high: #F18336;
+    --sev-critical: #F64F47;
+    --diff-add-text: #77E9C0;
+    --diff-add: #58D8AE;
+    --diff-add-bg: rgba(88, 216, 174, 0.08);
+    --diff-del-bg: rgba(246, 79, 71, 0.09);
+    --ansi-blue: #4FC4D4;
+    --chart-disproven: #A9BBBD;
+    --grid: rgba(255, 255, 255, var(--grid-alpha));
+    --grid-dash: rgba(255, 255, 255, var(--grid-dash-alpha));
+  }
+}
+
+
+/* ==========================================================================
+   D. SURFACE OVERRIDE — the dashboard (dashboard blueprint §0.1)
+   ========================================================================== */
+[data-surface="app"] {
+  --grid-alpha: 0.018;       /* graph paper becomes a functional graticule, not texture */
+  --grain-opacity: 0;        /* grain costs paint on a scrolling 400-row table */
+  --dur-state: var(--dur-1); /* 120ms — nothing on the dashboard above 180ms … */
+  --dur-enter: var(--dur-2); /* 180ms   … except the three evidence components (ruling 7) */
+}
+
+
+/* ==========================================================================
+   E. CONTRAST OVERRIDE — the projector variant (design §7.3), set on <html>.
+      Every hairline is promoted to solid --ink-7 (3.03:1). Also re-applied on
+      nested theming roots, because layer B re-declares aliases there.
+   ========================================================================== */
+[data-contrast="high"],
+[data-contrast="high"] :is([data-surface], [data-theme]) {
+  --rule-hair: var(--ink-7);
+  --rule-1: var(--ink-7);
+  --rule-2: var(--ink-7);
+  --rule-3: var(--hc-rule-3);
+  --registration: var(--ink-7);
+  --registration-hover: var(--hc-rule-3);
+  --grid-alpha: 0.07;          /* 0.028 vanishes on a beamer */
+  --grid-dash-alpha: 0.07;     /* T0: the graticule gets the same promotion */
+  --syn-comment: var(--text-body);
+}
+
+
+/* ==========================================================================
+   F. TAILWIND REGISTRATION (v4, CSS-first). Wipe the default scales we do not
+      use — we ship no colour, radius, shadow, curve or animation we did not
+      choose (so `bg-black`, `text-white`, `shadow-md`, `rounded-full`-style
+      radii, `ease-in-out`, `animate-spin`/`animate-pulse` generate NOTHING).
+   ========================================================================== */
+@theme {
+  --color-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+  --text-shadow-*: initial;
+  --ease-*: initial;
+  --animate-*: initial;
+}
+
+/* Dark only: every `dark:` variant (vendored shadcn code) applies unconditionally. */
+@custom-variant dark (&:where(*));
+
+@theme inline static {
+  --color-ink-0: var(--ink-0);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-ink-5: var(--ink-5);
+  --color-ink-6: var(--ink-6);
+  --color-ink-7: var(--ink-7);
+  --color-ink-8: var(--ink-8);
+  --color-text-primary: var(--text-primary);
+  --color-text-body: var(--text-body);
+  --color-text-dim: var(--text-dim);
+  --color-text-disabled: var(--text-disabled);
+  --color-grid: var(--grid);
+  --color-grid-dash: var(--grid-dash);
+  --color-rule-hair: var(--rule-hair);
+  --color-rule-1: var(--rule-1);
+  --color-rule-2: var(--rule-2);
+  --color-rule-3: var(--rule-3);
+  --color-inset-hi: var(--inset-hi);
+  --color-scrim: var(--scrim);
+  --color-registration: var(--registration);
+  --color-registration-hover: var(--registration-hover);
+  --color-hc-rule-3: var(--hc-rule-3);
+  --color-signal-text: var(--signal-text);
+  --color-signal-hi: var(--signal-hi);
+  --color-signal: var(--signal);
+  --color-signal-lo: var(--signal-lo);
+  --color-signal-tint: var(--signal-tint);
+  --color-signal-tint-lo: var(--signal-tint-lo);
+  --color-alarm-text: var(--alarm-text);
+  --color-alarm-hi: var(--alarm-hi);
+  --color-alarm: var(--alarm);
+  --color-alarm-tint: var(--alarm-tint);
+  --color-alarm-tint-hi: var(--alarm-tint-hi);
+  --color-alarm-tint-lo: var(--alarm-tint-lo);
+  --color-alarm-tint-hover: var(--alarm-tint-hover);
+  --color-marker-text: var(--marker-text);
+  --color-marker: var(--marker);
+  --color-marker-tint: var(--marker-tint);
+  --color-sev-info: var(--sev-info);
+  --color-sev-low: var(--sev-low);
+  --color-sev-medium: var(--sev-medium);
+  --color-sev-high: var(--sev-high);
+  --color-sev-critical: var(--sev-critical);
+  --color-diff-add-text: var(--diff-add-text);
+  --color-diff-add: var(--diff-add);
+  --color-diff-add-bg: var(--diff-add-bg);
+  --color-diff-del-text: var(--diff-del-text);
+  --color-diff-del: var(--diff-del);
+  --color-diff-del-bg: var(--diff-del-bg);
+  --color-syn-comment: var(--syn-comment);
+  --color-syn-plain: var(--syn-plain);
+  --color-syn-keyword: var(--syn-keyword);
+  --color-syn-string: var(--syn-string);
+  --color-syn-number: var(--syn-number);
+  --color-syn-entity: var(--syn-entity);
+  --color-ansi-black: var(--ansi-black);
+  --color-ansi-red: var(--ansi-red);
+  --color-ansi-green: var(--ansi-green);
+  --color-ansi-yellow: var(--ansi-yellow);
+  --color-ansi-blue: var(--ansi-blue);
+  --color-ansi-cyan: var(--ansi-cyan);
+  --color-ansi-magenta: var(--ansi-magenta);
+  --color-ansi-white: var(--ansi-white);
+  --color-proof-proven-bg: var(--proof-proven-bg);
+  --color-proof-proven-fg: var(--proof-proven-fg);
+  --color-proof-proven-border: var(--proof-proven-border);
+  --color-proof-disproven-bg: var(--proof-disproven-bg);
+  --color-proof-disproven-fg: var(--proof-disproven-fg);
+  --color-proof-disproven-border: var(--proof-disproven-border);
+  --color-proof-inconclusive-bg: var(--proof-inconclusive-bg);
+  --color-proof-inconclusive-fg: var(--proof-inconclusive-fg);
+  --color-proof-inconclusive-border: var(--proof-inconclusive-border);
+  --color-proof-not-attempted-bg: var(--proof-not-attempted-bg);
+  --color-proof-not-attempted-fg: var(--proof-not-attempted-fg);
+  --color-proof-not-attempted-border: var(--proof-not-attempted-border);
+  --color-gate-failure-bg: var(--gate-failure-bg);
+  --color-gate-failure-fg: var(--gate-failure-fg);
+  --color-gate-failure-border: var(--gate-failure-border);
+  --color-gate-neutral-bg: var(--gate-neutral-bg);
+  --color-gate-neutral-fg: var(--gate-neutral-fg);
+  --color-gate-neutral-border: var(--gate-neutral-border);
+  --color-gate-success-bg: var(--gate-success-bg);
+  --color-gate-success-fg: var(--gate-success-fg);
+  --color-gate-success-border: var(--gate-success-border);
+  --color-status-proposed-fg: var(--status-proposed-fg);
+  --color-status-proposed-border: var(--status-proposed-border);
+  --color-status-published-fg: var(--status-published-fg);
+  --color-status-published-rail: var(--status-published-rail);
+  --color-status-suppressed-fg: var(--status-suppressed-fg);
+  --color-status-suppressed-border: var(--status-suppressed-border);
+  --color-status-dropped-fg: var(--status-dropped-fg);
+  --color-stage-pending-node: var(--stage-pending-node);
+  --color-stage-pending-connector: var(--stage-pending-connector);
+  --color-stage-running-node: var(--stage-running-node);
+  --color-stage-running-connector: var(--stage-running-connector);
+  --color-stage-done-node: var(--stage-done-node);
+  --color-stage-done-connector: var(--stage-done-connector);
+  --color-stage-degraded-node: var(--stage-degraded-node);
+  --color-stage-degraded-connector: var(--stage-degraded-connector);
+  --color-stage-failed-node: var(--stage-failed-node);
+  --color-stage-failed-connector: var(--stage-failed-connector);
+  --color-heartbeat-live: var(--heartbeat-live);
+  --color-heartbeat-stale: var(--heartbeat-stale);
+  --color-chart-proven: var(--chart-proven);
+  --color-chart-disproven: var(--chart-disproven);
+  --color-chart-inconclusive: var(--chart-inconclusive);
+  --color-chart-not-attempted: var(--chart-not-attempted);
+  --color-chart-series: var(--chart-series);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-reference: var(--chart-reference);
+  /* shadcn/ui semantic colours (generated components use these) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Families — brand-gaps §G chains, verbatim after the next/font variable.
+     var(--font-gsc/--font-inter, …) carries its own fallback so a missing
+     next/font class cannot invalidate the whole declaration. "Inter Fallback"
+     (G below) sits right after "Inter Variable" so the size-adjusted face is
+     actually used — outside the chain it would be dead CSS. */
+  --font-mono: var(--font-gsc, "Google Sans Code"), "Google Sans Code", ui-monospace, "SF Mono", "Menlo", "Cascadia Mono", "Consolas", monospace;
+  --font-display: var(--font-gsc, "Google Sans Code"), "Google Sans Code", ui-monospace, "SF Mono", "Menlo", "Cascadia Mono", "Consolas", monospace;
+  --font-heading: var(--font-gsc, "Google Sans Code"), "Google Sans Code", ui-monospace, "SF Mono", "Menlo", "Cascadia Mono", "Consolas", monospace;
+  --font-sans: var(--font-inter, "Inter Variable"), "Inter Variable", "Inter Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --default-font-feature-settings: "cv05" 1, "cv11" 1;
+}
+
+@theme static {
+  /* Radius — design §3.2: 2px data, 4px panels, 6px the largest container. */
+  --radius-data: 2px;       /* chips, inputs, buttons, table cells, terminal panes, diff rows */
+  --radius-panel: 4px;      /* cards, panels, dialogs */
+  --radius-container: 6px;  /* the largest container only (hero bench, ⌘K palette) */
+  --radius-dot: 9999px;     /* the live heartbeat dot, and nothing else */
+  /* shadcn/ui radix-nova compatibility: its controls use rounded-lg, its dialog
+     and palette rounded-xl. Mapped onto the grid; 3xl/4xl stay undefined so no
+     generated component can render pill-shaped. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+
+  /* Shadow — design §3.4: the complete inventory. Elevation is one ink rung +
+     1px hairline + the inset highlight, never a drop shadow (R6). */
+  --shadow-palette: 0 8px 32px oklch(0 0 0 / 0.55); /* ⌘K palette only */
+  --shadow-modal: 0 16px 48px oklch(0 0 0 / 0.60);  /* dialogs only */
+  --inset-shadow-hi: inset 0 1px 0 oklch(1 0 0 / 0.06); /* = --inset-hi: the milled top edge */
+
+  /* Easing — motion spec §2.1: three curves plus linear. No fourth curve ships. */
+  --ease-instrument: cubic-bezier(0.33, 0, 0.12, 1); /* entrances, wipes, rail draws, reveals */
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1);           /* hover, focus, chip, press, state-flip scale */
+  --ease-mass: cubic-bezier(0.52, 0, 0.08, 1);       /* EXACTLY ONE element: the proof-bench scan line */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);           /* every exit / dismiss */
+
+  /* `transition` / `transition-colors` defaults: --dur-1 on --ease-snap, never
+     Tailwind's cubic-bezier(0.4, 0, 0.2, 1). */
+  --default-transition-duration: 120ms;
+  --default-transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+
+/* ==========================================================================
+   G. TYPOGRAPHY — design §2.2 OpenType config, §2.3 scale, brand-gaps §G
+   ========================================================================== */
+
+/* Metric-compatible fallback for Inter so prose does not reflow if the woff2
+   fails (brand-gaps §G, verbatim). */
+@font-face {
+  font-family: "Inter Fallback";
+  src: local("Arial");
+  size-adjust: 107%;
+  ascent-override: 90%;
+  descent-override: 22%;
+}
+
+/* Inter renders sentences. Google Sans Code renders everything a machine
+   produced (§2.5). Belt-and-braces: no ligatures, tabular slashed zeros, and
+   tracking EXACTLY 0 on all monospace data. Components layer, so a utility
+   (e.g. a display line's negative tracking) can still override it. */
+@layer components {
+  .font-mono, .prg-code, .prg-terminal, .prg-diff {
+    font-family: var(--font-mono);
+    font-variant-ligatures: none;
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0;
+  }
+}
+
+@utility font-prose {
+  font-family: var(--font-sans);
+  font-feature-settings: var(--font-settings);
+  font-optical-sizing: auto;
+}
+
+/* Tabular numerals in Inter. Merged, never stacked (§2.2). */
+@utility tabular {
+  font-feature-settings: var(--font-settings), "tnum" 1, "zero" 1;
+  font-variant-numeric: lining-nums tabular-nums slashed-zero;
+}
+
+/* The scale as bundles (family + size + leading + tracking + weight). Named
+   type-* because --text-* is Tailwind's font-size namespace and --text-body
+   etc. are colours here. */
+@utility type-display-hero {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-hero);
+  line-height: 1.02;
+  letter-spacing: -0.032em;
+  font-weight: 520;
+  font-variant-ligatures: none;
+}
+@utility type-display-h2 {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-h2);
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  font-weight: 560;
+  font-variant-ligatures: none;
+}
+@utility type-display-h3 {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-h3);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 560;
+  font-variant-ligatures: none;
+}
+@utility type-display-h4 {
+  font-family: var(--font-display);
+  font-size: var(--fs-display-h4);
+  line-height: 1.3;
+  letter-spacing: -0.014em;
+  font-weight: 560;
+  font-variant-ligatures: none;
+}
+/* The instrument-panel legend: eyebrows, column heads, stage names, section
+   index. Cap at 4 words. */
+@utility type-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+@utility type-lead {
+  font-family: var(--font-sans);
+  font-size: var(--fs-lead);
+  line-height: 1.55;
+  letter-spacing: -0.011em;
+  font-feature-settings: var(--font-settings);
+}
+@utility type-body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  letter-spacing: -0.011em;
+  font-feature-settings: var(--font-settings);
+}
+@utility type-small {
+  font-family: var(--font-sans);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  letter-spacing: -0.013em;
+  font-feature-settings: var(--font-settings);
+}
+@utility type-micro {
+  font-family: var(--font-sans);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+  letter-spacing: 0;
+  font-feature-settings: var(--font-settings);
+}
+@utility type-readout-xl {
+  font-family: var(--font-mono);
+  font-size: var(--fs-readout-xl);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+@utility type-readout {
+  font-family: var(--font-mono);
+  font-size: var(--fs-readout);
+  line-height: 1.2;
+  letter-spacing: 0;
+  font-weight: 500;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+@utility type-terminal {
+  font-family: var(--font-mono);
+  font-size: var(--fs-terminal);
+  line-height: var(--lh-terminal);
+  letter-spacing: 0;
+  font-weight: 400;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+@utility type-data {
+  font-family: var(--font-mono);
+  font-size: var(--fs-data);
+  line-height: 1.45;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+/* Chips and hashes: tracking stays 0 (hashes are data). */
+@utility type-chip {
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  line-height: 1.4;
+  letter-spacing: 0;
+  font-weight: 600;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+/* Badge label (§5.4): the chip size at 600, UPPERCASE, +0.08em. */
+@utility type-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-chip);
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-variant-ligatures: none;
+  font-variant-numeric: tabular-nums slashed-zero;
+}

@@ -1,0 +1,4 @@
+/* OWNER: T3 (wave 1). Stub from T0 — replace entirely.
+   Holds: keyframes (heartbeat tick, scan), the reduced-motion second state, [data-anim] handshake helpers.
+   Imported by app/globals.css after the token files. Reference tokens by their
+   short names (var(--ink-2)), never var(--color-*) — see app/tokens/core.css. */

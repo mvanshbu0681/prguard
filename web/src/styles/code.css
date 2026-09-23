@@ -1,0 +1,4 @@
+/* OWNER: T1b (wave 1). Stub from T0 — replace entirely.
+   Holds: the .prg-code / .prg-terminal / .prg-diff quarantine, Shiki theme classes, anser ANSI classes.
+   Imported by app/globals.css after the token files. Reference tokens by their
+   short names (var(--ink-2)), never var(--color-*) — see app/tokens/core.css. */

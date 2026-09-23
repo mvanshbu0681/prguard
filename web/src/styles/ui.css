@@ -1,0 +1,4 @@
+/* OWNER: T1b (wave 1). Stub from T0 — replace entirely.
+   Holds: restyled shadcn/ui primitives (buttons, inputs, badges, tooltip, dialog, sheet, tabs, toast, skeleton).
+   Imported by app/globals.css after the token files. Reference tokens by their
+   short names (var(--ink-2)), never var(--color-*) — see app/tokens/core.css. */

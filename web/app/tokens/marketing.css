@@ -1,0 +1,40 @@
+/* ==========================================================================
+   app/tokens/marketing.css — marketing-only token additions.
+
+   OWNER: T0 (wave 0). FROZEN once T0 merges (plan §8) — raise changes with
+   the T0 owner. Imported globally by app/globals.css (one Tailwind entry), but
+   every value is SCOPED to [data-surface="marketing"], which the marketing
+   route-group layout sets. A marketing tweak therefore cannot regress the
+   dashboard. Lab pages opt in by wrapping content in data-surface="marketing".
+
+   Sources: docs/design/02-design-system.md §3.1 (section spacing), §3.5 (glow),
+   §4.1–§4.3 (graph paper, grain, hero stack), §4.6 (gradient border);
+   plan §7 T4 (hero bench mask). Verified by `npm run tokens:verify` (gamut).
+   ========================================================================== */
+
+[data-surface="marketing"] {
+  /* @group Marketing texture — design §4.1 / §4.2 */
+  --grid-alpha: 0.028;    /* graph paper, 8px minor / 64px major (restated so a core change cannot regress it) */
+  --grain-opacity: 0.035; /* bounded feTurbulence grain, mix-blend-mode overlay. Never full-viewport, never animated */
+  --grain-size: 180px;
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* @group Hero glow and frame — design §3.5 / §4.3 / §4.6 */
+  /* The single ambient element on the site. Never animates; accent coverage < 3% of hero pixels. */
+  --glow-hero: radial-gradient(70% 50% at 78% 12%, oklch(0.78 0.125 205 / 0.10), transparent 68%);
+  /* The 1px gradient border on the one heavy element (the hero bench frame), via mask-composite. */
+  --gradient-border: linear-gradient(160deg, oklch(1 0 0 / 0.16) 0%, oklch(1 0 0 / 0.06) 35%, oklch(0.78 0.125 205 / 0.14) 100%);
+  /* Fade the hero graph paper out so it never fights the fold. */
+  --mask-hero-grid: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  /* Hero ProofBench mask: "there is more product than fits here" (plan T4). */
+  --mask-bench: linear-gradient(to bottom, #000 0% 78%, transparent);
+
+  /* @group Section rhythm — design §3.1 */
+  --space-section-tight: var(--sp-20); /* 80px */
+  --space-section: var(--sp-24);       /* 96px */
+  --space-section-hero: var(--sp-32);  /* 128px */
+}
+
+/* The graph paper re-derives --grid from --grid-alpha on this element (core.css
+   layer B matches [data-surface]); the projector variant still wins, because
+   core.css layer E targets [data-contrast="high"] [data-surface]. */
