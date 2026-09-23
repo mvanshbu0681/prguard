@@ -3,7 +3,10 @@
 //   - long lines never wrap (white-space: pre on every pre; nothing that breaks words);
 //   - the quarantine: diff green / diff red / ANSI green only ever style the three scopes;
 //   - --alarm is a fill, never a text colour; no shadows; no literal colours;
-//   - transitions are compositor-only and use the motion tokens;
+//   - transitions are compositor-only (plus the hover wash's background-color step) and use
+//     the motion tokens; nothing is opacity: 0;
+//   - each surface is its own stacking context;
+//   - an accused diff row trades its diff tint for the band fill;
 //   - every class the components emit has a rule, and tones beat captured ANSI colour.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -107,13 +110,107 @@ describe("code.css — the quarantine and the palette rules", () => {
     expect(decls.filter((d) => /shadow/.test(d.name)).map((d) => d.rule.prelude)).toEqual([]);
   });
 
-  it("transitions only compositor properties, on motion tokens", () => {
+  it("transitions compositor properties, plus the hover wash's one background-color step, on motion tokens", () => {
     const transitions = decls.filter((d) => d.name.startsWith("transition") || d.name.startsWith("animation"));
     expect(transitions.length).toBeGreaterThan(0);
     for (const t of transitions) {
-      expect(t.value).toMatch(/^(?:opacity|transform) var\(--dur-\d\) var\(--ease-(?:snap|instrument|exit)\)$/);
+      expect(t.value).toMatch(/^(?:opacity|transform|background-color) var\(--dur-\d\) var\(--ease-(?:snap|instrument|exit)\)$/);
+      // motion §6.1: a colour transition is a one-shot hover step, --dur-1 on --ease-snap (§7)
+      if (t.value.startsWith("background-color")) {
+        expect(t.value).toBe("background-color var(--dur-1) var(--ease-snap)");
+        expect(t.rule.atRules).toContain("@media (hover: hover)");
+      }
     }
     expect(css).not.toMatch(/cubic-bezier\(/);
+  });
+
+  it("hides nothing: no opacity: 0 and no visibility: hidden anywhere (R8, motion §3.5)", () => {
+    expect(decls.filter((d) => d.name === "opacity" && Number.parseFloat(d.value) === 0).map((d) => d.rule.prelude)).toEqual([]);
+    expect(decls.filter((d) => d.name === "visibility" && d.value === "hidden").map((d) => d.rule.prelude)).toEqual([]);
+    expect(css).not.toMatch(/opacity:\s*0(?:\.0*)?\s*[;}]/);
+  });
+
+  it("washes a hovered line with the data-atom colour, transparent at rest (motion §7, class E)", () => {
+    const rest = rules.find((r) => r.prelude === ":where(.prg-terminal__line, .prg-code__line, .prg-diff__row)::after");
+    const hover = rules.find((r) => r.prelude === ":where(.prg-terminal__line, .prg-code__line, .prg-diff__row):hover::after");
+    expect(has(rest, "background-color", "transparent")).toBe(true);
+    expect(has(hover, "background-color", "oklch(1 0 0 / 0.04)")).toBe(true);
+    expect(rest?.atRules).toContain("@media (hover: hover)");
+    expect(hover?.atRules).toContain("@media (hover: hover)");
+  });
+});
+
+describe("code.css — stacking", () => {
+  it("makes every surface its own stacking context, so its z-indexes never meet the page's", () => {
+    const root = ruleFor(":where(.prg-terminal, .prg-code, .prg-diff)");
+    expect(has(root, "isolation", "isolate")).toBe(true);
+    expect(has(root, "position", "relative")).toBe(true);
+    // the internal layers are small numbers, and all of them live under a surface scope
+    const z = decls.filter((d) => d.name === "z-index");
+    expect(z.length).toBeGreaterThan(0);
+    for (const d of z) {
+      expect(Number(d.value), d.rule.prelude).toBeLessThanOrEqual(3);
+      expect(selectors(d.rule.prelude).every((s) => SCOPED.test(s)), d.rule.prelude).toBe(true);
+    }
+  });
+});
+
+describe("code.css — the accused row in a diff (dashboard §4)", () => {
+  it("maps every rail tone to a row fill colour", () => {
+    for (const tone of RAIL_TONES) {
+      const rule = ruleFor(`.prg-diff__row[data-fill="${tone}"]`);
+      expect(rule, tone).toBeDefined();
+      expect(rule?.decls[0].name).toBe("--prg-fill-color");
+      expect(rule?.decls[0].value).toMatch(/^var\(--(?:signal|signal-lo|alarm|marker|sev-(?:critical|high|medium|low|info))\)$/);
+    }
+  });
+
+  it("replaces the diff tint with the band at 10%, after the add/del tints and at their specificity", () => {
+    const index = rules.findIndex((r) => r.prelude === ".prg-diff .prg-diff__row[data-hl]");
+    expect(index).toBeGreaterThan(-1);
+    const rule = rules[index];
+    expect(rule.decls.find((d) => d.name === "--prg-row-tint")?.value).toBe(
+      "color-mix(in oklab, var(--prg-fill-color, var(--prg-rail-color)) 10%, transparent)",
+    );
+    // an engine without color-mix() keeps the diff tint rather than losing the whole row background
+    expect(rule.atRules.some((a) => a.startsWith("@supports (color: color-mix("))).toBe(true);
+    for (const kind of ["add", "del"]) {
+      const tint = rules.findIndex((r) => r.prelude === `.prg-diff .prg-diff__row[data-kind="${kind}"]`);
+      expect(tint, kind).toBeGreaterThan(-1);
+      expect(rules[tint].decls.some((d) => d.name === "--prg-row-tint"), kind).toBe(true);
+      expect(index, kind).toBeGreaterThan(tint);
+    }
+  });
+
+  it("keeps the rail and the one-rung row for every highlighted line", () => {
+    const hl = ruleFor(":where(.prg-code__line, .prg-diff__row)[data-hl]");
+    expect(has(hl, "--prg-row-base", "var(--ink-3)")).toBe(true);
+    expect(has(hl, "--prg-row-rail", "var(--prg-rail-color)")).toBe(true);
+  });
+});
+
+describe("code.css — headers", () => {
+  it("sets the hunk range as a label and leaves the section heading's case alone (§5.8, §2.5)", () => {
+    const range = ruleFor(".prg-diff__range");
+    expect(has(range, "text-transform", "uppercase")).toBe(true);
+    expect(has(range, "letter-spacing", "0.12em")).toBe(true);
+    const hunk = ruleFor('.prg-diff .prg-diff__row[data-kind="hunk"]');
+    expect(has(hunk, "font-size", "var(--fs-label)")).toBe(true);
+    expect(has(hunk, "color", "var(--text-dim)")).toBe(true);
+    expect(has(hunk, "text-transform")).toBe(false);
+    expect(has(hunk, "letter-spacing")).toBe(false);
+  });
+
+  it("drops the header meta to a second row instead of truncating the path", () => {
+    const header = ruleFor(":where(.prg-code__header, .prg-diff__header)");
+    expect(has(header, "flex-wrap", "wrap")).toBe(true);
+    expect(has(header, "min-block-size", "var(--sp-8)")).toBe(true);
+    expect(has(header, "block-size")).toBe(false);
+    const title = ruleFor(":where(.prg-code__title, .prg-diff__path)");
+    expect(has(title, "flex", "1 1 16ch")).toBe(true);
+    expect(has(title, "text-overflow", "ellipsis")).toBe(true);
+    const meta = ruleFor(".prg-code__meta");
+    expect(has(meta, "flex-shrink", "0")).toBe(false);
   });
 });
 

@@ -2,8 +2,10 @@
 // <CodeBlockClient> (client fallback) so both render the identical DOM (design §5.6).
 //
 //   .prg-code[data-gutter][data-state=plain|highlighted][data-lang]
+//                                   its own stacking context (isolation: isolate, code.css)
 //     div.prg-code__header          32px --ink-2 strip: title left, language (or the
-//                                   "syntax highlighting unavailable for .ex" note) right
+//                                   "syntax highlighting unavailable for .ex" note) right;
+//                                   the meta takes a second row when both cannot fit
 //     div.prg-code__viewport        role=region, aria-label, tabIndex=0, the scroller
 //       pre.prg-code__pre > code
 //         span.prg-code__line[data-line][data-hl=<RailTone>]

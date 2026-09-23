@@ -68,6 +68,35 @@ describe("<PRGuardDiff>", () => {
     expect(rowsOf(old.container).filter((r) => r.dataset.hl).map((r) => r.dataset.kind)).toEqual(["del"]);
   });
 
+  it("fills the accused row with the finding's band, defaulting to the rail tone (dashboard §4)", () => {
+    const { container } = render(
+      <PRGuardDiff
+        diff={DIFF}
+        highlight={[
+          { side: "new", start: 39, tone: "alarm", fill: "high" },
+          { side: "old", start: 39, tone: "medium" },
+        ]}
+      />,
+    );
+    const add = container.querySelector('.prg-diff__row[data-kind="add"]');
+    expect(add).toHaveAttribute("data-hl", "alarm"); // blocking: the rail is --alarm whatever the band
+    expect(add).toHaveAttribute("data-fill", "high");
+    const del = container.querySelector('.prg-diff__row[data-kind="del"]');
+    expect(del).toHaveAttribute("data-hl", "medium");
+    expect(del).toHaveAttribute("data-fill", "medium");
+    expect(container.querySelectorAll(".prg-diff__row[data-fill]")).toHaveLength(2);
+    expect(container.querySelectorAll(".prg-diff__row[data-hl]:not([data-fill])")).toHaveLength(0);
+  });
+
+  it("sets the hunk range apart from the section heading, and a copy still yields the @@ line", () => {
+    const { container } = render(<PRGuardDiff diff={DIFF} />);
+    const hunk = container.querySelector('.prg-diff__row[data-kind="hunk"]') as HTMLElement;
+    expect(hunk.querySelector(".prg-diff__range")?.textContent).toBe("@@ -38,4 +38,4 @@");
+    expect(hunk.textContent).toBe("@@ -38,4 +38,4 @@ def charge(account, amount_cents):");
+    const bare = render(<PRGuardDiff diff={"@@ -1 +1 @@\n-a\n+b"} />);
+    expect(bare.container.querySelector(".prg-diff__range")?.textContent).toBe("@@ -1 +1 @@");
+  });
+
   it("hangs an annotation directly beneath its line, outside the pre", () => {
     const { container } = render(
       <PRGuardDiff diff={DIFF} annotations={[{ side: "new", line: 39, tone: "alarm", label: "finding a91f3c2e", content: <p>card</p> }]} />,

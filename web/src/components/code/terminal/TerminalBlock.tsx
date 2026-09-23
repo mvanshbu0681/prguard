@@ -10,6 +10,11 @@
 //
 // DOM contract (stable, for the bench's timeline and for tests):
 //   .prg-terminal[data-bg][data-rail][data-gutter]
+//                                        its own stacking context (isolation: isolate): the
+//                                        z-indexes inside (gutter 1, rail 2, focus ring 3) stay
+//                                        inside, so an overlay the bench mounts after the panes
+//                                        (the scan line) paints over them at any z-index, auto
+//                                        included, and never needs to outbid the gutter.
 //     span.prg-terminal__rail            2px rail; the bench wipes it in with scaleY (origin top)
 //     div.prg-terminal__viewport         role=region|log, aria-label, tabIndex=0, the scroller
 //       pre.prg-terminal__pre > code

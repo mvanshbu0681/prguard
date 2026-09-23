@@ -11,6 +11,8 @@ import { CodeBlock, CodeBlockClient, PRGuardDiff, PYTEST_TONES, RAIL_TONES, Term
 import {
   ANSI_PANE,
   AUDIT_JSON,
+  BAND_DIFF,
+  BAND_HIGHLIGHTS,
   BASE,
   BASE_PANE,
   CHARGE_DIFF,
@@ -139,7 +141,7 @@ export default function CodeSurfacesLab() {
 
         <Section
           index="02"
-          title="Disproven head pane"
+          title="Head pane · proof_status: disproven"
           note={
             <>
               The counter-demo: the same bench on finding <Token>{DISPROVEN}</Token>, whose repro test also passes at
@@ -151,7 +153,7 @@ export default function CodeSurfacesLab() {
             <Seam sha={HEAD} />
             <TerminalBlock
               text={DISPROVEN_HEAD_PANE}
-              label={`pytest at head ${HEAD}, disproven finding`}
+              label={`pytest at head ${HEAD}, finding ${DISPROVEN} (proof_status: disproven)`}
               background="signal-tint-lo"
               rail="signal-lo"
               lineNumbers
@@ -198,11 +200,17 @@ export default function CodeSurfacesLab() {
         <Section
           index="04"
           title="Location · unified diff"
-          note="PRGuardDiff, unified by default. The +/− gutter glyph is the semantic channel and colour is secondary. The finding's line is highlighted and the annotation slot hangs beneath it."
+          note={
+            <>
+              PRGuardDiff, unified by default. The +/− gutter glyph is the semantic channel and colour is secondary. The accused line
+              trades its diff tint for the finding&apos;s band at 10% (<Token>--sev-critical</Token>) under the blocking rail
+              (<Token>--alarm</Token>), and the annotation slot hangs beneath it.
+            </>
+          }
         >
           <PRGuardDiff
             diff={CHARGE_DIFF}
-            highlight={[{ side: "new", start: 41, tone: "alarm", label: `finding ${FINDING}` }]}
+            highlight={[{ side: "new", start: 41, tone: "alarm", fill: "critical", label: `finding ${FINDING}` }]}
             annotations={[
               {
                 side: "new",
@@ -220,7 +228,10 @@ export default function CodeSurfacesLab() {
               },
             ]}
           />
-          <Props>view=&quot;unified&quot; highlight=[&#123; side: &quot;new&quot;, start: 41, tone: &quot;alarm&quot; &#125;] annotations=[… line 41]</Props>
+          <Props>
+            view=&quot;unified&quot; highlight=[&#123; side: &quot;new&quot;, start: 41, tone: &quot;alarm&quot;, fill: &quot;critical&quot; &#125;]
+            annotations=[… line 41]
+          </Props>
         </Section>
 
         <Section
@@ -253,7 +264,7 @@ export default function CodeSurfacesLab() {
           <PRGuardDiff
             diff={CHARGE_DIFF}
             view="split"
-            highlight={[{ side: "new", start: 41, tone: "alarm", label: `finding ${FINDING}` }]}
+            highlight={[{ side: "new", start: 41, tone: "alarm", fill: "critical", label: `finding ${FINDING}` }]}
           />
           <Props>view=&quot;split&quot;</Props>
         </Section>
@@ -295,6 +306,11 @@ export default function CodeSurfacesLab() {
             title="RailTone"
             highlight={RAIL_TONES.map((tone, i) => ({ start: i + 1, tone }))}
           />
+          <PRGuardDiff diff={BAND_DIFF} filePath="specimen/bands.py" highlight={BAND_HIGHLIGHTS} />
+          <Props>
+            PRGuardDiff highlight: fill is the band at 10% in place of the diff tint, tone is the rail. Rows 1 and 8 carry no
+            highlight, for reference.
+          </Props>
         </Section>
       </div>
     </div>

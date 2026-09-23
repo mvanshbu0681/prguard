@@ -26,14 +26,18 @@
 // rows: the row colour carries direction of edit, as §5.8 specifies. These greens and reds
 // are quarantined to .prg-diff (code.css) and never style chrome.
 //
-// DOM contract:
+// A highlighted (accused) row: 2px rail in `tone`, the row one rung up, and the band colour
+// (`fill`, default `tone`) at 10% in place of the diff tint (dashboard §4).
+//
+// DOM contract (the root is its own stacking context, isolation: isolate, see code.css):
 //   .prg-diff[data-view]
 //     div.prg-diff__header                 path · +N −M
 //     div.prg-diff__viewport               role=region, tabIndex=0, the scroller (inline-size container)
 //       div.prg-diff__sheet[data-view]
 //         pre.prg-diff__pre[data-side] > code
-//           span.prg-diff__row[data-kind=hunk|context|add|del|meta|empty][data-old][data-new][data-hl]
+//           span.prg-diff__row[data-kind=hunk|context|add|del|meta|empty][data-old][data-new][data-hl][data-fill]
 //             span.prg-diff__gutter > span.prg-diff__num[data-n] (aria-hidden) · span.prg-diff__marker
+//             hunk rows: span.prg-diff__range (the @@ range, label style) + the section heading
 //         div.prg-diff__annotation[role=note]   hung beneath its line, pinned to the visible width
 import { Fragment, useId, useMemo, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -43,10 +47,15 @@ import { pairRows, parseUnifiedDiff, type DiffRow, type SplitCell, type SplitPai
 
 export type DiffSide = "old" | "new";
 
-/** A highlighted range on one side. FindingLocation.side: LEFT → "old", RIGHT → "new". */
+/** A highlighted range on one side. FindingLocation.side: LEFT → "old", RIGHT → "new".
+ *  `tone` is the 2px rail; `fill` is the row fill at 10%, which replaces the diff tint
+ *  (dashboard §4). For a finding: `fill` is its severity band, and `tone` is the same band,
+ *  or `alarm` when the finding is blocking ("the rail is --alarm regardless of band"). */
 export interface DiffHighlight extends LineHighlight {
   /** Default "new". */
   side?: DiffSide;
+  /** Row fill tone, drawn at 10% alpha in place of the diff tint. Default: `tone`. */
+  fill?: RailTone;
 }
 
 /** Content hung beneath a line: the inline finding card (T9) mounts here. */
@@ -140,10 +149,24 @@ function Row({ cell, view, side, hl }: { cell: SplitCell; view: "unified" | "spl
       data-old={cell.oldLine}
       data-new={cell.newLine}
       data-hl={hl?.tone}
+      data-fill={hl ? (hl.fill ?? hl.tone) : undefined}
     >
       <Gutter numbers={numbers} silent={cell.kind !== "add" && cell.kind !== "del"} />
-      {showText ? cell.text : null}
+      {!showText ? null : cell.kind === "hunk" ? <HunkText text={cell.text} /> : cell.text}
     </span>
+  );
+}
+
+/** `@@ -32,11 +32,13 @@ def charge(…)`: the range is set as a label, the section heading
+ *  stays code (code.css). Two spans, same characters: a copy still yields the line. */
+function HunkText({ text }: { text: string }) {
+  const close = text.indexOf("@@", 2);
+  const cut = close === -1 ? text.length : close + 2;
+  return (
+    <>
+      <span className="prg-diff__range">{text.slice(0, cut)}</span>
+      {text.slice(cut)}
+    </>
   );
 }
 

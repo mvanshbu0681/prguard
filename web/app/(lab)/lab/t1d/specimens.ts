@@ -5,6 +5,7 @@
 // binding ids (A10): nothing that the corpus provides is typed here. The code and diff
 // bodies are specimen source for the components, not product data.
 import manifest from "@fixtures/manifest.json";
+import type { DiffHighlight } from "@/components/code";
 
 const { ids } = manifest;
 
@@ -154,6 +155,29 @@ export const CHARGE_DIFF = [
   "+    return session.refund(receipt.id, amount_cents, currency=session.currency)",
   "\\ No newline at end of file",
 ].join("\n");
+
+/** Accused rows over added, context and removed lines: each comment names the highlight the
+ *  row carries. New side 10–15, old side 10–12. */
+export const BAND_DIFF = [
+  "@@ -10,3 +10,6 @@ def specimen():",
+  "+    added()      # no highlight: the diff tint",
+  "+    added()      # fill critical, rail alarm: a blocking finding",
+  "+    added()      # fill high, rail alarm: a blocking finding in the high band",
+  "+    added()      # fill high, rail high",
+  "     context()    # fill medium, rail medium",
+  "-    removed()    # fill low, rail low",
+  "+    added()      # fill info, rail info",
+  "-    removed()    # no highlight: the diff tint",
+].join("\n");
+
+export const BAND_HIGHLIGHTS: DiffHighlight[] = [
+  { side: "new", start: 11, tone: "alarm", fill: "critical" },
+  { side: "new", start: 12, tone: "alarm", fill: "high" },
+  { side: "new", start: 13, tone: "high" },
+  { side: "new", start: 14, tone: "medium" },
+  { side: "old", start: 11, tone: "low" },
+  { side: "new", start: 15, tone: "info" },
+];
 
 /** A client-highlighted block: an audit document keyed by the manifest ids. */
 export const AUDIT_JSON = JSON.stringify(

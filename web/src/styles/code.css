@@ -16,7 +16,12 @@
      terminal below 768px, motion §6.5).
    - Line numbers are CSS content on aria-hidden spans: never copied, never read.
    - No shadows. Rails are 2px background layers. --alarm is only ever a fill.
-   - Hover is the data-atom wash, opacity-only, 120ms on --ease-snap.
+   - Hover is the data-atom wash: a 120ms background-color step on --ease-snap.
+   - Nothing is opacity: 0 or visibility: hidden (R8, motion §3.5).
+   - Each surface is its own stacking context (isolation: isolate). The z-indexes
+     inside (sticky gutter 1, hover wash 1, pane rail 2, annotation 2, focus ring 3)
+     never compete with anything outside it: the bench's scan line, a sticky header
+     or a popover paints over a pane without needing a z-index race.
 
    @layer components, so a caller's utility class (className="rounded-none") wins.
    ========================================================================== */
@@ -32,6 +37,7 @@
     --prg-gutter-w: var(--sp-4); /* 16px text inset; 40px with line numbers */
     --prg-rail-color: transparent;
     position: relative;
+    isolation: isolate; /* the internal z-indexes stay inside the surface (header note) */
     display: block;
     inline-size: 100%;
     min-inline-size: 0; /* a long line never widens a flex or grid parent: the pane scrolls */
@@ -149,20 +155,22 @@
     --prg-gutter-w: var(--sp-10); /* 40px */
   }
 
-  /* Hover: the data-atom wash (motion §7, class E). Opacity only; no fill step, no border. */
+  /* Hover: the data-atom wash (motion §7, class E): background oklch(1 0 0 / 0.04), no fill
+     step, no border. An overlay, so it lies over the sticky gutter and the rail as well as the
+     text. Transparent at rest, never opacity: 0 (R8); the wash is a one-shot background-color
+     step on one element, --dur-1 on --ease-snap (motion §6.1 bounds colour transitions). */
   @media (hover: hover) {
     :where(.prg-terminal__line, .prg-code__line, .prg-diff__row)::after {
       content: "";
       position: absolute;
       inset: 0;
       z-index: 1;
-      background: oklch(1 0 0 / 0.04);
-      opacity: 0;
+      background-color: transparent;
       pointer-events: none;
-      transition: opacity var(--dur-1) var(--ease-snap);
+      transition: background-color var(--dur-1) var(--ease-snap);
     }
     :where(.prg-terminal__line, .prg-code__line, .prg-diff__row):hover::after {
-      opacity: 1;
+      background-color: oklch(1 0 0 / 0.04);
     }
     .prg-diff__row:is([data-kind="hunk"], [data-kind="empty"])::after {
       content: none;
@@ -200,7 +208,8 @@
     --prg-rail-color: var(--sev-info);
   }
 
-  /* A highlighted finding line: the rail in its tone + the row one rung up (--ink-3). */
+  /* A highlighted finding line: the rail in its tone + the row one rung up (--ink-3).
+     In a diff the row also trades its diff tint for the band tint (section 5). */
   :where(.prg-code__line, .prg-diff__row)[data-hl] {
     --prg-row-base: var(--ink-3);
     --prg-row-rail: var(--prg-rail-color);
@@ -303,18 +312,25 @@
     border: 1px solid var(--rule-1);
   }
 
+  /* The 32px header strip. When the title and the meta (language, or the "unavailable" note,
+     plus actions) cannot share one row with at least 16ch of title, the meta drops to a
+     second row (48px in all) instead of truncating the path to its first letters: the file
+     name is the one thing that identifies the source, and the note is a stated degradation
+     that must print whole. Flex line-breaking reads the title's 16ch basis, not its content. */
   :where(.prg-code__header, .prg-diff__header) {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: var(--sp-3);
-    block-size: var(--sp-8); /* 32px */
-    padding-inline: var(--sp-3);
+    column-gap: var(--sp-3);
+    min-block-size: var(--sp-8); /* 32px */
+    padding: var(--sp-1) var(--sp-3);
     background: var(--ink-2);
     border-bottom: 1px solid var(--rule-1);
-    line-height: 1.4;
+    line-height: var(--sp-5); /* 20px rows: 4 + 20 + 4 = 32, and 4 + 20 + 20 + 4 = 48 wrapped */
   }
   :where(.prg-code__title, .prg-diff__path) {
+    flex: 1 1 16ch;
     min-inline-size: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -324,7 +340,8 @@
   }
   .prg-code__meta {
     display: inline-flex;
-    flex-shrink: 0;
+    flex: 0 1 auto; /* alone on its row and still too wide: the note wraps at its spaces */
+    min-inline-size: 0;
     align-items: center;
     gap: var(--sp-3);
   }
@@ -441,12 +458,42 @@
     content: "\2212" / "removed: ";
     color: var(--diff-del-text);
   }
-  /* Hunk header: --ink-2 band, 11px mono --text-dim. Not uppercased and not tracked:
-     the section heading is code, and letter case is evidence (§2.5). */
+
+  /* The accused line (dashboard §4, "How a finding's lines are highlighted"). Its row fill is
+     the severity band colour at 10% and it REPLACES the diff tint: a diff tint says "this
+     line changed", a band tint says "this line is accused". The +/− glyph and the text colour
+     keep carrying the direction of edit. data-fill is the finding's band (PRGuardDiff writes
+     `fill`, defaulting to the rail tone), so a blocking finding shows an --alarm rail over its
+     own band's fill. Same specificity as the add/del rules and after them, so it wins. */
+  .prg-diff__row[data-fill="signal"] { --prg-fill-color: var(--signal); }
+  .prg-diff__row[data-fill="signal-lo"] { --prg-fill-color: var(--signal-lo); }
+  .prg-diff__row[data-fill="alarm"] { --prg-fill-color: var(--alarm); }
+  .prg-diff__row[data-fill="marker"] { --prg-fill-color: var(--marker); }
+  .prg-diff__row[data-fill="critical"] { --prg-fill-color: var(--sev-critical); }
+  .prg-diff__row[data-fill="high"] { --prg-fill-color: var(--sev-high); }
+  .prg-diff__row[data-fill="medium"] { --prg-fill-color: var(--sev-medium); }
+  .prg-diff__row[data-fill="low"] { --prg-fill-color: var(--sev-low); }
+  .prg-diff__row[data-fill="info"] { --prg-fill-color: var(--sev-info); }
+  /* Guarded: an engine without color-mix() would drop the whole row and gutter background
+     (and the rail with it) at computed-value time; there the diff tint stays instead. */
+  @supports (color: color-mix(in oklab, red 10%, transparent)) {
+    .prg-diff .prg-diff__row[data-hl] {
+      --prg-row-tint: color-mix(in oklab, var(--prg-fill-color, var(--prg-rail-color)) 10%, transparent);
+    }
+  }
+  /* Hunk header (§5.8): --ink-2 band, 11px mono --text-dim. The `@@ -a,b +c,d @@` range is
+     the instrument legend and is set as one: caps, +0.12em, 500. The section heading git
+     prints after it is source code and keeps its letter case, because case is evidence
+     (§2.5); it stays at tracking 0. */
   .prg-diff .prg-diff__row[data-kind="hunk"] {
     --prg-row-base: var(--ink-2);
     color: var(--text-dim);
     font-size: var(--fs-label);
+  }
+  .prg-diff__range {
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
   }
   .prg-diff .prg-diff__row[data-kind="meta"] {
     color: var(--text-dim);
