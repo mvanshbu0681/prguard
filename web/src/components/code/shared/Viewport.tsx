@@ -7,11 +7,16 @@
 //     long traceback (axe: scrollable-region-focusable). The focus ring is the
 //     global 2px --signal-hi outline, inset by code.css so no ancestor clips it.
 // Both axes scroll; nothing inside ever wraps (code.css).
-import type { CSSProperties, ReactNode } from "react";
+//
+// A windowed surface (more than 400 rows, shared/windowing.ts) also passes a ref (the
+// virtualizer's scroll element), its select-all handler and `windowed`, which gives the
+// viewport a default max height (code.css) when the caller set none.
+import type { CSSProperties, KeyboardEventHandler, ReactNode, Ref } from "react";
 
 export interface ViewportProps {
   className: string;
   label: string;
+  /** Space-separated ids of the elements that describe the region. */
   describedBy?: string;
   /** "log" for output that is still arriving (the live run's proof terminal). */
   role?: "region" | "log";
@@ -21,21 +26,28 @@ export interface ViewportProps {
   height?: number;
   /** Maximum height in px; shorter content shrinks the viewport. */
   maxHeight?: number;
+  /** Windowed content: data-windowed, and the default max height in code.css. */
+  windowed?: boolean;
+  onKeyDown?: KeyboardEventHandler<HTMLDivElement>;
+  ref?: Ref<HTMLDivElement>;
   children: ReactNode;
 }
 
-export function Viewport({ className, label, describedBy, role = "region", busy, height, maxHeight, children }: ViewportProps) {
+export function Viewport({ className, label, describedBy, role = "region", busy, height, maxHeight, windowed, onKeyDown, ref, children }: ViewportProps) {
   const style: CSSProperties | undefined =
     height !== undefined || maxHeight !== undefined ? { height, maxHeight } : undefined;
   return (
     <div
+      ref={ref}
       className={className}
       role={role}
       aria-label={label}
-      aria-describedby={describedBy}
+      aria-describedby={describedBy || undefined}
       aria-busy={role === "log" ? Boolean(busy) : undefined}
       tabIndex={0}
       style={style}
+      data-windowed={windowed ? "" : undefined}
+      onKeyDown={onKeyDown}
     >
       {children}
     </div>

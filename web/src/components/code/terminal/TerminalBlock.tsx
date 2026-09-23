@@ -6,7 +6,8 @@
 // Google Sans Code 13px on a 22px line (12/20 below 768px), tracking 0, no ligatures,
 // horizontal scroll and NEVER a wrap, because wrapping destroys traceback alignment.
 //
-// Works in Server and Client Components alike (no state, no effects, no 'use client').
+// Works in Server and Client Components alike (no state, no effects, no 'use client'); only
+// the windowed viewport of a long capture is a client component.
 //
 // DOM contract (stable, for the bench's timeline and for tests):
 //   .prg-terminal[data-bg][data-rail][data-gutter]
@@ -27,11 +28,21 @@
 //                                                  so a copy never picks it up (Safari included)
 //             span[data-tone][data-mark].prg-ansi-* …   the text
 //   Lines are separated by literal "\n" text nodes: pre.textContent === the captured text.
-import { Fragment, useMemo, type ReactNode } from "react";
+//
+// Past 400 lines the viewport is <TerminalWindow> (a client component, shared/windowing.ts):
+// only the lines near the view are rendered, between aria-hidden spacers, each line carrying
+// data-index; the groups, classes and separators are the same. A copy inside the region is
+// answered from the captured text and select-all inside it copies every line. Without a
+// `height`/`maxHeight` a windowed viewport stops at min(70vh, 32 lines) and scrolls.
+// Line numbers past 999 widen the gutter beyond 40px (--prg-digits) instead of overflowing it.
+import { Fragment, useMemo, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import type { RailTone } from "../shared/types";
 import { Viewport } from "../shared/Viewport";
-import { buildTerminalLines, splitIntoGroups, type TerminalHighlightRule, type TerminalLine, type TerminalSegment } from "./model";
+import { digitsOf, shouldWindow } from "../shared/windowing";
+import { Line } from "./Line";
+import { buildTerminalLines, splitIntoGroups, type TerminalHighlightRule } from "./model";
+import { TerminalWindow } from "./TerminalWindow";
 
 export type TerminalBackground = "default" | "signal-tint-lo" | "alarm-tint-lo";
 
@@ -66,34 +77,6 @@ export interface TerminalBlockProps {
   className?: string;
 }
 
-function Segment({ segment }: { segment: TerminalSegment }): ReactNode {
-  const names = segment.role ? [...segment.classes, `prg-terminal__${segment.role}`] : segment.classes;
-  const className = names.length ? names.join(" ") : undefined;
-  if (!className && !segment.tone && !segment.mark) return segment.text;
-  return (
-    <span className={className} data-tone={segment.tone} data-mark={segment.mark}>
-      {segment.text}
-    </span>
-  );
-}
-
-function Line({ line, numbered }: { line: TerminalLine; numbered: boolean }) {
-  return (
-    <span
-      className="prg-terminal__line"
-      data-line={line.number}
-      data-kind={line.kind}
-      data-tone={line.tone}
-      data-mark={line.marks.length ? line.marks.join(" ") : undefined}
-    >
-      <span className="prg-terminal__gutter" aria-hidden="true" data-ln={numbered ? line.number : undefined} />
-      {line.segments.map((segment, i) => (
-        <Segment key={i} segment={segment} />
-      ))}
-    </span>
-  );
-}
-
 export function TerminalBlock({
   text,
   label,
@@ -112,8 +95,10 @@ export function TerminalBlock({
   className,
 }: TerminalBlockProps) {
   const lines = useMemo(() => buildTerminalLines(text, { highlight, prompt, startLine }), [text, highlight, prompt, startLine]);
-  const groups = splitIntoGroups(lines, rowGroups);
   const lastNumber = lines.length ? lines[lines.length - 1].number : startLine;
+  const windowed = shouldWindow(lines.length);
+  const digits = lineNumbers ? digitsOf(lastNumber) : 0;
+  const role = live ? "log" : "region";
 
   return (
     <div
@@ -122,24 +107,38 @@ export function TerminalBlock({
       data-bg={background}
       data-rail={rail === "none" ? undefined : rail}
       data-gutter={lineNumbers ? "numbers" : undefined}
+      style={digits > 3 ? ({ "--prg-digits": digits } as CSSProperties) : undefined}
     >
       {rail === "none" ? null : <span className="prg-terminal__rail" aria-hidden="true" />}
-      <Viewport className="prg-terminal__viewport" label={label} role={live ? "log" : "region"} busy={busy} height={height} maxHeight={maxHeight}>
-        <pre className="prg-terminal__pre">
-          <code className="prg-terminal__code">
-            {groups.map((group, g) => (
-              <span key={g} className="prg-terminal__group" data-row-group={g}>
-                {group.map((line) => (
-                  <Fragment key={line.number}>
-                    <Line line={line} numbered={lineNumbers} />
-                    {line.number < lastNumber ? "\n" : null}
-                  </Fragment>
-                ))}
-              </span>
-            ))}
-          </code>
-        </pre>
-      </Viewport>
+      {windowed ? (
+        <TerminalWindow
+          lines={lines}
+          numbered={lineNumbers}
+          label={label}
+          role={role}
+          busy={busy}
+          height={height}
+          maxHeight={maxHeight}
+          rowGroups={rowGroups}
+        />
+      ) : (
+        <Viewport className="prg-terminal__viewport" label={label} role={role} busy={busy} height={height} maxHeight={maxHeight}>
+          <pre className="prg-terminal__pre">
+            <code className="prg-terminal__code">
+              {splitIntoGroups(lines, rowGroups).map((group, g) => (
+                <span key={g} className="prg-terminal__group" data-row-group={g}>
+                  {group.map((line) => (
+                    <Fragment key={line.number}>
+                      <Line line={line} numbered={lineNumbers} />
+                      {line.number < lastNumber ? "\n" : null}
+                    </Fragment>
+                  ))}
+                </span>
+              ))}
+            </code>
+          </pre>
+        </Viewport>
+      )}
     </div>
   );
 }

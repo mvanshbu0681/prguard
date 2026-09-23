@@ -296,7 +296,8 @@ export default function CodeSurfacesLab() {
           title="Rail tones"
           note={
             <>
-              Every tone a highlighted line or pane rail accepts. Rails are fills: <Token>--alarm</Token> appears only here, never as text.
+              Every tone a highlighted line or pane rail accepts. Rails are fills: <Token>--alarm</Token> only ever paints a rail or a
+              row fill, never text.
             </>
           }
         >
@@ -308,8 +309,8 @@ export default function CodeSurfacesLab() {
           />
           <PRGuardDiff diff={BAND_DIFF} filePath="specimen/bands.py" highlight={BAND_HIGHLIGHTS} />
           <Props>
-            PRGuardDiff highlight: fill is the band at 10% in place of the diff tint, tone is the rail. Rows 1 and 8 carry no
-            highlight, for reference.
+            PRGuardDiff highlight: fill is the band at 10% in place of the diff tint, tone is the rail. New line 10 and old line 12
+            carry no highlight, for reference.
           </Props>
         </Section>
       </div>

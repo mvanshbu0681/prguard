@@ -151,8 +151,27 @@
   :where(.prg-terminal__gutter, .prg-code__gutter) {
     padding-inline-end: var(--sp-3);
   }
+  /* 40px, until the numbers need more: past 999 the component sets --prg-digits and the
+     gutter grows by whole digits (1ch resolves on the 12.5px gutter), never overflowing. */
   :where(.prg-terminal, .prg-code)[data-gutter] {
-    --prg-gutter-w: var(--sp-10); /* 40px */
+    --prg-gutter-w: max(var(--sp-10), calc(var(--prg-digits, 0) * 1ch + var(--sp-3) + var(--sp-1)));
+  }
+
+  /* ------------------------------------------------------------------------
+     Windowed surfaces (more than 400 rows, shared/windowing.ts). Only rows near the view
+     are rendered; aria-hidden block spacers hold the height of the rest. The sheet keeps
+     the width of the widest line (--prg-cols, set by the component) while that line is not
+     rendered, so the horizontal scroll never jumps. With no height from the caller the
+     viewport stops at min(70vh, 32 lines) and scrolls, so there is a window to fill.
+     ------------------------------------------------------------------------ */
+  :where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport)[data-windowed] {
+    max-block-size: min(70vh, calc(32 * var(--prg-lh)));
+  }
+  :where(.prg-terminal__spacer, .prg-code__spacer, .prg-diff__spacer) {
+    display: block;
+  }
+  :where(.prg-terminal__pre, .prg-code__pre)[data-windowed] {
+    min-inline-size: max(100%, calc(var(--prg-cols, 0) * 1ch + var(--prg-gutter-w) + var(--sp-4)));
   }
 
   /* Hover: the data-atom wash (motion §7, class E): background oklch(1 0 0 / 0.04), no fill
