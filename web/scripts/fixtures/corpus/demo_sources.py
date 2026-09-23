@@ -5,7 +5,7 @@
 * ``7c41a09`` (base) — ``charge()`` charges in ``account.currency``, set at signup.
 * ``3e5a1c8`` (first push) — ``charge()`` reads ``account.default_currency`` instead and
   returns ``None`` when an account has none. Reviewed by the run the second push superseded.
-* ``9c2d4b1`` (second push, the demo head) — the same ``charge()`` three lines lower with a
+* ``9c2d4b1`` (second push, the demo head) — the same ``charge()`` two lines lower with a
   local renamed, plus ``get_rate()`` raising ``UnsupportedCurrency``.
 
 These are real, importable Python modules. ``scripts/fixtures/check_pytest_text.py`` writes the
@@ -199,7 +199,7 @@ def _to_settlement(amount_minor: int, currency: str) -> int:
 
 def charge(account: Account, amount_minor: int) -> Charge:
     if amount_minor <= 0:
-        raise ValueError(f"amount must be positive, got {amount_minor}")
+        raise ValueError("amount must be positive, got %d" % amount_minor)
     currency = account.currency
     settled = _to_settlement(amount_minor, currency)
     charge_id = gateway.client.create_charge(account.id, settled, currency)
@@ -212,7 +212,7 @@ def charge(account: Account, amount_minor: int) -> Charge:
     )
 '''
 
-#: The first push. Same bug as the demo head, three lines higher and with the local named
+#: The first push. Same bug as the demo head, two lines higher and with the local named
 #: ``cur`` — the fingerprint of the finding is identical at both revisions, which is M3.
 CHARGE_RUN_A = '''\
 """Charge creation for checkout.
@@ -252,7 +252,7 @@ def _to_settlement(amount_minor: int, currency: str) -> int:
 
 def charge(account: Account, amount_minor: int) -> Charge:
     if amount_minor <= 0:
-        raise ValueError(f"amount must be positive, got {amount_minor}")
+        raise ValueError("amount must be positive, got %d" % amount_minor)
     cur = account.default_currency
     if cur is None:
         log.info("account %s has no default currency; charge skipped", account.id)
@@ -308,7 +308,7 @@ def _to_settlement(amount_minor: int, currency: str) -> int:
 
 def charge(account: Account, amount_minor: int) -> Charge:
     if amount_minor <= 0:
-        raise ValueError(f"amount must be positive, got {amount_minor}")
+        raise ValueError("amount must be positive, got %d" % amount_minor)
     currency = account.default_currency
     if currency is None:
         log.info("account %s has no default currency; charge skipped", account.id)
@@ -387,7 +387,7 @@ def get_order(order_id: str) -> CheckoutResponse:
 
 
 def _line(label: str, amount_minor: int) -> str:
-    return f"{label}: {amount_minor / 100:.2f}"
+    return "%s: %.2f" % (label, amount_minor / 100)
 
 
 def render_summary(order, cart) -> dict[str, str]:
@@ -401,7 +401,7 @@ def render_summary(order, cart) -> dict[str, str]:
 #: Before #4790: ``_line()`` printed raw minor units. #4790 changed it to the float division
 #: the quality reviewer flagged, and that version is the demo PR's base.
 CHECKOUT_PRE4790 = CHECKOUT_BASE.replace(
-    'return f"{label}: {amount_minor / 100:.2f}"', 'return f"{label}: {amount_minor}"'
+    'return "%s: %.2f" % (label, amount_minor / 100)', 'return "%s: %d" % (label, amount_minor)'
 )
 
 CHECKOUT_HEAD = '''\
@@ -468,7 +468,7 @@ def get_order(order_id: str) -> CheckoutResponse:
 
 
 def _line(label: str, amount_minor: int) -> str:
-    return f"{label}: {amount_minor / 100:.2f}"
+    return "%s: %.2f" % (label, amount_minor / 100)
 
 
 def render_summary(order, cart) -> dict[str, str]:
@@ -628,7 +628,7 @@ class RecordingGateway:
 
     def create_charge(self, account_id, amount_minor, currency):
         self.sent.append((account_id, amount_minor, currency))
-        return f"ch_repro_{len(self.sent):04d}"
+        return "ch_repro_%04d" % len(self.sent)
 
 
 @pytest.fixture(autouse=True)

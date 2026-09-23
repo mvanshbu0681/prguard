@@ -193,8 +193,8 @@ FLOAT_MONEY = Template(
     span=(1, 1),
     title="Format money in `_line()` from integer cents, not float division.",
     body=(
-        "`_line()` renders `amount_minor / 100:.2f`, which goes through binary floating point "
-        "before it is rounded for display. Every order summary line passes through it, and a "
+        "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary "
+        "floating point before it is rounded for display. Every order summary line passes through it, and a "
         "later change that feeds the summary into an invoice or a CSV will inherit amounts that "
         "differ from the integer totals by a cent."
     ),
