@@ -168,6 +168,11 @@ function Facts({ rows }: { rows: [string, ReactNode][] }) {
   );
 }
 
+/** A route, file or identifier inside prose: mono, never broken at its own hyphens. */
+function C({ children }: { children: ReactNode }) {
+  return <code className="font-mono whitespace-nowrap text-text-primary">{children}</code>;
+}
+
 function Action({ keyName, onClick, disabled, children }: { keyName: string; onClick: () => void; disabled?: boolean; children: ReactNode }) {
   return (
     <button type="button" className={BTN} onClick={onClick} disabled={disabled} aria-keyshortcuts={keyName.toLowerCase()}>
@@ -183,20 +188,15 @@ function Action({ keyName, onClick, disabled, children }: { keyName: string; onC
 
 interface RouteStats {
   count: number;
-  cancelled: number;
-  last: ApiCall | null;
+  last: ApiCall;
 }
 
+/** Completed calls per route (a cancelled read produced no answer, so it is not one). */
 function statsByRoute(calls: readonly ApiCall[]): Map<string, RouteStats> {
   const out = new Map<string, RouteStats>();
   for (const call of calls) {
-    const s = out.get(call.route) ?? { count: 0, cancelled: 0, last: null };
-    if (call.aborted) s.cancelled += 1;
-    else {
-      s.count += 1;
-      s.last = call;
-    }
-    out.set(call.route, s);
+    if (call.aborted) continue;
+    out.set(call.route, { count: (out.get(call.route)?.count ?? 0) + 1, last: call });
   }
   return out;
 }
@@ -212,9 +212,7 @@ const UNCALLED: Record<string, string> = {
 function EndpointRow({ route, stats }: { route: ApiRoute; stats: RouteStats | undefined }) {
   const label = `${route.method} ${route.path}`;
   const last = stats?.last ?? null;
-  const detail = last
-    ? [`${stats!.count} call${stats!.count === 1 ? "" : "s"}`, stats!.cancelled ? `${stats!.cancelled} cancelled` : null, last.code, last.search || null].filter(Boolean).join(" · ")
-    : (UNCALLED[label] ?? (stats?.cancelled ? `${stats.cancelled} cancelled` : "not called"));
+  const detail = last ? [`${stats!.count} call${stats!.count === 1 ? "" : "s"}`, last.code, last.search || null].filter(Boolean).join(" · ") : (UNCALLED[label] ?? "not called yet");
   return (
     <tr className="border-b border-rule-hair align-top">
       <td className="py-2 pr-3">
@@ -233,8 +231,10 @@ function EndpointRow({ route, stats }: { route: ApiRoute; stats: RouteStats | un
 
 function EndpointTable({ calls }: { calls: readonly ApiCall[] }) {
   const stats = statsByRoute(calls);
+  const cancelled = calls.filter((c) => c.aborted).length;
   return (
-    <table className="w-full border-collapse type-data">
+    <>
+      <table className="w-full border-collapse type-data">
       <caption className="sr-only">Every API route with the last call the hooks made to it</caption>
       <thead>
         <tr className="border-b border-rule-1">
@@ -257,7 +257,14 @@ function EndpointTable({ calls }: { calls: readonly ApiCall[] }) {
           <EndpointRow key={`${route.method} ${route.path}`} route={route} stats={stats.get(`${route.method} ${route.path}`)} />
         ))}
       </tbody>
-    </table>
+      </table>
+      {cancelled > 0 ? (
+        <p className="mt-3 max-w-(--measure-body) type-small text-text-dim">
+          {cancelled} read{cancelled === 1 ? "" : "s"} cancelled by TanStack Query on unmount or a new key, not counted above. Under <C>next dev</C>, StrictMode mounts
+          every component twice, so each first read is cancelled once.
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -409,7 +416,7 @@ function Lab({ corpus }: { corpus: Corpus }) {
   const stageTotal = run?.stage_total ?? STAGES.length;
   const sentence = run
     ? live
-      ? `Stage ${stageIndex}/${stageTotal} — ${run.stage ?? "?"} · ${age ?? 0}s since last output`
+      ? `Stage ${stageIndex}/${stageTotal} — ${run.stage ?? "?"} · ${age ?? 0}s since last output`
       : `status: ${run.status} · stage ${stageIndex}/${stageTotal} ${run.stage ?? ""}`.trim()
     : status.error
       ? `No run to show · ${status.error.status} ${status.error.code}`
@@ -433,7 +440,7 @@ function Lab({ corpus }: { corpus: Corpus }) {
   return (
     <div data-surface="app" className="min-h-dvh bg-ink-0 text-text-body">
       <div className="mx-auto max-w-[1200px] px-4 py-10 md:px-8">
-        <header>
+        <header className="pb-10">
           <p className="type-label text-text-dim">/ lab — t2a · data layer</p>
           <h1 className="mt-3 type-display-h3 text-text-primary">Data layer</h1>
           <p className="mt-3 max-w-(--measure-body) type-body text-text-body">
@@ -443,23 +450,37 @@ function Lab({ corpus }: { corpus: Corpus }) {
           <div className="mt-6 max-w-[760px]">
             <Facts
               rows={[
-                ["mode", FIXTURES ? "fixtures · NEXT_PUBLIC_FIXTURES is not 0" : `live · ${API_BASE}`],
+                ["mode", FIXTURES ? "fixtures, the default · NEXT_PUBLIC_FIXTURES=0 turns it off" : `live · ${API_BASE}`],
                 ["corpus", corpusLine],
-                ["latency", "40–160 ms per path, deterministic · ?latency=0 removes it"],
+                ["latency", "40–160ms per path, deterministic · ?latency=0 removes it"],
                 ["routes", `${API_ROUTES.filter((r) => !("ext" in r)).length} from openapi.json + 1 extension, GET /v1/reviews (plan A11)`],
               ]}
             />
           </div>
         </header>
 
-        <Section index="01" title="Endpoints" note="Status, latency and item count are the last call's, as the transport recorded it. Items read items.length for a list and findings.length for a result.">
+        <Section
+          index="01"
+          title="Endpoints"
+          note={
+            <>
+              Status, latency and item count are the last call&apos;s, as the transport recorded it. Items read <C>items.length</C> for a list and{" "}
+              <C>findings.length</C> for a result.
+            </>
+          }
+        >
           <EndpointTable calls={calls} />
         </Section>
 
         <Section
           index="02"
           title="Simulated run"
-          note={`GET /v1/reviews/${DEMO_SHORT.review}, polled by useReviewStatus every 1200 ms while it runs. POST /v1/reviews or ?replay=1 starts it; stage durations come from live/demo-run.json, 2 s each while that file is a stub.`}
+          note={
+            <>
+              <C>GET /v1/reviews/{DEMO_SHORT.review}</C>, polled by <C>useReviewStatus</C> every 1200ms while it runs. <C>POST /v1/reviews</C> or{" "}
+              <C>?replay=1</C> starts it. Stage durations are <C>live/demo-run.json</C>&apos;s, times its <C>time_scale</C>; 2s each while that file is a stub.
+            </>
+          }
         >
           <div className="grid gap-6 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <Panel title="GET /v1/reviews/{id}">
@@ -485,7 +506,7 @@ function Lab({ corpus }: { corpus: Corpus }) {
                         "—"
                       ),
                     ],
-                    ["poll", `${interval === false ? "stopped" : `${interval} ms`} · ${polls} poll${polls === 1 ? "" : "s"} · ${status.failureCount} missed`],
+                    ["poll", `${interval === false ? "stopped" : `every ${interval}ms`} · ${polls} poll${polls === 1 ? "" : "s"} · ${status.failureCount} missed`],
                     ["result", resultLine],
                   ]}
                 />
@@ -519,7 +540,9 @@ function Lab({ corpus }: { corpus: Corpus }) {
                     </a>
                   </li>
                 </ul>
-                <p className="mt-2 type-small text-text-body">?stall=1 stops the heartbeat at stage 3, so the 20 s stale state and the 45 s silent state can be seen.</p>
+                <p className="mt-2 type-small text-text-body">
+                  <C>?stall=1</C> stops the heartbeat at stage 3, so the 20s stale state and the 45s silent state can be seen.
+                </p>
               </div>
             </div>
           </div>
@@ -528,15 +551,21 @@ function Lab({ corpus }: { corpus: Corpus }) {
         <Section
           index="03"
           title="Suppress round trip"
-          note="useSuppressFinding strikes the finding before the response (one reducer, shared with the resolver). The ledger row and a suppression.created audit event follow; a failure rolls every cache back and raises a toast."
+          note={
+            <>
+              <C>useSuppressFinding</C> strikes the finding before the response (one reducer, shared with the resolver). The ledger row and a{" "}
+              <C>suppression.created</C> audit event follow; a failure rolls every cache back and raises a toast.
+            </>
+          }
         >
           <div className="grid gap-6 lg:grid-cols-3">
             <Panel title="Finding">
               {list.length === 0 ? (
                 <div className="space-y-2 type-small text-text-body">
                   <p>
-                    GET /v1/findings returned {findings.data ? "0 findings" : "nothing yet"}. Suppress targets manifest ids.proven_finding_id ({shortId(DEMO_IDS.proven_finding_id)}): expect 404
-                    FINDING_NOT_FOUND, and a 422 first for an empty reason, because the body is validated before the lookup.
+                    <C>GET /v1/findings</C> returned {findings.data ? "0 findings" : "nothing yet"}. Suppress targets the manifest&apos;s <C>proven_finding_id</C> (
+                    {shortId(DEMO_IDS.proven_finding_id)}): expect 404 <C>FINDING_NOT_FOUND</C>, and a 422 first for an empty reason, because the body is validated
+                    before the lookup.
                   </p>
                   {corpus === "disk" ? (
                     <p>
@@ -551,7 +580,7 @@ function Lab({ corpus }: { corpus: Corpus }) {
                   {list.map((f: Finding) => (
                     <li key={f.id} className={cn("grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 border-b border-rule-hair py-1", f.id === targetId && "text-text-primary")}>
                       <span className={cn(f.id === targetId ? "text-signal-text" : "text-text-dim")}>{shortId(f.id)}</span>
-                      <span className={cn("min-w-0 truncate", f.status === "suppressed" && "line-through decoration-text-dim")}>
+                      <span className={cn("min-w-0", f.status === "suppressed" && "line-through decoration-text-dim")}>
                         {f.status} · {f.severity?.band ?? "unscored"} · {f.proof?.status ?? "not_attempted"}
                       </span>
                     </li>
@@ -576,7 +605,9 @@ function Lab({ corpus }: { corpus: Corpus }) {
             <Panel title="Ledger · GET /v1/suppressions">
               <Facts
                 rows={[
-                  ["totals", ledger.data?.totals ? `active ${ledger.data.totals.active ?? 0} · expired ${ledger.data.totals.expired ?? 0} · revoked ${ledger.data.totals.revoked ?? 0}` : ledger.error ? `${ledger.error.status} ${ledger.error.code}` : "reading"],
+                  ...(ledger.error
+                    ? ([["totals", `${ledger.error.status} ${ledger.error.code}`]] as [string, ReactNode][])
+                    : (["active", "expired", "revoked"] as const).map((k): [string, ReactNode] => [k, ledger.data?.totals ? (ledger.data.totals[k] ?? 0) : "…"])),
                   ["newest", newestRow ? `${shortId(newestRow.suppression_id)} · ${newestRow.scope}` : "none"],
                   ["reason", newestRow ? newestRow.reason : "—"],
                   ["created_by", newestRow ? (newestRow.created_by ?? "null") : "—"],
@@ -596,7 +627,7 @@ function Lab({ corpus }: { corpus: Corpus }) {
                   ]}
                 />
               ) : (
-                <p className="type-small text-text-body">{trail.data ? "No suppression.created event in the trail yet. Press S." : "Reading GET /v1/audit."}</p>
+                <p className="type-small text-text-body">{trail.data ? "No suppression.created event in the trail yet. Press S." : "Reading GET /v1/audit."}</p>
               )}
               <div className="mt-4">
                 <Facts
@@ -604,7 +635,8 @@ function Lab({ corpus }: { corpus: Corpus }) {
                     [
                       "chain",
                       chain.data
-                        ? `verified: ${String(chain.data.chain.verified)} · checked ${chain.data.chain.checked ?? 0}${chain.data.chain.first_seq != null ? ` · seq ${chain.data.chain.first_seq}–${chain.data.chain.last_seq}` : ""}`
+                        ? // No-break spaces keep each name with its value when the line wraps.
+                          `verified: ${String(chain.data.chain.verified)} · checked ${chain.data.chain.checked ?? 0}${chain.data.chain.first_seq != null ? ` · seq ${chain.data.chain.first_seq}–${chain.data.chain.last_seq}` : ""}`
                         : chain.error
                           ? `${chain.error.status} ${chain.error.code}`
                           : "reading",
