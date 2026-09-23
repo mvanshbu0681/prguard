@@ -247,6 +247,9 @@ export function useWindowCopy({ bodyRef, count, textOf, allText: every }: UseWin
       const body = bodyRef.current;
       const selection = document.getSelection();
       if (!body || !selection || !event.clipboardData) return;
+      // A copy from a field (a search box beside the pane) is the field's own.
+      const target = event.target;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       const current = latest.current;
       const text = copyText(body, selection, current.count, current.textOf, all.current, current.every);
       if (text === null) return;

@@ -210,6 +210,22 @@ describe("<TerminalBlock> windowed", () => {
     expect(prevented).toBe(false);
   });
 
+  it("never takes over a copy from a field, even with a selection left in the pane", () => {
+    const { container } = render(
+      <div>
+        <input aria-label="search" defaultValue="currency" />
+        <TerminalBlock text={LONG} label="t" />
+      </div>,
+    );
+    selectRows(container, [2, 0], [3, 4]);
+    const setData = vi.fn();
+    const event = new Event("copy", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "clipboardData", { value: { setData } });
+    screen.getByRole("textbox", { name: "search" }).dispatchEvent(event);
+    expect(setData).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
   it("widens the gutter past 999 instead of overflowing it", () => {
     const { container } = render(<TerminalBlock text={LONG} label="t" lineNumbers />);
     expect((container.querySelector(".prg-terminal") as HTMLElement).style.getPropertyValue("--prg-digits")).toBe("4");

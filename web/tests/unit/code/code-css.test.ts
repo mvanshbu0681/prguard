@@ -212,7 +212,7 @@ describe("code.css — windowed surfaces and wide line numbers", () => {
   it("widens the gutter and the diff's number columns by whole digits past 999, never below 40px / 32px", () => {
     expect(has(ruleFor(":where(.prg-terminal, .prg-code)[data-gutter]"), "--prg-gutter-w", "max(var(--sp-10), calc(var(--prg-digits, 0) * 1ch + var(--sp-3) + var(--sp-1)))")).toBe(true);
     const diffRoots = rules.filter((r) => r.prelude === ".prg-diff");
-    expect(diffRoots.some((r) => has(r, "--prg-diff-num-w", "max(var(--sp-8), calc(var(--prg-digits, 0) * 1ch + var(--sp-2)))"))).toBe(true);
+    expect(diffRoots.some((r) => has(r, "--prg-diff-num-w", "max(var(--sp-8), calc(var(--prg-digits, 0) * 1ch + var(--sp-3)))"))).toBe(true);
   });
 });
 

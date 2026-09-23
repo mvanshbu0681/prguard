@@ -59,7 +59,7 @@ const PAPER: CSSProperties = {
   ].join(", "),
 };
 
-function Section({ index, title, note, children }: { index: string; title: string; note?: ReactNode; children: ReactNode }) {
+function Section({ index, title, note, children }: { index: string; title: ReactNode; note?: ReactNode; children: ReactNode }) {
   return (
     <section className="border-t border-rule-1 py-10" aria-labelledby={`s-${index}`}>
       <h2 id={`s-${index}`} className="type-label text-text-dim">
@@ -158,7 +158,11 @@ export default function CodeSurfacesLab() {
 
         <Section
           index="02"
-          title="Head pane · proof_status: disproven"
+          title={
+            <>
+              Head pane · <span className="tracking-normal normal-case">proof_status: disproven</span>
+            </>
+          }
           note={
             <>
               The counter-demo: the same bench on finding <Token>{DISPROVEN}</Token>, whose repro test also passes at

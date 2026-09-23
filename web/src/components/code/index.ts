@@ -9,6 +9,9 @@
 // through dynamic import(), so it lands in the client bundle only if <CodeBlockClient>
 // actually mounts. Rendering <CodeBlock> inside a Client Component is an error (it is
 // async); use <CodeBlockClient> there.
+//
+// All three window past WINDOW_THRESHOLD (400) rows: only the rows near the view render,
+// copy and select-all answer from the captured text (shared/windowing.ts).
 export { TerminalBlock, type TerminalBackground, type TerminalBlockProps } from "./terminal/TerminalBlock";
 export {
   buildTerminalLines,
@@ -40,3 +43,4 @@ export {
 export { parseUnifiedDiff, pairRows, type DiffRow, type DiffRowKind, type ParsedDiff } from "./diff/parse";
 
 export { RAIL_TONES, TEXT_TONES, type LineHighlight, type RailTone, type TextTone } from "./shared/types";
+export { WINDOW_THRESHOLD } from "./shared/windowing";
