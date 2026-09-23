@@ -63,14 +63,16 @@ export function Icon({ icon: Glyph, size = 16, label, className, ...rest }: Icon
     if (process.env.NODE_ENV !== "production") throw new Error(`<Icon icon={${name}}> is banned — ${reason}`);
     return null;
   }
+  // Lucide adds aria-hidden only when it sees no aria-* / role / title prop at all, and an
+  // explicit `role={undefined}` counts as one. So name the icon, or hide it — explicitly.
+  const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true as const };
   return (
     <Glyph
       size={iconPx(size)}
       strokeWidth={LUCIDE_STROKE}
-      role={label ? "img" : undefined}
-      aria-label={label}
       focusable="false"
       className={cn("inline-block shrink-0 align-[-0.125em]", className)}
+      {...a11y}
       {...rest}
     />
   );
