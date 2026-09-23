@@ -1,11 +1,13 @@
 // @vitest-environment node
-// OWNER: T3. The handshake and motion.css in a REAL browser (jsdom runs no CSS
-// animations). Headless Chromium loads the actual app/tokens/core.css and
-// src/styles/motion.css plus the <AnimHandshake /> markup, and the Web Animations
-// API reads the CSS animations' timing, so the 1600ms is measured, not assumed.
+// OWNER: T3. The handshake, the revealer and motion.css in a REAL browser (jsdom runs
+// no CSS animations and has no Web Animations API). Headless Chromium loads the actual
+// app/tokens/core.css and src/styles/motion.css plus the <AnimHandshake /> markup; the
+// real markAnimReady() (bundled from src/motion with esbuild) is injected where a test
+// needs the runtime. The Web Animations API reads the CSS animations' timing, so the
+// 1600ms is measured, not assumed.
 //
 // Holds one machine-wide `browser` slot (plan A12, same protocol as scripts/slot.sh).
-// Skips, loudly, if Playwright's Chromium is not installed.
+// Skips, loudly, if Playwright's Chromium (or esbuild, for the runtime tests) is missing.
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
@@ -30,6 +32,32 @@ function stylesheet(): string {
 function documentHtml(body: string): string {
   const handshake = renderToStaticMarkup(createElement(AnimHandshake));
   return `<!doctype html><html><head>${handshake}<style>${stylesheet()}</style></head><body>${body}</body></html>`;
+}
+
+/** The real runtime half of the handshake, as a browser script defining window.__motion. */
+async function runtimeBundle(): Promise<string | null> {
+  try {
+    const esbuild = await import("esbuild");
+    const out = await esbuild.build({
+      stdin: {
+        contents: `export { markAnimReady, animReadyInfo } from "./src/motion/handshake"; export { pendingReveals } from "./src/motion/reveal";`,
+        resolveDir: WEB,
+        loader: "ts",
+      },
+      bundle: true,
+      write: false,
+      format: "iife",
+      globalName: "__motion",
+      platform: "browser",
+      jsx: "automatic",
+      define: { "process.env.NODE_ENV": '"production"' },
+      logLevel: "silent",
+    });
+    return out.outputFiles[0].text;
+  } catch (error) {
+    console.warn("[motion] could not bundle src/motion for the browser; the runtime tests are skipped", error);
+    return null;
+  }
 }
 
 // --- browser slot (scripts/slot.sh protocol) --------------------------------
@@ -86,6 +114,8 @@ async function animations(page: Page, selector: string): Promise<Anim[]> {
   );
 }
 
+const names = async (page: Page, selector: string) => (await animations(page, selector)).map((a) => a.name);
+
 /** A token's computed colour, via a probe element. */
 const tokenColour = (page: Page, token: string) =>
   page.evaluate((t) => {
@@ -98,12 +128,15 @@ const tokenColour = (page: Page, token: string) =>
   }, token);
 
 const style = (page: Page, selector: string, prop: string) => page.$eval(selector, (el, p) => getComputedStyle(el).getPropertyValue(p), prop);
+const attr = (page: Page, selector: string, name: string) => page.$eval(selector, (el, n) => el.getAttribute(n), name);
 
 let release: (() => void) | null = null;
 let browser: Browser | null = null;
+let bundle: string | null = null;
 
 beforeAll(async () => {
   if (!HAS_BROWSER) return;
+  bundle = await runtimeBundle();
   release = await acquireSlot();
   browser = await chromium.launch();
 }, 330_000);
@@ -119,6 +152,14 @@ async function open(body: string, init: Parameters<Browser["newContext"]>[0] = {
   await page.setContent(documentHtml(body));
   return { page, context };
 }
+
+/** Inject the real runtime half (markAnimReady + the revealer). */
+async function withRuntime(page: Page): Promise<void> {
+  await page.addScriptTag({ content: bundle! });
+}
+
+type Ready = { runtime: string | null; at: number; kept: number } | null;
+const markReady = (page: Page) => page.evaluate(() => (window as unknown as { __motion: { markAnimReady(r: string): Ready } }).__motion.markAnimReady("gsap"));
 
 describe.skipIf(!HAS_BROWSER)("the fallback handshake in Chromium", () => {
   it("hides [data-anim] until the force-reveal fires at 1600ms when no runtime loads", async () => {
@@ -153,7 +194,7 @@ describe.skipIf(!HAS_BROWSER)("the fallback handshake in Chromium", () => {
     await context.close();
   }, 15_000);
 
-  it("is disarmed by html.anim-ready: the runtime owns the reveal, and data-anim-in reveals it", async () => {
+  it("is disarmed by html.anim-ready: the timer is gone and data-anim-in reveals it", async () => {
     const { page, context } = await open(`<p id="t" data-anim>content</p>`);
     await page.evaluate(() => document.documentElement.classList.add("anim-ready"));
     expect(await animations(page, "#t")).toEqual([]);
@@ -163,16 +204,6 @@ describe.skipIf(!HAS_BROWSER)("the fallback handshake in Chromium", () => {
     expect(await style(page, "#t", "visibility")).toBe("visible");
     await context.close();
   }, 15_000);
-
-  it("a late runtime (anim-late) keeps force-revealed content visible and static", async () => {
-    const { page, context } = await open(`<p id="t" data-anim class="reveal">content</p>`);
-    await page.$eval("#t", (el) => (el.getAnimations()[0].currentTime = 1700));
-    expect(await style(page, "#t", "visibility")).toBe("visible");
-    await page.evaluate(() => document.documentElement.classList.add("anim-late"));
-    expect(await style(page, "#t", "visibility")).toBe("visible");
-    expect(await animations(page, "#t")).toEqual([]);
-    await context.close();
-  });
 
   it("never hides anything with JavaScript disabled (noscript) or in print", async () => {
     const noJs = await open(`<p id="t" data-anim>content</p>`, { javaScriptEnabled: false });
@@ -185,25 +216,108 @@ describe.skipIf(!HAS_BROWSER)("the fallback handshake in Chromium", () => {
   });
 });
 
+describe.skipIf(!HAS_BROWSER)("markAnimReady and the revealer in Chromium", () => {
+  const page2 = (id: string) => `<p id="${id}" data-anim class="reveal">${id}</p>`;
+  const BELOW = `<div style="height: 250vh"></div>`;
+  // Room after the last element, so it can scroll past the 84% line.
+  const TAIL = `<div style="height: 100vh"></div>`;
+
+  it("on time: in-view content reveals at once, staggered; content below the fold waits for the scroll", async ({ skip }) => {
+    if (!bundle) skip();
+    const { page, context } = await open(`${page2("a")}${page2("b")}${BELOW}${page2("below")}${TAIL}`);
+    await withRuntime(page);
+    const ready = await markReady(page);
+    expect(ready).toMatchObject({ runtime: "gsap", kept: 0 });
+    await page.waitForFunction(() => document.getElementById("b")?.hasAttribute("data-anim-in"));
+    expect([await attr(page, "#a", "data-anim-in"), await attr(page, "#b", "data-anim-in")]).toEqual(["", ""]);
+    expect((await animations(page, "#a"))[0]).toMatchObject({ name: "prg-reveal", delay: 0, duration: 420 });
+    expect((await animations(page, "#b"))[0]).toMatchObject({ name: "prg-reveal", delay: 60 }); // the sibling stagger
+    expect(await style(page, "#below", "visibility")).toBe("hidden");
+    expect(await animations(page, "#below")).toEqual([]); // disarmed: the revealer owns it now
+    await page.$eval("#below", (el) => el.scrollIntoView());
+    await page.waitForFunction(() => document.getElementById("below")?.getAttribute("data-anim-in") === "");
+    expect(await style(page, "#below", "visibility")).toBe("visible");
+    await context.close();
+  });
+
+  it("late: content whose force-reveal fired stays visible and still (static); content mounted since is revealed normally", async ({ skip }) => {
+    if (!bundle) skip();
+    const { page, context } = await open(`${page2("shown")}${BELOW}`);
+    await withRuntime(page);
+    // #shown's timer has fired (the runtime is late) …
+    await page.$eval("#shown", (el, fired) => (el.getAnimations()[0].currentTime = fired), FORCE_REVEAL_MS + 100);
+    expect(await style(page, "#shown", "visibility")).toBe("visible");
+    // … and #later was mounted a moment ago, so its own timer has not.
+    await page.evaluate((tail) => document.body.insertAdjacentHTML("beforeend", `<p id="later" data-anim class="reveal">later</p>${tail}`), TAIL);
+    const ready = await markReady(page);
+    expect(ready?.kept).toBe(1);
+    expect(await attr(page, "#shown", "data-anim-in")).toBe("static");
+    expect(await style(page, "#shown", "visibility")).toBe("visible"); // never flashed back to hidden
+    expect(await animations(page, "#shown")).toEqual([]); // and it does not animate in again
+    expect(await style(page, "#later", "visibility")).toBe("hidden");
+    await page.$eval("#later", (el) => el.scrollIntoView());
+    await page.waitForFunction(() => document.getElementById("later")?.getAttribute("data-anim-in") === "");
+    expect(await names(page, "#later")).toEqual(["prg-reveal"]);
+    await context.close();
+  });
+
+  it("content mounted after the runtime loaded is revealed too", async ({ skip }) => {
+    if (!bundle) skip();
+    const { page, context } = await open(`<main id="m"></main>`);
+    await withRuntime(page);
+    await markReady(page);
+    await page.evaluate(() => document.getElementById("m")!.insertAdjacentHTML("beforeend", `<ul><li id="x" data-anim class="reveal">x</li><li id="y" data-anim class="reveal reveal-rise">y</li></ul>`));
+    await page.waitForFunction(() => document.getElementById("y")?.hasAttribute("data-anim-in"));
+    expect(await names(page, "#x")).toEqual(["prg-reveal"]);
+    expect(await names(page, "#y")).toEqual(["prg-reveal-rise"]);
+    expect(await page.evaluate(() => (window as unknown as { __motion: { pendingReveals(): number } }).__motion.pendingReveals())).toBe(0);
+    await context.close();
+  });
+
+  it("the first runtime decides; a second call changes nothing", async ({ skip }) => {
+    if (!bundle) skip();
+    const { page, context } = await open(page2("a"));
+    await withRuntime(page);
+    expect(await markReady(page)).not.toBeNull();
+    expect(await markReady(page)).toBeNull();
+    expect(await page.evaluate(() => document.documentElement.getAttribute("data-anim-runtime"))).toBe("gsap");
+    await context.close();
+  });
+});
+
 describe.skipIf(!HAS_BROWSER)("motion.css in Chromium", () => {
-  it(".stamp: the colour flips in 0ms whatever else asks for a transition; the scale is 180ms on --ease-snap", async () => {
+  it(".stamp: the colour flips in 0ms whatever else asks for a transition; controlled rest / a / b", async () => {
     const { page, context } = await open(`
       <style>.utility { transition: background-color 120ms, color 120ms; }</style>
-      <span id="s" class="stamp utility" style="transition: color 200ms; background-color: rgb(0, 0, 0)">PROVEN</span>`);
+      <span id="s" class="stamp utility" data-stamp="rest" style="transition: color 200ms; background-color: rgb(0, 0, 0)">PROVEN</span>`);
     expect(await style(page, "#s", "transition-duration")).toBe("0s");
+    expect(await style(page, "#s", "display")).toBe("inline-block"); // a scale needs a box
+    expect(await animations(page, "#s")).toEqual([]); // rest: a page load is not a verdict
     await page.$eval("#s", (el) => ((el as HTMLElement).style.backgroundColor = "rgb(46, 206, 221)"));
     expect(await style(page, "#s", "background-color")).toBe("rgb(46, 206, 221)"); // same frame: no tween
     await page.$eval("#s", (el) => el.setAttribute("data-stamp", "a"));
     expect(await animations(page, "#s")).toEqual([{ name: "prg-stamp-a", delay: 0, duration: 180, fill: "none", easing: "cubic-bezier(0.2, 0, 0, 1)", iterations: 1 }]);
     await page.$eval("#s", (el) => el.setAttribute("data-stamp", "b"));
-    expect((await animations(page, "#s")).map((a) => a.name)).toEqual(["prg-stamp-b"]); // a ↔ b restarts it
+    expect(await names(page, "#s")).toEqual(["prg-stamp-b"]); // a ↔ b restarts it
     await context.close();
   });
 
-  it(".heartbeat ticks on steps(1, end) at the telemetry period and stops when stale", async () => {
+  it(".stamp: declarative, it plays once when the class arrives or the element mounts with it", async () => {
+    const { page, context } = await open(`<span id="chip" class="chip">PROVEN</span><div id="host"></div>`);
+    expect(await animations(page, "#chip")).toEqual([]);
+    await page.$eval("#chip", (el) => el.classList.add("stamp"));
+    expect((await animations(page, "#chip"))[0]).toMatchObject({ name: "prg-stamp", duration: 180, easing: "cubic-bezier(0.2, 0, 0, 1)" });
+    await page.$eval("#host", (el) => (el.innerHTML = `<svg id="dot" class="stamp" width="10" height="10"><circle cx="5" cy="5" r="4"/></svg>`));
+    expect(await names(page, "#dot")).toEqual(["prg-stamp"]); // a re-mount (React key change) stamps
+    await context.close();
+  });
+
+  it(".heartbeat ticks on steps(1, end) at the telemetry period, lags in --marker, and stops when stale", async () => {
     const { page, context } = await open(`
       <span id="live" class="heartbeat" style="--heartbeat-period: 1200ms"></span>
-      <span id="stale" class="heartbeat" data-stale></span>`);
+      <span id="lag" class="heartbeat" data-lagging></span>
+      <span id="stale" class="heartbeat" data-stale></span>
+      <svg width="10" height="10"><circle id="ring" class="heartbeat" cx="5" cy="5" r="4" fill="none" stroke="red"/></svg>`);
     expect(await animations(page, "#live")).toEqual([{ name: "prg-tick", delay: 0, duration: 1200, fill: "none", easing: "steps(1)", iterations: Infinity }]);
     const opacityAt = await page.$eval("#live", (el) => {
       const a = el.getAnimations()[0];
@@ -213,45 +327,66 @@ describe.skipIf(!HAS_BROWSER)("motion.css in Chromium", () => {
       });
     });
     expect(opacityAt).toEqual(["0.35", "0.35", "1", "1", "1"]); // 0.35 → 1 at 12% (144ms)
+    expect(await style(page, "#live", "background-color")).toBe(await tokenColour(page, "--signal"));
+    expect([await style(page, "#live", "width"), await style(page, "#live", "height"), await style(page, "#live", "border-radius")]).toEqual(["6px", "6px", "9999px"]);
+    expect(await names(page, "#lag")).toEqual(["prg-tick"]); // still ticking …
+    expect(await style(page, "#lag", "background-color")).toBe(await tokenColour(page, "--marker")); // … in --marker
+    expect(await style(page, "#lag", "transition-duration")).toBe("0.12s");
     expect(await animations(page, "#stale")).toEqual([]);
     expect(await style(page, "#stale", "opacity")).toBe("1");
     expect(await style(page, "#stale", "background-color")).toBe(await tokenColour(page, "--marker"));
-    expect(await style(page, "#live", "background-color")).toBe(await tokenColour(page, "--signal"));
+    expect(await style(page, "#stale", "transition-duration")).toBe("0s"); // the stale flip is 0ms
+    expect(await names(page, "#ring")).toEqual(["prg-tick"]); // an SVG ring ticks …
+    expect(await style(page, "#ring", "background-color")).toBe("rgba(0, 0, 0, 0)"); // … without the dot's box
     await context.close();
   });
 
-  it(".reveal runs only under html.anim-ready, on --dur-enter, staggered and capped at the 6th item", async () => {
+  it(".reveal runs only under html.anim-ready for data-anim-in=\"\", staggered and capped at the 6th item; \"static\" never animates", async () => {
     const items = Array.from({ length: 8 }, (_, i) => `<li id="r${i}" data-anim class="reveal" style="--reveal-index:${Math.min(i, 5)}">${i}</li>`).join("");
-    const { page, context } = await open(`<ul>${items}</ul><div data-surface="app"><p id="app" data-anim class="reveal">app</p></div><p id="rise" data-anim class="reveal reveal-rise">rise</p>`);
-    await page.evaluate(() => document.querySelectorAll("[data-anim]").forEach((el) => el.setAttribute("data-anim-in", "")));
-    expect((await animations(page, "#r0")).map((a) => a.name)).toEqual(["prg-force-reveal"]); // pending: no reveal animation yet
+    const { page, context } = await open(
+      `<ul>${items}</ul><div data-surface="app"><p id="app" data-anim class="reveal">app</p></div><p id="rise" data-anim class="reveal reveal-rise">rise</p><p id="still" data-anim class="reveal">still</p>`,
+    );
+    await page.evaluate(() => document.querySelectorAll("[data-anim]:not(#still)").forEach((el) => el.setAttribute("data-anim-in", "")));
+    await page.$eval("#still", (el) => el.setAttribute("data-anim-in", "static"));
+    expect(await names(page, "#r0")).toEqual(["prg-force-reveal"]); // pending: no reveal animation yet
     await page.evaluate(() => document.documentElement.classList.add("anim-ready"));
-    const first = await animations(page, "#r0");
-    expect(first).toEqual([{ name: "prg-reveal", delay: 0, duration: 420, fill: "both", easing: "cubic-bezier(0.33, 0, 0.12, 1)", iterations: 1 }]);
+    expect(await animations(page, "#r0")).toEqual([{ name: "prg-reveal", delay: 0, duration: 420, fill: "both", easing: "cubic-bezier(0.33, 0, 0.12, 1)", iterations: 1 }]);
     expect((await animations(page, "#r5"))[0].delay).toBe(300);
     expect((await animations(page, "#r7"))[0].delay).toBe(300); // the cap
     expect((await animations(page, "#app"))[0].duration).toBe(180); // the dashboard's --dur-enter
     expect((await animations(page, "#rise"))[0].name).toBe("prg-reveal-rise");
+    expect(await animations(page, "#still")).toEqual([]);
+    expect(await style(page, "#still", "visibility")).toBe("visible");
     await context.close();
   });
 
-  it(".draw and .scan restart on a ↔ b and rest drawn / hidden", async () => {
+  it(".draw restarts on a ↔ b and rests drawn; .scan travels once on --ease-mass and rests collapsed", async () => {
     const { page, context } = await open(`
       <svg width="100" height="100"><path id="d" class="draw" pathLength="1" d="M0 0 L100 0" stroke="red"/></svg>
-      <i id="scan" class="scan" style="--scan-travel: 400px"></i>`);
+      <i id="scan" class="scan" style="display: block; height: 2px; --scan-travel: 400px"></i>`);
     expect(await animations(page, "#d")).toEqual([]);
     expect(await style(page, "#d", "stroke-dasharray")).toBe("1px");
     expect(await style(page, "#d", "stroke-dashoffset")).toBe("0px"); // rests drawn
     await page.$eval("#d", (el) => el.setAttribute("data-draw", "a"));
     expect((await animations(page, "#d"))[0]).toMatchObject({ name: "prg-draw-a", duration: 420, easing: "cubic-bezier(0.33, 0, 0.12, 1)" });
+    await page.$eval("#d", (el) => el.setAttribute("data-draw", "rest"));
+    expect(await animations(page, "#d")).toEqual([]);
+    expect(await style(page, "#scan", "scale")).toBe("1 0"); // collapsed: the line exists only while it moves
     await page.$eval("#scan", (el) => el.setAttribute("data-scan", "a"));
     expect((await animations(page, "#scan"))[0]).toMatchObject({ name: "prg-scan-a", duration: 1400, easing: "cubic-bezier(0.52, 0, 0.08, 1)" });
+    const mid = await page.$eval("#scan", (el) => {
+      el.getAnimations()[0].currentTime = 700;
+      const cs = getComputedStyle(el);
+      return { scale: cs.scale, opacity: cs.opacity };
+    });
+    expect(mid).toEqual({ scale: "1", opacity: "0.6" });
     await context.close();
   });
 
   it("reduced motion is a designed second state, for BOTH the OS preference and html[data-motion=reduced]", async () => {
     const body = `
       <span id="s" class="stamp" data-stamp="a">PROVEN</span>
+      <span id="s2" class="stamp">PROVEN</span>
       <span id="h" class="heartbeat"></span>
       <svg><path id="d" class="draw" pathLength="1" d="M0 0 L9 0" data-draw="a"/></svg>
       <svg><path id="d2" class="draw" pathLength="1" d="M0 0 L9 0" data-anim data-anim-in/></svg>
@@ -264,11 +399,13 @@ describe.skipIf(!HAS_BROWSER)("motion.css in Chromium", () => {
         if (t === "attribute") document.documentElement.setAttribute("data-motion", "reduced");
       }, trigger);
       expect(await animations(page, "#s"), trigger).toEqual([]); // scale dropped, colour unaffected
+      expect(await animations(page, "#s2"), trigger).toEqual([]);
       expect(await animations(page, "#h"), trigger).toEqual([]);
       expect(await style(page, "#h", "opacity"), trigger).toBe("1"); // static, fully visible
       expect(await animations(page, "#d"), trigger).toEqual([]);
       expect(await animations(page, "#d2"), trigger).toEqual([]);
       expect(await style(page, "#d2", "visibility"), trigger).toBe("visible"); // drawn, complete
+      expect(await style(page, "#d2", "stroke-dashoffset"), trigger).toBe("0px");
       expect(await animations(page, "#scan"), trigger).toEqual([]); // never runs
       expect(await animations(page, "#r"), trigger).toEqual([{ name: "prg-reveal", delay: 120, duration: 120, fill: "both", easing: "cubic-bezier(0.33, 0, 0.12, 1)", iterations: 1 }]);
       await context.close();
