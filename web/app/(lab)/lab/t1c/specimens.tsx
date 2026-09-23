@@ -17,24 +17,29 @@ export function Section({ index, title, note, children }: { index: string; title
 /** A panel on the ink ladder: one rung up, 1px hairline, the milled inset (§3.6). */
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-panel border border-rule-1 bg-ink-1 shadow-[inset_0_1px_0_var(--inset-hi)] ${className}`}>{children}</div>
+    <div className={`relative rounded-panel border border-rule-1 bg-ink-1 shadow-[inset_0_1px_0_var(--inset-hi)] ${className}`}>{children}</div>
   );
 }
+
+// Every size table shares one column grid — a 16rem name column, then 48px per size — so
+// the 12 · 14 · 16 · 20 · 24 columns line up from table to table down the page.
+const NAME_COL = "w-64 min-w-64";
+const SIZE_COL = "w-12 min-w-12";
 
 /** Column heads for a size table: the §6.3 scale. */
 export function SizeHeads({ first, extra = [] }: { first: string; extra?: string[] }) {
   return (
     <tr className="border-b border-rule-1">
-      <th scope="col" className="py-2 pr-6 text-left type-label font-medium text-text-dim">
+      <th scope="col" className={`${NAME_COL} py-2 pr-6 text-left type-label font-medium text-text-dim`}>
         {first}
       </th>
       {ICON_SIZES.map((s) => (
-        <th key={s} scope="col" className="w-12 py-2 text-center type-label font-medium text-text-dim">
+        <th key={s} scope="col" className={`${SIZE_COL} py-2 text-center type-label font-medium text-text-dim`}>
           {s}
         </th>
       ))}
       {extra.map((e) => (
-        <th key={e} scope="col" className="py-2 pl-6 text-left type-label font-medium text-text-dim">
+        <th key={e} scope="col" className="py-2 pl-8 text-left type-label font-medium whitespace-nowrap text-text-dim">
           {e}
         </th>
       ))}
@@ -45,17 +50,17 @@ export function SizeHeads({ first, extra = [] }: { first: string; extra?: string
 /** One row: a name, then the icon at every size on the scale. */
 export function SizeRow({ name, render, extra }: { name: ReactNode; render: (size: (typeof ICON_SIZES)[number]) => ReactNode; extra?: ReactNode[] }) {
   return (
-    <tr className="border-b border-rule-hair">
-      <th scope="row" className="py-2 pr-6 text-left font-normal type-data whitespace-nowrap text-text-body">
+    <tr className="border-b border-rule-hair last:border-b-0">
+      <th scope="row" className={`${NAME_COL} py-2 pr-6 text-left font-normal type-data whitespace-nowrap text-text-body`}>
         {name}
       </th>
       {ICON_SIZES.map((s) => (
-        <td key={s} className="h-12 w-12 text-center align-middle text-text-primary">
+        <td key={s} className={`${SIZE_COL} h-12 text-center align-middle text-text-primary`}>
           {render(s)}
         </td>
       ))}
       {extra?.map((e, i) => (
-        <td key={i} className="py-2 pl-6 align-middle">
+        <td key={i} className="py-2 pl-8 align-middle">
           {e}
         </td>
       ))}

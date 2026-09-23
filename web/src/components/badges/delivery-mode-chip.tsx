@@ -7,7 +7,7 @@
 //   inline_nearest  INLINE NEAREST  rung 2   --marker-text, 1px --marker  a nearby diff line
 //   file_level      FILE LEVEL      rung 3   --marker-text, 1px --marker  a file comment
 //   summary_only    SUMMARY ONLY    rung 4   --marker-text, 1px --marker  the review body table
-//   not_delivered   NOT DELIVERED   no rung  --text-disabled, 1px dotted --rule-2
+//   not_delivered   NOT DELIVERED   no rung  --text-disabled, 1px --rule-2  (the quiet not_attempted style)
 //
 // The ladder glyph shows the rung by POSITION, so the mode reads without colour.
 import type { ComponentProps } from "react";

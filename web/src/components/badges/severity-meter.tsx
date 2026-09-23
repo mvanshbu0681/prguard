@@ -8,8 +8,12 @@
 // Three cues, in order: the FILL COUNT (band rank: info 1 … critical 5), the printed score
 // (always 3 decimals), and — third, redundant — the band colour on the filled segments.
 // Measured: medium vs high is ΔE 3.3 under protanopia, and the ramp's luminance rises then
-// falls, so colour alone cannot carry a band. The band label is --text-body, never the band
-// colour: --sev-critical is --alarm, which is fill-only (R2).
+// falls, so colour alone cannot carry a band.
+//
+// §5.4 type: the score in readout mono (500, tabular, --text-primary), the band label in 11px
+// mono caps --text-dim. The glyph's band letter is --text-body because there it stands in for
+// the missing score; it is never the band colour, since --sev-critical is --alarm and --alarm
+// is fill-only (R2).
 //
 // This is the five-segment band meter. The six-segment weighted contribution bar is
 // <ContributionBar> (track T5), a different component.
@@ -20,8 +24,11 @@ import { BAND_LETTER, SEVERITY_BANDS, bandRank, chipLabel, formatScore } from ".
 import { SEVERITY_FILL, STAMP_CLASS } from "./spec";
 import { useStamp } from "./use-stamp";
 
-/** Segment geometry: 3 × 9px sitting on the text baseline inline; 10 × 10px in the glyph. Gap 2px. */
-const SEGMENT = { inline: "h-[9px] w-[3px]", glyph: "size-[10px]" } as const;
+/**
+ * Segment geometry, whole pixels only: 4 × 9px inline (9px is the cap height of 12.5px data
+ * text, and §5.4's 3px is a floor), 10 × 10px in the glyph (58 × 10 for five). Gap 2px.
+ */
+const SEGMENT = { inline: "h-[9px] w-[4px]", glyph: "size-[10px]" } as const;
 
 // Forced colors paints every background as Canvas, which would erase the fill count — the
 // one cue that must survive. Filled segments become solid CanvasText, empty ones an outline.
@@ -59,7 +66,7 @@ export function SeverityMeter({ score, band, density = "inline", className, ...r
       {...rest}
     >
       {density === "inline" ? (
-        <span data-slot="severity-score" className="font-mono text-text-primary tabular-nums">
+        <span data-slot="severity-score" className="font-mono font-medium text-text-primary tabular-nums">
           {reading}
         </span>
       ) : null}
@@ -79,7 +86,8 @@ export function SeverityMeter({ score, band, density = "inline", className, ...r
           );
         })}
       </span>
-      <span data-slot="severity-band" className="type-badge text-text-body">
+      {/* -me cancels the label's trailing +0.12em, so the meter's box ends at the last letter */}
+      <span data-slot="severity-band" className={cn("type-label -me-[0.12em]", density === "inline" ? "text-text-dim" : "text-text-body")}>
         {density === "inline" ? chipLabel(band) : BAND_LETTER[band]}
       </span>
     </span>

@@ -11,7 +11,11 @@
 //
 // Five SHAPES, not five colours, so the state survives greyscale and forced-colors mode
 // (every shape is drawn in currentColor, which forced colors maps to CanvasText).
-// Connectors between stations are <StageRail>'s (track T7); this is the node alone.
+// Connectors between stations are <StageRail>'s (track T7); this is the node alone. The root
+// is an <svg>, so a rail drawn as one SVG can nest it (x / y) as well as HTML can inline it.
+//
+// The stamp goes on an inner <g> with transform-box: fill-box, never on the root <svg>
+// (§6.4 rule 4: Safari mis-handles transforms on the outermost svg).
 import type { CSSProperties, SVGProps } from "react";
 import type { StageState } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
@@ -57,7 +61,6 @@ export function StageDot({ state, size = 10, label, heartbeatMs, className, styl
   const beat = state === "running" && heartbeatMs ? ({ "--heartbeat-period": `${heartbeatMs}ms` } as CSSProperties) : undefined;
   return (
     <svg
-      key={stamps}
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${size} ${size}`}
       width={size}
@@ -69,11 +72,13 @@ export function StageDot({ state, size = 10, label, heartbeatMs, className, styl
       data-slot="stage-dot"
       data-state={state}
       data-shape={STAGE_DOT_SHAPE[state]}
-      className={cn("inline-block shrink-0 transition-none", STAGE_DOT_COLOR[state], stamps > 0 && STAMP_CLASS, className)}
+      className={cn("inline-block shrink-0 overflow-visible transition-none", STAGE_DOT_COLOR[state], className)}
       style={beat ? { ...beat, ...style } : style}
       {...rest}
     >
-      {shape(state, size)}
+      <g key={stamps} data-slot="stage-dot-stamp" className={cn("origin-center [transform-box:fill-box]", stamps > 0 && STAMP_CLASS)}>
+        {shape(state, size)}
+      </g>
     </svg>
   );
 }

@@ -21,8 +21,9 @@ const advanceAll = (c: Counts): Counts => ({
   band: c.band + 1,
 });
 
+// Lab-only control (t1b owns the real Button): one ink rung on hover, one more on press, no movement.
 const BUTTON =
-  "inline-flex h-8 shrink-0 items-center rounded-data border border-rule-2 bg-ink-2 px-4 type-label text-text-body hover:border-rule-3 hover:bg-ink-3 active:translate-y-[0.5px]";
+  "inline-flex h-8 shrink-0 items-center rounded-data border border-rule-2 bg-ink-2 px-4 type-label text-text-body hover:border-rule-3 hover:bg-ink-3 active:bg-ink-4";
 
 export function StampDemo() {
   const [n, setN] = useState<Counts>(ZERO);

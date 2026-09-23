@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { LedgerGlyph, type GateGlyphState, type Rung } from "@/components/icons/chip-glyphs";
 import { ProofMark } from "@/components/icons/marks";
 import type { DeliveryMode, FindingStatus, ProofStatus, SeverityBand, StageState } from "@/lib/contracts";
+import { chipLabel } from "./format";
 
 /* ------------------------------------------------------------------------------------
    The chip base — docs/design/02-design-system.md §5.4
@@ -20,9 +21,11 @@ import type { DeliveryMode, FindingStatus, ProofStatus, SeverityBand, StageState
  * 20px tall (never less), 2px radius, 6px padding-x, a 1px border on every state
  * (transparent where the state has none, so a flip never shifts layout), 11px Google Sans
  * Code 600 UPPERCASE +0.08em, 12px leading glyph, 4px gap. `transition-none`: THE 0ms RULE.
+ * `relative` makes the chip the containing block of its visually hidden prefix, so a chip
+ * inside a horizontal scroller can never widen the page.
  */
 export const CHIP_BASE =
-  "inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded-data border px-1.5 type-badge transition-none";
+  "relative inline-flex h-5 shrink-0 items-center gap-1 whitespace-nowrap rounded-data border px-1.5 type-badge transition-none";
 
 /** Pulls the label's trailing +0.08em letter-space back in, so it sits optically centred. */
 export const CHIP_LABEL = "-me-[0.08em]";
@@ -34,23 +37,26 @@ export const STAMP_CLASS = "stamp";
    Proof — §1.7
    ------------------------------------------------------------------------------------ */
 
+/** "Nothing happened here": transparent, 1px --rule-2, --text-disabled. An explicit token, never opacity (R4). */
 const QUIET = "bg-proof-not-attempted-bg text-proof-not-attempted-fg border-proof-not-attempted-border";
 
+// Labels are the value in 11px mono caps (brand-gaps §D): `not_attempted` → NOT ATTEMPTED.
 export const PROOF_CHIP: Record<ProofStatus, { label: string; className: string; strike?: true; caption?: string }> = {
-  proven: { label: "PROVEN", className: "bg-proof-proven-bg text-proof-proven-fg border-proof-proven-border" },
+  proven: { label: chipLabel("proven"), className: "bg-proof-proven-bg text-proof-proven-fg border-proof-proven-border" },
   disproven: {
-    label: "DISPROVEN",
+    label: chipLabel("disproven"),
     className: "bg-proof-disproven-bg text-proof-disproven-fg border-proof-disproven-border",
     strike: true,
     caption: "refuted by execution",
   },
   inconclusive: {
-    label: "INCONCLUSIVE",
+    label: chipLabel("inconclusive"),
     className: "bg-proof-inconclusive-bg text-proof-inconclusive-fg border-dashed border-proof-inconclusive-border",
   },
-  not_attempted: { label: "NOT ATTEMPTED", className: QUIET },
-  not_applicable: { label: "NOT APPLICABLE", className: QUIET },
-  skipped_no_env: { label: "SKIPPED · NO ENV", className: QUIET },
+  not_attempted: { label: chipLabel("not_attempted"), className: QUIET },
+  // §1.7 has four rows; the API has six. These two wear the not_attempted style with their own label and vial.
+  not_applicable: { label: chipLabel("not_applicable"), className: QUIET },
+  skipped_no_env: { label: chipLabel("skipped_no_env"), className: QUIET },
 };
 
 /* ------------------------------------------------------------------------------------
@@ -166,10 +172,12 @@ export const STAGE_DOT_SHAPE: Record<StageState, "ring" | "ring-dot" | "disc" | 
 
 const FALLBACK = "bg-transparent text-marker-text border-marker";
 
+// not_delivered is the backend's default mode (nothing was posted, e.g. a suppressed or
+// dropped finding), not an error: it wears the same quiet treatment as not_attempted.
 export const DELIVERY_MODE: Record<DeliveryMode, { rung: Rung | null; className: string }> = {
   inline_exact: { rung: 0, className: "bg-transparent text-text-body border-rule-2" },
   inline_nearest: { rung: 1, className: FALLBACK },
   file_level: { rung: 2, className: FALLBACK },
   summary_only: { rung: 3, className: FALLBACK },
-  not_delivered: { rung: null, className: "bg-transparent text-text-disabled border-dotted border-rule-2" },
+  not_delivered: { rung: null, className: "bg-transparent text-text-disabled border-rule-2" },
 };

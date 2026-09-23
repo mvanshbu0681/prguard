@@ -11,9 +11,10 @@
 //                      No green, no checkmark: an instrument at rest has a needle at zero.
 //   null     RUNNING   the gate is not decided yet; neutral styling
 //
-// Every state reserves the same border widths (transparent where unused), so the 0ms colour
-// flip never moves a pixel of layout. The glyph (■ ○ — ◉) keeps the state legible without
-// colour. The failure square is --alarm as a fill, the one place a chip may use it.
+// Every state keeps the same box: a 1px border on all four sides (transparent where the state
+// has none), and BLOCKED's 2px top rule takes its extra pixel out of the padding, so the 0ms
+// colour flip never moves a pixel of layout. The glyph (■ ○ — ◉) keeps the state legible
+// without colour. The failure square is --alarm as a fill, the one place a chip may use it.
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { GateGlyph, type GateGlyphState } from "@/components/icons/chip-glyphs";
 import type { GateConclusion } from "@/lib/contracts";
@@ -87,14 +88,20 @@ export function GateBlock({ conclusion, blocking, delivery, reason, detail, anno
     );
   }
 
+  // Only BLOCKED carries the 2px --alarm top rule. It takes its extra pixel from the top
+  // padding, so the four states share one box and the flip never moves the content.
+  const failure = state === "failure";
+  const pad = line ? (failure ? "border-t-2 pt-[11px] pb-3" : "py-3") : failure ? "border-t-2 pt-[7px] pb-2" : "py-2";
+
   return (
     <div data-slot="gate-block" data-conclusion={state} className={cn("relative w-[280px] max-w-full", className)} {...rest}>
       <div
         key={stamps}
         data-slot="gate-block-frame"
         className={cn(
-          "flex flex-col justify-center gap-1 rounded-data border border-t-2 px-3 transition-none",
-          line ? "min-h-16 py-3" : "min-h-11 py-2",
+          "flex flex-col justify-center gap-1 rounded-data border px-3 transition-none",
+          line ? "min-h-16" : "min-h-11",
+          pad,
           spec.block,
           stamps > 0 && STAMP_CLASS,
         )}

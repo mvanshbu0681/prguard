@@ -130,10 +130,14 @@ export function GlyphSvg({ char, speak, glyph, title, className, children, ...re
     </svg>
   );
   if (!speak || title) return svg;
+  // The inline `relative` wrapper is the containing block for the visually hidden
+  // character. Without it the absolutely positioned span resolves against the nearest
+  // positioned ancestor, which can sit outside a horizontal scroller, and a glyph deep
+  // in a scrolled table would widen the whole page.
   return (
-    <>
+    <span data-slot="glyph" className="relative">
       {svg}
       <span className="sr-only">{char}</span>
-    </>
+    </span>
   );
 }

@@ -23,6 +23,12 @@ import type { ReactNode } from "react";
 import { Panel, Specimen } from "./specimens";
 import { DELIVERY_MODES, FINDING_STATUSES, GATE_READINGS, PROOF_STATUSES, STAGE_STATES } from "./states";
 
+/**
+ * The API's own gate.reason for a neutral gate (backend `routes_reviews._gate_reason`),
+ * verbatim, so the specimen wraps the way the real block will.
+ */
+const NEUTRAL_REASON = "Nothing could be executed in this run, so nothing is claimed or blocked.";
+
 /** 0.000, then every threshold and the score one step below it. */
 export function specimenScores(): number[] {
   const out = [0];
@@ -89,7 +95,7 @@ export function BadgeSheet({ idPrefix }: { idPrefix: string }) {
       <Row title="gate · block">
         <GateBlock conclusion="failure" blocking={1} delivery="check_run" announce={false} />
         <GateBlock conclusion="success" blocking={0} delivery="check_run" announce={false} />
-        <GateBlock conclusion="neutral" reason="no sandbox available — nothing could be proven" delivery="commit_status" announce={false} />
+        <GateBlock conclusion="neutral" reason={NEUTRAL_REASON} delivery="commit_status" announce={false} />
         <GateBlock conclusion={null} announce={false} />
       </Row>
 

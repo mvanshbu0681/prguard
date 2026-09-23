@@ -44,7 +44,7 @@ type Box = { x: number; y: number; w: number; h: number };
 type VialGrid = {
   cap: Box;
   body: string;
-  /** the uncapped vessel: the walls end in a rim as wide as the missing cap */
+  /** the uncapped vessel: the walls end in a lip exactly as wide as the missing cap's overhang */
   open: string;
   dash: string;
   full: Box;
@@ -52,6 +52,10 @@ type VialGrid = {
   strike: string;
 };
 
+// The cap overhangs the tube's outer wall by about one stroke on every grid (1px on 12,
+// 0.875 on 16, 1.75 on 24 — the whole-pixel edge nearest to the 12px proportion), so the
+// silhouette reads as a capped sample vial and not as a T. The sample stops one or two
+// units under the cap: that edge is the fill line.
 const VIAL_GRID: Record<12 | 16 | 24, VialGrid> = {
   12: {
     cap: { x: 2, y: 1, w: 8, h: 2 },
@@ -63,18 +67,18 @@ const VIAL_GRID: Record<12 | 16 | 24, VialGrid> = {
     strike: "M1.5 11.5L10.5 0.5",
   },
   16: {
-    cap: { x: 3, y: 1, w: 10, h: 3 },
+    cap: { x: 4, y: 1, w: 8, h: 3 },
     body: "M5.5 4V14.5H10.5V4",
-    open: "M3 4.5H5.5V14.5H10.5V4.5H13",
+    open: "M4 4.5H5.5V14.5H10.5V4.5H12",
     dash: "2 1.5",
     full: { x: 6, y: 6, w: 4, h: 8 },
     half: { x: 6, y: 10, w: 4, h: 4 },
     strike: "M2 15L14 1",
   },
   24: {
-    cap: { x: 5, y: 2, w: 14, h: 4 },
+    cap: { x: 6, y: 2, w: 12, h: 4 },
     body: "M8.5 6V21.5H15.5V6",
-    open: "M5 6.5H8.5V21.5H15.5V6.5H19",
+    open: "M6 6.5H8.5V21.5H15.5V6.5H18",
     dash: "3 2",
     full: { x: 9, y: 9, w: 6, h: 12 },
     half: { x: 9, y: 15, w: 6, h: 6 },
