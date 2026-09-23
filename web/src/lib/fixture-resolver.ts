@@ -905,7 +905,8 @@ export function createFixtureResolver(options: FixtureResolverOptions = {}): Fix
 
       const typedScope = scope as SuppressionCreated["scope"];
       const actor = actorOf(request);
-      const createdAt = toIsoSeconds(now());
+      // utcnow(), rendered like schemas._iso_z: microseconds when non-zero, then Z.
+      const createdAt = isoZ(now());
       const expiresMs = expiresRaw === null ? null : Date.parse(expiresRaw as string);
       // _match_path_for: pattern keeps the supplied glob, file records the finding's own path.
       const matchPath = typedScope === "pattern" ? (matchRaw as string) : typedScope === "file" ? finding.location.file_path : null;
@@ -1002,7 +1003,7 @@ export function createFixtureResolver(options: FixtureResolverOptions = {}): Fix
       if (!row) fail("SUPPRESSION_NOT_FOUND", { suppression_id: id });
       // Idempotent: a revoked row is returned as it is, and no second event is written.
       if (row.revoked_at) return [200, row];
-      const revokedAt = toIsoSeconds(now());
+      const revokedAt = isoZ(now());
       const own = overlay.suppressions.findIndex((r) => r.suppression_id === id);
       if (own >= 0) overlay.suppressions[own] = { ...overlay.suppressions[own]!, active: false, revoked_at: revokedAt };
       else overlay.revocations.set(id, revokedAt);

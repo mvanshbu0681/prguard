@@ -212,4 +212,25 @@ describe("the run list's live fallback (NEXT_PUBLIC_FIXTURES=0)", () => {
     expect(list.totals.matched).toBe(1);
     expect(ext.getRememberedReviews()).toHaveLength(2);
   });
+
+  it("through a QueryClient, a finished run is read once per 30s, its result once per session", async () => {
+    vi.stubEnv("NEXT_PUBLIC_FIXTURES", "0");
+    vi.resetModules();
+    const ext = await import("@/api/ext");
+    const transport = await import("@/api/transport");
+    const { QueryClient } = await import("@tanstack/react-query");
+    const { resolver } = testResolver();
+    const requested: string[] = [];
+    transport.setTransportBase(async (input) => {
+      requested.push(new URL((input as Request).url).pathname);
+      return resolver(input as Request);
+    });
+    const id = FINDINGS[0]!.review_id;
+    ext.rememberCreatedReview({ review_id: id, status: "queued", trigger: "api", repository: { owner: "acme", name: "checkout-service" }, pull_request: { number: 4821, head_sha: null }, poll_url: "", result_url: "", created_at: "2026-09-19T14:00:00Z" });
+    const queryClient = new QueryClient();
+    await ext.listReviews({ queryClient });
+    await ext.listReviews({ queryClient });
+    expect(requested).toEqual([`/v1/reviews/${id}`, `/v1/reviews/${id}/result`]);
+    queryClient.clear();
+  });
 });

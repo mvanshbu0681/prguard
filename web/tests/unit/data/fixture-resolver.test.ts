@@ -191,7 +191,7 @@ describe("POST /v1/findings/{id}/suppress — validation and the overlay", () =>
       source: "human_api",
       expires_at: "2027-03-01T00:00:00Z", // normalised to UTC, rendered with Z
       revoked_at: null,
-      created_at: "2026-09-23T10:00:00Z",
+      created_at: "2026-09-23T10:00:00.456000Z", // utcnow(), rendered as schemas._iso_z renders it
       // F1's fingerprint also occurs in REVIEW_B (F4).
       affected_findings: { this_run: 1, historical: 1 },
     });
@@ -226,7 +226,7 @@ describe("POST /v1/findings/{id}/suppress — validation and the overlay", () =>
       prev_hash: HASH(4),
       event_hash: PENDING_EVENT_HASH,
       tenant_id: DEMO_IDS.tenant_id,
-      created_at: "2026-09-23T10:00:00Z",
+      created_at: "2026-09-23T10:00:00.456000Z",
     });
     // routes_suppressions.py's payload, plus the request id audit.append() echoes (spec §6.0).
     expect(event.payload).toEqual({

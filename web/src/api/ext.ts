@@ -12,7 +12,7 @@
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { FIXTURES } from "@/lib/env";
 import { client } from "./client.gen";
-import { getReviewResultQueryKey } from "./@tanstack/react-query.gen";
+import { getReviewResultQueryKey, getReviewStatusQueryKey } from "./@tanstack/react-query.gen";
 import { decodeCursor, encodeCursor, keysetPage } from "./cursor";
 import { ApiError, isApiError } from "./errors";
 import { getReviewResult, getReviewStatus } from "./sdk.gen";
@@ -158,10 +158,21 @@ function toListItem(accepted: ReviewAccepted, status: ReviewStatus, result: Revi
   };
 }
 
+/** A finished run's status only moves when a suppression changes its counts: re-read it at most this often. */
+const TERMINAL_STATUS_STALE_MS = 30_000;
+
 async function readRun(accepted: ReviewAccepted, signal: AbortSignal | undefined, queryClient: QueryClient | undefined): Promise<ReviewListItem | null> {
   let status: ReviewStatus;
+  const fetchStatus = async () => (await getReviewStatus({ path: { review_id: accepted.review_id }, signal, throwOnError: true })).data;
   try {
-    status = (await getReviewStatus({ path: { review_id: accepted.review_id }, signal, throwOnError: true })).data;
+    // Shared with useReviewStatus through the query cache: a live run is always re-read, a finished one every 30s.
+    status = queryClient
+      ? await queryClient.fetchQuery({
+          queryKey: getReviewStatusQueryKey({ path: { review_id: accepted.review_id } }),
+          queryFn: fetchStatus,
+          staleTime: (query) => (TERMINAL.has((query.state.data as ReviewStatus | undefined)?.status ?? "queued") ? TERMINAL_STATUS_STALE_MS : 0),
+        })
+      : await fetchStatus();
   } catch (error) {
     if (isApiError(error) && error.status === 404) return null; // the run is gone from the backend
     throw error;
