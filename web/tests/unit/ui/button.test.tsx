@@ -1,7 +1,7 @@
 // OWNER: T1b (wave 1). Design §5.1, motion §4.1.1 — and the brief's test:
 // "Button loading renders no spinner".
 import "./dom-polyfills";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactElement } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -80,6 +80,26 @@ describe("Button loading renders no spinner", () => {
     );
     await userEvent.click(screen.getByRole("button"));
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("adds no event handler of its own, so a Server Component can render it", () => {
+    // Called as a function it returns the element it would render: its props are what
+    // RSC would have to serialise. A function prop there is a render-time error.
+    const rest = Button({ children: "RUN A REVIEW" }) as ReactElement<Record<string, unknown>>;
+    expect(Object.values(rest.props).filter((v) => typeof v === "function")).toEqual([]);
+    const onClick = () => undefined;
+    const loading = Button({ children: "SUPPRESS", loading: true, type: "submit", onClick }) as ReactElement<Record<string, unknown>>;
+    expect(loading.props.onClick).toBeUndefined();
+    expect(loading.props.type).toBe("button");
+    const disabled = Button({ children: "REVOKE", "aria-disabled": true, onClick }) as ReactElement<Record<string, unknown>>;
+    expect(disabled.props.onClick).toBeUndefined();
+    const live = Button({ children: "RUN", type: "submit", onClick }) as ReactElement<Record<string, unknown>>;
+    expect(live.props.onClick).toBe(onClick);
+    expect(live.props.type).toBe("submit");
+  });
+
+  it("keeps an inert link from taking the pointer", () => {
+    expect(declValue(CSS, 'a.ui-btn:is([data-loading], [aria-disabled="true"])', "pointer-events")).toBe("none");
   });
 
   it("the toaster's loading toast uses the same ellipsis, not sonner's spinner", async () => {

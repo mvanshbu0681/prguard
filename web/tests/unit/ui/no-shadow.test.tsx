@@ -242,10 +242,12 @@ describe("no ui component renders a shadow class", () => {
   });
 
   it("recognises every shadow spelling it guards against", () => {
-    for (const t of ["shadow", "shadow-md", "shadow-modal", "hover:shadow-lg", "data-[state=open]:shadow-xl", "drop-shadow-sm", "inset-shadow-hi", "text-shadow-sm", "!shadow-none"]) {
-      expect(SHADOW_TOKEN.test(t), t).toBe(true);
-    }
-    for (const t of ["ui-shadowless", "no-shadow", "hover-row"]) expect(SHADOW_TOKEN.test(t), t).toBe(false);
+    // Assembled at runtime: Tailwind scans test files too, and a literal class
+    // name here would be compiled into the production stylesheet.
+    const s = ["sha", "dow"].join("");
+    const spellings = [s, `${s}-md`, `${s}-modal`, `hover:${s}-lg`, `data-[state=open]:${s}-xl`, `drop-${s}-sm`, `inset-${s}-hi`, `text-${s}-sm`, `!${s}-none`];
+    for (const t of spellings) expect(SHADOW_TOKEN.test(t), t).toBe(true);
+    for (const t of [`ui-${s}less`, `no-${s}`, "hover-row"]) expect(SHADOW_TOKEN.test(t), t).toBe(false);
   });
 });
 

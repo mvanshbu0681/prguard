@@ -90,26 +90,20 @@ export interface ButtonProps extends React.ComponentProps<"button">, Omit<Button
   loading?: boolean;
 }
 
-function Button({ className, variant, size, asChild = false, loading = false, children, onClick, ...props }: ButtonProps) {
+function Button({ className, variant, size, asChild = false, loading = false, children, type, onClick, ...props }: ButtonProps) {
   const v = resolveButtonVariant(variant);
   const s = resolveButtonSize(size);
   const Comp = asChild ? Slot.Root : "button";
   const inert = loading || props["aria-disabled"] === true || props["aria-disabled"] === "true";
 
-  // aria-disabled (not `disabled`) while loading, so focus stays on the control
-  // the user just pressed. The click — including a form's implicit submit — is
-  // swallowed here instead.
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (inert) {
-      event.preventDefault();
-      return;
-    }
-    onClick?.(event);
-  };
-
+  // Inert (loading or aria-disabled) keeps focus on the control the user just
+  // pressed — aria-disabled, never `disabled` — and does nothing: the caller's
+  // click handler is dropped and a native button stops being a submit button.
+  // Button adds no handler of its own, so a Server Component can render one.
   return (
     <Comp
       {...props}
+      type={asChild ? undefined : inert ? "button" : type}
       data-slot="button"
       data-variant={v}
       data-size={s}
@@ -117,7 +111,7 @@ function Button({ className, variant, size, asChild = false, loading = false, ch
       aria-busy={loading || undefined}
       aria-disabled={loading ? true : props["aria-disabled"]}
       className={buttonVariants({ variant: v, size: s, className })}
-      onClick={handleClick}
+      onClick={inert ? undefined : onClick}
     >
       {asChild ? <Slot.Slottable>{children}</Slot.Slottable> : children}
       {loading ? <LoadingEllipsis data-slot="button-ellipsis" className="ui-btn__ellipsis" /> : null}

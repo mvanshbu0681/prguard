@@ -468,6 +468,11 @@
     color: transparent;
     cursor: default;
   }
+  /* A native inert button drops its click handler and its submit type (button.tsx);
+     an inert link (asChild) cannot drop its href, so it stops taking the pointer. */
+  a.ui-btn:is([data-loading], [aria-disabled="true"]) {
+    pointer-events: none;
+  }
   .ui-btn__ellipsis {
     position: absolute;
     inset: 0;
