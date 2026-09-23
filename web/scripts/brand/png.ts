@@ -5,7 +5,7 @@
 // into a pixel buffer and encoded as a true 32-bit RGBA PNG — which is what an
 // ICO's PNG entries are specified to be, and what a browser screenshot will not
 // give you for an image with no transparent pixels.
-import { crc32, deflateSync } from 'node:zlib';
+import { crc32, deflateSync, inflateSync } from 'node:zlib';
 
 export interface PixelRect {
   x: number;
@@ -81,4 +81,83 @@ export function encodePng(width: number, height: number, rgba: Uint8Array): Uint
     at += p.length;
   }
   return out;
+}
+
+export interface DecodedPng {
+  width: number;
+  height: number;
+  /** RGBA, 8 bits per channel, row-major (opaque formats get alpha 255). */
+  rgba: Uint8Array;
+  /** The file's own colour type: 2 = RGB, 6 = RGBA. */
+  colorType: number;
+}
+
+/**
+ * Decode an 8-bit, non-interlaced RGB or RGBA PNG (what encodePng writes and
+ * what Chromium's screenshots are). The tests use it to check the committed
+ * rasters pixel by pixel. Throws on anything else.
+ */
+export function decodePng(png: Uint8Array): DecodedPng {
+  const view = new DataView(png.buffer, png.byteOffset, png.byteLength);
+  const signature = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (!signature.every((b, i) => png[i] === b)) throw new Error('png: bad signature');
+  let at = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = -1;
+  const idat: Uint8Array[] = [];
+  while (at < png.length) {
+    const length = view.getUint32(at);
+    const type = String.fromCharCode(png[at + 4], png[at + 5], png[at + 6], png[at + 7]);
+    const data = png.subarray(at + 8, at + 8 + length);
+    if (type === 'IHDR') {
+      width = view.getUint32(at + 8);
+      height = view.getUint32(at + 12);
+      colorType = data[9];
+      if (data[8] !== 8 || (colorType !== 2 && colorType !== 6) || data[12] !== 0) {
+        throw new Error(`png: unsupported format (depth ${data[8]}, colour type ${colorType}, interlace ${data[12]})`);
+      }
+    } else if (type === 'IDAT') {
+      idat.push(data);
+    } else if (type === 'IEND') {
+      break;
+    }
+    at += 12 + length;
+  }
+  const channels = colorType === 6 ? 4 : 3;
+  const stride = width * channels;
+  const raw = inflateSync(Buffer.concat(idat));
+  const pixels = new Uint8Array(height * stride);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const line = raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1));
+    const row = pixels.subarray(y * stride, (y + 1) * stride);
+    const prev = y > 0 ? pixels.subarray((y - 1) * stride, y * stride) : null;
+    for (let x = 0; x < stride; x++) {
+      const a = x >= channels ? row[x - channels] : 0;
+      const b = prev ? prev[x] : 0;
+      const c = prev && x >= channels ? prev[x - channels] : 0;
+      let predictor = 0;
+      if (filter === 1) predictor = a;
+      else if (filter === 2) predictor = b;
+      else if (filter === 3) predictor = (a + b) >> 1;
+      else if (filter === 4) {
+        const p = a + b - c;
+        const pa = Math.abs(p - a);
+        const pb = Math.abs(p - b);
+        const pc = Math.abs(p - c);
+        predictor = pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      } else if (filter !== 0) throw new Error(`png: unknown filter ${filter}`);
+      row[x] = (line[x] + predictor) & 0xff;
+    }
+  }
+  if (channels === 4) return { width, height, rgba: pixels, colorType };
+  const rgba = new Uint8Array(width * height * 4);
+  for (let i = 0, j = 0; i < pixels.length; i += 3, j += 4) {
+    rgba[j] = pixels[i];
+    rgba[j + 1] = pixels[i + 1];
+    rgba[j + 2] = pixels[i + 2];
+    rgba[j + 3] = 255;
+  }
+  return { width, height, rgba, colorType };
 }
