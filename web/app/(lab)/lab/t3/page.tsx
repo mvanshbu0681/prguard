@@ -14,7 +14,7 @@ import type { BenchIds } from "./bench";
 import { DrawDemo } from "./draw-demo";
 import { HandshakeProbes } from "./handshake-demo";
 import { HeartbeatDemo } from "./heartbeat-demo";
-import { Kbd, LabSection } from "./lab-ui";
+import { C, Kbd, LabSection, U } from "./lab-ui";
 import { parseMode } from "./modes";
 import { MotionPanel } from "./panel";
 import { RevealDemo } from "./reveal-demo";
@@ -49,9 +49,9 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
         <p className="type-label text-text-dim">/ lab — t3 · motion substrate</p>
         <h1 className="mt-3 type-display-h3 text-text-primary md:type-display-h2">Motion substrate</h1>
         <p className="mt-3 max-w-(--measure-body) type-body text-text-body">
-          The primitives every animated surface uses: tokens held equal to the stylesheet, the fallback handshake, useReplay on GSAP,
-          useSequence without an engine, and the CSS helpers. Readouts are measured in this browser. Press <Kbd>P</Kbd> to replay the bench
-          and <Kbd>S</Kbd> to replay the stations.
+          The primitives every animated surface uses: tokens held equal to the stylesheet, the fallback handshake, <C>useReplay</C> on GSAP,{" "}
+          <C>useSequence</C> without an engine, and the CSS helpers. Readouts are measured in this browser. Press <Kbd>P</Kbd> to replay the
+          bench and <Kbd>S</Kbd> to replay the stations.
         </p>
         <div className="mt-6">
           <MotionPanel mode={mode} />
@@ -62,7 +62,13 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
         id="handshake"
         index="01"
         title="Handshake"
-        note={`[data-anim] content is hidden by an inline style in <head> and force-revealed at ${HANDSHAKE.forceRevealMs}ms, unless a runtime loads and runs a frame first. A runtime that arrives late keeps what is already visible exactly as it is. Each runtime link above is a full page load.`}
+        note={
+          <>
+            <C>[data-anim]</C> content is hidden by an inline style in <C>{"<head>"}</C> and force-revealed at {HANDSHAKE.forceRevealMs}ms, unless a
+            runtime loads and runs a frame first. A runtime that arrives late keeps what is already visible exactly as it is. Each runtime
+            link above is a full page load.
+          </>
+        }
       >
         <HandshakeProbes />
       </LabSection>
@@ -70,7 +76,11 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
       <LabSection
         id="replay"
         index="02"
-        title="useReplay · P"
+        title={
+          <>
+            <U>useReplay</U> · P
+          </>
+        }
         note="A paused GSAP timeline, built on mount and parked on its last frame, so the server-rendered bench is the end state. P restarts it from zero and it lands on the same frame every time. At 2200ms the chip changes colour in 0ms; only the 180ms scale moves. Then it holds for 4000ms."
       >
         <ReplaySlot mode={mode} ids={ids} />
@@ -79,8 +89,17 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
       <LabSection
         id="stamp"
         index="03"
-        title="The 0ms flip"
-        note={`.stamp carries no transition at all, whatever a utility asks for. The only motion is scale 1.045 to 1 over ${DUR.state}ms on --ease-snap. Controlled: useStamp drives data-stamp. Declarative: the element re-mounts with the class.`}
+        title={
+          <>
+            The <U>0ms</U> flip
+          </>
+        }
+        note={
+          <>
+            <C>.stamp</C> carries no transition at all, whatever a utility asks for. The only motion is scale 1.045 to 1 over {DUR.state}ms on{" "}
+            <C>--ease-snap</C>. Controlled: <C>useStamp</C> drives <C>data-stamp</C>. Declarative: the element re-mounts with the class.
+          </>
+        }
       >
         <StampDemo />
       </LabSection>
@@ -89,7 +108,12 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
         id="heartbeat"
         index="04"
         title="Heartbeat"
-        note="The only loop in the product. It ticks at the telemetry period on steps(1, end), turns --marker after 10s of silence and stops after 20s. The period is written on the dot, never on :root."
+        note={
+          <>
+            The only loop in the product. It ticks at the telemetry period on <C>steps(1, end)</C>, turns <C>--marker</C> after 10s of silence and
+            stops after 20s. The period is written on the dot, never on <C>:root</C>.
+          </>
+        }
       >
         <HeartbeatDemo />
       </LabSection>
@@ -98,20 +122,45 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
         id="reveal"
         index="05"
         title="Reveal"
-        note={`Mark an element data-anim with the class reveal and nothing else: one revealer per document shows it when its top crosses 84% of the viewport, ${STAGGER.sibling}ms apart within a batch, capped at the ${STAGGER.cap}th item.`}
+        note={
+          <>
+            Mark an element <C>data-anim</C> with the class <C>reveal</C> and nothing else: one revealer per document shows it when its top
+            crosses 84% of the viewport, {STAGGER.sibling}ms apart within a batch, capped at the {STAGGER.cap}th item.
+          </>
+        }
       >
         <RevealDemo />
       </LabSection>
 
-      <LabSection id="draw" index="06" title="Draw" note={`stroke-dashoffset on paths with pathLength 1, over ${DUR.enter}ms on --ease-instrument. At most six paths draw at once.`}>
+      <LabSection
+        id="draw"
+        index="06"
+        title="Draw"
+        note={
+          <>
+            <C>stroke-dashoffset</C> on paths with <C>pathLength=&quot;1&quot;</C>, over {DUR.enter}ms on <C>--ease-instrument</C>. At rest a path
+            has no dash, so a scaled hairline is solid; the dash is measured when a draw starts. At most six paths draw at once. Press{" "}
+            <Kbd>W</Kbd> to replay the right-hand figure.
+          </>
+        }
+      >
         <DrawDemo />
       </LabSection>
 
       <LabSection
         id="sequence"
         index="07"
-        title="useSequence · S"
-        note="Timed beats with no animation engine, for the dashboard. Each beat sets React state; CSS does any tweening. A timer wakes a frame early and requestAnimationFrame lands the beat, so a stalled frame catches up in order."
+        title={
+          <>
+            <U>useSequence</U> · S
+          </>
+        }
+        note={
+          <>
+            Timed beats with no animation engine, for the dashboard. Each beat sets React state; CSS does any tweening. A timer wakes a frame
+            early and <C>requestAnimationFrame</C> lands the beat, so a stalled frame catches up in order.
+          </>
+        }
       >
         <SequenceDemo />
       </LabSection>
@@ -127,7 +176,17 @@ export default async function MotionLabPage({ searchParams }: { searchParams: Pr
         </dl>
       </LabSection>
 
-      <LabSection id="tokens" index="09" title="Tokens" note="src/motion/tokens.ts, which a unit test parses against app/tokens/core.css so a GSAP timeline and a CSS transition cannot drift apart.">
+      <LabSection
+        id="tokens"
+        index="09"
+        title="Tokens"
+        note={
+          <>
+            <C>src/motion/tokens.ts</C>, which a unit test parses against <C>app/tokens/core.css</C>, so a GSAP timeline and a CSS transition
+            cannot drift apart.
+          </>
+        }
+      >
         <div className="grid gap-6 md:grid-cols-3">
           <dl className="type-data">
             {Object.values(EASE).map((e) => (

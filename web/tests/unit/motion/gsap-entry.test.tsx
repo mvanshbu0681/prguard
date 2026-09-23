@@ -128,6 +128,7 @@ describe("motionMedia", () => {
 
     media.set(REDUCED_QUERY, true);
     await vi.waitFor(() => expect(runs.at(-1)?.reduced).toBe(true));
+    await new Promise((r) => setTimeout(r, 10)); // GSAP folds media changes less than 2ms apart into one
     media.set(MEDIA.desktop, true);
     await vi.waitFor(() => expect(runs.at(-1)).toEqual({ reduced: true, desktop: true, coarse: false }));
 

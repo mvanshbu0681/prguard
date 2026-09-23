@@ -40,7 +40,12 @@ async function runtimeBundle(): Promise<string | null> {
     const esbuild = await import("esbuild");
     const out = await esbuild.build({
       stdin: {
-        contents: `export { markAnimReady, animReadyInfo } from "./src/motion/handshake"; export { pendingReveals } from "./src/motion/reveal";`,
+        contents: [
+          `export { markAnimReady, animReadyInfo } from "./src/motion/handshake";`,
+          `export { pendingReveals } from "./src/motion/reveal";`,
+          `export { drawLength, fitDraw } from "./src/motion/draw";`,
+          `export { retrigger } from "./src/motion/stamp";`,
+        ].join("\n"),
         resolveDir: WEB,
         loader: "ts",
       },
@@ -274,6 +279,34 @@ describe.skipIf(!HAS_BROWSER)("markAnimReady and the revealer in Chromium", () =
     await context.close();
   });
 
+  it("a scaled non-scaling hairline gets a dash that covers it: fitDraw measures the screen-to-user ratio", async ({ skip }) => {
+    if (!bundle) skip();
+    // viewBox 100 wide drawn 200px wide: a 2x scale.
+    const { page, context } = await open(`
+      <svg width="200" height="20" viewBox="0 0 100 10">
+        <path id="hair" class="draw" pathLength="1" d="M0 5 C30 5 70 5 100 5" stroke="red" fill="none" vector-effect="non-scaling-stroke"/>
+        <path id="plain" class="draw" pathLength="1" d="M0 8 H100" stroke="red"/>
+      </svg>
+      <svg width="50" height="5" viewBox="0 0 100 10"><path id="small" class="draw" pathLength="1" d="M0 5 H100" stroke="red" vector-effect="non-scaling-stroke"/></svg>`);
+    await withRuntime(page);
+    type M = { drawLength(el: Element): number; retrigger(el: Element, attr: string): void };
+    const lengths = await page.evaluate(() => {
+      const m = (window as unknown as { __motion: M }).__motion;
+      return ["hair", "plain", "small"].map((id) => m.drawLength(document.getElementById(id)!));
+    });
+    expect(lengths[0]).toBeCloseTo(2, 2);
+    expect(lengths[1]).toBe(1); // a scaling stroke's dash already follows the path
+    expect(lengths[2]).toBeCloseTo(0.5, 2); // drawn smaller than its viewBox: a shorter dash
+    await page.evaluate(() => (window as unknown as { __motion: M }).__motion.retrigger(document.getElementById("hair")!, "data-draw"));
+    const start = await page.$eval("#hair", (el) => {
+      el.getAnimations()[0].currentTime = 0;
+      const cs = getComputedStyle(el);
+      return [el.style.getPropertyValue("--draw-len"), cs.strokeDasharray, cs.strokeDashoffset];
+    });
+    expect(start).toEqual(["2", "2px, 2px", "2px"]);
+    await context.close();
+  });
+
   it("the first runtime decides; a second call changes nothing", async ({ skip }) => {
     if (!bundle) skip();
     const { page, context } = await open(page2("a"));
@@ -360,15 +393,29 @@ describe.skipIf(!HAS_BROWSER)("motion.css in Chromium", () => {
     await context.close();
   });
 
-  it(".draw restarts on a ↔ b and rests drawn; .scan travels once on --ease-mass and rests collapsed", async () => {
+  it(".draw restarts on a ↔ b and rests drawn and solid; .scan travels once on --ease-mass and rests collapsed", async () => {
     const { page, context } = await open(`
       <svg width="100" height="100"><path id="d" class="draw" pathLength="1" d="M0 0 L100 0" stroke="red"/></svg>
       <i id="scan" class="scan" style="display: block; height: 2px; --scan-travel: 400px"></i>`);
     expect(await animations(page, "#d")).toEqual([]);
-    expect(await style(page, "#d", "stroke-dasharray")).toBe("1px");
-    expect(await style(page, "#d", "stroke-dashoffset")).toBe("0px"); // rests drawn
+    expect(await style(page, "#d", "stroke-dasharray")).toBe("none"); // no dash at rest: solid at any scale
+    expect(await style(page, "#d", "stroke-dashoffset")).toBe("0px");
     await page.$eval("#d", (el) => el.setAttribute("data-draw", "a"));
-    expect((await animations(page, "#d"))[0]).toMatchObject({ name: "prg-draw-a", duration: 420, easing: "cubic-bezier(0.33, 0, 0.12, 1)" });
+    expect((await animations(page, "#d"))[0]).toMatchObject({ name: "prg-draw-a", duration: 420, fill: "backwards", easing: "cubic-bezier(0.33, 0, 0.12, 1)" });
+    const frames = await page.$eval("#d", (el) => {
+      const a = el.getAnimations()[0];
+      const at = (t: number) => {
+        a.currentTime = t;
+        const cs = getComputedStyle(el);
+        return { dash: cs.strokeDasharray, offset: Number.parseFloat(cs.strokeDashoffset) };
+      };
+      return [at(0), at(419)];
+    });
+    expect(frames[0]).toEqual({ dash: "1px, 1px", offset: 1 }); // undrawn: the dash is shifted off the path
+    expect(frames[1].dash).toBe("1px, 1px");
+    expect(frames[1].offset).toBeLessThan(0.001); // drawn
+    await page.$eval("#d", (el) => el.getAnimations()[0].finish());
+    expect(await style(page, "#d", "stroke-dasharray")).toBe("none"); // hands back to the solid path
     await page.$eval("#d", (el) => el.setAttribute("data-draw", "rest"));
     expect(await animations(page, "#d")).toEqual([]);
     expect(await style(page, "#scan", "scale")).toBe("1 0"); // collapsed: the line exists only while it moves

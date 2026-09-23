@@ -4,7 +4,17 @@
 // imports nothing from T1 or T2).
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
-export function LabSection({ id, index, title, note, children }: { id: string; index: string; title: string; note?: ReactNode; children: ReactNode }) {
+/** An identifier inside prose: Google Sans Code (it is machine text), never broken across lines. */
+export function C({ children }: { children: ReactNode }) {
+  return <code className="font-mono text-[0.9em] whitespace-nowrap text-text-primary">{children}</code>;
+}
+
+/** A number and its unit inside an uppercase label: the unit keeps its case (ms, not MS). */
+export function U({ children }: { children: ReactNode }) {
+  return <span className="normal-case">{children}</span>;
+}
+
+export function LabSection({ id, index, title, note, children }: { id: string; index: string; title: ReactNode; note?: ReactNode; children: ReactNode }) {
   return (
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-6 border-t border-rule-1 py-10">
       <h2 id={`${id}-title`} className="type-label text-text-dim">

@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { heartbeatLabel, heartbeatProps } from "@/motion/heartbeat";
 import { HEARTBEAT } from "@/motion/tokens";
-import { LabButton } from "./lab-ui";
+import { LabButton, U } from "./lab-ui";
 
 const FIXED = [4_000, 12_000, 21_000] as const;
 const SKIP_MS = 10_000;
@@ -45,7 +45,9 @@ export function HeartbeatDemo() {
         ))}
       </div>
       <div className="space-y-3 bg-ink-1 p-5">
-        <p className="type-label text-text-dim">live · 1 Hz text ticker</p>
+        <p className="type-label text-text-dim">
+          live · <U>1 Hz</U> text ticker
+        </p>
         <Row ageMs={age} label={state} />
         <div className="flex flex-wrap gap-2 pt-1">
           <LabButton
@@ -56,7 +58,9 @@ export function HeartbeatDemo() {
           >
             output arrives
           </LabButton>
-          <LabButton onClick={() => setClock((c) => ({ ...c, lastOutputAt: c.lastOutputAt - SKIP_MS }))}>skip {SKIP_MS / 1000}s</LabButton>
+          <LabButton onClick={() => setClock((c) => ({ ...c, lastOutputAt: c.lastOutputAt - SKIP_MS }))}>
+            skip <U>{SKIP_MS / 1000}s</U>
+          </LabButton>
         </div>
       </div>
     </div>

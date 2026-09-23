@@ -35,6 +35,8 @@ html.x { animation: hue 1s infinite; }                           /* @expect root
   &.stamp { transition: color 120ms; }                           /* @expect stamp-colour */
 }
 .list { height: 40px; transition: height var(--dur-2) var(--ease-snap); } /* @expect compositor */
+@keyframes dash { from { stroke-dasharray: 0 1; } to { stroke-dasharray: 1 0; } } /* @expect compositor */
+@keyframes half { from { stroke-dasharray: 1 1; stroke-dashoffset: 1; } 50% { stroke-dasharray: 1 1; } } /* @expect compositor */
 `,
   "src/styles/good.css": `
 .a { transition: opacity var(--dur-3) var(--ease-instrument), transform var(--dur-3) var(--ease-instrument); }
@@ -49,6 +51,8 @@ html.x { animation: hue 1s infinite; }                           /* @expect root
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes force-reveal { to { visibility: visible; } }
 @keyframes rise { from { translate: 0 8px; clip-path: inset(0 100% 0 0); } }
+@keyframes draw { from { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: var(--draw-len, 1); } to { stroke-dasharray: var(--draw-len, 1)  var(--draw-len, 1); stroke-dashoffset: 0; } }
+@keyframes packet { 0%, 100% { stroke-dasharray: 0.06 0.94; } 50% { stroke-dashoffset: 0.5; } }
 @keyframes tick { 0% { opacity: .35; animation-timing-function: steps(1, end); } 12% { opacity: 1; } }
 .e { transition-timing-function: cubic-bezier(0.33, 0, 0.12, 1); }
 .f { transition-timing-function: cubic-bezier(0.52, 0, 0.08, 1); }

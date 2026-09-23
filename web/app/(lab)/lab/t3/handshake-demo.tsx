@@ -61,12 +61,14 @@ export function HandshakeProbes() {
   }, []);
 
   return (
-    <ul ref={list} className="grid gap-px overflow-hidden rounded-panel border border-rule-1 bg-rule-1 md:grid-cols-3">
+    // Dividers are the items' own borders (not a gap over a ruled background), so a probe
+    // that is still hidden leaves plain panel, not a grey block.
+    <ul ref={list} className="grid overflow-hidden rounded-panel border border-rule-1 bg-ink-1 md:grid-cols-3">
       {PROBES.map((label, i) => {
         const p = probes[i];
         const delta = p.visibleAt !== null && p.armedAt !== null ? p.visibleAt - p.armedAt : null;
         return (
-          <li key={label} data-anim className="reveal bg-ink-1 px-4 py-3">
+          <li key={label} data-anim className="reveal border-rule-1 px-4 py-3 not-first:border-t md:not-first:border-t-0 md:not-first:border-l">
             <p className="type-label text-text-dim">probe {i + 1}</p>
             <p className="mt-1 type-small text-text-primary">{label}</p>
             <dl className="mt-2 space-y-0.5 type-data">

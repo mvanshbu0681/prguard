@@ -135,7 +135,7 @@ describe("token helpers", () => {
 
 describe("src/styles/motion.css references only tokens that exist", () => {
   // Hooks motion.css documents for callers to set; everything else must be a token.
-  const HOOKS = new Set(["--motion-dur", "--motion-delay", "--reveal-index", "--reveal-rise", "--scan-travel"]);
+  const HOOKS = new Set(["--motion-dur", "--motion-delay", "--reveal-index", "--reveal-rise", "--scan-travel", "--draw-len"]);
   const css = readFileSync(path.join(WEB, "src/styles/motion.css"), "utf8");
   const used = [...new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((m) => m[1]))];
 

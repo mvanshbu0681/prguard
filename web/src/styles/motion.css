@@ -90,14 +90,16 @@
   }
 }
 
-/* A path with pathLength="1" drawing from its start (§4.7, §4.8.2). */
+/* A path with pathLength="1" drawing from its start (§4.7, §4.8.2). The dash exists only
+   inside the keyframes (constant, never interpolated), so a path at rest is solid; its
+   length is --draw-len, measured by src/motion/draw.ts for non-scaling strokes. */
 @keyframes prg-draw-a {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
+  from { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: var(--draw-len, 1); }
+  to { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: 0; }
 }
 @keyframes prg-draw-b {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
+  from { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: var(--draw-len, 1); }
+  to { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: 0; }
 }
 
 /* The scan line's one travel (§4.6.2): at 60% opacity, only while it moves. */
@@ -216,28 +218,28 @@ html.anim-ready .reveal.reveal-rise[data-anim][data-anim-in=""] {
 /* --------------------------------------------------------------------------
    5. .draw: stroke-dashoffset on a path with pathLength="1", so one keyframe draws
       an 80px fork and a 2400px spine at the same perceived speed (§4.7). Add
-      vector-effect="non-scaling-stroke" for hairlines. Rests drawn.
+      vector-effect="non-scaling-stroke" for hairlines. Rests drawn and solid: the
+      dash lives only in the keyframes, and fill-mode is `backwards` (it holds the
+      undrawn frame through a stagger delay, then hands back to the solid path).
         first appearance   <path pathLength="1" class="draw" data-anim>
                            (replay it with replayReveal() from src/motion/reveal.ts)
         replay             <path pathLength="1" class="draw"> + retrigger(el, "data-draw")
-      One mechanism per element. Paint property: at most 6 paths drawing at once (§6.1).
+      Both measure --draw-len first (src/motion/draw.ts). One mechanism per element.
+      Paint property: at most 6 paths drawing at once (§6.1).
    -------------------------------------------------------------------------- */
 @layer components {
-  .draw {
-    stroke-dasharray: 1;
-  }
   .draw[data-draw="a"] {
-    animation: prg-draw-a var(--motion-dur, var(--dur-enter)) var(--ease-instrument) both;
+    animation: prg-draw-a var(--motion-dur, var(--dur-enter)) var(--ease-instrument) backwards;
     animation-delay: var(--motion-delay, 0ms);
   }
   .draw[data-draw="b"] {
-    animation: prg-draw-b var(--motion-dur, var(--dur-enter)) var(--ease-instrument) both;
+    animation: prg-draw-b var(--motion-dur, var(--dur-enter)) var(--ease-instrument) backwards;
     animation-delay: var(--motion-delay, 0ms);
   }
 }
 
 html.anim-ready .draw[data-anim][data-anim-in=""] {
-  animation: prg-draw-a var(--motion-dur, var(--dur-enter)) var(--ease-instrument) both;
+  animation: prg-draw-a var(--motion-dur, var(--dur-enter)) var(--ease-instrument) backwards;
   animation-delay: calc(var(--motion-delay, 0ms) + min(var(--reveal-index, 0), 5) * var(--stagger-sibling));
 }
 

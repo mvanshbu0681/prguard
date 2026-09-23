@@ -23,6 +23,7 @@
 // useReplay / useSequence drives (those render their end frame statically).
 
 import { ANIM_ATTR, ANIM_IN_ATTR, ANIM_IN_STATIC, REVEAL_INDEX_VAR } from "./attrs";
+import { fitDraw } from "./draw";
 import { onceInView } from "./in-view";
 import { STAGGER } from "./tokens";
 
@@ -35,6 +36,7 @@ export const PENDING_SELECTOR = `[${ANIM_ATTR}]:not([${ANIM_IN_ATTR}])`;
 export function revealNow(el: Element, index = 0): void {
   const i = Math.min(Math.max(0, Math.floor(Number.isFinite(index) ? index : 0)), STAGGER.cap - 1);
   if (el instanceof HTMLElement || el instanceof SVGElement) el.style.setProperty(REVEAL_INDEX_VAR, String(i));
+  if (el.matches(".draw")) fitDraw(el); // a first-appearance draw: measure the dash first (./draw)
   el.setAttribute(ANIM_IN_ATTR, "");
 }
 

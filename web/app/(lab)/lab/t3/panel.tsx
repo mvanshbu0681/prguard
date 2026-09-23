@@ -3,10 +3,10 @@
 // where the handshake stands (measured in this browser, not typed), and the reduced-motion
 // toggle, which writes data-motion="reduced" on <html> exactly as the product's footer
 // toggle does (motion spec §5: one code path with the OS preference).
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { animReadyInfo, FORCE_REVEAL_MS, onAnimReady, type AnimReady } from "@/motion/handshake";
 import { setMotionOverride, useMotionOverride, useReducedMotion } from "@/motion/reduced";
-import { LabButton, ms, Readouts } from "./lab-ui";
+import { LabButton, ms, Readouts, U } from "./lab-ui";
 import { LATE_MS, RUNTIME_MODES, type RuntimeMode } from "./modes";
 
 const subscribeReady = (onChange: () => void) => onAnimReady(() => onChange());
@@ -17,7 +17,15 @@ export function useAnimReady(): AnimReady | null {
   return useSyncExternalStore(subscribeReady, animReadyInfo, serverReady);
 }
 
-const MODE_LABEL: Record<RuntimeMode, string> = { ok: "runtime loads", late: `loads at ${LATE_MS}ms`, blocked: "runtime blocked" };
+const MODE_LABEL: Record<RuntimeMode, ReactNode> = {
+  ok: "runtime loads",
+  late: (
+    <>
+      loads at <U>{LATE_MS}ms</U>
+    </>
+  ),
+  blocked: "runtime blocked",
+};
 
 export function MotionPanel({ mode }: { mode: RuntimeMode }) {
   const ready = useAnimReady();

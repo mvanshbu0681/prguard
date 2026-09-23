@@ -12,7 +12,9 @@
 //                         Documented exceptions: `visibility` (discrete; the fallback
 //                         handshake's force-reveal, design §4.7 / motion §3.5) and `height`
 //                         on the ⌘K list only (motion §4.3): a rule whose own `height` is
-//                         var(--cmdk-list-height), or a selector naming cmdk-list.
+//                         var(--cmdk-list-height), or a selector naming cmdk-list. A
+//                         keyframes block may hold `stroke-dasharray` CONSTANT (same value
+//                         at 0% and 100%): the draw technique's dash, never interpolated.
 //                         `transition: all`, Tailwind's `transition-all` and the bare
 //                         `transition` utility (it includes box-shadow and backdrop-filter)
 //                         are violations.
@@ -104,6 +106,12 @@ const COLOUR_FAMILY = new Set(["outline-color", "text-decoration-color", "fill",
 const DISCRETE = new Set(["visibility"]);
 /** Keyframe-internal declarations that are not animated properties. */
 const KEYFRAME_META = new Set(["animation-timing-function", "animation-composition"]);
+/**
+ * Properties a keyframes block may hold CONSTANT (the same value at 0% and at 100%, and
+ * nowhere different): a static override for the animation's duration, never
+ * interpolated. The draw technique needs exactly one: its dash (src/motion/draw.ts).
+ */
+const CONSTANT_OK = new Set(["stroke-dasharray"]);
 
 const COLOUR_PROPS = new Set([...[...BOUNDED].filter((p) => p !== "stroke-dashoffset"), ...COLOUR_FAMILY]);
 
@@ -162,6 +170,32 @@ const OVERSHOOT_MOTION = new Set(["backIn", "backOut", "backInOut", "anticipate"
 const ENGINE_GSAP_ENTRIES = new Set(["gsap", "useReplay", "GsapRuntime"]);
 const ENGINE_MOTION_ENTRIES = new Set(["motion", "motion-features"]);
 const MOTION_IMPORT = /^(gsap|@gsap\/|motion$|motion\/|framer-motion|@\/motion(\/|$))/;
+
+/** @param {string} step a keyframe selector: `from`, `to`, `12%`, `0%, 100%` */
+function stepPercents(step) {
+  return splitTop(step, ",")
+    .map((s) => s.trim().toLowerCase())
+    .map((s) => (s === "from" ? 0 : s === "to" ? 100 : Number.parseFloat(s)));
+}
+
+/**
+ * True when `prop` holds one value through the whole keyframes block (present at 0% and
+ * at 100%, never different): nothing is interpolated.
+ * @param {{ props: { prop: string, value: string, step: string }[] }} kf
+ * @param {string} prop
+ */
+export function isConstantInKeyframes(kf, prop) {
+  const own = kf.props.filter((p) => p.prop === prop);
+  if (!own.length) return false;
+  if (new Set(own.map((p) => p.value.replace(/\s+/g, " ").trim())).size !== 1) return false;
+  const steps = new Set(own.flatMap((p) => stepPercents(p.step)));
+  return steps.has(0) && steps.has(100);
+}
+
+/** A keyframe declaration the allowlist does not cover but that does not animate. */
+function constantOverride(kf, prop) {
+  return Boolean(kf) && CONSTANT_OK.has(prop) && isConstantInKeyframes(kf, prop);
+}
 
 const CMDK_HEIGHT = /var\(\s*--cmdk-list-height\b/;
 
@@ -339,9 +373,10 @@ function nest(parent, child) {
 /**
  * @typedef {{ name: string, params: string }} CssAtRule
  * @typedef {{ prop: string, value: string, important: boolean, line: number, col: number,
- *   selector: string, ruleId: number, atRules: CssAtRule[], keyframes: string | null }} CssDecl
- * @typedef {{ prop: string, line: number, col: number }} CssKeyframeProp
- * @typedef {{ name: string, line: number, col: number, props: CssKeyframeProp[] }} CssKeyframes
+ *   selector: string, ruleId: number, atRules: CssAtRule[], keyframes: string | null,
+ *   keyframesId: number, keyframeStep: string | null }} CssDecl
+ * @typedef {{ prop: string, value: string, step: string, line: number, col: number }} CssKeyframeProp
+ * @typedef {{ id: number, name: string, line: number, col: number, props: CssKeyframeProp[] }} CssKeyframes
  */
 
 /**
@@ -360,6 +395,7 @@ export function parseCss(text, { lineOffset = 0, colOffset = 0 } = {}) {
   let bufStart = 0;
   let paren = 0;
   let ruleSeq = 0;
+  let keyframesSeq = 0;
 
   const at = (offset) => {
     const p = pos(offset);
@@ -369,19 +405,24 @@ export function parseCss(text, { lineOffset = 0, colOffset = 0 } = {}) {
     let selector = "";
     let ruleId = -1;
     let kf = null;
+    let keyframesId = -1;
+    let keyframeStep = null;
     const atRules = [];
     for (const f of stack) {
       if (f.kind === "rule") {
         selector = f.selector;
         ruleId = f.id;
       } else if (f.kind === "at") atRules.push({ name: f.name, params: f.params });
-      else if (f.kind === "keyframes") kf = f.name;
+      else if (f.kind === "keyframes") {
+        kf = f.name;
+        keyframesId = f.entry.id;
+      } else if (f.kind === "keyframe") keyframeStep = f.selector;
       else if (f.kind === "utility") {
         selector = f.selector;
         ruleId = f.id;
       }
     }
-    return { selector, ruleId, atRules, keyframes: kf };
+    return { selector, ruleId, atRules, keyframes: kf, keyframesId, keyframeStep };
   };
 
   const open = (prelude, offset) => {
@@ -391,7 +432,7 @@ export function parseCss(text, { lineOffset = 0, colOffset = 0 } = {}) {
       const name = (m?.[1] ?? "").toLowerCase();
       const params = (m?.[2] ?? "").trim();
       if (/keyframes$/.test(name)) {
-        const kf = { name: params.replace(/^["']|["']$/g, ""), ...at(offset), props: [] };
+        const kf = { id: keyframesSeq++, name: params.replace(/^["']|["']$/g, ""), ...at(offset), props: [] };
         keyframes.push(kf);
         stack.push({ kind: "keyframes", name: kf.name, entry: kf });
       } else if (name === "utility") stack.push({ kind: "utility", selector: `.${params.replace(/-\*$/, "")}`, id: ruleSeq++ });
@@ -421,7 +462,7 @@ export function parseCss(text, { lineOffset = 0, colOffset = 0 } = {}) {
     const ctx = context();
     const top = stack[stack.length - 1];
     const d = { prop, value, important, ...at(start), ...ctx };
-    if (top?.kind === "keyframe" && top.entry) top.entry.props.push({ prop, line: d.line, col: d.col });
+    if (top?.kind === "keyframe" && top.entry) top.entry.props.push({ prop, value, step: top.selector, line: d.line, col: d.col });
     decls.push(d);
   };
 
@@ -505,7 +546,7 @@ function checkCssDecls(parsed, file, report, keyframeIndex) {
     if (d.keyframes) {
       if (d.prop.startsWith("--")) {
         report({ ...where, rule: "compositor", token: d.prop, message: `@keyframes ${d.keyframes} animates the custom property ${d.prop}; animate the property that consumes it (motion §6.1)` });
-      } else if (!KEYFRAME_META.has(d.prop) && !allowedProperty(d.prop)) {
+      } else if (!KEYFRAME_META.has(d.prop) && !allowedProperty(d.prop) && !constantOverride(parsed.keyframes.find((k) => k.id === d.keyframesId), d.prop)) {
         report({ ...where, rule: "compositor", token: d.prop, message: `@keyframes ${d.keyframes} animates \`${d.prop}\`; only transform, opacity, clip-path, filter (and bounded colour / stroke-dashoffset) may move (motion §6.1)` });
       }
       continue;
@@ -567,7 +608,7 @@ function indexKeyframes(parsedList) {
       const entry = index.get(kf.name) ?? { custom: false, banned: [] };
       for (const p of kf.props) {
         if (p.prop.startsWith("--")) entry.custom = true;
-        else if (!KEYFRAME_META.has(p.prop) && !allowedProperty(p.prop)) entry.banned.push(p.prop);
+        else if (!KEYFRAME_META.has(p.prop) && !allowedProperty(p.prop) && !constantOverride(kf, p.prop)) entry.banned.push(p.prop);
       }
       index.set(kf.name, entry);
     }

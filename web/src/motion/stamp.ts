@@ -25,6 +25,7 @@
 // Engine-free.
 
 import { useState } from "react";
+import { fitDraw } from "./draw";
 
 export type StampAttr = "rest" | "a" | "b";
 export type RetriggerAttr = "data-stamp" | "data-draw" | "data-scan";
@@ -45,8 +46,12 @@ export function useStamp(value: unknown): StampAttr {
   return count === 0 ? "rest" : count % 2 === 1 ? "a" : "b";
 }
 
-/** Restart the helper animation on `el` (flip its attribute "a" ↔ "b"; "rest" or absent → "a"). */
+/**
+ * Restart the helper animation on `el` (flip its attribute "a" ↔ "b"; "rest" or absent
+ * → "a"). A draw is measured first (./draw), so a scaled hairline still meets its node.
+ */
 export function retrigger(el: Element, attr: RetriggerAttr = "data-stamp"): void {
+  if (attr === "data-draw") fitDraw(el);
   el.setAttribute(attr, el.getAttribute(attr) === "a" ? "b" : "a");
 }
 

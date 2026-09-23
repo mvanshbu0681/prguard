@@ -8,7 +8,7 @@
 // (0s: no transition at all, whatever the utilities say) and the animation it runs.
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useStamp } from "@/motion/stamp";
-import { LabButton, Readouts } from "./lab-ui";
+import { LabButton, Readouts, U } from "./lab-ui";
 
 type Verdict = "not_attempted" | "inconclusive" | "disproven" | "proven";
 const VERDICTS: readonly Verdict[] = ["not_attempted", "inconclusive", "disproven", "proven"];
@@ -21,9 +21,11 @@ const CHIP: Record<Verdict, string> = {
 const CHIP_BASE = "inline-flex h-5 min-w-[120px] items-center justify-center rounded-data border px-1.5 type-badge";
 
 type Gate = "clear" | "blocked";
+// Blocked: the only chromatic gate state (a 1px --alarm border on the chip). Clear is
+// achromatic: text on a tint with a 1px --signal-lo underline, never a green light.
 const GATE: Record<Gate, string> = {
   blocked: "border-gate-failure-border bg-gate-failure-bg text-gate-failure-fg",
-  clear: "border-gate-success-border bg-gate-success-bg text-gate-success-fg",
+  clear: "border-transparent border-b-gate-success-border bg-gate-success-bg text-gate-success-fg",
 };
 
 interface Measured {
@@ -58,7 +60,9 @@ function ControlledVerdict() {
   const [chip, measured] = useMeasured(verdict);
   return (
     <div className="space-y-4 p-5">
-      <p className="type-label text-text-dim">controlled · useStamp</p>
+      <p className="type-label text-text-dim">
+        controlled · <U>useStamp</U>
+      </p>
       <div className="flex min-h-5 flex-wrap items-center gap-3">
         <span ref={chip} className={`stamp ${CHIP_BASE} ${CHIP[verdict]}`} data-stamp={stamp} data-state={verdict} role="status">
           {verdict.replace("_", " ")}
