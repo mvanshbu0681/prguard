@@ -2,12 +2,21 @@
 //
 // Section 01 is the Proof Bench's two panes exactly as landing §01 specifies them (the
 // bench chrome itself is T4's). Every other section exercises one contract: the disproven
-// pane, highlighted source, the diff with a finding line and its annotation slot, the
-// no-wrap rule at 375px, the ANSI class mapping, split view, all ten grammars plus the
-// unsupported-language note, the client fallback, and every rail tone.
+// pane, highlighted source, the diff with an accused line (band fill, blocking rail) and its
+// annotation slot, the no-wrap rule at 375px, the ANSI class mapping, split view, all ten
+// grammars plus the unsupported-language note, the client fallback, every rail tone and row
+// fill, and windowing past 400 lines on all three surfaces.
 import type { Metadata } from "next";
 import type { CSSProperties, ReactNode } from "react";
-import { CodeBlock, CodeBlockClient, PRGuardDiff, PYTEST_TONES, RAIL_TONES, TerminalBlock } from "@/components/code";
+import {
+  CodeBlock,
+  CodeBlockClient,
+  PRGuardDiff,
+  PYTEST_TONES,
+  RAIL_TONES,
+  TerminalBlock,
+  type TerminalHighlightRule,
+} from "@/components/code";
 import {
   ANSI_PANE,
   AUDIT_JSON,
@@ -24,7 +33,11 @@ import {
   HEAD,
   HEAD_PANE,
   LANGUAGE_SPECIMENS,
+  LONG_CAPTURE,
+  LONG_DIFF,
+  LONG_DIFF_LINE,
   LONG_PANE,
+  LONG_SOURCE,
   REPRO,
   REPRO_SOURCE,
   REPRO_START,
@@ -32,6 +45,10 @@ import {
 } from "./specimens";
 
 export const metadata: Metadata = { title: "Code surfaces (lab)" };
+
+const LONG_CAPTURE_LINES = LONG_CAPTURE.split("\n").length;
+/** pytest -v prints FAILED mid-line; the bench's rules only tone the short-summary form. */
+const LONG_TONES: readonly TerminalHighlightRule[] = [...PYTEST_TONES, { pattern: /\bFAILED\b/, tone: "alarm" }];
 
 const PAPER: CSSProperties = {
   backgroundImage: [
@@ -312,6 +329,49 @@ export default function CodeSurfacesLab() {
             PRGuardDiff highlight: fill is the band at 10% in place of the diff tint, tone is the rail. New line 10 and old line 12
             carry no highlight, for reference.
           </Props>
+        </Section>
+
+        <Section
+          index="11"
+          title="Long output · windowed"
+          note={
+            <>
+              Past 400 lines a surface renders only the lines near the view. The sheet keeps the widest line&apos;s width, a copy is
+              answered from the captured text, and select-all inside a focused pane (<Token>Ctrl A</Token> or <Token>Cmd A</Token>)
+              copies every line. Line numbers past 999 widen the gutter.
+            </>
+          }
+        >
+          <TerminalBlock
+            text={LONG_CAPTURE}
+            label={`pytest -v at head ${HEAD}, ${LONG_CAPTURE_LINES} lines`}
+            lineNumbers
+            height={330}
+            highlight={LONG_TONES}
+          />
+          <Props>TerminalBlock · {LONG_CAPTURE_LINES} lines · height=330 · highlight=[…PYTEST_TONES, FAILED]</Props>
+          <CodeBlock
+            code={LONG_SOURCE}
+            filePath="checkout/ledger.py"
+            maxHeight={330}
+            highlight={[{ start: 1205, tone: "high", label: "rounding at 3 decimals" }]}
+          />
+          <Props>CodeBlock · 1240 lines · maxHeight=330 · highlight=[&#123; start: 1205, tone: &quot;high&quot; &#125;]</Props>
+          <PRGuardDiff
+            diff={LONG_DIFF}
+            height={330}
+            highlight={[{ side: "new", start: LONG_DIFF_LINE, tone: "alarm", fill: "critical", label: `finding ${FINDING}` }]}
+            annotations={[
+              {
+                side: "new",
+                line: LONG_DIFF_LINE,
+                tone: "alarm",
+                label: `finding ${FINDING}`,
+                content: <p className="type-data text-text-body">finding {FINDING} · new line {LONG_DIFF_LINE} · the slot is measured, not assumed</p>,
+              },
+            ]}
+          />
+          <Props>PRGuardDiff · 601 rows · height=330 · the accused line is new {LONG_DIFF_LINE}, 403 lines down</Props>
         </Section>
       </div>
     </div>

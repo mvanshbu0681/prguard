@@ -179,6 +179,67 @@ export const BAND_HIGHLIGHTS: DiffHighlight[] = [
   { side: "new", start: 15, tone: "info" },
 ];
 
+// ------------------------------------------------------------------ long specimens (windowed)
+
+/** A long `pytest -v` capture: 1,486 lines, the repro test failing near the end. Past 400
+ *  lines the pane windows. Case names and timings are specimen text, not product data. */
+export const LONG_CAPTURE = (() => {
+  const cases = 1478;
+  const failAt = 1203;
+  const lines = [`$ git checkout ${HEAD} && pytest -v -p no:cacheprovider tests/`, `collected ${cases} items`, ""];
+  for (let i = 1; i <= cases; i++) {
+    const pct = `[${String(Math.floor((i / cases) * 100)).padStart(3)}%]`;
+    const name = i === failAt ? `${REPRO}::${TEST}` : `tests/test_ledger.py::test_rounding[case-${String(i).padStart(4, "0")}]`;
+    const status = i === failAt ? "FAILED" : "PASSED";
+    lines.push(`${`${name} ${status}`.padEnd(74)}${pct}`);
+  }
+  lines.push(
+    `FAILED ${REPRO}::${TEST} - AttributeError: 'NoneType' object has no attribute 'currency'`,
+    `1 failed, ${cases - 1} passed in 41.07s`,
+  );
+  return lines.join("\n");
+})();
+
+/** checkout/ledger.py, generated: 1,240 lines, so the gutter needs four digits. */
+export const LONG_SOURCE = (() => {
+  const lines = ["from decimal import Decimal, ROUND_HALF_EVEN", "", ""];
+  for (let i = 1; lines.length < 1240; i++) {
+    lines.push(`def rate_${String(i).padStart(3, "0")}(amount: Decimal) -> Decimal:`);
+    lines.push(`    return (amount * Decimal("0.${String(i % 97).padStart(3, "0")}")).quantize(Decimal("0.001"), ROUND_HALF_EVEN)`);
+    lines.push("", "");
+  }
+  return lines.slice(0, 1240).join("\n");
+})();
+
+/** One hunk of checkout/ledger.py: 612 rows starting at line 1180, so the number columns
+ *  need four digits. Every fourth line changes. */
+export const LONG_DIFF_START = 1180;
+export const LONG_DIFF = (() => {
+  const body: string[] = [];
+  let oldCount = 0;
+  let newCount = 0;
+  for (let i = 0; i < 480; i++) {
+    const n = LONG_DIFF_START + i;
+    if (i % 4 === 3) {
+      body.push(`-    total += entry.amount  # ${n}`, `+    total += entry.amount.quantize(CENT)  # ${n}`);
+      oldCount++;
+      newCount++;
+    } else {
+      body.push(`     entry = entries[${i}]  # ${n}`);
+      oldCount++;
+      newCount++;
+    }
+  }
+  return [
+    "--- a/checkout/ledger.py",
+    "+++ b/checkout/ledger.py",
+    `@@ -${LONG_DIFF_START},${oldCount} +${LONG_DIFF_START},${newCount} @@ def settle(entries):`,
+    ...body,
+  ].join("\n");
+})();
+/** The accused line deep in the long diff (new side). */
+export const LONG_DIFF_LINE = LONG_DIFF_START + 403;
+
 /** A client-highlighted block: an audit document keyed by the manifest ids. */
 export const AUDIT_JSON = JSON.stringify(
   {

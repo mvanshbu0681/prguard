@@ -189,6 +189,33 @@ describe("code.css — the accused row in a diff (dashboard §4)", () => {
   });
 });
 
+describe("code.css — windowed surfaces and wide line numbers", () => {
+  it("gives a windowed viewport a default height to window in, which a caller's height overrides", () => {
+    const viewport = ruleFor(":where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport)[data-windowed]");
+    expect(has(viewport, "max-block-size", "min(70vh, calc(32 * var(--prg-lh)))")).toBe(true);
+  });
+
+  it("makes spacers blocks and keeps the widest line's width while it is not rendered", () => {
+    expect(has(ruleFor(":where(.prg-terminal__spacer, .prg-code__spacer, .prg-diff__spacer)"), "display", "block")).toBe(true);
+    expect(has(ruleFor(".prg-diff__sheet[data-view=\"split\"] > .prg-diff__spacer"), "grid-column", "1 / -1")).toBe(true);
+    const pre = ruleFor(":where(.prg-terminal__pre, .prg-code__pre)[data-windowed]");
+    expect(pre?.decls.find((d) => d.name === "min-inline-size")?.value).toMatch(/^max\(100%, calc\(var\(--prg-cols, 0\) \* 1ch \+ var\(--prg-gutter-w\) \+ var\(--sp-4\)\)\)$/);
+    expect(ruleFor(".prg-diff__sheet[data-windowed]")?.decls.find((d) => d.name === "min-inline-size")?.value).toContain("var(--prg-cols, 0) * 1ch");
+    expect(ruleFor('.prg-diff__sheet[data-windowed][data-view="split"]')?.decls.find((d) => d.name === "min-inline-size")?.value).toMatch(/^max\(100%, calc\(2 \* /);
+  });
+
+  it("keeps the pre padding the windowing maths assumes (SHEET_PADDING = --sp-2)", () => {
+    expect(has(ruleFor(":where(.prg-terminal__pre, .prg-code__pre, .prg-diff__pre)"), "padding-block", "var(--sp-2)")).toBe(true);
+    expect(has(ruleFor(".prg-diff__sheet"), "padding-block", "var(--sp-2)")).toBe(true);
+  });
+
+  it("widens the gutter and the diff's number columns by whole digits past 999, never below 40px / 32px", () => {
+    expect(has(ruleFor(":where(.prg-terminal, .prg-code)[data-gutter]"), "--prg-gutter-w", "max(var(--sp-10), calc(var(--prg-digits, 0) * 1ch + var(--sp-3) + var(--sp-1)))")).toBe(true);
+    const diffRoots = rules.filter((r) => r.prelude === ".prg-diff");
+    expect(diffRoots.some((r) => has(r, "--prg-diff-num-w", "max(var(--sp-8), calc(var(--prg-digits, 0) * 1ch + var(--sp-2)))"))).toBe(true);
+  });
+});
+
 describe("code.css — headers", () => {
   it("sets the hunk range as a label and leaves the section heading's case alone (§5.8, §2.5)", () => {
     const range = ruleFor(".prg-diff__range");
