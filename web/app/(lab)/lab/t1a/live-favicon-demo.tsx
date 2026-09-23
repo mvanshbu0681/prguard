@@ -53,8 +53,10 @@ function useIconHref(state: LiveFaviconState) {
 export function LiveFaviconDemo() {
   const [state, setState] = useState<LiveFaviconState>(null);
   const frames = useFrames();
-  const href = useIconHref(state);
+  // The swap first, then the readout: effects run in call order, so the
+  // readout's immediate read sees the new href rather than the old one.
   useLiveFavicon(state);
+  const href = useIconHref(state);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

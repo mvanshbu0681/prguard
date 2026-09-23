@@ -215,7 +215,11 @@
   /* Registration marks (design §4.5): 1px L-strokes on the frame's outer
      corners, --registration (0.10) at rest. Pure decoration: aria-hidden,
      pointer-events none. Hover class A (motion §7): marks 0.10 → 0.22 and the
-     hairline --rule-1 → --rule-2 over 120ms; the fill does not change. */
+     hairline --rule-1 → --rule-2 over 120ms; the fill does not change.
+     Each mark takes its own corner's radius from the frame (inherit), so the
+     L traces the frame's rounded corner exactly. A square L on a 4px/6px
+     frame puts its corner pixels outside the curve, over the page, where the
+     same 10% white reads darker: the corner of the L looks broken. */
   .prg-exhibit__mark {
     position: absolute;
     z-index: 1;
@@ -230,24 +234,28 @@
     left: -1px;
     border-top-width: 1px;
     border-left-width: 1px;
+    border-top-left-radius: inherit;
   }
   .prg-exhibit__mark[data-corner="tr"] {
     top: -1px;
     right: -1px;
     border-top-width: 1px;
     border-right-width: 1px;
+    border-top-right-radius: inherit;
   }
   .prg-exhibit__mark[data-corner="bl"] {
     bottom: -1px;
     left: -1px;
     border-bottom-width: 1px;
     border-left-width: 1px;
+    border-bottom-left-radius: inherit;
   }
   .prg-exhibit__mark[data-corner="br"] {
     bottom: -1px;
     right: -1px;
     border-bottom-width: 1px;
     border-right-width: 1px;
+    border-bottom-right-radius: inherit;
   }
   @media (hover: hover) {
     .prg-exhibit:hover {

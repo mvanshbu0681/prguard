@@ -6,8 +6,13 @@
 // mark ladder in every tone, the wordmark, the four lockups, the favicon set,
 // the GitHub App avatar at 512 and at 20px, the live favicon, and the OG card.
 // Marketing-only tokens (grain, glow, gradient border) need data-surface="marketing".
+// Sample content is the canonical demo story (plan A10): identifiers from the
+// fixture manifest, pytest lines from the same loader the OG card uses. The
+// lab types no number an API field would provide.
+import manifest from '@fixtures/manifest.json';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { loadOgStory } from '../../../og/data';
 import { Lockup, Mark, markForm, Wordmark, type MarkTone } from '@/components/brand';
 import {
   Exhibit,
@@ -46,22 +51,44 @@ function Caption({ children }: { children: ReactNode }) {
   return <p className="mt-2 type-data text-text-dim">{children}</p>;
 }
 
+const { ids } = manifest;
+const story = loadOgStory();
+const REVIEW = ids.demo_review_id.slice(0, 7);
+const FINDING = ids.proven_finding_id.slice(0, 8);
+const PROOF_SOURCE = `GET /v1/reviews/${REVIEW}/result → findings[0].proof`;
+const CAPTURED = '2026-09-19T14:22:07Z';
+
+/** "1 passed in 0.42s" with the verb in its execution colour. */
+function Result({ text, verb, className }: { text: string; verb: string; className: string }) {
+  const at = text.indexOf(verb);
+  if (at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className={className}>{verb}</span>
+      {text.slice(at + verb.length)}
+    </>
+  );
+}
+
 function BenchSample() {
   return (
     <div className="type-terminal">
       <div className="border-l-2 border-signal-lo bg-signal-tint-lo px-4 py-2 text-text-body">
-        <span className="text-text-dim">$ </span>pytest -q tests/test_repro_7e3f1a.py
-        <br />1 <span className="text-signal-text">passed</span> in 0.42s
+        <span className="text-text-dim">$ </span>pytest -q {ids.repro_test_path}
+        <br />
+        <Result text={story.baseResult} verb="passed" className="text-signal-text" />
       </div>
       <div className="border-l-2 border-alarm bg-alarm-tint-lo px-4 py-2 text-text-body">
-        <span className="text-text-dim">$ </span>pytest -q tests/test_repro_7e3f1a.py
-        <br />1 <span className="text-alarm-text">failed</span> in 0.39s
+        <span className="text-text-dim">$ </span>pytest -q {ids.repro_test_path}
+        <br />
+        <Result text={story.headResult} verb="failed" className="text-alarm-text" />
       </div>
     </div>
   );
 }
 
-const PROOF_SOURCE = 'GET /v1/reviews/4e8b1d0/result → findings[0].proof';
+const SHAS = `base ${story.baseSha} · head ${story.headSha}`;
 
 export default function T1aLab() {
   return (
@@ -112,12 +139,12 @@ export default function T1aLab() {
       <LabSection
         index="02"
         title="Surface"
-        note="One ink rung, a 1px hairline, and inset 0 1px 0 var(--inset-hi) from level 2. No drop shadow anywhere. The last row is interactive (hover class B)."
+        note="One ink rung, a 1px hairline, and inset 0 1px 0 var(--inset-hi) from level 2. No drop shadow anywhere. The last row is interactive (hover class B): each is a link, keyboard-reachable, with the 2px focus ring."
       >
-        <GraphPaper className="grid gap-4 rounded-panel p-4 sm:grid-cols-2 lg:grid-cols-4" data-surface="app">
+        <GraphPaper className="grid grid-cols-2 gap-3 rounded-panel p-3 md:gap-4 md:p-4 lg:grid-cols-4" data-surface="app">
           {VARIANTS.flatMap((variant) =>
             ELEVATIONS.map((elevation) => (
-              <Surface key={`${variant}-${elevation}`} elevation={elevation} variant={variant} className="min-h-24 p-4">
+              <Surface key={`${variant}-${elevation}`} elevation={elevation} variant={variant} className="min-h-20 p-3 md:min-h-24 md:p-4">
                 <p className="type-label text-text-dim">
                   {variant} · {elevation}
                 </p>
@@ -125,8 +152,8 @@ export default function T1aLab() {
             )),
           )}
           {ELEVATIONS.map((elevation) => (
-            <Surface key={`interactive-${elevation}`} as="a" href="#lab-02" elevation={elevation} interactive className="block min-h-24 p-4 no-underline">
-              <p className="type-label text-text-body">interactive · {elevation}</p>
+            <Surface key={`interactive-${elevation}`} as="a" href="#lab-02" elevation={elevation} interactive className="block min-h-20 p-3 no-underline md:min-h-24 md:p-4">
+              <p className="type-label text-text-body">link · {elevation}</p>
             </Surface>
           ))}
         </GraphPaper>
@@ -139,61 +166,44 @@ export default function T1aLab() {
       >
         <div className="grid gap-8 lg:grid-cols-2">
           <div>
-            <Exhibit index="05" category="Computed severity" provenance="GET /v1/findings/a91f3c2e → severity" padded>
-              <p className="type-readout-xl text-text-primary">0.810</p>
+            <Exhibit index="04" category="Repro test" provenance={`GET /v1/findings/${FINDING} → proof.test_file_path`} padded>
+              <p className="type-data text-text-primary [overflow-wrap:anywhere]">
+                {ids.repro_test_path}
+                <span className="text-text-dim">::</span>
+                {ids.failing_test}
+              </p>
             </Exhibit>
             <Caption>minimal · no identifier, no meta, provenance without capture time</Caption>
           </div>
           <div>
-            <Exhibit
-              index="01"
-              category="Proof bench"
-              identifier="finding a91f3c2e"
-              meta="python:3.12-slim · seed 4a91"
-              provenance={PROOF_SOURCE}
-              capturedAt="2026-09-19T14:22:07Z"
-            >
+            <Exhibit index="01" category="Proof bench" identifier={`finding ${FINDING}`} meta={SHAS} provenance={PROOF_SOURCE} capturedAt={CAPTURED}>
               <BenchSample />
             </Exhibit>
             <Caption>full · identifier, meta slot, captured-at</Caption>
           </div>
           <div>
-            <Exhibit
-              index="01"
-              category="Proof bench"
-              identifier="finding a91f3c2e"
-              provenance={PROOF_SOURCE}
-              capturedAt="2026-09-19T14:22:07Z"
-              forceHover
-            >
+            <Exhibit index="01" category="Proof bench" identifier={`finding ${FINDING}`} provenance={PROOF_SOURCE} capturedAt={CAPTURED} forceHover>
               <BenchSample />
             </Exhibit>
             <Caption>forceHover · marks 0.22, hairline --rule-2, fill unchanged</Caption>
           </div>
           <div>
-            <Exhibit
-              index="08"
-              category="Self-report"
-              density="compact"
-              provenance="GET /v1/accuracy → metrics · derived: proof.inconclusive / proof.attempted"
-              ext
-              padded
-            >
-              <p className="type-readout text-text-primary">
-                0.114 <span className="type-data text-text-dim">(n=537)</span>
+            <Exhibit index="06" category="Recent runs" density="compact" provenance="GET /v1/reviews?limit=8 → items[0]" ext padded>
+              <p className="type-data text-text-body">
+                {REVIEW} <span className="text-text-dim">·</span> {ids.repository.owner}/{ids.repository.name}#{ids.pr_number}
               </p>
             </Exhibit>
-            <Caption>compact · 24px strip · ext provenance</Caption>
+            <Caption>compact · 24px strip · ext provenance (plan A11: the list is fixture-only)</Caption>
           </div>
           <div data-surface="marketing">
             <Exhibit
               index="01"
               category="Proof bench"
-              identifier="finding a91f3c2e"
+              identifier={`finding ${FINDING}`}
               radius="container"
               className="gradient-border"
               provenance={PROOF_SOURCE}
-              capturedAt="2026-09-19T14:22:07Z"
+              capturedAt={CAPTURED}
             >
               <BenchSample />
             </Exhibit>
@@ -201,7 +211,7 @@ export default function T1aLab() {
           </div>
           <div>
             <Surface elevation={2} className="flex flex-col">
-              <IndexStrip index="03" category="Suppressions" identifier="12 active" />
+              <IndexStrip index="03" category="Suppressions" />
               <p className="p-4 type-small text-text-body">An ordinary dashboard panel is bracketed but carries no registration marks.</p>
               <ProvenanceStrip source="GET /v1/suppressions?status=active" />
             </Surface>
@@ -213,9 +223,9 @@ export default function T1aLab() {
       <LabSection index="04" title="Index and provenance" note="The index grammar without a frame, for section heads and the nav; the provenance line on its own.">
         <div className="grid gap-6">
           <SectionIndex index="05" category="Computed severity" />
-          <SectionIndex index="404" category="No such route" identifier="/runs/4e8b1d0/pipeline" />
+          <SectionIndex index="404" category="No such route" identifier={`/runs/${REVIEW}/pipeline`} />
           <SectionIndex index="02" category="The negation" rule={false} />
-          <ProvenanceLine source={PROOF_SOURCE} capturedAt="2026-09-19T14:22:07Z" />
+          <ProvenanceLine source={PROOF_SOURCE} capturedAt={CAPTURED} />
           <ProvenanceLine source="GET /v1/reviews?limit=8 → items" ext />
         </div>
       </LabSection>
