@@ -11,7 +11,9 @@ Every other weight the card asks for resolves to the nearest of these three.
 
 Source: app/fonts/GoogleSansCode-VF-latin.woff2 (T0's committed subset of
 Google Sans Code v7.001, OFL — app/fonts/OFL-GoogleSansCode.txt). No network,
-no new glyphs: the instances carry exactly the subset's cmap.
+no new glyphs: the instances carry exactly the subset's cmap. The OFL travels
+with every copy, so app/og/fonts/OFL-GoogleSansCode.txt sits beside the
+instances (the licence declares no Reserved Font Name, so the name stays).
 
 Run from web/ (uv fetches fonttools + brotli into a throwaway environment):
   uv run --with fonttools --with brotli python scripts/brand/instance-fonts.py
