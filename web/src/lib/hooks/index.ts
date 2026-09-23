@@ -1,8 +1,17 @@
 // OWNER: t2a (wave 1).
 //
-// Every data hook, typed from @/lib/api-types. `error` is always an ApiError
-// (status, §6.0 code, endpoint); write failures raise a toast carrying
-// `<METHOD> <path> · <status>`. Import from "@/lib/hooks".
+// Every data hook, typed from @/lib/api-types. Import from "@/lib/hooks".
+//
+// Reads: `error` is always an ApiError (status, §6.0 code and details,
+// endpoint, request id). Read failures are for the caller's inline error frame;
+// they never toast (dashboard §2.0).
+//
+// Writes raise toasts in t1b's shape (design §5.14): a mono caps title of four
+// words at most, then a provenance line with plan A10's short ids —
+//   SUPPRESSION ROLLED BACK · POST /v1/findings/a91f3c2e/suppress · 422 · fx_00000c · VALIDATION_ERROR: …
+// A failure always toasts and stays until dismissed. A success toasts for
+// suppress, revoke and re-run (pass { notify: false } to keep it quiet); create
+// is quiet unless { notify: true }, because the caller navigates to the run.
 export { useReviewStatus, useReviewResult, useCreateReview, useRerunReview, useReviewList } from "./use-review";
 export { useFindings, useFindingsInfinite, useFinding, findingsQuery, type FindingFilters } from "./use-findings";
 export {
