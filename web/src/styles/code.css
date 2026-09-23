@@ -17,7 +17,7 @@
    - Line numbers are CSS content on aria-hidden spans: never copied, never read.
    - No shadows. Rails are 2px background layers. --alarm is only ever a fill.
    - Hover is the data-atom wash: a 120ms background-color step on --ease-snap.
-   - Nothing is opacity: 0 or visibility: hidden (R8, motion §3.5).
+   - Nothing is hidden by opacity or visibility in this file (R8, motion §3.5).
    - Each surface is its own stacking context (isolation: isolate). The z-indexes
      inside (sticky gutter 1, hover wash 1, pane rail 2, annotation 2, focus ring 3)
      never compete with anything outside it: the bench's scan line, a sticky header
@@ -176,7 +176,7 @@
 
   /* Hover: the data-atom wash (motion §7, class E): background oklch(1 0 0 / 0.04), no fill
      step, no border. An overlay, so it lies over the sticky gutter and the rail as well as the
-     text. Transparent at rest, never opacity: 0 (R8); the wash is a one-shot background-color
+     text. Transparent at rest, never hidden by opacity (R8); the wash is a one-shot background-color
      step on one element, --dur-1 on --ease-snap (motion §6.1 bounds colour transitions). */
   @media (hover: hover) {
     :where(.prg-terminal__line, .prg-code__line, .prg-diff__row)::after {

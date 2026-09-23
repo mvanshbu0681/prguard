@@ -127,7 +127,9 @@ describe("code.css — the quarantine and the palette rules", () => {
   it("hides nothing: no opacity: 0 and no visibility: hidden anywhere (R8, motion §3.5)", () => {
     expect(decls.filter((d) => d.name === "opacity" && Number.parseFloat(d.value) === 0).map((d) => d.rule.prelude)).toEqual([]);
     expect(decls.filter((d) => d.name === "visibility" && d.value === "hidden").map((d) => d.rule.prelude)).toEqual([]);
-    expect(css).not.toMatch(/opacity:\s*0(?:\.0*)?\s*[;}]/);
+    // the motion checklist greps the raw file, comments included
+    expect(css).not.toMatch(/opacity:\s*0(?![.\d])/);
+    expect(css).not.toMatch(/visibility:\s*hidden/);
   });
 
   it("washes a hovered line with the data-atom colour, transparent at rest (motion §7, class E)", () => {
