@@ -1,26 +1,18 @@
-import { cn } from "@/lib/utils"
+// OWNER: T1b (wave 1). A key cap: 1px --rule-2, 2px radius, 11px mono, --text-body.
+//
+//   <Kbd>⌘K</Kbd>   <KbdGroup><Kbd>g</Kbd><Kbd>o</Kbd></KbdGroup>
+//
+// Google Sans Code has ⌘ ⇧ ⌥ ← ↑ → ↓ but no ⏎ or ↵: write "Enter", "Esc", "Tab".
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
-  return (
-    <kbd
-      data-slot="kbd"
-      className={cn(
-        "pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 rounded-sm bg-muted px-1 font-sans text-xs font-medium text-muted-foreground select-none in-data-[slot=tooltip-content]:bg-background/20 in-data-[slot=tooltip-content]:text-background dark:in-data-[slot=tooltip-content]:bg-background/10 [&_svg:not([class*='size-'])]:size-3",
-        className
-      )}
-      {...props}
-    />
-  )
+  return <kbd data-slot="kbd" className={cn("ui-kbd", className)} {...props} />;
 }
 
-function KbdGroup({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <kbd
-      data-slot="kbd-group"
-      className={cn("inline-flex items-center gap-1", className)}
-      {...props}
-    />
-  )
+/** A key combination or sequence. Nested <kbd> is the HTML spec's form for "these keys together". */
+function KbdGroup({ className, ...props }: React.ComponentProps<"kbd">) {
+  return <kbd data-slot="kbd-group" className={cn("ui-kbd-group", className)} {...props} />;
 }
 
-export { Kbd, KbdGroup }
+export { Kbd, KbdGroup };

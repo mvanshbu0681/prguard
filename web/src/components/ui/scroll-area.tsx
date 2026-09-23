@@ -1,54 +1,48 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cn } from "@/lib/utils"
-import { ScrollArea as ScrollAreaPrimitive } from "radix-ui"
+// OWNER: T1b (wave 1). A thin --ink-6 thumb (2px radius, never a pill) on a
+// transparent 8px track; the thumb steps one rung (ink-7) on hover.
+// If the region holds no focusable content, pass viewportProps={{ tabIndex: 0 }}
+// so a keyboard user can scroll it; its ring is inset so it is never clipped.
+import * as React from "react";
+import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
+import { cn } from "@/lib/utils";
 
 function ScrollArea({
   className,
   children,
+  viewportProps,
   ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.Root>) {
+}: React.ComponentProps<typeof ScrollAreaPrimitive.Root> & {
+  viewportProps?: React.ComponentProps<typeof ScrollAreaPrimitive.Viewport>;
+}) {
   return (
-    <ScrollAreaPrimitive.Root
-      data-slot="scroll-area"
-      className={cn("relative", className)}
-      {...props}
-    >
+    <ScrollAreaPrimitive.Root data-slot="scroll-area" className={cn("ui-scroll", className)} {...props}>
       <ScrollAreaPrimitive.Viewport
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+        {...viewportProps}
+        className={cn("ui-scroll__viewport", viewportProps?.className)}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
       <ScrollBar />
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
-  )
+  );
 }
 
-function ScrollBar({
-  className,
-  orientation = "vertical",
-  ...props
-}: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
+function ScrollBar({ className, orientation = "vertical", ...props }: React.ComponentProps<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>) {
   return (
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       data-slot="scroll-area-scrollbar"
       data-orientation={orientation}
       orientation={orientation}
-      className={cn(
-        "flex touch-none p-px transition-colors select-none data-horizontal:h-2.5 data-horizontal:flex-col data-horizontal:border-t data-horizontal:border-t-transparent data-vertical:h-full data-vertical:w-2.5 data-vertical:border-l data-vertical:border-l-transparent",
-        className
-      )}
+      className={cn("ui-scrollbar", className)}
       {...props}
     >
-      <ScrollAreaPrimitive.ScrollAreaThumb
-        data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-border"
-      />
+      <ScrollAreaPrimitive.ScrollAreaThumb data-slot="scroll-area-thumb" className="ui-scrollbar__thumb" />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
-  )
+  );
 }
 
-export { ScrollArea, ScrollBar }
+export { ScrollArea, ScrollBar };

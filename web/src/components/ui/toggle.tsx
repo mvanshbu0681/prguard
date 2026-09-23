@@ -1,46 +1,36 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-import { Toggle as TogglePrimitive } from "radix-ui"
+// OWNER: T1b (wave 1). A two-state control (motion §4.1.4): the density
+// toggle (32px ↔ 26px), wrap, and the footer's MOTION / CONTRAST controls.
+//
+// 11px mono caps. Rest --text-dim; hover steps one rung and lifts the label to
+// --text-body (hover-quiet). On = level 4 — --ink-4 fill, --ink-7 border,
+// --text-primary — plus the 2px --signal bar a selected tab carries, so the
+// state is a shape and not colour alone. aria-pressed is set by Radix.
+// A toggle that writes data-motion / data-contrast flips the page in 0ms.
+import * as React from "react";
+import { Toggle as TogglePrimitive } from "radix-ui";
+import { cn } from "@/lib/utils";
 
-const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-transparent",
-        outline: "border border-input bg-transparent hover:bg-muted",
-      },
-      size: {
-        default:
-          "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+export type ToggleVariant = "default" | "outline";
+export type ToggleSize = "sm" | "md" | "lg";
 
-function Toggle({
-  className,
+export function toggleVariants({
   variant = "default",
-  size = "default",
-  ...props
-}: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
-  return (
-    <TogglePrimitive.Root
-      data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+  size = "md",
+  className,
+}: { variant?: ToggleVariant | null; size?: ToggleSize | "default" | null; className?: string } = {}): string {
+  const s = !size || size === "default" ? "md" : size;
+  return cn("ui-toggle hover-quiet", variant === "outline" && "ui-toggle--outline", s !== "md" && `ui-toggle--${s}`, className);
 }
 
-export { Toggle, toggleVariants }
+export interface ToggleProps extends React.ComponentProps<typeof TogglePrimitive.Root> {
+  variant?: ToggleVariant | null;
+  size?: ToggleSize | "default" | null;
+}
+
+function Toggle({ className, variant = "default", size = "md", ...props }: ToggleProps) {
+  return <TogglePrimitive.Root data-slot="toggle" className={toggleVariants({ variant, size, className })} {...props} />;
+}
+
+export { Toggle };

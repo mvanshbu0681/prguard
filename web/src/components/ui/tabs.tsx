@@ -1,89 +1,93 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-import { Tabs as TabsPrimitive } from "radix-ui"
+// OWNER: T1b (wave 1). Design §5.12, motion §4.2.3.
+//
+// List: a 1px --rule-hair bottom rule. Tab: 32px, 12px padding-x, 11px mono caps.
+// Rest --text-dim → hover --text-body (120ms) → selected --text-primary plus a
+// 2px --signal bar (meaning-bearing, so a solid token). One bar slides between
+// tabs with transform only (translateX + scaleX, 180ms --ease-snap); panels
+// swap in 0ms — no cross-fade on a data surface. Before the list has measured
+// (first paint, no JS) each selected tab draws its own bar, so nothing is
+// missing at frame 0. Radix supplies role="tablist", arrow-key roving focus.
+//
+// Tabs are BANNED inside finding detail (design §5.12): the proof must never be
+// behind a tab.
+import * as React from "react";
+import { Tabs as TabsPrimitive } from "radix-ui";
+import { cn } from "@/lib/utils";
 
-function Tabs({
-  className,
-  orientation = "horizontal",
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Root>) {
-  return (
-    <TabsPrimitive.Root
-      data-slot="tabs"
-      data-orientation={orientation}
-      className={cn(
-        "group/tabs flex gap-2 data-horizontal:flex-col",
-        className
-      )}
-      {...props}
-    />
-  )
+function Tabs({ className, orientation = "horizontal", ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+  return <TabsPrimitive.Root data-slot="tabs" orientation={orientation} className={cn("ui-tabs", className)} {...props} />;
 }
 
-const tabsListVariants = cva(
-  "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
-  {
-    variants: {
-      variant: {
-        default: "bg-muted",
-        line: "gap-1 bg-transparent",
-      },
+/** Where the indicator must sit for the active tab, in the list's own coordinates. */
+export function indicatorTransform(list: DOMRect, tab: DOMRect, scrollLeft: number): string {
+  const x = tab.left - list.left + scrollLeft;
+  return `translateX(${Math.round(x * 100) / 100}px) scaleX(${Math.round(tab.width * 100) / 100})`;
+}
+
+const useIsoLayoutEffect = typeof window === "undefined" ? React.useEffect : React.useLayoutEffect;
+
+function TabsList({ className, children, ref, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+  const listRef = React.useRef<HTMLDivElement | null>(null);
+  const indicatorRef = React.useRef<HTMLSpanElement>(null);
+  const setListRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      listRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
     },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+    [ref],
+  );
 
-function TabsList({
-  className,
-  variant = "default",
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.List> &
-  VariantProps<typeof tabsListVariants>) {
+  useIsoLayoutEffect(() => {
+    const list = listRef.current;
+    const indicator = indicatorRef.current;
+    if (!list || !indicator || typeof ResizeObserver === "undefined") return;
+    if (list.getAttribute("aria-orientation") === "vertical") return;
+
+    let frame = 0;
+    const place = () => {
+      const active = list.querySelector<HTMLElement>('[role="tab"][data-state="active"]');
+      if (!active) {
+        list.removeAttribute("data-indicator");
+        return;
+      }
+      indicator.style.transform = indicatorTransform(list.getBoundingClientRect(), active.getBoundingClientRect(), list.scrollLeft);
+      // Reveal (and arm the transition) a frame later, so the first placement never animates.
+      if (list.getAttribute("data-indicator") !== "ready") {
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => list.setAttribute("data-indicator", "ready"));
+      }
+    };
+
+    place();
+    const mutations = new MutationObserver(place);
+    mutations.observe(list, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-state"] });
+    const sizes = new ResizeObserver(place);
+    sizes.observe(list);
+    list.querySelectorAll('[role="tab"]').forEach((tab) => sizes.observe(tab));
+    return () => {
+      cancelAnimationFrame(frame);
+      mutations.disconnect();
+      sizes.disconnect();
+    };
+  }, []);
+
   return (
-    <TabsPrimitive.List
-      data-slot="tabs-list"
-      data-variant={variant}
-      className={cn(tabsListVariants({ variant }), className)}
-      {...props}
-    />
-  )
+    <TabsPrimitive.List ref={setListRef} data-slot="tabs-list" className={cn("ui-tabs__list", className)} {...props}>
+      {children}
+      <span ref={indicatorRef} data-slot="tabs-indicator" className="ui-tabs__indicator" aria-hidden="true" />
+    </TabsPrimitive.List>
+  );
 }
 
-function TabsTrigger({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
-  return (
-    <TabsPrimitive.Trigger
-      data-slot="tabs-trigger"
-      className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
-        "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
-        "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
-        className
-      )}
-      {...props}
-    />
-  )
+function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+  return <TabsPrimitive.Trigger data-slot="tabs-trigger" className={cn("ui-tabs__trigger", className)} {...props} />;
 }
 
-function TabsContent({
-  className,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return (
-    <TabsPrimitive.Content
-      data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
-      {...props}
-    />
-  )
+function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  return <TabsPrimitive.Content data-slot="tabs-content" className={cn("ui-tabs__content", className)} {...props} />;
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants }
+export { Tabs, TabsList, TabsTrigger, TabsContent };
