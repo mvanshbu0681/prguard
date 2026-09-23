@@ -6,9 +6,12 @@
 // the server output only. Client code never imports this module: it reads the
 // same corpus through the hooks and the fixture resolver.
 //
-// Guards: the `server-only` package is not installed, so this module (a) throws
-// if evaluated in a browser and (b) imports node:fs, which makes a client-bundle
-// import fail at build time rather than ship the whole corpus.
+// Guards: `import "server-only"` — Next implements it in the compiler (no
+// package is installed; next/types/global.d.ts declares it), so a Client
+// Component that imports this module fails the build instead of shipping the
+// corpus. A runtime check backs it up. vitest cannot resolve the specifier:
+// a test that imports this module adds `vi.mock("server-only", () => ({}))`
+// (tests/unit/data/fixtures-on-disk.test.ts does).
 //
 // Stub files (`_stub: true`, before t2b's generator runs) make every loader
 // throw FixtureUnavailableError naming the file: a page built on an ungenerated
@@ -22,6 +25,7 @@
 // use getAuditEventsText() / getVectorsText() and parse in the client with
 // parseLosslessJson (src/api/lossless.ts) — LosslessNumber instances cannot cross
 // the server → client component boundary, the raw text can.
+import "server-only";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import accuracyReport from "@fixtures/accuracy/report.json";

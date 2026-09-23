@@ -4,7 +4,10 @@
 // corpus after. Every assertion holds in both states.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// Next implements `import "server-only"` in its compiler; vitest has no such module.
+vi.mock("server-only", () => ({}));
 import { DELIVERY_MODES, GATE_CONCLUSIONS, PROOF_STATUSES } from "@/lib/contracts";
 import { DEMO_IDS, DEMO_RUN_PATH, DEMO_SHORT } from "@/lib/demo-ids";
 import { createFixtureResolver, FixtureMissingError } from "@/lib/fixture-resolver";
