@@ -11,9 +11,10 @@
 //                      No green, no checkmark: an instrument at rest has a needle at zero.
 //   null     RUNNING   the gate is not decided yet; neutral styling
 //
-// Every state keeps the same box: a 1px border on all four sides (transparent where the state
-// has none), and BLOCKED's 2px top rule takes its extra pixel out of the padding, so the 0ms
-// colour flip never moves a pixel of layout. The glyph (■ ○ — ◉) keeps the state legible
+// Every state keeps the same box: 280x64 (docs/design/04-dashboard-blueprint.md, the gate
+// block), a 1px border on all four sides (transparent where the state has none), BLOCKED's 2px
+// top rule taking its extra pixel out of the padding, and the second line always reserved and
+// clamped to one line, so the 0ms colour flip never moves a pixel of layout. The glyph (■ ○ — ◉) keeps the state legible
 // without colour. The failure square is --alarm as a fill, the one place a chip may use it.
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { GateGlyph, type GateGlyphState } from "@/components/icons/chip-glyphs";
@@ -70,8 +71,11 @@ export type GateBlockProps = Omit<ComponentProps<"div">, "children"> & {
   announce?: boolean;
 };
 
+/** One line at 11px, always: the row exists in every state and never wraps. */
+const DETAIL_ROW = "block min-w-0 truncate pl-5 font-mono text-[11px] leading-[1.4]";
+
 /**
- * The gate block: 280px, top-right of every run view.
+ * The gate block: 280x64, top-right of every run view.
  *
  *   ■ GATE · BLOCKED            check_run     the verdict, and the gate-ladder rung that carried it
  *     1 blocking finding                      why: the count, or the API's reason for a neutral gate
@@ -96,7 +100,10 @@ export function GateBlock({ conclusion, blocking, delivery, reason, detail, anno
   // Only BLOCKED carries the 2px --alarm top rule. It takes its extra pixel from the top
   // padding, so the four states share one box and the flip never moves the content.
   const failure = state === "failure";
-  const pad = line ? (failure ? "border-t-2 pt-[11px] pb-3" : "py-3") : failure ? "border-t-2 pt-[7px] pb-2" : "py-2";
+  const pad = failure ? "border-t-2 pt-[11px] pb-3" : "py-3";
+  // The full sentence stays in the DOM (assistive tech reads all of it); the eye gets one
+  // line and the rest on hover. gate.reason can run to three lines at 11px.
+  const title = typeof line === "string" ? line : undefined;
 
   return (
     <div data-slot="gate-block" data-conclusion={state} className={cn("relative w-[280px] max-w-full", className)} {...rest}>
@@ -104,8 +111,7 @@ export function GateBlock({ conclusion, blocking, delivery, reason, detail, anno
         key={stamps}
         data-slot="gate-block-frame"
         className={cn(
-          "flex flex-col justify-center gap-1 rounded-data border px-3 transition-none",
-          line ? "min-h-16" : "min-h-11",
+          "flex h-16 flex-col justify-center gap-1 overflow-hidden rounded-data border px-3 transition-none",
           pad,
           spec.block,
           stamps > 0 && STAMP_CLASS,
@@ -124,10 +130,15 @@ export function GateBlock({ conclusion, blocking, delivery, reason, detail, anno
           ) : null}
         </span>
         {line ? (
-          <span data-slot="gate-block-detail" className="pl-5 font-mono text-[11px] leading-[1.4] [overflow-wrap:anywhere]">
+          <span data-slot="gate-block-detail" title={title} className={DETAIL_ROW}>
             {line}
           </span>
-        ) : null}
+        ) : (
+          // Nothing to say yet (RUNNING, or no count supplied): the row is still reserved.
+          <span data-slot="gate-block-detail-empty" aria-hidden="true" className={DETAIL_ROW}>
+            {"\u00a0"}
+          </span>
+        )}
       </div>
       {announce ? (
         <>
