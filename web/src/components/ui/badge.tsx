@@ -1,48 +1,53 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-import { Slot } from "radix-ui"
+// OWNER: T1b (wave 1). Design §5.4 base: a neutral rectangular chip.
+//
+// 20px tall (never smaller), 2px radius, 6px padding-x, 11px Google Sans Code
+// 600 caps +0.08em, an optional 12px leading glyph with a 4px gap. Never a pill.
+// The label is --text-body (Lc 78): a chip label needs Lc 60 and --text-dim is 45.
+//
+// This is the NEUTRAL chip only. Proof, severity, gate and stage chips carry
+// state, a mandatory glyph and a 0ms stamp; they are track t1c's, not this file's.
+import * as React from "react";
+import { Slot } from "radix-ui";
+import { cn } from "@/lib/utils";
 
-const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3!",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
-        secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
-        destructive:
-          "bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20",
-        outline:
-          "border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground",
-        ghost:
-          "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
+export type BadgeVariant = "neutral" | "outline";
+/** The vendored-shadcn names, kept so generated call sites still compile. */
+export type BadgeVariantAlias = "default" | "secondary" | "ghost";
 
-function Badge({
-  className,
-  variant = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot.Root : "span"
+const ALIAS: Record<BadgeVariantAlias, BadgeVariant> = {
+  default: "neutral",
+  secondary: "neutral",
+  ghost: "outline",
+};
 
-  return (
-    <Comp
-      data-slot="badge"
-      data-variant={variant}
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
-  )
+export function resolveBadgeVariant(variant: BadgeVariant | BadgeVariantAlias | null | undefined): BadgeVariant {
+  if (!variant) return "neutral";
+  return (ALIAS as Record<string, BadgeVariant>)[variant] ?? (variant as BadgeVariant);
 }
 
-export { Badge, badgeVariants }
+/** label: 11px mono caps +0.08em. value: a hash or SHA — case kept, tracking 0 (hashes are data, design §2.3). */
+export type BadgeKind = "label" | "value";
+
+export function badgeVariants({
+  variant,
+  kind = "label",
+  className,
+}: { variant?: BadgeVariant | BadgeVariantAlias | null; kind?: BadgeKind; className?: string } = {}): string {
+  const v = resolveBadgeVariant(variant);
+  return cn("ui-badge", v === "outline" && "ui-badge--outline", kind === "value" && "ui-badge--value", className);
+}
+
+export interface BadgeProps extends React.ComponentProps<"span"> {
+  variant?: BadgeVariant | BadgeVariantAlias | null;
+  kind?: BadgeKind;
+  /** Render the child (a link, a button) as the chip; it then gets the one-rung hover and the focus ring. */
+  asChild?: boolean;
+}
+
+function Badge({ className, variant, kind = "label", asChild = false, ...props }: BadgeProps) {
+  const Comp = asChild ? Slot.Root : "span";
+  const v = resolveBadgeVariant(variant);
+  return <Comp data-slot="badge" data-variant={v} data-kind={kind} className={badgeVariants({ variant: v, kind, className })} {...props} />;
+}
+
+export { Badge };

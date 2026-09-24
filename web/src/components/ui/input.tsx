@@ -1,18 +1,25 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+"use client";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
-  return (
-    <input
-      type={type}
-      data-slot="input"
-      className={cn(
-        "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base transition-colors outline-none file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 md:text-sm dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40",
-        className
-      )}
-      {...props}
-    />
-  )
+// OWNER: T1b (wave 1). Design §5.2, motion §4.1.6.
+//
+// 32px, --ink-1 fill, a meaning-bearing 1px --ink-7 border (3.03:1, SC 1.4.11),
+// 2px radius, 13px Inter. Hover brightens the border one step (--ink-8); focus
+// keeps it and adds the 2px --signal-hi ring; aria-invalid="true" flips it to
+// --alarm in 0ms. Inside a <Field> it picks up its id, aria-describedby,
+// aria-invalid and aria-required. `mono` is for hashes, SHAs, paths and anything
+// else a machine produced.
+import * as React from "react";
+import { useFieldControl } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
+
+export interface InputProps extends React.ComponentProps<"input"> {
+  /** Google Sans Code 12.5px, tabular, tracking 0 — for machine-produced values. */
+  mono?: boolean;
 }
 
-export { Input }
+function Input({ className, type, mono = false, ...props }: InputProps) {
+  const wired = useFieldControl(props);
+  return <input type={type} data-slot="input" data-mono={mono ? "" : undefined} className={cn("ui-input", className)} {...wired} />;
+}
+
+export { Input };

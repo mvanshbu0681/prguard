@@ -1,66 +1,122 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-import { Slot } from "radix-ui"
+// OWNER: T1b (wave 1). Design §5.1, motion §4.1.1–4.1.2 and §7 class C.
+//
+//   <Button>RUN A REVIEW →</Button>                     primary: solid --signal, --ink-0 label
+//   <Button variant="ghost">DOCS</Button>                1px --rule-2
+//   <Button variant="quiet" size="sm">CLEAR</Button>     no border, --text-dim → --text-body
+//   <Button variant="link">ALL SIX METRICS →</Button>    --signal-text, 1px rule drawn on hover
+//   <Button variant="destructive">REVOKE</Button>        a ghost with --alarm-text. Never a red fill.
+//   <Button loading>RUN</Button>                         stepped ellipsis, width held, aria-busy
+//
+// Labels are 11px Google Sans Code 500 caps +0.12em (type-label): write them in
+// caps, and keep them to four words. Hover, press and focus come from the shared
+// hover language in src/styles/ui.css (hover-primary / hover-ghost / hover-quiet /
+// link-draw), so a Button and a hand-built control can never drift apart.
+import * as React from "react";
+import { Slot } from "radix-ui";
+import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-        ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
-        destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default:
-          "h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8",
-        "icon-xs":
-          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-9",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+/** The five button variants the design ships. */
+export type ButtonVariant = "primary" | "ghost" | "quiet" | "link" | "destructive";
+/** The vendored-shadcn names, kept so generated call sites still compile. */
+export type ButtonVariantAlias = "default" | "outline" | "secondary";
+export type ButtonSize = "sm" | "md" | "lg" | "icon-sm" | "icon";
+export type ButtonSizeAlias = "default" | "xs" | "icon-xs" | "icon-lg";
 
-function Button({
-  className,
-  variant = "default",
-  size = "default",
-  asChild = false,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
-  const Comp = asChild ? Slot.Root : "button"
+const VARIANT_ALIAS: Record<ButtonVariantAlias, ButtonVariant> = {
+  default: "primary",
+  outline: "ghost",
+  secondary: "ghost",
+};
+const SIZE_ALIAS: Record<ButtonSizeAlias, ButtonSize> = {
+  default: "md",
+  xs: "sm",
+  "icon-xs": "icon-sm",
+  "icon-lg": "icon",
+};
 
-  return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  )
+/** Variant → the hover-language class that owns its hover, press and timing. */
+const HOVER_CLASS: Record<ButtonVariant, string> = {
+  primary: "hover-primary",
+  ghost: "hover-ghost",
+  quiet: "hover-quiet",
+  link: "link-draw",
+  destructive: "hover-ghost",
+};
+
+export function resolveButtonVariant(variant: ButtonVariant | ButtonVariantAlias | null | undefined): ButtonVariant {
+  if (!variant) return "primary";
+  return (VARIANT_ALIAS as Record<string, ButtonVariant>)[variant] ?? (variant as ButtonVariant);
 }
 
-export { Button, buttonVariants }
+export function resolveButtonSize(size: ButtonSize | ButtonSizeAlias | null | undefined): ButtonSize {
+  if (!size) return "md";
+  return (SIZE_ALIAS as Record<string, ButtonSize>)[size] ?? (size as ButtonSize);
+}
+
+export interface ButtonVariantProps {
+  variant?: ButtonVariant | ButtonVariantAlias | null;
+  size?: ButtonSize | ButtonSizeAlias | null;
+  className?: string;
+}
+
+/** Class names for a button-styled element that is not a <Button> (e.g. a Next <Link>). */
+export function buttonVariants({ variant, size, className }: ButtonVariantProps = {}): string {
+  const v = resolveButtonVariant(variant);
+  const s = resolveButtonSize(size);
+  return cn("ui-btn", `ui-btn--${v}`, s !== "md" && `ui-btn--${s}`, HOVER_CLASS[v], className);
+}
+
+/**
+ * The loading glyph: three 2px squares that type themselves out on the
+ * heartbeat period ("." → ".." → "…"), and stand still at "…" under reduced
+ * motion. Drawn in SVG: Google Sans Code has no ⋯. Never a spinner.
+ */
+export function LoadingEllipsis({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span data-slot="loading-ellipsis" className={cn("ui-ellipsis", className)} aria-hidden="true" {...props}>
+      <svg viewBox="0 0 14 2" width="14" height="2" focusable="false">
+        <rect x="0" y="0" width="2" height="2" fill="currentColor" />
+        <rect x="6" y="0" width="2" height="2" fill="currentColor" />
+        <rect x="12" y="0" width="2" height="2" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
+
+export interface ButtonProps extends React.ComponentProps<"button">, Omit<ButtonVariantProps, "className"> {
+  /** Render the child element (a link, a Next <Link>) with the button's styling and behaviour. */
+  asChild?: boolean;
+  /** An in-flight request: the label keeps its width, a stepped ellipsis replaces it, clicks are ignored. */
+  loading?: boolean;
+}
+
+function Button({ className, variant, size, asChild = false, loading = false, children, type, onClick, ...props }: ButtonProps) {
+  const v = resolveButtonVariant(variant);
+  const s = resolveButtonSize(size);
+  const Comp = asChild ? Slot.Root : "button";
+  const inert = loading || props["aria-disabled"] === true || props["aria-disabled"] === "true";
+
+  // Inert (loading or aria-disabled) keeps focus on the control the user just
+  // pressed — aria-disabled, never `disabled` — and does nothing: the caller's
+  // click handler is dropped and a native button stops being a submit button.
+  // Button adds no handler of its own, so a Server Component can render one.
+  return (
+    <Comp
+      {...props}
+      type={asChild ? undefined : inert ? "button" : type}
+      data-slot="button"
+      data-variant={v}
+      data-size={s}
+      data-loading={loading ? "" : undefined}
+      aria-busy={loading || undefined}
+      aria-disabled={loading ? true : props["aria-disabled"]}
+      className={buttonVariants({ variant: v, size: s, className })}
+      onClick={inert ? undefined : onClick}
+    >
+      {asChild ? <Slot.Slottable>{children}</Slot.Slottable> : children}
+      {loading ? <LoadingEllipsis data-slot="button-ellipsis" className="ui-btn__ellipsis" /> : null}
+    </Comp>
+  );
+}
+
+export { Button };
