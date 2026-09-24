@@ -25,61 +25,10 @@
 // tamperable> owns the four guards, the tamper control and the broken-state rendering;
 // this file only slices the window and supplies the copy around it.
 import { Grain, GraphPaper, SectionIndex } from "@/components/chrome";
-import type { OccurrenceView } from "@/components/sections/record/IdentityPanel";
-import { IdentityPanel, type LedgerRowView } from "@/components/sections/record/IdentityPanel";
+import { IdentityPanel } from "@/components/sections/record/IdentityPanel";
 import { FlightRecorderPanel } from "@/components/sections/record/FlightRecorderPanel";
+import { buildLedgerRows, findOccurrences, toOccurrenceView } from "@/components/sections/record/build-view";
 import { getAuditChain, getAuditEventsText, getDemoProvenFinding, getFindings, getManifest, getReviewsIndex, getSuppressions } from "@/lib/fixtures";
-import type { AuditEvent, Finding } from "@/lib/api-types";
-
-function payloadSuppressionId(event: AuditEvent): string | null {
-  const id = event.payload?.["suppression_id"];
-  return typeof id === "string" ? id : null;
-}
-
-function toOccurrenceView(finding: Finding, reviews: ReturnType<typeof getReviewsIndex>["items"]): OccurrenceView {
-  const review = reviews.find((r) => r.review_id === finding.review_id);
-  return {
-    reviewId: finding.review_id,
-    prNumber: review?.pull_request.number ?? 0,
-    prTitle: review?.pull_request.title ?? null,
-    runStatus: review?.status ?? "succeeded",
-    gateConclusion: review?.gate_conclusion ?? null,
-    createdAt: finding.created_at,
-    filePath: finding.location.file_path,
-    symbolPath: finding.location.symbol_path ?? finding.location.file_path,
-    startLine: finding.location.start_line ?? 0,
-    endLine: finding.location.end_line ?? finding.location.start_line ?? 0,
-    findingStatus: finding.status,
-    proofStatus: finding.proof?.status ?? "not_attempted",
-    severityScore: finding.severity?.score ?? 0,
-    severityBand: finding.severity?.band ?? "info",
-    blocking: finding.blocking ?? false,
-  };
-}
-
-function buildLedgerRow(
-  suppressionId: string,
-  suppressions: ReturnType<typeof getSuppressions>["items"],
-  auditEvents: readonly AuditEvent[],
-): LedgerRowView | null {
-  const item = suppressions.find((s) => s.suppression_id === suppressionId);
-  if (!item) return null;
-  const revoked = Boolean(item.revoked_at);
-  const created = auditEvents.find((e) => e.event_type === "suppression.created" && payloadSuppressionId(e) === suppressionId);
-  const revokedEvent = revoked ? auditEvents.find((e) => e.event_type === "suppression.revoked" && payloadSuppressionId(e) === suppressionId) : undefined;
-  const seq = (revoked ? revokedEvent : created)?.seq ?? created?.seq ?? 0;
-  return {
-    seq,
-    state: revoked ? "revoked" : "suppressed",
-    scope: item.scope,
-    matchPath: item.match_path ?? null,
-    reason: item.reason,
-    createdBy: item.created_by ?? null,
-    createdAt: item.created_at,
-    expiresAt: item.expires_at ?? null,
-    revokedAt: item.revoked_at ?? null,
-  };
-}
 
 export function IdentityRecorder() {
   const manifest = getManifest();
@@ -91,21 +40,8 @@ export function IdentityRecorder() {
   const rawEventsText = getAuditEventsText();
 
   const fingerprint = proven.fingerprint ?? manifest.ids.proven_fingerprint;
-  const firstSeenRunId = proven.history?.first_seen_run_id ?? null;
-  const firstOccurrence =
-    firstSeenRunId != null ? (findings.find((f) => f.fingerprint === fingerprint && f.review_id === firstSeenRunId) ?? null) : null;
-
-  const occurrenceFindings = [firstOccurrence, proven].filter((f): f is Finding => f !== null).sort((a, b) => a.created_at.localeCompare(b.created_at));
-
-  const occurrences = occurrenceFindings.map((f) => toOccurrenceView(f, reviews));
-
-  const revokedItem = suppressions.find((s) => s.revoked_at);
-  const ledgerRows = [
-    buildLedgerRow(manifest.ids.demo_suppression_id, suppressions, auditEvents),
-    revokedItem ? buildLedgerRow(revokedItem.suppression_id, suppressions, auditEvents) : null,
-  ]
-    .filter((r): r is LedgerRowView => r !== null)
-    .sort((a, b) => a.seq - b.seq);
+  const occurrences = findOccurrences(proven, fingerprint, findings).map((f) => toOccurrenceView(f, reviews));
+  const ledgerRows = buildLedgerRows(manifest.ids.demo_suppression_id, suppressions, auditEvents);
 
   return (
     <section id="record" aria-labelledby="record-heading" className="relative isolate overflow-hidden border-b border-rule-hair px-4 py-24 md:px-8 md:py-32">

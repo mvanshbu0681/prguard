@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 import { parseLosslessJson } from "@/api/lossless";
 import { ChainRail, type LosslessAuditEvent } from "@/components/evidence/ChainRail";
+import { windowAroundSeq } from "./build-view";
 
 interface AuditEventsFile {
   items: LosslessAuditEvent[];
@@ -34,11 +35,7 @@ export interface FlightRecorderPanelProps {
 export function FlightRecorderPanel({ rawEventsText, tamperDemoSeq, before = 3, after = 2 }: FlightRecorderPanelProps) {
   const file = useMemo(() => parseLosslessJson(rawEventsText) as unknown as AuditEventsFile, [rawEventsText]);
 
-  const windowEvents = useMemo(() => {
-    const lo = tamperDemoSeq - before;
-    const hi = tamperDemoSeq + after;
-    return file.items.filter((e) => e.seq >= lo && e.seq <= hi);
-  }, [file, tamperDemoSeq, before, after]);
+  const windowEvents = useMemo(() => windowAroundSeq(file.items, tamperDemoSeq, before, after), [file, tamperDemoSeq, before, after]);
 
   return (
     <ChainRail
