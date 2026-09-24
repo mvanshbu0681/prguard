@@ -30,7 +30,7 @@
 // Entrance animation is the engine-free CSS substrate (src/styles/motion.css) via
 // `data-anim` + `.reveal` / `.draw` — the app-wide batched IntersectionObserver
 // (src/motion/reveal.ts) reveals them; nothing here drives a timeline.
-import { useCallback, useId, useMemo, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from "react";
+import { useCallback, useId, useMemo, useState, type ClipboardEvent, type FormEvent, type HTMLAttributes, type KeyboardEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Exhibit, Surface } from "@/components/chrome";
 import type { AuditEvent, ChainRailProps as BaseChainRailProps } from "@/components/evidence/props";
@@ -207,6 +207,19 @@ interface RowProps {
   labelId: string;
 }
 
+
+/**
+ * The tamper field. Uncontrolled after mount: React renders `text` once and never
+ * rewrites the text node while the visitor types. As controlled children it did, and
+ * every keystroke re-rendered the node and reset the caret to position 0, so typing
+ * "XY" produced "YX…". A restore remounts it (key={generation}) with the pristine text;
+ * collapsing and re-expanding remounts it with the current text.
+ */
+function CanonicalField({ text, ...props }: { text: string } & HTMLAttributes<HTMLDivElement>) {
+  const [initial] = useState(text);
+  return <div {...props}>{initial}</div>;
+}
+
 function ChainRow({
   data,
   expanded,
@@ -258,7 +271,6 @@ function ChainRow({
       className={cn("chain-rail__row relative", desaturated && "[opacity:.45] [filter:saturate(0.25)]")}
       data-seq={event.seq}
       data-broken={!intact ? "" : undefined}
-      data-anim
     >
       <div className={cn("chain-rail__rail-node absolute left-[15px] top-3 z-10 h-[7px] w-[7px] -translate-x-1/2 rounded-full", intact ? "bg-signal-lo" : "bg-alarm")} aria-hidden />
       {connector !== "none" ? (
@@ -320,8 +332,9 @@ function ChainRow({
           </div>
           <div className="flex min-w-0 gap-2">
             <span className="type-micro w-24 shrink-0 pt-0.5 text-text-dim">canonical_json</span>
-            <div
+            <CanonicalField
               key={generation}
+              text={text}
               contentEditable={canEdit}
               suppressContentEditableWarning
               spellCheck={false}
@@ -336,9 +349,7 @@ function ChainRow({
                 "type-data min-w-0 flex-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-text-body outline-none",
                 canEdit && "cursor-text rounded-data border border-dashed border-rule-2 px-1 focus-visible:[box-shadow:var(--focus-ring)]",
               )}
-            >
-              {text}
-            </div>
+            />
           </div>
           {guard === "no-crypto" ? (
             <p className="type-micro text-text-dim">hash verification requires https or localhost</p>
