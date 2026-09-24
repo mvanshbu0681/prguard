@@ -34,7 +34,8 @@ interface NavigationLike {
   entries(): NavigationHistoryEntryLike[];
 }
 
-function findingsBackHref(): string | null {
+/** Exported for tests/unit/routes/finding-detail/back-link.test.tsx. */
+export function findingsBackHref(): string | null {
   if (typeof window === "undefined") return null;
   const nav = (window as unknown as { navigation?: NavigationLike }).navigation;
   if (!nav || typeof nav.entries !== "function") return null;
