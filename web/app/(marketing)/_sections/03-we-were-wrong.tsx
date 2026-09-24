@@ -38,10 +38,14 @@ export function WeWereWrong() {
 
   return (
     <section id="wrong" className="border-b border-rule-hair bg-ink-0 px-4 py-20 md:px-8 md:py-24">
-      <div className="mx-auto grid max-w-[1200px] gap-x-12 gap-y-12 lg:grid-cols-12">
-        <div className="flex flex-col gap-8 lg:col-span-6">
+      <div className="mx-auto grid min-w-0 max-w-[1200px] gap-x-12 gap-y-12 lg:grid-cols-12">
+        <div className="flex min-w-0 flex-col gap-8 lg:col-span-6">
           <div className="flex flex-col gap-4">
-            <SectionIndex index="03" category="Self-refutation" />
+            {/* Renders "/ 03 — WE WERE WRONG": src/components/marketing-shell/sections.ts's
+                MARKETING_SECTIONS category for id="wrong", so the nav, the footer
+                sitemap and this section's own head all name it the same way. The
+                blueprint's own "SELF-REFUTATION" framing survives in the H2 and body. */}
+            <SectionIndex index="03" category="WE WERE WRONG" />
             <h2 className="type-display-h2 text-balance text-text-primary">We were wrong about this one.</h2>
             <div className="flex max-w-(--measure-body) flex-col gap-3 type-body text-text-body">
               <p>
@@ -79,7 +83,7 @@ export function WeWereWrong() {
           </div>
         </div>
 
-        <div className="lg:col-span-6">
+        <div className="min-w-0 lg:col-span-6">
           <ProofBench
             proof={proof}
             density="compact"

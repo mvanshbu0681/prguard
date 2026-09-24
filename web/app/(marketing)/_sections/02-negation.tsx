@@ -27,6 +27,12 @@ export function Negation() {
       id="negation"
       className="relative isolate border-b border-rule-hair bg-ink-0"
     >
+      {/* The site-wide index grammar (design §4.4), kept as a bare corner label —
+          no rule, no panel — so §02 still reads as air (marketing-shell's live
+          nav index and tests/unit/marketing-shell/sections.test.ts both key off
+          this exact string). */}
+      <p className="type-label px-4 pt-6 text-text-dim md:px-8">/ 02 — THE NEGATION</p>
+
       <NegationRules className="flex flex-col">
         {/* Full-bleed hairline, tick at 25% of its width (§02: "a single tick
             mark each at 25% and 75%"). */}
