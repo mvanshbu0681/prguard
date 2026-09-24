@@ -272,12 +272,21 @@ def series(world: World, counts: dict[str, Any]) -> dict[str, Any]:
         week = _week_start(run.queued_at)
         if row.proof_status in ATTEMPTED:
             weekly[week][row.proof_status] += 1
-        elif row.status != "dropped" and row.proof_status == "not_attempted":
-            weekly[week]["not_attempted"] += 1
+        elif row.status != "dropped" and row.proof_status in ("not_attempted", "not_applicable"):
+            weekly[week][row.proof_status] += 1
 
     dismissed_ids = {o.finding_id for o in world.outcomes if o.outcome == "dismissed"}
     addressed_ids = {o.finding_id for o in world.outcomes if o.outcome == "addressed"}
     ever = [row for _, row in rows if row.status == "published" or row.id in dismissed_ids]
+    # Calibration divides by the addressed_rate population: published findings on PRs
+    # run more than once (core/accuracy.py CAVEATS: single-run PRs are excluded from n).
+    runs_per_pr = Counter(run.row.pull_request_id for run in world.runs)
+    rerun_prs = {pr for pr, count in runs_per_pr.items() if count > 1}
+    addressable = [
+        row
+        for run, row in rows
+        if row.status == "published" and run.row.pull_request_id in rerun_prs
+    ]
 
     by_category = []
     for category in CATEGORIES:
@@ -291,7 +300,7 @@ def series(world: World, counts: dict[str, Any]) -> dict[str, Any]:
         )
     calibration = []
     for band in BANDS_DESC:
-        population = [row for row in ever if row.severity_band == band]
+        population = [row for row in addressable if row.severity_band == band]
         calibration.append(
             {
                 "band": band,
@@ -302,6 +311,7 @@ def series(world: World, counts: dict[str, Any]) -> dict[str, Any]:
                 ),
                 "addressed": sum(1 for row in population if row.id in addressed_ids),
                 "n": len(population),
+                "published_n": sum(1 for row in ever if row.severity_band == band),
             }
         )
     out = {
@@ -313,6 +323,7 @@ def series(world: World, counts: dict[str, Any]) -> dict[str, Any]:
                 "inconclusive": weekly[week]["inconclusive"],
                 "skipped_no_env": weekly[week]["skipped_no_env"],
                 "not_attempted": weekly[week]["not_attempted"],
+                "not_applicable": weekly[week]["not_applicable"],
             }
             for week in weeks
         ],
@@ -323,9 +334,13 @@ def series(world: World, counts: dict[str, Any]) -> dict[str, Any]:
     # The composition sums to the report's totals, and every population is the report's.
     for key in ("proven", "disproven", "inconclusive", "skipped_no_env"):
         assert sum(week[key] for week in out["weekly"]) == counts["proof"][key], key
+    visible = sum(1 for _, row in rows if row.status != "dropped")
+    assert sum(sum(v for k, v in week.items() if k != "week_start") for week in out["weekly"]) == visible
     assert sum(item["published"] for item in by_category) == counts["precision"]["ever_published"]
     assert sum(item["dismissed"] for item in by_category) == counts["precision"]["dismissed"]
-    assert sum(item["n"] for item in calibration) == counts["precision"]["ever_published"]
+    assert sum(item["n"] for item in calibration) == counts["precision"]["published_on_rerun_prs"]
+    assert sum(item["addressed"] for item in calibration) == counts["precision"]["addressed"]
+    assert sum(item["published_n"] for item in calibration) == counts["precision"]["ever_published"]
     return out
 
 

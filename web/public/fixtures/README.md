@@ -22,7 +22,7 @@ The generator must use them verbatim and may add more ids under `ids`.
 | Path | Shape | Notes |
 |---|---|---|
 | `manifest.json` | `{ generator, ids, counts }` | `counts` = totals of everything generated, for tests |
-| `reviews/index.json` | `{ items: ReviewListItem[] }` **Ext** | ~40 runs across ~6 repos, newest first. `ReviewListItem` = `{ review_id, status, trigger, repository: {owner,name}, pull_request: {number, title, author}, risk_tier, gate_conclusion, counts: ResultCounts, cost_usd_estimate, duration_seconds, created_at, finished_at }` |
+| `reviews/index.json` | `{ items: ReviewListItem[] }` **Ext** | 76 runs (71 succeeded, 3 failed, 2 cancelled) across 6 repos, newest first. `ReviewListItem` = `{ review_id, status, trigger, repository: {owner,name}, pull_request: {number, title, author}, risk_tier, gate_conclusion, counts: ResultCounts, cost_usd_estimate, duration_seconds, created_at, finished_at }` |
 | `reviews/<id>.status.json` | `ReviewStatus` | Final state for every run in the index (`succeeded`, or `failed`/`cancelled` with `error`) |
 | `reviews/<id>.result.json` | `ReviewResult` | Full result incl. `findings[]`, `review_payload` (the exact GitHub review body — see brand-gaps §E), `gate`, `delivery.ladder_breakdown`, `cost`, `timing`, `context` |
 | `findings/index.json` | `{ items: Finding[] }` | **Every** finding across every run (≥ 240). The resolver filters/paginates this for `GET /v1/findings` and serves `GET /v1/findings/{id}` from it |
@@ -30,7 +30,7 @@ The generator must use them verbatim and may add more ids under `ids`.
 | `audit/events.json` | `{ items: AuditItemWithTenant[], chain: AuditChain }` | The tenant's **whole** chain, contiguous `seq`, ascending. `AuditItemWithTenant` = `AuditItem & { tenant_id: string }` (plan A9 — the hash covers tenant_id). Hashes computed by the backend's `compute_event_hash`. `chain.verified = true` |
 | `audit/vectors.json` | `{ items: { name, document, prev_hash, canonical, hash }[] }` | Cross-language canonical-JSON test vectors (plan A8). `document` is the exact dict hashed, `canonical` is Python's `canonical_json(document)`, `hash` is `compute_event_hash`. Must include: `1.0`, `0.5`, `-0.0`, `1e-05`, `1.5e-07`, `1e16`, `123456789012345678.0`, large ints, nested dicts with unsorted keys, arrays of dicts, non-ASCII (`café`, an astral emoji in a **value**), escapes (`\n`, `\t`, `\u0001`, quotes, backslash, U+2028), `true/false/null`, empty `{}`/`[]`, and `created_at` with and without microseconds. **The raw JSON text of this file preserves Python's number lexemes** — write it with `json.dumps`, never re-serialise through JS |
 | `accuracy/report.json` | `AccuracyReport` | Computed from ONE set of raw counts with the exact formulas in `core/accuracy.py` (plan A7). Nothing in it is typed by hand |
-| `accuracy/series.json` | **Ext** | `{ weekly: { week_start, proven, disproven, inconclusive, not_attempted }[], dismissal_by_category: { category, dismissed, published }[], calibration: { band, predicted_score_mean, addressed, n }[], raw_counts: {...} }` — every number carries its n. `raw_counts` are the inputs `report.json` was computed from |
+| `accuracy/series.json` | **Ext** | `{ weekly: { week_start, proven, disproven, inconclusive, skipped_no_env, not_attempted, not_applicable }[], dismissal_by_category: { category, dismissed, published }[], calibration: { band, predicted_score_mean, addressed, n, published_n }[], raw_counts: {...} }` — every number carries its n. `weekly` covers every non-dropped finding (the six keys of all weeks sum to the visible findings in `findings/index.json`); the four attempted keys sum to `report.json → proof`. `calibration.n` is the `addressed_rate` population (published findings on PRs run more than once), so `sum(n) = addressed_rate.n` and `sum(addressed) = raw_counts.precision.addressed`; `published_n` is every published finding in the band (`sum = human_dismissal_rate.n`). `raw_counts` are the inputs `report.json` was computed from |
 | `cost/summary.json` | **Ext** | `{ window, per_stage: { stage, p50_s, p95_s }[] (9, in STAGES order), cost_histogram: { bin_start_usd, bin_end_usd, runs }[], cost_p50_usd, cost_p95_usd, cache_hit: { day, cache_read_tokens, input_tokens }[] }` |
 | `live/demo-run.json` | **Ext** | The simulated live run (plan A5). `{ review_id, time_scale, stages: { key, duration_ms, label }[] (9, STAGES order), heartbeat_interval_ms: 1200, final_status_file, final_result_file }` — t2a's resolver advances `GET /v1/reviews/{id}` through these stages from a per-run start time |
 
@@ -81,7 +81,8 @@ implementation only where the spec defines behaviour the implementation leaves o
 depend on one of these should not expect it from a live backend:
 
 * Coordinator drops are persisted as `findings` rows with `status: dropped` (no `severity`), and
-  every finding row, dropped or not, has a `finding.proposed` event.
+  every finding row of a run that completed, dropped or not, has a `finding.proposed` event.
+  Cancelled runs write no run record, as in the backend, so their rows have no audit event.
 * `finding.proposed` payloads also carry `severity_inputs` (the six measured inputs).
 * `proof.status` records `not_applicable` (a non-Python finding) and `skipped_no_env` (a run with
   no sandbox), where the implementation leaves `not_attempted`.

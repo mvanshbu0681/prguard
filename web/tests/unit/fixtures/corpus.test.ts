@@ -365,7 +365,18 @@ describe("fixture corpus: accuracy, cost, live run, suppressions", () => {
     for (const key of ["proven", "disproven", "inconclusive", "skipped_no_env"] as const) {
       expect(series.weekly.reduce((sum: number, week: Record<string, number>) => sum + week[key], 0), key).toBe(report.proof[key]);
     }
-    expect(series.calibration.reduce((sum: number, band: { n: number }) => sum + band.n, 0)).toBe(report.precision_proxies.human_dismissal_rate.n);
+    // Calibration divides by the addressed_rate population (published findings on re-run PRs).
+    expect(series.calibration.reduce((sum: number, band: { n: number }) => sum + band.n, 0)).toBe(report.precision_proxies.addressed_rate.n);
+    expect(series.calibration.reduce((sum: number, band: { addressed: number }) => sum + band.addressed, 0)).toBe(counts.precision.addressed);
+    expect(series.calibration.reduce((sum: number, band: { published_n: number }) => sum + band.published_n, 0)).toBe(report.precision_proxies.human_dismissal_rate.n);
+    // The weekly composition covers every finding a human can see, not_applicable included.
+    const visible = findings.filter((row: { status: string }) => row.status !== "dropped").length;
+    const weeklyTotal = series.weekly.reduce(
+      (sum: number, week: Record<string, number | string>) =>
+        sum + (["proven", "disproven", "inconclusive", "skipped_no_env", "not_attempted", "not_applicable"] as const).reduce((acc, key) => acc + Number(week[key]), 0),
+      0,
+    );
+    expect(weeklyTotal).toBe(visible);
     expect(series.dismissal_by_category.reduce((sum: number, row: { published: number }) => sum + row.published, 0)).toBe(report.precision_proxies.human_dismissal_rate.n);
   });
 
