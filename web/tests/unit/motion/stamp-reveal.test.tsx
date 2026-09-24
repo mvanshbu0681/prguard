@@ -152,6 +152,16 @@ describe("the document revealer", () => {
     expect([byId("late1"), byId("flag")].map((el) => el.getAttribute(ANIM_IN_ATTR))).toEqual(["", ""]);
   });
 
+  it("shows content already scrolled past as it is (static), and keeps waiting for content below", () => {
+    document.body.innerHTML = `<ul>${item("above")}${item("below")}</ul>`;
+    startAutoReveal();
+    const io = observerOf(byId("above"));
+    io.outside([byId("above"), byId("below")], [-400, 1400]);
+    expect(byId("above").getAttribute(ANIM_IN_ATTR)).toBe("static");
+    expect(byId("below").hasAttribute(ANIM_IN_ATTR)).toBe(false);
+    expect(pendingReveals()).toBe(1);
+  });
+
   it("stop releases every observer", () => {
     document.body.innerHTML = `<ul>${item("a")}</ul>`;
     startAutoReveal();
@@ -184,6 +194,17 @@ describe("in view", () => {
     expect(order).toEqual(["a0", "b1"]);
     stopC();
     expect(io.disconnected).toBe(true);
+  });
+
+  it("fires for content above the viewport only when asked (passed: reveals, never autoplay)", () => {
+    const [a, b] = [document.createElement("div"), document.createElement("div")];
+    const seen: string[] = [];
+    onceInView(a, () => seen.push("a"));
+    onceInView(b, () => seen.push("b"), { passed: true });
+    expect(observerOf(a)).not.toBe(observerOf(b));
+    observerOf(a).outside([a], [-400]);
+    observerOf(b).outside([b], [-400]);
+    expect(seen).toEqual(["b"]);
   });
 
   it("calls back at once where IntersectionObserver is missing: visibility is never gated", () => {

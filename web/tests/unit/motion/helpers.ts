@@ -97,6 +97,22 @@ export class MockIntersectionObserver implements IntersectionObserver {
     );
     this.callback(entries, this);
   }
+  /** Report `elements` as NOT intersecting, lying at `tops` (with height 40) relative to a 900px root. */
+  outside(elements: Element[], tops: number[]) {
+    const entries = elements.map(
+      (target, i) =>
+        ({
+          target,
+          isIntersecting: false,
+          intersectionRatio: 0,
+          boundingClientRect: { top: tops[i], bottom: tops[i] + 40, left: 0 } as DOMRectReadOnly,
+          intersectionRect: {} as DOMRectReadOnly,
+          rootBounds: { top: 0, bottom: 756 } as DOMRectReadOnly,
+          time: 0,
+        }) as IntersectionObserverEntry,
+    );
+    this.callback(entries, this);
+  }
 }
 
 export function installIntersectionObserver(): () => void {

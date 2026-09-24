@@ -9,7 +9,8 @@
 //                                             including ones mounted later, is revealed the
 //                                             first time its top crosses 84% of the viewport
 //                                             (motion spec §4.5), in batches: elements that
-//                                             cross together stagger by position
+//                                             cross together stagger by position; elements
+//                                             already scrolled past are shown static
 //   motion.css .reveal                       opacity 0 → 1 (.reveal-rise adds a rise of at
 //                                             most 8px) on --dur-enter / --ease-instrument,
 //                                             delayed min(index, 5) × --stagger-sibling
@@ -24,7 +25,7 @@
 
 import { ANIM_ATTR, ANIM_IN_ATTR, ANIM_IN_STATIC, REVEAL_INDEX_VAR } from "./attrs";
 import { fitDraw } from "./draw";
-import { onceInView } from "./in-view";
+import { isPassed, onceInView } from "./in-view";
 import { STAGGER } from "./tokens";
 
 export { REVEAL_INDEX_VAR };
@@ -84,10 +85,16 @@ export function startAutoReveal(): () => void {
     if (watched.has(el) || el.hasAttribute(ANIM_IN_ATTR)) return;
     watched.set(
       el,
-      onceInView(el, (_entry, index) => {
-        watched.delete(el);
-        revealNow(el, index);
-      }),
+      onceInView(
+        el,
+        (entry, index) => {
+          watched.delete(el);
+          // Scrolled past before the runtime arrived: show it as it is, nobody sees it move.
+          if (entry && isPassed(entry)) showStatic(el);
+          else revealNow(el, index);
+        },
+        { passed: true },
+      ),
     );
   };
   const unwatch = (el: Element) => {

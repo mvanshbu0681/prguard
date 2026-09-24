@@ -16,6 +16,12 @@ export interface InViewOptions {
   threshold?: number;
   /** Margin around the viewport, CSS syntax. The default fires when the top crosses 84% of the viewport (§4.5). */
   rootMargin?: string;
+  /**
+   * Also fire for a target that lies wholly ABOVE the viewport (already scrolled past:
+   * a reload with restored scroll, an anchor jump to #run). Reveals use it, so content
+   * the reader has passed is never left hidden (and unfindable with Cmd-F) behind them.
+   */
+  passed?: boolean;
 }
 
 export type InViewCallback = (entry: IntersectionObserverEntry | null, batchIndex: number) => void;
@@ -30,15 +36,22 @@ interface Pool {
 
 const pools = new Map<string, Pool>();
 
-function poolFor(threshold: number, rootMargin: string): Pool {
-  const key = `${threshold}|${rootMargin}`;
+/** True when the entry's target sits wholly above the observer's root (scrolled past). */
+export function isPassed(entry: IntersectionObserverEntry): boolean {
+  return !entry.isIntersecting && entry.boundingClientRect.bottom <= (entry.rootBounds?.top ?? 0);
+}
+
+const poolKey = (threshold: number, rootMargin: string, passed: boolean) => `${threshold}|${rootMargin}|${passed ? "passed" : ""}`;
+
+function poolFor(threshold: number, rootMargin: string, passed: boolean): Pool {
+  const key = poolKey(threshold, rootMargin, passed);
   let pool = pools.get(key);
   if (pool) return pool;
   const callbacks = new Map<Element, InViewCallback>();
   const observer = new IntersectionObserver(
     (entries) => {
       const entering = entries
-        .filter((e) => e.isIntersecting && callbacks.has(e.target))
+        .filter((e) => (e.isIntersecting || (passed && isPassed(e))) && callbacks.has(e.target))
         .sort((x, y) => x.boundingClientRect.top - y.boundingClientRect.top || x.boundingClientRect.left - y.boundingClientRect.left);
       entering.forEach((entry, index) => {
         const cb = callbacks.get(entry.target);
@@ -69,7 +82,8 @@ export function onceInView(el: Element, callback: InViewCallback, options: InVie
   }
   const threshold = options.threshold ?? 0;
   const rootMargin = options.rootMargin ?? REVEAL_ROOT_MARGIN;
-  const pool = poolFor(threshold, rootMargin);
+  const passed = options.passed ?? false;
+  const pool = poolFor(threshold, rootMargin, passed);
   pool.callbacks.set(el, callback);
   pool.observer.observe(el);
   return () => {
@@ -78,7 +92,7 @@ export function onceInView(el: Element, callback: InViewCallback, options: InVie
     pool.observer.unobserve(el);
     if (pool.callbacks.size === 0) {
       pool.observer.disconnect();
-      pools.delete(`${threshold}|${rootMargin}`);
+      pools.delete(poolKey(threshold, rootMargin, passed));
     }
   };
 }
