@@ -41,7 +41,7 @@ export interface MetricCardProps {
 
 export function MetricCard({ name, metric, provenance, derivation, ext = false, index = "01", z = 1.96, className }: MetricCardProps) {
   const { value, n, definition } = metric;
-  const hasData = value !== null && typeof n === "number" && n > 0;
+  const hasData = value != null && typeof n === "number" && n > 0;
   const lowN = hasData && n! < LOW_N_FLOOR;
   const interval = hasData ? wilson(successesFromRate(value!, n!), n!, z) : null;
 

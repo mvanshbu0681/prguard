@@ -57,10 +57,17 @@ export function asAccuracySeriesExt(series: AccuracySeries): AccuracySeriesExt {
   return series as AccuracySeriesExt;
 }
 
-/** What `<MetricCard>` needs to render one of the six A6 metrics — see file header. */
+/**
+ * What `<MetricCard>` needs to render one of the six A6 metrics — see file
+ * header. `value`/`n` are optional (not just nullable) so the generated
+ * `AccuracyMetric` (`web/src/api/types.gen.ts`, whose `value`/`n` are `?`)
+ * satisfies this shape directly — `report.precision_proxies.<key>` needs no
+ * adapter, only the two derived metrics (`proven_rate`, `inconclusive_rate`)
+ * are built by hand in metric-grid.tsx.
+ */
 export interface AccuracyMetricLike {
-  /** null → "no data (n = 0)", never an invented 0.000. */
-  value: number | null;
+  /** Missing or null → "no data (n = 0)", never an invented 0.000. */
+  value?: number | null;
   n?: number;
   /** Always-visible 13px body text — never a tooltip (dashboard §2.10). */
   definition: string;
