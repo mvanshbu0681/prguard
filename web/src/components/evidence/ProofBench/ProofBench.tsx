@@ -96,7 +96,13 @@ export function ProofBench(props: ProofBenchProps) {
     setRunToken((t) => t + 1);
   }, []);
   const handleEnd = useCallback(() => {
+    // Settle all the way back to stage 0 too, not just animating=false: with no reset the
+    // data-pb-* flags would sit on the root forever at their final "true" values — inert
+    // (nothing keys off them once [data-pb-anim] is gone) but no longer bit-for-bit the
+    // pristine DOM a fresh static render produces. The replay-equals-static guarantee is
+    // about the actual markup, not just the visible result.
     setAnimating(false);
+    setStage(STAGE.rest);
     onReplayEnd?.();
   }, [onReplayEnd]);
 
