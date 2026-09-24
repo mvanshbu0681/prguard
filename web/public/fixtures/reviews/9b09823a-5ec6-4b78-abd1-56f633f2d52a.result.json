@@ -1,0 +1,274 @@
+{
+  "review_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "web-storefront",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 1126,
+    "title": "Currency switcher in the header",
+    "author": "kwame-a",
+    "head_sha": "b726daf6d8307c2e30544fb080f875890e5a7b86",
+    "base_sha": "ad8d00693fae884ca47aa4c2fe69290e308c7a3d",
+    "url": "https://github.com/acme/web-storefront/pull/1126"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2573559089,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 1,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.9302,
+    "input_tokens": 70490,
+    "output_tokens": 36561,
+    "cache_read_tokens": 170073
+  },
+  "timing": {
+    "queued_at": "2026-09-11T10:05:42.366713Z",
+    "started_at": "2026-09-11T10:05:42.639491Z",
+    "finished_at": "2026-09-11T10:06:13.475491Z",
+    "duration_seconds": 30.836
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "5ea69916-4bb8-45d3-86f1-af996441ba91",
+      "review_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+      "fingerprint": "fc08fd1f9e8893c5894ccc0a3ffaf52920c1d252cb0847353cf9e4b1b42d4b5b",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "float_price_formatting",
+      "title": "formatPrice() divides by 100 for every currency, including JPY",
+      "body_markdown": "`formatPrice()` renders `amountMinor / 100` (line 24); JPY has no minor unit, so ¥1200 is shown as ¥12.",
+      "location": {
+        "file_path": "src/components/CurrencySwitcher.tsx",
+        "start_line": 24,
+        "end_line": 26,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/components/CurrencySwitcher.tsx::#0"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.555,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.7,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.25,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × untested × blast radius 0.70 × unproven × churn 0.25",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 26,
+        "github_comment_id": 2480375370
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-11T10:06:11.435091Z"
+    },
+    {
+      "id": "bd3f6083-8368-4844-8d7c-493f518c325e",
+      "review_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+      "fingerprint": "263bfd7f327d352b26b036fe3930799c7efe0c89c95862cb3445b7affe90a9aa",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "duplicated_storage_key",
+      "title": "Read the selected currency through the cart storage helper",
+      "body_markdown": "`useCurrency()` writes `\"acme.currency\"` directly (line 36) while every other preference goes through `storage.ts`, which namespaces keys per user.",
+      "location": {
+        "file_path": "src/components/CurrencySwitcher.tsx",
+        "start_line": 36,
+        "end_line": 37,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/components/CurrencySwitcher.tsx::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.38,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.2,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.25,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "untested × reachable internally × unproven × blast radius 0.20 × churn 0.25",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_nearest",
+        "delivered_line": 32,
+        "github_comment_id": 1929858482
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-11T10:06:11.436491Z"
+    },
+    {
+      "id": "96ec80aa-4f5e-4a56-ad66-1b125d730162",
+      "review_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "missing_memoization",
+      "title": "Memoize `currencyOptions`",
+      "body_markdown": "`currencyOptions` re-renders on every parent render.",
+      "location": {
+        "file_path": "src/components/CurrencySwitcher.tsx",
+        "start_line": 48,
+        "end_line": 50,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-11T10:06:11.437891Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#1126` in 30.8s · [full run ↗](https://prguard.acme.internal/runs/9b09823a-5ec6-4b78-abd1-56f633f2d52a)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 1 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "b726daf6d8307c2e30544fb080f875890e5a7b86",
+    "comments": [
+      {
+        "path": "src/components/CurrencySwitcher.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.555`** high\n\n`formatPrice()` renders `amountMinor / 100` (line 24); JPY has no minor unit, so ¥1200 is shown as ¥12.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/CurrencySwitcher.tsx` is not Python.\n\n**Severity `0.555`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.105` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/5ea69916-4bb8-45d3-86f1-af996441ba91#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint fc08fd1f…4b5b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/5ea69916-4bb8-45d3-86f1-af996441ba91#suppress)",
+        "line": 26,
+        "side": "RIGHT",
+        "start_line": 24,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "src/components/CurrencySwitcher.tsx",
+        "body": "> Nearest reviewable line. The issue is at `src/components/CurrencySwitcher.tsx:36`.\n\n**`proof_status: not_applicable`** · severity **`0.380`** medium\n\n`useCurrency()` writes `\"acme.currency\"` directly (line 36) while every other preference goes through `storage.ts`, which namespaces keys per user.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/CurrencySwitcher.tsx` is not Python.\n\n**Severity `0.380`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bd3f6083-8368-4844-8d7c-493f518c325e#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 263bfd7f…a9aa` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bd3f6083-8368-4844-8d7c-493f518c325e#suppress)",
+        "line": 32,
+        "side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=9b09823a-5ec6-4b78-abd1-56f633f2d52a"
+}
