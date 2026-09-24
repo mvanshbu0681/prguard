@@ -57,11 +57,16 @@ class Facts:
 
 @dataclass(frozen=True)
 class FailureSpec:
-    """How pytest reports the failing statement of a repro (``pytest_text.Failure``)."""
+    """How pytest reports the failing statement of a repro (``pytest_text.Failure``).
+
+    ``line`` names the failing statement when it is not the test's last one (pytest prints the
+    function only down to the statement that raised): the last line containing it wins.
+    """
 
     exception: str
     explanation: tuple[str, ...]
     caret: str | None = None
+    line: str | None = None
 
 
 @dataclass(frozen=True)

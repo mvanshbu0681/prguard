@@ -269,6 +269,27 @@ def ms(value: float) -> timedelta:
     return timedelta(milliseconds=value)
 
 
+#: Debugging aid only: ``CORPUS_LENIENT=1`` reports every plan inconsistency instead of
+#: stopping at the first. The generator never sets it, so a real run always fails fast.
+PLAN_ERRORS: list[str] = []
+
+
+def fill(text: str, **values: object) -> str:
+    """Replace ``{name}`` placeholders by name, leaving every other brace alone."""
+    for name, value in values.items():
+        text = text.replace("{" + name + "}", str(value))
+    return text
+
+
+def plan_error(message: str) -> None:
+    import os
+
+    if os.environ.get("CORPUS_LENIENT") == "1":
+        PLAN_ERRORS.append(message)
+        return
+    raise AssertionError(message)
+
+
 def parse_at(value: str, key: str) -> datetime:
     """``2026-09-23T11:46`` gets a seeded sub-minute offset; a value with seconds is exact."""
     moment = datetime.fromisoformat(value).replace(tzinfo=UTC)
@@ -668,6 +689,9 @@ class Simulation:
         row.error_message = f"Superseded by a newer head SHA ({head})."
         row.finished_at = record.cancel_at
         row.degradations = list(record.degradations)
+        if not any(stage.key == "identity" and stage.ended for stage in record.stages):
+            # Findings are persisted in S6; a run stopped before it has none.
+            record.findings = []
 
     # =================================================================================
     # S1 — ingest
@@ -697,9 +721,9 @@ class Simulation:
             changed, token_budget=SETTINGS.CONTEXT_TOKEN_BUDGET, max_files=SETTINGS.MAX_FILES
         )
         if selection.risk_tier != spec.tier:
-            raise AssertionError(
+            plan_error(
                 f"{spec.key}: plan says tier {spec.tier!r}, build_context computed "
-                f"{selection.risk_tier!r}"
+                f"{selection.risk_tier!r} ({sum(c.changed_lines for c in changed)} changed lines)"
             )
         record.selection = selection
         record.degrade(*selection.degradations)
@@ -791,8 +815,6 @@ class Simulation:
                 continue
             source = repo.source(path)
             wanted = ranges.get(path) or [self._default_hunk(record, path, source)]
-            if spec.padding_lines:
-                wanted = [*wanted, *self._padding(record, path, source)]
             patch, additions, deletions = synth.build_patch(source.text, wanted)
             changed.append(
                 context.ChangedFile(
@@ -801,6 +823,20 @@ class Simulation:
                 )
             )
             sources[path] = source.text
+        if spec.padding_lines:
+            # A design note added with the change: it carries the changed-line count that puts
+            # a run with no sensitive path in the ``full`` tier (§11.2 assumption 11) without
+            # moving any finding's hunk.
+            path = f"docs/changes/{spec.pr}.md"
+            text = synth.design_note(path, spec.title, spec.padding_lines)
+            patch, additions, deletions = synth.build_patch(text, [], added=True)
+            changed.append(
+                context.ChangedFile(
+                    path=path, change_status="added", patch=patch, additions=additions,
+                    deletions=deletions, content=text,
+                )
+            )
+            sources[path] = text
         for path, text in tree.items():
             sources.setdefault(path, text)
         return changed, sources
@@ -818,7 +854,13 @@ class Simulation:
         text = self._head_text(record, path)
         if text is None:
             return path, None
-        first, last = locate(path, symbol, text)
+        real = path in self.real_changes.get(record.spec.key, {}) or path in self.real_trees.get(
+            record.spec.key, {}
+        )
+        if not real and path in record.repo.specs:
+            first, last = record.repo.source(path).spans[symbol]
+        else:
+            first, last = locate(path, symbol, text)
         if span is None:
             return path, (first, min(last, first + 2))
         start, end = first + span[0], first + span[1]
@@ -860,7 +902,8 @@ class Simulation:
             if start - distance - 8 >= 1:
                 last = start - distance
                 return [(last - rng.randint(3, 6), last)]
-            raise AssertionError(f"{path} is too short for a far hunk ({total} lines)")
+            plan_error(f"{record.spec.key}: {path} is too short for a far hunk from {use.tpl} ({total} lines)")
+            return [(start, end)]
         raise ValueError(f"unknown anchor {use.anchor!r}")
 
     def _default_hunk(self, record: RunRecord, path: str, source: synth.SourceFile) -> tuple[int, int]:
@@ -868,12 +911,6 @@ class Simulation:
         total = len(source.lines)
         first = rng.randint(1, max(1, total - 8))
         return (first, min(total, first + rng.randint(2, 7)))
-
-    def _padding(self, record: RunRecord, path: str, source: synth.SourceFile) -> list[tuple[int, int]]:
-        rng = stream(f"pad:{record.spec.key}:{path}")
-        total = len(source.lines)
-        first = rng.randint(1, max(1, total - 12))
-        return [(first, min(total, first + record.spec.padding_lines))]
 
     # =================================================================================
     # S3 — specialists
@@ -884,7 +921,7 @@ class Simulation:
         for use in record.spec.uses:
             who = self._specialist_of(use)
             if who not in record.specialists:
-                raise AssertionError(
+                plan_error(
                     f"{record.spec.key}: {use.tpl} is from {who!r}, but a {tier} run only runs "
                     f"{record.specialists}"
                 )
@@ -951,9 +988,9 @@ class Simulation:
                 drop = self.drops[use.tpl]
             specialist = use.specialist or drop.specialist
             symbol = use.symbol or (original.symbol if original else "")
-            body = drop.body.format(file=path, symbol=symbol)
-            title = drop.title.format(file=path, symbol=symbol)
-            detail = drop.detail.format(file=path, symbol=symbol)
+            body = fill(drop.body, file=path, symbol=symbol)
+            title = fill(drop.title, file=path, symbol=symbol)
+            detail = fill(drop.detail, file=path, symbol=symbol)
             row = models.Finding(
                 id=finding_id,
                 tenant_id=TENANT_ID,
@@ -1011,7 +1048,8 @@ class Simulation:
 
     @staticmethod
     def _body(text: str, start: int, end: int) -> str:
-        return text.format(start=start, mid=start + 1, end=end)
+        # Placeholders are replaced by name: bodies quote code with literal braces in it.
+        return fill(text, start=start, mid=start + 1, end=end)
 
     def _finding_row(self, record: RunRecord, canon: core_types.CanonicalFinding) -> models.Finding:
         return models.Finding(
@@ -1285,9 +1323,10 @@ class Simulation:
             item = by_id[finding.id]
             proof = item.template.proofs.get(item.use.proof)
             if proof is None:
-                raise AssertionError(
+                plan_error(
                     f"{spec.key}: {item.key} was selected for proof but has no {item.use.proof!r} repro"
                 )
+                proof = Proof(kind="gen_fail")
             item.proof = proof
             timing = stream(f"proof-ms:{spec.key}:{item.key}")
             generate = timing.randint(2200, 3400)
@@ -1421,7 +1460,9 @@ class Simulation:
             return core_types.RunResult(exit_code=0, stdout=pt.passed_run(seconds), command=command)
 
         def failed(seconds: float) -> core_types.RunResult:
-            source, lineno = repro.test_function_source(proof.test_code, proof.test_name)
+            source, lineno = repro.test_function_source(
+                proof.test_code, proof.test_name, proof.failure.line
+            )
             failure = pt.Failure(
                 test_path=path,
                 test_name=proof.test_name,
@@ -1448,10 +1489,11 @@ class Simulation:
         if kind == "deps_failed":
             return passed(proof.base_seconds), failed(proof.head_seconds), False
         if kind == "head_timeout":
+            # The runners' own record of a kill: exit 124, the notice appended to stderr.
             head = core_types.RunResult(
-                exit_code=-9,
+                exit_code=124,
                 stdout="",
-                stderr=pt.timeout_stderr(runner_name, SETTINGS.PROOF_TIMEOUT),
+                stderr=f"\n{pt.timeout_stderr(runner_name, SETTINGS.PROOF_TIMEOUT)}\n",
                 timed_out=True,
                 command=command,
             )
@@ -1505,7 +1547,7 @@ class Simulation:
             got = assignments[item.canon.id].mode
             want = expected.get(item.use.anchor)
             if want is None or got != want:
-                raise AssertionError(
+                plan_error(
                     f"{spec.key}: {item.key} planned anchor {item.use.anchor!r} but the ladder "
                     f"put it on {got!r}"
                 )

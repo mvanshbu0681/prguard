@@ -212,6 +212,19 @@ def _json(spec: FileSpec) -> SourceFile:
     return SourceFile(path=spec.path, text="\n".join(lines) + "\n", spans=spans)
 
 
+def design_note(path: str, title: str, lines: int) -> str:
+    """A markdown design note of ``lines`` lines, added alongside a change."""
+    rng = stream(f"note:{path}")
+    body = [f"# {title}", "", "## Context", ""]
+    while len(body) < lines - 1:
+        noun, verb, attr = rng.choice(_NOUNS), rng.choice(_VERBS), rng.choice(_ATTRS)
+        body.append(f"- {verb.capitalize()} the {noun} {attr} before the next step ({rng.randint(1, 99)}).")
+        if rng.random() < 0.12:
+            body.extend(["", f"## {noun.capitalize()} {attr}", ""])
+    body = body[: lines - 1] + [""]
+    return "\n".join(body) + "\n"
+
+
 def oversized_file(path: str, entries: int = 14_000) -> str:
     """A translation catalogue big enough that S2's token budget cannot hold its patch (E5)."""
     rng = stream(f"oversized:{path}")
