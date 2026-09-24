@@ -8,8 +8,8 @@
 // or `useAccuracy()`, same shape either way).
 //
 //   ┌ / 01 — EXECUTION VERIFIED PRECISION ───────────────────────────────┐
-//   │  0.910                                                              │
-//   │  ├───────────●───────────┤   0.865            n = 25       0.938   │
+//   │  <value>                                                            │
+//   │  ├───────────●───────────┤   <low>          n = <n>        <high>  │
 //   │  Of findings we claimed as proven, the share where the repro …      │
 //   └ GET /v1/accuracy → precision_proxies.execution_verified_precision ──┘
 import type { ReactNode } from "react";

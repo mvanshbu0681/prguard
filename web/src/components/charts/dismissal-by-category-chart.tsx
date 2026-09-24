@@ -60,7 +60,8 @@ export function DismissalByCategoryChart({ categories, index = "08", provenance 
           <XAxis type="number" domain={[0, 1]} tickFormatter={(v: number) => v.toFixed(3)} tickLine={false} axisLine={false} tickMargin={8} />
           <YAxis type="category" dataKey="category" tickLine={false} axisLine={false} width={128} tickFormatter={(v: string) => v.replaceAll("_", " ")} />
           <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
-          <Bar dataKey="rate" fill="var(--color-rate)" isAnimationActive={false} maxBarSize={20}>
+          {/* minPointSize: a category with rate 0 (no dismissals) still needs a visible bar to print its label on — a true zero-width rect never mounts. */}
+          <Bar dataKey="rate" fill="var(--color-rate)" isAnimationActive={false} maxBarSize={20} minPointSize={2}>
             <LabelList dataKey="label" position="right" className="fill-text-dim type-chip tabular" />
           </Bar>
         </BarChart>

@@ -26,8 +26,11 @@ describe("empty state — charts 2-4 read a fixture-only series (plan A11)", () 
   });
 
   it("every empty chart's provenance is marked fixture-only (ext)", () => {
-    render(<ProofCompositionChart weekly={[]} />);
-    expect(screen.getByText(/fixture-only: not served by the API yet/)).toBeInTheDocument();
+    const { container } = render(<ProofCompositionChart weekly={[]} />);
+    // ProvenanceLine splits "fixture-only:" into its own no-wrap span (chrome/ProvenanceLine.tsx),
+    // so the note is two text nodes — assert on the strip's normalised textContent.
+    const provenance = container.querySelector('[data-strip="provenance"]');
+    expect((provenance?.textContent ?? "").replace(/\s+/g, " ")).toContain("fixture-only: not served by the API yet");
   });
 });
 
@@ -49,7 +52,7 @@ describe("ProofCompositionChart — mounts with data, sits on the graticule (no 
 
 describe("DismissalByCategoryChart — sorted descending, n printed on every bar", () => {
   it("prints the computed rate and n for each category, not a legend", () => {
-    render(
+    const { container } = render(
       <DismissalByCategoryChart
         categories={[
           { category: "correctness", dismissed: 4, published: 45 },
@@ -58,10 +61,20 @@ describe("DismissalByCategoryChart — sorted descending, n printed on every bar
         ]}
       />,
     );
+    // Recharts word-wraps a <LabelList> string into one <tspan> per word, so the
+    // rendered text is scattered across sibling nodes — assert on the SVG's
+    // whitespace-normalised textContent rather than one exact text node.
+    const text = (container.textContent ?? "").replace(/\s+/g, "");
     // security: 3/24 = 0.125; correctness: 4/45 = 0.089; test_integrity: 0/1 = 0.000
-    expect(screen.getByText("0.125 · n = 24")).toBeInTheDocument();
-    expect(screen.getByText("0.089 · n = 45")).toBeInTheDocument();
-    expect(screen.getByText("0.000 · n = 1")).toBeInTheDocument();
+    expect(text).toContain("0.125·n=24");
+    expect(text).toContain("0.089·n=45");
+    expect(text).toContain("0.000·n=1");
+    expect(container.querySelector(".ui-chart-legend")).toBeNull();
+  });
+
+  it("still draws a bar (and prints its label) for a category with rate exactly 0 — a true zero-width rect never mounts", () => {
+    const { container } = render(<DismissalByCategoryChart categories={[{ category: "test_integrity", dismissed: 0, published: 1 }]} />);
+    expect(container.querySelectorAll(".recharts-bar-rectangle")).toHaveLength(1);
   });
 });
 

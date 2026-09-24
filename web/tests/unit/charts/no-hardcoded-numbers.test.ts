@@ -26,12 +26,29 @@ const RENDERING_FILES = [
   "gate-outcome-bar.tsx",
 ].map((name) => ({ name, path: resolve(CHART_DIR, name) }));
 
-const SOURCES = RENDERING_FILES.map((f) => ({ ...f, source: readFileSync(f.path, "utf8") }));
+/**
+ * Every component's `index` prop default (`index = "07"`, the IndexStrip
+ * number — pure UI chrome, not data) is stripped before scanning: a small
+ * count like the fixture's `proof.inconclusive = 10` can coincide with a
+ * two-digit index label by chance, and that coincidence is not a hard-coded
+ * data value.
+ */
+function stripIndexDefaults(source: string): string {
+  return source.replace(/index\s*=\s*"\d+"/g, 'index=""');
+}
 
-/** Matches `value` as a standalone number, not as a substring of a longer digit run (so 42 doesn't match inside 1420, or 1 inside 12). */
+const SOURCES = RENDERING_FILES.map((f) => ({ ...f, source: stripIndexDefaults(readFileSync(f.path, "utf8")) }));
+
+/**
+ * Matches `value` as a standalone number: not a substring of a longer digit
+ * run (42 inside 1420), and not part of an identifier a CSS token or a
+ * className can legitimately contain a small integer in (`--ink-5`,
+ * `h-12`, `gap-4`) — those aren't data, so a trailing/leading hyphen or word
+ * character also breaks the match.
+ */
 function embedsLiteral(source: string, value: number): boolean {
   const escaped = String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`(?<![.\\d])${escaped}(?![.\\d])`).test(source);
+  return new RegExp(`(?<![.\\d\\w§-])${escaped}(?![.\\d\\w§-])`).test(source);
 }
 
 describe("no hard-coded numbers — the fixture's own values never appear as source literals", () => {

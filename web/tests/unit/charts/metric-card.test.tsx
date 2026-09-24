@@ -14,12 +14,14 @@ describe("MetricCard — value formatting (brand-gaps §D: 3 decimals, always)",
 
   it("prints 0 as 0.000, not a blank or a dash", () => {
     render(<MetricCard name="self_caught_false_positive_rate" metric={{ value: 0, n: 40, definition: "x" }} provenance="GET /v1/accuracy → x" />);
-    expect(screen.getByText("0.000")).toBeInTheDocument();
+    // getAllByText, not getByText: at p̂ = 0 the Wilson low bound also prints "0.000".
+    expect(screen.getAllByText("0.000").length).toBeGreaterThan(0);
   });
 
   it("prints 1 as 1.000, not 1 or 100%", () => {
     render(<MetricCard name="execution_verified_precision" metric={{ value: 1, n: 25, definition: "x" }} provenance="GET /v1/accuracy → x" />);
-    expect(screen.getByText("1.000")).toBeInTheDocument();
+    // getAllByText, not getByText: at p̂ = 1 the Wilson high bound also prints "1.000".
+    expect(screen.getAllByText("1.000").length).toBeGreaterThan(0);
     expect(screen.queryByText("100%")).not.toBeInTheDocument();
   });
 
