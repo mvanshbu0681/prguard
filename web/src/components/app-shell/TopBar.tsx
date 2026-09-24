@@ -20,6 +20,7 @@ import { API_BASE, FIXTURES } from '@/lib/env';
 import { cn } from '@/lib/utils';
 import { useCompactRowsToggle, useContrastToggle } from './prefs';
 import { breadcrumbsForPath } from './routes';
+import { useIsMobile } from './useIsMobile';
 
 export interface TopBarProps {
   onOpenPalette: () => void;
@@ -64,6 +65,7 @@ function ModeChip() {
 export function TopBar({ onOpenPalette }: TopBarProps) {
   const [contrastOn, setContrast] = useContrastToggle();
   const [compactOn, setCompact] = useCompactRowsToggle();
+  const isMobile = useIsMobile();
 
   return (
     <header
@@ -103,17 +105,19 @@ export function TopBar({ onOpenPalette }: TopBarProps) {
           <Icon icon={Rows3Icon} size={14} label="Toggle compact rows" />
         </button>
 
-        <button
-          type="button"
-          onClick={onOpenPalette}
-          className="hover-quiet flex h-7 items-center gap-1.5 rounded-data px-2 text-text-dim"
-        >
-          <Icon icon={SearchIcon} size={14} />
-          <KbdGroup>
-            <Kbd>⌘</Kbd>
-            <Kbd>K</Kbd>
-          </KbdGroup>
-        </button>
+        {isMobile ? null : (
+          <button
+            type="button"
+            onClick={onOpenPalette}
+            className="hover-quiet flex h-7 items-center gap-1.5 rounded-data px-2 text-text-dim"
+          >
+            <Icon icon={SearchIcon} size={14} />
+            <KbdGroup>
+              <Kbd>⌘</Kbd>
+              <Kbd>K</Kbd>
+            </KbdGroup>
+          </button>
+        )}
       </div>
     </header>
   );
