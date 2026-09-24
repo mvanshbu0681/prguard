@@ -289,7 +289,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `audit_break_glass()`.",
+      "title": "Use structured logging arguments in `audit_break_glass()`",
       "body_markdown": "`audit_break_glass()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/admin/break_glass.py",

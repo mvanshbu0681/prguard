@@ -220,7 +220,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `render_sms()` before it is used.",
+      "title": "Validate the argument to `render_sms()` before it is used",
       "body_markdown": "`render_sms()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/providers/sms.py",
@@ -267,7 +267,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `send_batch()`.",
+      "title": "Cover the empty-input branch of `send_batch()`",
       "body_markdown": "`send_batch()` has no test for an empty input.",
       "location": {
         "file_path": "app/providers/sms.py",

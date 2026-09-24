@@ -212,7 +212,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_wafv2_ip_set.blocked`.",
+      "title": "Add `prevent_destroy` to `aws_wafv2_ip_set.blocked`",
       "body_markdown": "A mistaken plan could destroy `aws_wafv2_ip_set.blocked`.",
       "location": {
         "file_path": "terraform/waf.tf",

@@ -228,7 +228,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `_rate_limit_key()`.",
+      "title": "Add a regression test for `_rate_limit_key()`",
       "body_markdown": "No test exercises the path in `_rate_limit_key()` that this change breaks.",
       "location": {
         "file_path": "app/auth/reset.py",
@@ -275,7 +275,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `send_reset_email()` returns when nothing matches.",
+      "title": "Document what `send_reset_email()` returns when nothing matches",
       "body_markdown": "`send_reset_email()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/auth/reset.py",

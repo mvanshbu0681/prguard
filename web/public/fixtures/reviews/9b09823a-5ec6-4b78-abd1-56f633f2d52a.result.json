@@ -208,7 +208,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `currencyOptions`.",
+      "title": "Memoize `currencyOptions`",
       "body_markdown": "`currencyOptions` re-renders on every parent render.",
       "location": {
         "file_path": "src/components/CurrencySwitcher.tsx",

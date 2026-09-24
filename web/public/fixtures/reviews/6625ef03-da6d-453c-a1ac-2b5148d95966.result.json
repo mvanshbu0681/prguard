@@ -147,7 +147,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `group_by_currency()` before it is used.",
+      "title": "Validate the argument to `group_by_currency()` before it is used",
       "body_markdown": "`group_by_currency()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -194,7 +194,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `batch_total()` so the name says it has a side effect.",
+      "title": "Rename `batch_total()` so the name says it has a side effect",
       "body_markdown": "`batch_total()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -241,7 +241,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `schedule_batch()`.",
+      "title": "Add a regression test for `schedule_batch()`",
       "body_markdown": "No test exercises the path in `schedule_batch()` that this change breaks.",
       "location": {
         "file_path": "app/payouts/batch.py",

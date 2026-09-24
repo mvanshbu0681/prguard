@@ -70,7 +70,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `issue_code()` so the name says it has a side effect.",
+      "title": "Rename `issue_code()` so the name says it has a side effect",
       "body_markdown": "`issue_code()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/oauth/authorize.py",

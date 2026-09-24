@@ -70,7 +70,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_kms_key.secrets`.",
+      "title": "Add `prevent_destroy` to `aws_kms_key.secrets`",
       "body_markdown": "A mistaken plan could destroy `aws_kms_key.secrets`.",
       "location": {
         "file_path": "terraform/kms.tf",

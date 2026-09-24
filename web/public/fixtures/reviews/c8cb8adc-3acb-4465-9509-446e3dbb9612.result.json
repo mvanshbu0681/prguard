@@ -139,7 +139,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `record_attempt()`.",
+      "title": "Use structured logging arguments in `record_attempt()`",
       "body_markdown": "`record_attempt()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -186,7 +186,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `_is_retryable()` returns when nothing matches.",
+      "title": "Document what `_is_retryable()` returns when nothing matches",
       "body_markdown": "`_is_retryable()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -233,7 +233,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `create_charge_with_retry()` against two callers running it at once.",
+      "title": "Guard `create_charge_with_retry()` against two callers running it at once",
       "body_markdown": "Two workers running `create_charge_with_retry()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/billing/retry.py",

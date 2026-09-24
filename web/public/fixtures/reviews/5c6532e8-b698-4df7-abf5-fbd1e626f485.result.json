@@ -287,7 +287,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `_client()`.",
+      "title": "Use structured logging arguments in `_client()`",
       "body_markdown": "`_client()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/billing/stripe_client.py",

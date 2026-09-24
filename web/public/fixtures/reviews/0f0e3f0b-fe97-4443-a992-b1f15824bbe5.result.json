@@ -222,7 +222,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `round_minor()`.",
+      "title": "Use structured logging arguments in `round_minor()`",
       "body_markdown": "`round_minor()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -269,7 +269,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "obscured_invariant",
-      "title": "Make the invariant in `invoice_tax_total()` explicit.",
+      "title": "Make the invariant in `invoice_tax_total()` explicit",
       "body_markdown": "`invoice_tax_total()` relies on an ordering it never states.",
       "location": {
         "file_path": "app/billing/tax.py",

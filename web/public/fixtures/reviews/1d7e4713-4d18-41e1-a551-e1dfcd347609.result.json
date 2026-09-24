@@ -214,7 +214,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `gridColumns`.",
+      "title": "Memoize `gridColumns`",
       "body_markdown": "`gridColumns` re-renders on every parent render.",
       "location": {
         "file_path": "src/components/ProductGrid.tsx",

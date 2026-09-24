@@ -216,7 +216,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `key_for_kid()`.",
+      "title": "Cache the result of `key_for_kid()`",
       "body_markdown": "`key_for_kid()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/auth/jwks.py",

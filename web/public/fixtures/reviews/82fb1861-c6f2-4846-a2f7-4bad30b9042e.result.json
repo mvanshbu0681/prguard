@@ -212,7 +212,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "explicit_any",
-      "title": "Replace `any` in `lazyRoute` with the generated API type.",
+      "title": "Replace `any` in `lazyRoute` with the generated API type",
       "body_markdown": "`lazyRoute` types its argument as `any`.",
       "location": {
         "file_path": "src/routes/index.tsx",

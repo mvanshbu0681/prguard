@@ -220,7 +220,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `_dedupe_key()` against two callers running it at once.",
+      "title": "Guard `_dedupe_key()` against two callers running it at once",
       "body_markdown": "Two workers running `_dedupe_key()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -267,7 +267,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `should_send()`.",
+      "title": "Add a regression test for `should_send()`",
       "body_markdown": "No test exercises the path in `should_send()` that this change breaks.",
       "location": {
         "file_path": "app/push/dedupe.py",

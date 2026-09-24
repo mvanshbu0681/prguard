@@ -139,7 +139,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `upgrade()`.",
+      "title": "Annotate the return type of `upgrade()`",
       "body_markdown": "`upgrade()` is the only function in `migrations/versions/0091_drop_ledger_v1.py` without a return annotation.",
       "location": {
         "file_path": "migrations/versions/0091_drop_ledger_v1.py",

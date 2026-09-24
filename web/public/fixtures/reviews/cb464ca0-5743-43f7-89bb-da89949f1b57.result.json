@@ -216,7 +216,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "explicit_any",
-      "title": "Replace `any` in `submitPayment` with the generated API type.",
+      "title": "Replace `any` in `submitPayment` with the generated API type",
       "body_markdown": "`submitPayment` types its argument as `any`.",
       "location": {
         "file_path": "src/checkout/PayButton.tsx",

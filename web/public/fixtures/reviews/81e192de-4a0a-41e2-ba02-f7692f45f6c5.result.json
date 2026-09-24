@@ -220,7 +220,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `reconcile_settlements()`.",
+      "title": "Use structured logging arguments in `reconcile_settlements()`",
       "body_markdown": "`reconcile_settlements()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/reconcile/adyen.py",
@@ -267,7 +267,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "sleep_in_test",
-      "title": "Replace the sleep in the test for `_parse_report_row()` with a fake clock.",
+      "title": "Replace the sleep in the test for `_parse_report_row()` with a fake clock",
       "body_markdown": "The test for `_parse_report_row()` sleeps for two seconds to cross a boundary.",
       "location": {
         "file_path": "app/reconcile/adyen.py",

@@ -285,7 +285,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `send_digest()`.",
+      "title": "Annotate the return type of `send_digest()`",
       "body_markdown": "`send_digest()` is the only function in `app/workers/digest.py` without a return annotation.",
       "location": {
         "file_path": "app/workers/digest.py",

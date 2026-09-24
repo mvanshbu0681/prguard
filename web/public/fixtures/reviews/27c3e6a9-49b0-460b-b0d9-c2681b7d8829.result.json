@@ -285,7 +285,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `order_totals()`.",
+      "title": "Cache the result of `order_totals()`",
       "body_markdown": "`order_totals()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -332,7 +332,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `_line_items()`.",
+      "title": "Cover the empty-input branch of `_line_items()`",
       "body_markdown": "`_line_items()` has no test for an empty input.",
       "location": {
         "file_path": "app/api/orders.py",

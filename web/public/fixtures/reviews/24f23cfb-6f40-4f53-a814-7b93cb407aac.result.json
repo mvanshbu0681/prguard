@@ -283,7 +283,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `refundable_amount()`.",
+      "title": "Annotate the return type of `refundable_amount()`",
       "body_markdown": "`refundable_amount()` is the only function in `app/billing/refunds.py` without a return annotation.",
       "location": {
         "file_path": "app/billing/refunds.py",
@@ -330,7 +330,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `notify_refund()`.",
+      "title": "Cover the empty-input branch of `notify_refund()`",
       "body_markdown": "`notify_refund()` has no test for an empty input.",
       "location": {
         "file_path": "app/billing/refunds.py",

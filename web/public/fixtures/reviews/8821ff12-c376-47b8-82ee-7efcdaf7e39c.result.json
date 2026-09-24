@@ -224,7 +224,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `revoke_session()`.",
+      "title": "Add a regression test for `revoke_session()`",
       "body_markdown": "No test exercises the path in `revoke_session()` that this change breaks.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -271,7 +271,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `issue_session()` returns when nothing matches.",
+      "title": "Document what `issue_session()` returns when nothing matches",
       "body_markdown": "`issue_session()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -318,7 +318,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `_swap_tokens()` before it is used.",
+      "title": "Validate the argument to `_swap_tokens()` before it is used",
       "body_markdown": "`_swap_tokens()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/auth/session.py",

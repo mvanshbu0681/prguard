@@ -220,7 +220,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `_dedupe_key()`.",
+      "title": "Cache the result of `_dedupe_key()`",
       "body_markdown": "`_dedupe_key()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/push/dedupe.py",

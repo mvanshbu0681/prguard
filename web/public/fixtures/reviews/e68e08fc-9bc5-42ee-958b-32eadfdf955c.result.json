@@ -147,7 +147,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `refresh_session()` against two callers running it at once.",
+      "title": "Guard `refresh_session()` against two callers running it at once",
       "body_markdown": "Two workers running `refresh_session()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -194,7 +194,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `revoke_session()`.",
+      "title": "Use structured logging arguments in `revoke_session()`",
       "body_markdown": "`revoke_session()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -241,7 +241,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "unchecked_return_value",
-      "title": "Handle the error `remember_cookie()` returns.",
+      "title": "Handle the error `remember_cookie()` returns",
       "body_markdown": "The return value of `remember_cookie()` is ignored by its caller.",
       "location": {
         "file_path": "app/auth/remember.py",

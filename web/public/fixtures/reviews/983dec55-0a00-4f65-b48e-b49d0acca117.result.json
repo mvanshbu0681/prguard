@@ -223,7 +223,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `verify_pkce()`.",
+      "title": "Add a regression test for `verify_pkce()`",
       "body_markdown": "No test exercises the path in `verify_pkce()` that this change breaks.",
       "location": {
         "file_path": "app/oauth/authorize.py",
@@ -270,7 +270,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `authorize()`.",
+      "title": "Annotate the return type of `authorize()`",
       "body_markdown": "`authorize()` is the only function in `app/oauth/authorize.py` without a return annotation.",
       "location": {
         "file_path": "app/oauth/authorize.py",
@@ -317,7 +317,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `issue_code()` before it is used.",
+      "title": "Validate the argument to `issue_code()` before it is used",
       "body_markdown": "`issue_code()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/oauth/authorize.py",

@@ -222,7 +222,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `schedule_batch()` against two callers running it at once.",
+      "title": "Guard `schedule_batch()` against two callers running it at once",
       "body_markdown": "Two workers running `schedule_batch()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -269,7 +269,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "abusable_behaviour",
-      "title": "A caller can abuse the behaviour of `batch_total()`.",
+      "title": "A caller can abuse the behaviour of `batch_total()`",
       "body_markdown": "The defect in `batch_total()` is reachable from a request.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -316,7 +316,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `group_by_currency()` returns when nothing matches.",
+      "title": "Document what `group_by_currency()` returns when nothing matches",
       "body_markdown": "`group_by_currency()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/payouts/batch.py",

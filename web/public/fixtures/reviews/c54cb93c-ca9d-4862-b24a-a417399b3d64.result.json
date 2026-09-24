@@ -216,7 +216,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `mark_failed()` against two callers running it at once.",
+      "title": "Guard `mark_failed()` against two callers running it at once",
       "body_markdown": "Two workers running `mark_failed()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/workers/webhooks.py",

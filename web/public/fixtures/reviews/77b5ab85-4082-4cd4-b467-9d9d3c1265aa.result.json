@@ -295,7 +295,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `format_number()`.",
+      "title": "Use structured logging arguments in `format_number()`",
       "body_markdown": "`format_number()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/invoices/numbering.py",
@@ -342,7 +342,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `reset_sequence()` before it is used.",
+      "title": "Validate the argument to `reset_sequence()` before it is used",
       "body_markdown": "`reset_sequence()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/invoices/numbering.py",

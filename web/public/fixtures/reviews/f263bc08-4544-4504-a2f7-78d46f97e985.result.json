@@ -216,7 +216,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `parse_assertion()` against two callers running it at once.",
+      "title": "Guard `parse_assertion()` against two callers running it at once",
       "body_markdown": "Two workers running `parse_assertion()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/sso/saml.py",
@@ -263,7 +263,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `audience_ok()`.",
+      "title": "Use structured logging arguments in `audience_ok()`",
       "body_markdown": "`audience_ok()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/sso/saml.py",

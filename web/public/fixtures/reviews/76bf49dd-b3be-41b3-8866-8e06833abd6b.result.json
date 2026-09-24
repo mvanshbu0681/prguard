@@ -220,7 +220,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `export_orders_csv()` before it is used.",
+      "title": "Validate the argument to `export_orders_csv()` before it is used",
       "body_markdown": "`export_orders_csv()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -267,7 +267,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `serialize_order()` returns when nothing matches.",
+      "title": "Document what `serialize_order()` returns when nothing matches",
       "body_markdown": "`serialize_order()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -314,7 +314,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `export_orders_csv()`.",
+      "title": "Add a regression test for `export_orders_csv()`",
       "body_markdown": "No test exercises the path in `export_orders_csv()` that this change breaks.",
       "location": {
         "file_path": "app/api/orders.py",

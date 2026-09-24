@@ -150,7 +150,7 @@ JPY_SCALE = Template(
     file="app/billing/charge.py",
     symbol="_to_settlement",
     span=(2, 3),
-    title="Scale zero-decimal currencies up, not down, in _to_settlement().",
+    title="Scale zero-decimal currencies up, not down, in _to_settlement()",
     body=(
         "`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, "
         "whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` "
@@ -191,7 +191,7 @@ FLOAT_MONEY = Template(
     file="app/api/checkout.py",
     symbol="_line",
     span=(1, 1),
-    title="Format money in `_line()` from integer cents, not float division.",
+    title="Format money in `_line()` from integer cents, not float division",
     body=(
         "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary "
         "floating point before it is rounded for display. Every order summary line passes through it, and a "
@@ -218,7 +218,7 @@ SUMMARY_USD = Template(
     file="app/api/checkout.py",
     symbol="render_summary",
     span=(3, 3),
-    title="Render the order summary in the charge's currency, not a literal \"usd\".",
+    title="Render the order summary in the charge's currency, not a literal \"usd\"",
     body=(
         "`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line {start}). With this "
         "change a charge settles in the account's `default_currency`, so for a EUR account the "
@@ -252,7 +252,7 @@ DEMO_DROPS = {
             specialist="bugs",
             category="correctness",
             rule_key="stale_import_path",
-            title="Import `MINOR_UNITS` from `app.billing.currency`, where this change moved it.",
+            title="Import `MINOR_UNITS` from `app.billing.currency`, where this change moved it",
             body=(
                 "`charge.py` defines `MINOR_UNITS` locally while `app/billing/currency.py` "
                 "exports the same table, so the two copies will drift."
@@ -267,7 +267,7 @@ DEMO_DROPS = {
             specialist="tests",
             category="test_integrity",
             rule_key="weak_rounding_assertion",
-            title="Pin `test_refund_rounding` to an amount that actually rounds.",
+            title="Pin `test_refund_rounding` to an amount that actually rounds",
             body=(
                 "`test_refund_rounding` asserts `_to_settlement(333, \"usd\") == 333`, an "
                 "input the conversion never has to round, so a rounding regression would pass."
@@ -282,7 +282,7 @@ DEMO_DROPS = {
             specialist="quality",
             category="maintainability",
             rule_key="unclear_helper_name",
-            title="Name `_to_settlement()` after the unit it returns.",
+            title="Name `_to_settlement()` after the unit it returns",
             body="`_to_settlement()` returns US cents; the name does not say so.",
             reason="nitpick",
             detail="naming preference; nothing a caller can get wrong",
@@ -294,7 +294,7 @@ DEMO_DROPS = {
             specialist="security",
             category="security",
             rule_key="mutable_rate_table",
-            title="Make `_RATES` read-only so request code cannot change a rate.",
+            title="Make `_RATES` read-only so request code cannot change a rate",
             body=(
                 "`_RATES` is a module-level dict, so any code path could assign into it and move "
                 "every later charge onto a different rate."
@@ -315,7 +315,7 @@ DEMO_DUPLICATES = {
             specialist="tests",
             category="test_integrity",
             rule_key="missing_regression_test",
-            title="Pin `charge()` for an account that has no default currency.",
+            title="Pin `charge()` for an account that has no default currency",
             body=(
                 "`tests/billing/test_charge.py` adds `default_currency` to its only fixture row, "
                 "so no test exercises the legacy row this change stops handling."
@@ -330,7 +330,7 @@ DEMO_DUPLICATES = {
             specialist="quality",
             category="maintainability",
             rule_key="optional_result_unannotated",
-            title="Keep `charge()` returning a `Charge` or raising, never `None`.",
+            title="Keep `charge()` returning a `Charge` or raising, never `None`",
             body=(
                 "`charge()` is annotated `-> Charge` and now returns `None` on one path, which "
                 "every caller has to discover by reading the body."
@@ -345,7 +345,7 @@ DEMO_DUPLICATES = {
             specialist="security",
             category="security",
             rule_key="optional_return_unhandled",
-            title="Reject unsupported currency codes before `get_rate()` is called.",
+            title="Reject unsupported currency codes before `get_rate()` is called",
             body=(
                 "An unsupported code in `default_currency` reaches `get_rate()`, which the "
                 "specialist read as returning `None`, and the charge then fails with a `TypeError`."

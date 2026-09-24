@@ -218,7 +218,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_cost_tags",
-      "title": "Add cost-allocation tags to `aws_security_group.ledger_db`.",
+      "title": "Add cost-allocation tags to `aws_security_group.ledger_db`",
       "body_markdown": "`aws_security_group.ledger_db` has no `tags` block.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",
@@ -265,7 +265,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_db_parameter_group.ledger`.",
+      "title": "Add `prevent_destroy` to `aws_db_parameter_group.ledger`",
       "body_markdown": "A mistaken plan could destroy `aws_db_parameter_group.ledger`.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",

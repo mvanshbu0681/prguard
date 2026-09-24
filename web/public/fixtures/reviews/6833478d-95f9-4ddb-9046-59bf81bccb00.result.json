@@ -214,7 +214,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `vat_for()`.",
+      "title": "Annotate the return type of `vat_for()`",
       "body_markdown": "`vat_for()` is the only function in `app/billing/tax.py` without a return annotation.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -261,7 +261,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `round_minor()` against two callers running it at once.",
+      "title": "Guard `round_minor()` against two callers running it at once",
       "body_markdown": "Two workers running `round_minor()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -308,7 +308,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "obscured_invariant",
-      "title": "Make the invariant in `invoice_tax_total()` explicit.",
+      "title": "Make the invariant in `invoice_tax_total()` explicit",
       "body_markdown": "`invoice_tax_total()` relies on an ordering it never states.",
       "location": {
         "file_path": "app/billing/tax.py",

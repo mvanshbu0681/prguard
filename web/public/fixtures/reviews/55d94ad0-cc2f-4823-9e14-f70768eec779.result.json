@@ -208,7 +208,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `consentExpired()`.",
+      "title": "Cover the empty-input branch of `consentExpired()`",
       "body_markdown": "`consentExpired()` has no test for an empty input.",
       "location": {
         "file_path": "src/consent/Banner.tsx",

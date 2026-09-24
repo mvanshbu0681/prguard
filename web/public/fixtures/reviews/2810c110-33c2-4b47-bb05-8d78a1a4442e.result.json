@@ -214,7 +214,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `order_totals()`.",
+      "title": "Cache the result of `order_totals()`",
       "body_markdown": "`order_totals()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/api/orders.py",

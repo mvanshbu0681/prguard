@@ -283,7 +283,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "explicit_any",
-      "title": "Replace `any` in `countryLabel` with the generated API type.",
+      "title": "Replace `any` in `countryLabel` with the generated API type",
       "body_markdown": "`countryLabel` types its argument as `any`.",
       "location": {
         "file_path": "src/checkout/AddressForm.tsx",
@@ -330,7 +330,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `normalizePostcode`.",
+      "title": "Memoize `normalizePostcode`",
       "body_markdown": "`normalizePostcode` re-renders on every parent render.",
       "location": {
         "file_path": "src/checkout/AddressForm.tsx",

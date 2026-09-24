@@ -220,7 +220,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `match_payouts()`.",
+      "title": "Annotate the return type of `match_payouts()`",
       "body_markdown": "`match_payouts()` is the only function in `app/reconcile/adyen.py` without a return annotation.",
       "location": {
         "file_path": "app/reconcile/adyen.py",
@@ -267,7 +267,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "sleep_in_test",
-      "title": "Replace the sleep in the test for `reconcile_settlements()` with a fake clock.",
+      "title": "Replace the sleep in the test for `reconcile_settlements()` with a fake clock",
       "body_markdown": "The test for `reconcile_settlements()` sleeps for two seconds to cross a boundary.",
       "location": {
         "file_path": "app/reconcile/adyen.py",

@@ -147,7 +147,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `saved_cards_for()` before it is used.",
+      "title": "Validate the argument to `saved_cards_for()` before it is used",
       "body_markdown": "`saved_cards_for()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/checkout/cards.py",
@@ -194,7 +194,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `default_card()` so the name says it has a side effect.",
+      "title": "Rename `default_card()` so the name says it has a side effect",
       "body_markdown": "`default_card()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/checkout/cards.py",

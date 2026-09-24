@@ -218,7 +218,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_cost_tags",
-      "title": "Add cost-allocation tags to `aws_db_parameter_group.ledger`.",
+      "title": "Add cost-allocation tags to `aws_db_parameter_group.ledger`",
       "body_markdown": "`aws_db_parameter_group.ledger` has no `tags` block.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",

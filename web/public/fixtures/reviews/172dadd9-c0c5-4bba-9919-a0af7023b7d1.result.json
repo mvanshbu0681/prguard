@@ -287,7 +287,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `record_attempt()` so the name says it has a side effect.",
+      "title": "Rename `record_attempt()` so the name says it has a side effect",
       "body_markdown": "`record_attempt()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -334,7 +334,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `_is_retryable()` against two callers running it at once.",
+      "title": "Guard `_is_retryable()` against two callers running it at once",
       "body_markdown": "Two workers running `_is_retryable()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -381,7 +381,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `create_charge_with_retry()`.",
+      "title": "Add a regression test for `create_charge_with_retry()`",
       "body_markdown": "No test exercises the path in `create_charge_with_retry()` that this change breaks.",
       "location": {
         "file_path": "app/billing/retry.py",

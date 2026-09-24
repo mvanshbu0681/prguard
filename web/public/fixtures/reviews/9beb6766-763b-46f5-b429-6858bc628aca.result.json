@@ -122,7 +122,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "currency_exponent_inverted",
-      "title": "Scale zero-decimal currencies up, not down, in _to_settlement().",
+      "title": "Scale zero-decimal currencies up, not down, in _to_settlement()",
       "body_markdown": "`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` returns `0`, where 1200 JPY is 808 US cents at the table's rate. This change sends every account's `default_currency` through that line, including the Japanese accounts the account-settings page now lets pick `jpy`.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -191,7 +191,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "float_money_formatting",
-      "title": "Format money in `_line()` from integer cents, not float division.",
+      "title": "Format money in `_line()` from integer cents, not float division",
       "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -266,7 +266,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "hardcoded_currency",
-      "title": "Render the order summary in the charge's currency, not a literal \"usd\".",
+      "title": "Render the order summary in the charge's currency, not a literal \"usd\"",
       "body_markdown": "`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line 70). With this change a charge settles in the account's `default_currency`, so for a EUR account the response's `currency` field says `eur` while the summary beside it says `usd`. The two copies of the currency now have to change together, and nothing ties them.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -335,7 +335,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Pin `charge()` for an account that has no default currency.",
+      "title": "Pin `charge()` for an account that has no default currency",
       "body_markdown": "`tests/billing/test_charge.py` adds `default_currency` to its only fixture row, so no test exercises the legacy row this change stops handling.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -382,7 +382,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_helper_name",
-      "title": "Name `_to_settlement()` after the unit it returns.",
+      "title": "Name `_to_settlement()` after the unit it returns",
       "body_markdown": "`_to_settlement()` returns US cents; the name does not say so.",
       "location": {
         "file_path": "app/billing/charge.py",

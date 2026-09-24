@@ -141,7 +141,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_s3_bucket_versioning.invoices`.",
+      "title": "Add `prevent_destroy` to `aws_s3_bucket_versioning.invoices`",
       "body_markdown": "A mistaken plan could destroy `aws_s3_bucket_versioning.invoices`.",
       "location": {
         "file_path": "terraform/s3_invoices.tf",

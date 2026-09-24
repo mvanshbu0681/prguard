@@ -70,7 +70,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `validate_assertion()` returns when nothing matches.",
+      "title": "Document what `validate_assertion()` returns when nothing matches",
       "body_markdown": "`validate_assertion()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/sso/saml.py",

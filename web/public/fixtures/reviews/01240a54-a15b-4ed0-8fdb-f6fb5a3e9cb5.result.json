@@ -139,7 +139,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `get_signing_keys()`.",
+      "title": "Use structured logging arguments in `get_signing_keys()`",
       "body_markdown": "`get_signing_keys()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -186,7 +186,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `_fetch_jwks()`.",
+      "title": "Cache the result of `_fetch_jwks()`",
       "body_markdown": "`_fetch_jwks()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -233,7 +233,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `get_signing_keys()`.",
+      "title": "Cover the empty-input branch of `get_signing_keys()`",
       "body_markdown": "`get_signing_keys()` has no test for an empty input.",
       "location": {
         "file_path": "app/auth/jwks.py",

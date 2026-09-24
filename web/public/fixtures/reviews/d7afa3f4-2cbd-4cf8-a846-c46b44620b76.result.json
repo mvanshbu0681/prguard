@@ -139,7 +139,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `create_charge_with_retry()` returns when nothing matches.",
+      "title": "Document what `create_charge_with_retry()` returns when nothing matches",
       "body_markdown": "`create_charge_with_retry()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/billing/retry.py",

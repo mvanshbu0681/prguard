@@ -147,7 +147,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `apply_partial_refund()`.",
+      "title": "Add a regression test for `apply_partial_refund()`",
       "body_markdown": "No test exercises the path in `apply_partial_refund()` that this change breaks.",
       "location": {
         "file_path": "app/refunds/reconcile.py",
@@ -194,7 +194,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `_split_fee()` so the name says it has a side effect.",
+      "title": "Rename `_split_fee()` so the name says it has a side effect",
       "body_markdown": "`_split_fee()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/refunds/reconcile.py",
@@ -241,7 +241,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "unchecked_return_value",
-      "title": "Handle the error `fee_schedule()` returns.",
+      "title": "Handle the error `fee_schedule()` returns",
       "body_markdown": "The return value of `fee_schedule()` is ignored by its caller.",
       "location": {
         "file_path": "app/refunds/fees.py",

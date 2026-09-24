@@ -151,7 +151,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `schedule_batch()` so the name says it has a side effect.",
+      "title": "Rename `schedule_batch()` so the name says it has a side effect",
       "body_markdown": "`schedule_batch()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/payouts/batch.py",

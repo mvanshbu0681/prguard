@@ -70,7 +70,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `refresh_session()` so the name says it has a side effect.",
+      "title": "Rename `refresh_session()` so the name says it has a side effect",
       "body_markdown": "`refresh_session()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -117,7 +117,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `_swap_tokens()`.",
+      "title": "Annotate the return type of `_swap_tokens()`",
       "body_markdown": "`_swap_tokens()` is the only function in `app/auth/session.py` without a return annotation.",
       "location": {
         "file_path": "app/auth/session.py",

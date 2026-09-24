@@ -214,7 +214,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `loadCart()`.",
+      "title": "Cover the empty-input branch of `loadCart()`",
       "body_markdown": "`loadCart()` has no test for an empty input.",
       "location": {
         "file_path": "src/cart/storage.ts",
@@ -261,7 +261,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `cartKey()` before it is used.",
+      "title": "Validate the argument to `cartKey()` before it is used",
       "body_markdown": "`cartKey()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "src/cart/storage.ts",

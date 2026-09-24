@@ -145,7 +145,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `unsubscribe_url()` before it is used.",
+      "title": "Validate the argument to `unsubscribe_url()` before it is used",
       "body_markdown": "`unsubscribe_url()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/unsubscribe/links.py",

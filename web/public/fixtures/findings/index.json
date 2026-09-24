@@ -7,7 +7,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "optional_return_unhandled",
-      "title": "Reject unsupported currency codes before `get_rate()` is called.",
+      "title": "Reject unsupported currency codes before `get_rate()` is called",
       "body_markdown": "An unsupported code in `default_currency` reaches `get_rate()`, which the specialist read as returning `None`, and the charge then fails with a `TypeError`.",
       "location": {
         "file_path": "app/billing/rates.py",
@@ -54,7 +54,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "optional_result_unannotated",
-      "title": "Keep `charge()` returning a `Charge` or raising, never `None`.",
+      "title": "Keep `charge()` returning a `Charge` or raising, never `None`",
       "body_markdown": "`charge()` is annotated `-> Charge` and now returns `None` on one path, which every caller has to discover by reading the body.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -101,7 +101,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Pin `charge()` for an account that has no default currency.",
+      "title": "Pin `charge()` for an account that has no default currency",
       "body_markdown": "`tests/billing/test_charge.py` adds `default_currency` to its only fixture row, so no test exercises the legacy row this change stops handling.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -148,7 +148,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "mutable_rate_table",
-      "title": "Make `_RATES` read-only so request code cannot change a rate.",
+      "title": "Make `_RATES` read-only so request code cannot change a rate",
       "body_markdown": "`_RATES` is a module-level dict, so any code path could assign into it and move every later charge onto a different rate.",
       "location": {
         "file_path": "app/billing/rates.py",
@@ -195,7 +195,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_helper_name",
-      "title": "Name `_to_settlement()` after the unit it returns.",
+      "title": "Name `_to_settlement()` after the unit it returns",
       "body_markdown": "`_to_settlement()` returns US cents; the name does not say so.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -242,7 +242,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "weak_rounding_assertion",
-      "title": "Pin `test_refund_rounding` to an amount that actually rounds.",
+      "title": "Pin `test_refund_rounding` to an amount that actually rounds",
       "body_markdown": "`test_refund_rounding` asserts `_to_settlement(333, \"usd\") == 333`, an input the conversion never has to round, so a rounding regression would pass.",
       "location": {
         "file_path": "tests/billing/test_charge.py",
@@ -289,7 +289,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "stale_import_path",
-      "title": "Import `MINOR_UNITS` from `app.billing.currency`, where this change moved it.",
+      "title": "Import `MINOR_UNITS` from `app.billing.currency`, where this change moved it",
       "body_markdown": "`charge.py` defines `MINOR_UNITS` locally while `app/billing/currency.py` exports the same table, so the two copies will drift.",
       "location": {
         "file_path": "app/billing/currency.py",
@@ -336,7 +336,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "hardcoded_currency",
-      "title": "Render the order summary in the charge's currency, not a literal \"usd\".",
+      "title": "Render the order summary in the charge's currency, not a literal \"usd\"",
       "body_markdown": "`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line 70). With this change a charge settles in the account's `default_currency`, so for a EUR account the response's `currency` field says `eur` while the summary beside it says `usd`. The two copies of the currency now have to change together, and nothing ties them.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -405,7 +405,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "float_money_formatting",
-      "title": "Format money in `_line()` from integer cents, not float division.",
+      "title": "Format money in `_line()` from integer cents, not float division",
       "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -480,7 +480,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "currency_exponent_inverted",
-      "title": "Scale zero-decimal currencies up, not down, in _to_settlement().",
+      "title": "Scale zero-decimal currencies up, not down, in _to_settlement()",
       "body_markdown": "`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` returns `0`, where 1200 JPY is 808 US cents at the table's rate. This change sends every account's `default_currency` through that line, including the Japanese accounts the account-settings page now lets pick `jpy`.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -707,7 +707,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_helper_name",
-      "title": "Name `_to_settlement()` after the unit it returns.",
+      "title": "Name `_to_settlement()` after the unit it returns",
       "body_markdown": "`_to_settlement()` returns US cents; the name does not say so.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -754,7 +754,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Pin `charge()` for an account that has no default currency.",
+      "title": "Pin `charge()` for an account that has no default currency",
       "body_markdown": "`tests/billing/test_charge.py` adds `default_currency` to its only fixture row, so no test exercises the legacy row this change stops handling.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -801,7 +801,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "hardcoded_currency",
-      "title": "Render the order summary in the charge's currency, not a literal \"usd\".",
+      "title": "Render the order summary in the charge's currency, not a literal \"usd\"",
       "body_markdown": "`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line 70). With this change a charge settles in the account's `default_currency`, so for a EUR account the response's `currency` field says `eur` while the summary beside it says `usd`. The two copies of the currency now have to change together, and nothing ties them.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -870,7 +870,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "float_money_formatting",
-      "title": "Format money in `_line()` from integer cents, not float division.",
+      "title": "Format money in `_line()` from integer cents, not float division",
       "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -945,7 +945,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "currency_exponent_inverted",
-      "title": "Scale zero-decimal currencies up, not down, in _to_settlement().",
+      "title": "Scale zero-decimal currencies up, not down, in _to_settlement()",
       "body_markdown": "`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` returns `0`, where 1200 JPY is 808 US cents at the table's rate. This change sends every account's `default_currency` through that line, including the Japanese accounts the account-settings page now lets pick `jpy`.",
       "location": {
         "file_path": "app/billing/charge.py",
@@ -1221,7 +1221,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `audit_break_glass()`.",
+      "title": "Use structured logging arguments in `audit_break_glass()`",
       "body_markdown": "`audit_break_glass()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/admin/break_glass.py",
@@ -1487,7 +1487,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_s3_bucket_versioning.invoices`.",
+      "title": "Add `prevent_destroy` to `aws_s3_bucket_versioning.invoices`",
       "body_markdown": "A mistaken plan could destroy `aws_s3_bucket_versioning.invoices`.",
       "location": {
         "file_path": "terraform/s3_invoices.tf",
@@ -1605,7 +1605,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `consentExpired()`.",
+      "title": "Cover the empty-input branch of `consentExpired()`",
       "body_markdown": "`consentExpired()` has no test for an empty input.",
       "location": {
         "file_path": "src/consent/Banner.tsx",
@@ -1932,7 +1932,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "obscured_invariant",
-      "title": "Make the invariant in `invoice_tax_total()` explicit.",
+      "title": "Make the invariant in `invoice_tax_total()` explicit",
       "body_markdown": "`invoice_tax_total()` relies on an ordering it never states.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -1979,7 +1979,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `round_minor()` against two callers running it at once.",
+      "title": "Guard `round_minor()` against two callers running it at once",
       "body_markdown": "Two workers running `round_minor()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -2026,7 +2026,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `vat_for()`.",
+      "title": "Annotate the return type of `vat_for()`",
       "body_markdown": "`vat_for()` is the only function in `app/billing/tax.py` without a return annotation.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -2217,7 +2217,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `upgrade()`.",
+      "title": "Annotate the return type of `upgrade()`",
       "body_markdown": "`upgrade()` is the only function in `migrations/versions/0091_drop_ledger_v1.py` without a return annotation.",
       "location": {
         "file_path": "migrations/versions/0091_drop_ledger_v1.py",
@@ -2333,7 +2333,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `subject_for()`.",
+      "title": "Cover the empty-input branch of `subject_for()`",
       "body_markdown": "`subject_for()` has no test for an empty input.",
       "location": {
         "file_path": "app/templates/render.py",
@@ -2524,7 +2524,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_db_instance.ledger_replica`.",
+      "title": "Add `prevent_destroy` to `aws_db_instance.ledger_replica`",
       "body_markdown": "A mistaken plan could destroy `aws_db_instance.ledger_replica`.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",
@@ -2571,7 +2571,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_wafv2_ip_set.blocked`.",
+      "title": "Add `prevent_destroy` to `aws_wafv2_ip_set.blocked`",
       "body_markdown": "A mistaken plan could destroy `aws_wafv2_ip_set.blocked`.",
       "location": {
         "file_path": "terraform/waf.tf",
@@ -2760,7 +2760,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "unchecked_return_value",
-      "title": "Handle the error `write_rows()` returns.",
+      "title": "Handle the error `write_rows()` returns",
       "body_markdown": "The return value of `write_rows()` is ignored by its caller.",
       "location": {
         "file_path": "app/reports/ledger_csv.py",
@@ -2807,7 +2807,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `export_filename()`.",
+      "title": "Cover the empty-input branch of `export_filename()`",
       "body_markdown": "`export_filename()` has no test for an empty input.",
       "location": {
         "file_path": "app/reports/export.py",
@@ -2998,7 +2998,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `ProductGrid`.",
+      "title": "Memoize `ProductGrid`",
       "body_markdown": "`ProductGrid` re-renders on every parent render.",
       "location": {
         "file_path": "src/components/ProductGrid.tsx",
@@ -3183,7 +3183,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "obscured_invariant",
-      "title": "Make the invariant in `invoice_tax_total()` explicit.",
+      "title": "Make the invariant in `invoice_tax_total()` explicit",
       "body_markdown": "`invoice_tax_total()` relies on an ordering it never states.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -3230,7 +3230,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `round_minor()`.",
+      "title": "Use structured logging arguments in `round_minor()`",
       "body_markdown": "`round_minor()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/billing/tax.py",
@@ -3429,7 +3429,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `should_send()`.",
+      "title": "Add a regression test for `should_send()`",
       "body_markdown": "No test exercises the path in `should_send()` that this change breaks.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -3476,7 +3476,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `_dedupe_key()` against two callers running it at once.",
+      "title": "Guard `_dedupe_key()` against two callers running it at once",
       "body_markdown": "Two workers running `_dedupe_key()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -3673,7 +3673,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `_active_flag()`.",
+      "title": "Cover the empty-input branch of `_active_flag()`",
       "body_markdown": "`_active_flag()` has no test for an empty input.",
       "location": {
         "file_path": "app/scim/users.py",
@@ -3720,7 +3720,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `provision_user()` before it is used.",
+      "title": "Validate the argument to `provision_user()` before it is used",
       "body_markdown": "`provision_user()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/scim/users.py",
@@ -3842,7 +3842,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "explicit_any",
-      "title": "Replace `any` in `submitPayment` with the generated API type.",
+      "title": "Replace `any` in `submitPayment` with the generated API type",
       "body_markdown": "`submitPayment` types its argument as `any`.",
       "location": {
         "file_path": "src/checkout/PayButton.tsx",
@@ -4033,7 +4033,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "unchecked_return_value",
-      "title": "Handle the error `fee_schedule()` returns.",
+      "title": "Handle the error `fee_schedule()` returns",
       "body_markdown": "The return value of `fee_schedule()` is ignored by its caller.",
       "location": {
         "file_path": "app/refunds/fees.py",
@@ -4080,7 +4080,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `_split_fee()` so the name says it has a side effect.",
+      "title": "Rename `_split_fee()` so the name says it has a side effect",
       "body_markdown": "`_split_fee()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/refunds/reconcile.py",
@@ -4127,7 +4127,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `apply_partial_refund()`.",
+      "title": "Add a regression test for `apply_partial_refund()`",
       "body_markdown": "No test exercises the path in `apply_partial_refund()` that this change breaks.",
       "location": {
         "file_path": "app/refunds/reconcile.py",
@@ -4249,7 +4249,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `_dedupe_key()` before it is used.",
+      "title": "Validate the argument to `_dedupe_key()` before it is used",
       "body_markdown": "`_dedupe_key()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -4296,7 +4296,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `prune_seen()` returns when nothing matches.",
+      "title": "Document what `prune_seen()` returns when nothing matches",
       "body_markdown": "`prune_seen()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -4343,7 +4343,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `should_send()` against two callers running it at once.",
+      "title": "Guard `should_send()` against two callers running it at once",
       "body_markdown": "Two workers running `should_send()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -4465,7 +4465,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `order_totals()`.",
+      "title": "Cache the result of `order_totals()`",
       "body_markdown": "`order_totals()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -4656,7 +4656,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `get_signing_keys()` returns when nothing matches.",
+      "title": "Document what `get_signing_keys()` returns when nothing matches",
       "body_markdown": "`get_signing_keys()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -4703,7 +4703,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `key_for_kid()`.",
+      "title": "Cache the result of `key_for_kid()`",
       "body_markdown": "`key_for_kid()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -4750,7 +4750,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `key_for_kid()`.",
+      "title": "Cache the result of `key_for_kid()`",
       "body_markdown": "`key_for_kid()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -4941,7 +4941,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `_dedupe_key()`.",
+      "title": "Cache the result of `_dedupe_key()`",
       "body_markdown": "`_dedupe_key()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/push/dedupe.py",
@@ -5138,7 +5138,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `_client()`.",
+      "title": "Use structured logging arguments in `_client()`",
       "body_markdown": "`_client()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/billing/stripe_client.py",
@@ -5398,7 +5398,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `loadCart()` before it is used.",
+      "title": "Validate the argument to `loadCart()` before it is used",
       "body_markdown": "`loadCart()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "src/cart/storage.ts",
@@ -5445,7 +5445,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `saveCart()`.",
+      "title": "Cover the empty-input branch of `saveCart()`",
       "body_markdown": "`saveCart()` has no test for an empty input.",
       "location": {
         "file_path": "src/cart/storage.ts",
@@ -5636,7 +5636,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `schedule_batch()`.",
+      "title": "Add a regression test for `schedule_batch()`",
       "body_markdown": "No test exercises the path in `schedule_batch()` that this change breaks.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -5683,7 +5683,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `batch_total()` so the name says it has a side effect.",
+      "title": "Rename `batch_total()` so the name says it has a side effect",
       "body_markdown": "`batch_total()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -5730,7 +5730,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `group_by_currency()` before it is used.",
+      "title": "Validate the argument to `group_by_currency()` before it is used",
       "body_markdown": "`group_by_currency()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -5852,7 +5852,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `get_signing_keys()`.",
+      "title": "Cover the empty-input branch of `get_signing_keys()`",
       "body_markdown": "`get_signing_keys()` has no test for an empty input.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -5899,7 +5899,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `_fetch_jwks()`.",
+      "title": "Cache the result of `_fetch_jwks()`",
       "body_markdown": "`_fetch_jwks()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -5946,7 +5946,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `get_signing_keys()`.",
+      "title": "Use structured logging arguments in `get_signing_keys()`",
       "body_markdown": "`get_signing_keys()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/auth/jwks.py",
@@ -6204,7 +6204,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "sleep_in_test",
-      "title": "Replace the sleep in the test for `_fetch_one()` with a fake clock.",
+      "title": "Replace the sleep in the test for `_fetch_one()` with a fake clock",
       "body_markdown": "The test for `_fetch_one()` sleeps for two seconds to cross a boundary.",
       "location": {
         "file_path": "app/settlement/fetch.py",
@@ -6251,7 +6251,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `merge_batches()` against two callers running it at once.",
+      "title": "Guard `merge_batches()` against two callers running it at once",
       "body_markdown": "Two workers running `merge_batches()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/settlement/fetch.py",
@@ -6442,7 +6442,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `currencyOptions`.",
+      "title": "Memoize `currencyOptions`",
       "body_markdown": "`currencyOptions` re-renders on every parent render.",
       "location": {
         "file_path": "src/components/CurrencySwitcher.tsx",
@@ -6627,7 +6627,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `issue_code()` so the name says it has a side effect.",
+      "title": "Rename `issue_code()` so the name says it has a side effect",
       "body_markdown": "`issue_code()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/oauth/authorize.py",
@@ -6674,7 +6674,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `default_card()` so the name says it has a side effect.",
+      "title": "Rename `default_card()` so the name says it has a side effect",
       "body_markdown": "`default_card()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/checkout/cards.py",
@@ -6721,7 +6721,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `saved_cards_for()` before it is used.",
+      "title": "Validate the argument to `saved_cards_for()` before it is used",
       "body_markdown": "`saved_cards_for()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/checkout/cards.py",
@@ -6843,7 +6843,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `issue_code()` before it is used.",
+      "title": "Validate the argument to `issue_code()` before it is used",
       "body_markdown": "`issue_code()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/oauth/authorize.py",
@@ -6890,7 +6890,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `authorize()`.",
+      "title": "Annotate the return type of `authorize()`",
       "body_markdown": "`authorize()` is the only function in `app/oauth/authorize.py` without a return annotation.",
       "location": {
         "file_path": "app/oauth/authorize.py",
@@ -6937,7 +6937,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `verify_pkce()`.",
+      "title": "Add a regression test for `verify_pkce()`",
       "body_markdown": "No test exercises the path in `verify_pkce()` that this change breaks.",
       "location": {
         "file_path": "app/oauth/authorize.py",
@@ -7134,7 +7134,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_db_parameter_group.ledger`.",
+      "title": "Add `prevent_destroy` to `aws_db_parameter_group.ledger`",
       "body_markdown": "A mistaken plan could destroy `aws_db_parameter_group.ledger`.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",
@@ -7181,7 +7181,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_cost_tags",
-      "title": "Add cost-allocation tags to `aws_security_group.ledger_db`.",
+      "title": "Add cost-allocation tags to `aws_security_group.ledger_db`",
       "body_markdown": "`aws_security_group.ledger_db` has no `tags` block.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",
@@ -7376,7 +7376,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `send_digest()`.",
+      "title": "Annotate the return type of `send_digest()`",
       "body_markdown": "`send_digest()` is the only function in `app/workers/digest.py` without a return annotation.",
       "location": {
         "file_path": "app/workers/digest.py",
@@ -7636,7 +7636,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `_money()`.",
+      "title": "Cover the empty-input branch of `_money()`",
       "body_markdown": "`_money()` has no test for an empty input.",
       "location": {
         "file_path": "app/reports/export.py",
@@ -7683,7 +7683,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `export_filename()` before it is used.",
+      "title": "Validate the argument to `export_filename()` before it is used",
       "body_markdown": "`export_filename()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/reports/export.py",
@@ -7880,7 +7880,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `get_order()`.",
+      "title": "Cover the empty-input branch of `get_order()`",
       "body_markdown": "`get_order()` has no test for an empty input.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -7927,7 +7927,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `expire_sessions()` against two callers running it at once.",
+      "title": "Guard `expire_sessions()` against two callers running it at once",
       "body_markdown": "Two workers running `expire_sessions()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/checkout/session.py",
@@ -7974,7 +7974,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `create_checkout_session()` so the name says it has a side effect.",
+      "title": "Rename `create_checkout_session()` so the name says it has a side effect",
       "body_markdown": "`create_checkout_session()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/checkout/session.py",
@@ -8098,7 +8098,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "float_money_formatting",
-      "title": "Format money in `_line()` from integer cents, not float division.",
+      "title": "Format money in `_line()` from integer cents, not float division",
       "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
       "location": {
         "file_path": "app/api/checkout.py",
@@ -8321,7 +8321,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "explicit_any",
-      "title": "Replace `any` in `lazyRoute` with the generated API type.",
+      "title": "Replace `any` in `lazyRoute` with the generated API type",
       "body_markdown": "`lazyRoute` types its argument as `any`.",
       "location": {
         "file_path": "src/routes/index.tsx",
@@ -8506,7 +8506,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `unsubscribe_url()` before it is used.",
+      "title": "Validate the argument to `unsubscribe_url()` before it is used",
       "body_markdown": "`unsubscribe_url()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/unsubscribe/links.py",
@@ -8628,7 +8628,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `send_reset_email()` returns when nothing matches.",
+      "title": "Document what `send_reset_email()` returns when nothing matches",
       "body_markdown": "`send_reset_email()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/auth/reset.py",
@@ -8675,7 +8675,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `_rate_limit_key()`.",
+      "title": "Add a regression test for `_rate_limit_key()`",
       "body_markdown": "No test exercises the path in `_rate_limit_key()` that this change breaks.",
       "location": {
         "file_path": "app/auth/reset.py",
@@ -8878,7 +8878,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `export_orders_csv()`.",
+      "title": "Add a regression test for `export_orders_csv()`",
       "body_markdown": "No test exercises the path in `export_orders_csv()` that this change breaks.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -8925,7 +8925,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `serialize_order()` returns when nothing matches.",
+      "title": "Document what `serialize_order()` returns when nothing matches",
       "body_markdown": "`serialize_order()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -8972,7 +8972,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `export_orders_csv()` before it is used.",
+      "title": "Validate the argument to `export_orders_csv()` before it is used",
       "body_markdown": "`export_orders_csv()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -9169,7 +9169,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "sleep_in_test",
-      "title": "Replace the sleep in the test for `_parse_report_row()` with a fake clock.",
+      "title": "Replace the sleep in the test for `_parse_report_row()` with a fake clock",
       "body_markdown": "The test for `_parse_report_row()` sleeps for two seconds to cross a boundary.",
       "location": {
         "file_path": "app/reconcile/adyen.py",
@@ -9216,7 +9216,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `reconcile_settlements()`.",
+      "title": "Use structured logging arguments in `reconcile_settlements()`",
       "body_markdown": "`reconcile_settlements()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/reconcile/adyen.py",
@@ -9413,7 +9413,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `order_totals()` returns when nothing matches.",
+      "title": "Document what `order_totals()` returns when nothing matches",
       "body_markdown": "`order_totals()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -9535,7 +9535,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `_line_items()`.",
+      "title": "Cover the empty-input branch of `_line_items()`",
       "body_markdown": "`_line_items()` has no test for an empty input.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -9582,7 +9582,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "repeated_computation",
-      "title": "Cache the result of `order_totals()`.",
+      "title": "Cache the result of `order_totals()`",
       "body_markdown": "`order_totals()` recomputes the same value on every call.",
       "location": {
         "file_path": "app/api/orders.py",
@@ -9842,7 +9842,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_kms_key.secrets`.",
+      "title": "Add `prevent_destroy` to `aws_kms_key.secrets`",
       "body_markdown": "A mistaken plan could destroy `aws_kms_key.secrets`.",
       "location": {
         "file_path": "terraform/kms.tf",
@@ -9889,7 +9889,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `reset_sequence()` before it is used.",
+      "title": "Validate the argument to `reset_sequence()` before it is used",
       "body_markdown": "`reset_sequence()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/invoices/numbering.py",
@@ -9936,7 +9936,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `format_number()`.",
+      "title": "Use structured logging arguments in `format_number()`",
       "body_markdown": "`format_number()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/invoices/numbering.py",
@@ -10208,7 +10208,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `create_charge_with_retry()` against two callers running it at once.",
+      "title": "Guard `create_charge_with_retry()` against two callers running it at once",
       "body_markdown": "Two workers running `create_charge_with_retry()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -10255,7 +10255,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `_is_retryable()` returns when nothing matches.",
+      "title": "Document what `_is_retryable()` returns when nothing matches",
       "body_markdown": "`_is_retryable()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -10302,7 +10302,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `record_attempt()`.",
+      "title": "Use structured logging arguments in `record_attempt()`",
       "body_markdown": "`record_attempt()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -10418,7 +10418,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `cartKey()` before it is used.",
+      "title": "Validate the argument to `cartKey()` before it is used",
       "body_markdown": "`cartKey()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "src/cart/storage.ts",
@@ -10465,7 +10465,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `loadCart()`.",
+      "title": "Cover the empty-input branch of `loadCart()`",
       "body_markdown": "`loadCart()` has no test for an empty input.",
       "location": {
         "file_path": "src/cart/storage.ts",
@@ -10656,7 +10656,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `_sign()`.",
+      "title": "Cover the empty-input branch of `_sign()`",
       "body_markdown": "`_sign()` has no test for an empty input.",
       "location": {
         "file_path": "app/workers/webhooks.py",
@@ -10703,7 +10703,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_cost_tags",
-      "title": "Add cost-allocation tags to `aws_db_parameter_group.ledger`.",
+      "title": "Add cost-allocation tags to `aws_db_parameter_group.ledger`",
       "body_markdown": "`aws_db_parameter_group.ledger` has no `tags` block.",
       "location": {
         "file_path": "terraform/rds_ledger.tf",
@@ -10898,7 +10898,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `mark_failed()` against two callers running it at once.",
+      "title": "Guard `mark_failed()` against two callers running it at once",
       "body_markdown": "Two workers running `mark_failed()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/workers/webhooks.py",
@@ -11089,7 +11089,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `validate_assertion()` returns when nothing matches.",
+      "title": "Document what `validate_assertion()` returns when nothing matches",
       "body_markdown": "`validate_assertion()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/sso/saml.py",
@@ -11136,7 +11136,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `audience_ok()`.",
+      "title": "Use structured logging arguments in `audience_ok()`",
       "body_markdown": "`audience_ok()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/sso/saml.py",
@@ -11183,7 +11183,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `parse_assertion()` against two callers running it at once.",
+      "title": "Guard `parse_assertion()` against two callers running it at once",
       "body_markdown": "Two workers running `parse_assertion()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/sso/saml.py",
@@ -11374,7 +11374,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `gridColumns()` before it is used.",
+      "title": "Validate the argument to `gridColumns()` before it is used",
       "body_markdown": "`gridColumns()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "src/components/ProductGrid.tsx",
@@ -11421,7 +11421,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `ProductGrid()`.",
+      "title": "Cover the empty-input branch of `ProductGrid()`",
       "body_markdown": "`ProductGrid()` has no test for an empty input.",
       "location": {
         "file_path": "src/components/ProductGrid.tsx",
@@ -11537,7 +11537,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `notify_refund()`.",
+      "title": "Cover the empty-input branch of `notify_refund()`",
       "body_markdown": "`notify_refund()` has no test for an empty input.",
       "location": {
         "file_path": "app/billing/refunds.py",
@@ -11584,7 +11584,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `refundable_amount()`.",
+      "title": "Annotate the return type of `refundable_amount()`",
       "body_markdown": "`refundable_amount()` is the only function in `app/billing/refunds.py` without a return annotation.",
       "location": {
         "file_path": "app/billing/refunds.py",
@@ -11844,7 +11844,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `send_batch()`.",
+      "title": "Cover the empty-input branch of `send_batch()`",
       "body_markdown": "`send_batch()` has no test for an empty input.",
       "location": {
         "file_path": "app/providers/sms.py",
@@ -11891,7 +11891,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `render_sms()` before it is used.",
+      "title": "Validate the argument to `render_sms()` before it is used",
       "body_markdown": "`render_sms()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/providers/sms.py",
@@ -12088,7 +12088,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `schedule_batch()` so the name says it has a side effect.",
+      "title": "Rename `schedule_batch()` so the name says it has a side effect",
       "body_markdown": "`schedule_batch()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -12216,7 +12216,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "unchecked_return_value",
-      "title": "Handle the error `remember_cookie()` returns.",
+      "title": "Handle the error `remember_cookie()` returns",
       "body_markdown": "The return value of `remember_cookie()` is ignored by its caller.",
       "location": {
         "file_path": "app/auth/remember.py",
@@ -12263,7 +12263,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "printf_style_logging",
-      "title": "Use structured logging arguments in `revoke_session()`.",
+      "title": "Use structured logging arguments in `revoke_session()`",
       "body_markdown": "`revoke_session()` logs with `%s` placeholders; structured fields are easier to query.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -12310,7 +12310,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `refresh_session()` against two callers running it at once.",
+      "title": "Guard `refresh_session()` against two callers running it at once",
       "body_markdown": "Two workers running `refresh_session()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -12434,7 +12434,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `group_by_currency()` returns when nothing matches.",
+      "title": "Document what `group_by_currency()` returns when nothing matches",
       "body_markdown": "`group_by_currency()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -12481,7 +12481,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "abusable_behaviour",
-      "title": "A caller can abuse the behaviour of `batch_total()`.",
+      "title": "A caller can abuse the behaviour of `batch_total()`",
       "body_markdown": "The defect in `batch_total()` is reachable from a request.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -12528,7 +12528,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `schedule_batch()` against two callers running it at once.",
+      "title": "Guard `schedule_batch()` against two callers running it at once",
       "body_markdown": "Two workers running `schedule_batch()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/payouts/batch.py",
@@ -12725,7 +12725,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `gridColumns`.",
+      "title": "Memoize `gridColumns`",
       "body_markdown": "`gridColumns` re-renders on every parent render.",
       "location": {
         "file_path": "src/components/ProductGrid.tsx",
@@ -12916,7 +12916,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `_client()` before it is used.",
+      "title": "Validate the argument to `_client()` before it is used",
       "body_markdown": "`_client()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/providers/sms.py",
@@ -12963,7 +12963,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `render_sms()`.",
+      "title": "Cover the empty-input branch of `render_sms()`",
       "body_markdown": "`render_sms()` has no test for an empty input.",
       "location": {
         "file_path": "app/providers/sms.py",
@@ -13223,7 +13223,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "missing_prevent_destroy",
-      "title": "Add `prevent_destroy` to `aws_s3_bucket.invoices`.",
+      "title": "Add `prevent_destroy` to `aws_s3_bucket.invoices`",
       "body_markdown": "A mistaken plan could destroy `aws_s3_bucket.invoices`.",
       "location": {
         "file_path": "terraform/s3_invoices.tf",
@@ -13341,7 +13341,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `_swap_tokens()`.",
+      "title": "Annotate the return type of `_swap_tokens()`",
       "body_markdown": "`_swap_tokens()` is the only function in `app/auth/session.py` without a return annotation.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -13388,7 +13388,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `refresh_session()` so the name says it has a side effect.",
+      "title": "Rename `refresh_session()` so the name says it has a side effect",
       "body_markdown": "`refresh_session()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -13435,7 +13435,7 @@
       "specialist": "security",
       "category": "security",
       "rule_key": "unvalidated_input",
-      "title": "Validate the argument to `_swap_tokens()` before it is used.",
+      "title": "Validate the argument to `_swap_tokens()` before it is used",
       "body_markdown": "`_swap_tokens()` passes its argument on without checking its shape.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -13482,7 +13482,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `issue_session()` returns when nothing matches.",
+      "title": "Document what `issue_session()` returns when nothing matches",
       "body_markdown": "`issue_session()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -13529,7 +13529,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `revoke_session()`.",
+      "title": "Add a regression test for `revoke_session()`",
       "body_markdown": "No test exercises the path in `revoke_session()` that this change breaks.",
       "location": {
         "file_path": "app/auth/session.py",
@@ -13728,7 +13728,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_docstring",
-      "title": "Document what `create_charge_with_retry()` returns when nothing matches.",
+      "title": "Document what `create_charge_with_retry()` returns when nothing matches",
       "body_markdown": "`create_charge_with_retry()` has no docstring and two different empty results.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -13844,7 +13844,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "missing_regression_test",
-      "title": "Add a regression test for `create_charge_with_retry()`.",
+      "title": "Add a regression test for `create_charge_with_retry()`",
       "body_markdown": "No test exercises the path in `create_charge_with_retry()` that this change breaks.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -13891,7 +13891,7 @@
       "specialist": "bugs",
       "category": "correctness",
       "rule_key": "concurrent_invocation",
-      "title": "Guard `_is_retryable()` against two callers running it at once.",
+      "title": "Guard `_is_retryable()` against two callers running it at once",
       "body_markdown": "Two workers running `_is_retryable()` together could each overwrite the other's result.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -13938,7 +13938,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "unclear_function_name",
-      "title": "Rename `record_attempt()` so the name says it has a side effect.",
+      "title": "Rename `record_attempt()` so the name says it has a side effect",
       "body_markdown": "`record_attempt()` writes as well as reads; the name reads like a pure lookup.",
       "location": {
         "file_path": "app/billing/retry.py",
@@ -14198,7 +14198,7 @@
       "specialist": "quality",
       "category": "performance",
       "rule_key": "missing_memoization",
-      "title": "Memoize `normalizePostcode`.",
+      "title": "Memoize `normalizePostcode`",
       "body_markdown": "`normalizePostcode` re-renders on every parent render.",
       "location": {
         "file_path": "src/checkout/AddressForm.tsx",
@@ -14245,7 +14245,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "explicit_any",
-      "title": "Replace `any` in `countryLabel` with the generated API type.",
+      "title": "Replace `any` in `countryLabel` with the generated API type",
       "body_markdown": "`countryLabel` types its argument as `any`.",
       "location": {
         "file_path": "src/checkout/AddressForm.tsx",
@@ -14505,7 +14505,7 @@
       "specialist": "tests",
       "category": "test_integrity",
       "rule_key": "sleep_in_test",
-      "title": "Replace the sleep in the test for `reconcile_settlements()` with a fake clock.",
+      "title": "Replace the sleep in the test for `reconcile_settlements()` with a fake clock",
       "body_markdown": "The test for `reconcile_settlements()` sleeps for two seconds to cross a boundary.",
       "location": {
         "file_path": "app/reconcile/adyen.py",
@@ -14552,7 +14552,7 @@
       "specialist": "quality",
       "category": "maintainability",
       "rule_key": "missing_return_annotation",
-      "title": "Annotate the return type of `match_payouts()`.",
+      "title": "Annotate the return type of `match_payouts()`",
       "body_markdown": "`match_payouts()` is the only function in `app/reconcile/adyen.py` without a return annotation.",
       "location": {
         "file_path": "app/reconcile/adyen.py",
