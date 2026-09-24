@@ -265,12 +265,28 @@ function ContributionBarInstrument({
             const style: CSSProperties = {
               width: `max(${contributionPercent(row).toFixed(4)}%, ${SEGMENT_MIN_PX}px)`,
             };
+            // `reset` (useSequence) fires AFTER the SSR/hydration paint that shows the full
+            // rest-state bar (§0 rule 1: "before the first play, the DOM is whatever the
+            // server rendered"). useSequence's own `play()` calls `reset()` and then applies
+            // every due step SYNCHRONOUSLY in the same call (`begin` → `applyDue`), and
+            // segment 0's step (`at: 0`) is always due immediately — so React batches reset
+            // (grownCount → 0) and segment 0's step (grownCount → 1) into ONE commit; the DOM
+            // never visibly passes through grownCount=0. With the transform transition always
+            // on, THAT combined commit is where segments 1-5 would visibly animate a full→empty
+            // shrink (their last-painted value was 1, their new target is 0) before the real
+            // left-to-right growth starts. Segment 1's own step, by contrast, always lands on a
+            // LATER animation frame (`STAGGER.sibling` = 60ms out), so `grownCount > 1` is the
+            // first point at which enabling the transition is safe: the combined reset+segment-0
+            // commit snaps instantly, and every step from segment 1 onward animates normally.
+            const transitionsEnabled = !animates || grownCount > 1;
             const fillStyle: CSSProperties = {
               backgroundColor: base,
               backgroundImage: row.name === "proof_confidence" ? PROOF_CONFIDENCE_HATCH : undefined,
               transform: `scaleX(${grown ? 1 : 0})`,
               transformOrigin: "left",
-              transition: `background-color ${DUR.hover}ms var(--ease-snap), transform ${schedule[i]?.durationMs ?? DUR.hover}ms var(--ease-instrument)`,
+              transition: transitionsEnabled
+                ? `background-color ${DUR.hover}ms var(--ease-snap), transform ${schedule[i]?.durationMs ?? DUR.hover}ms var(--ease-instrument)`
+                : "none",
             };
             return (
               <div
