@@ -9,7 +9,7 @@
 // run's own status changes, so the "0ms colour flip, never a route change" promise (plan §2
 // hard rule 3; dashboard §2.4) is structural, not animated in after the fact.
 import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLiveFavicon } from "@/components/brand";
 import { ErrorState, useIsMobile } from "@/components/app-shell";
 import { GateArea } from "./GateArea";
@@ -41,7 +41,24 @@ export interface RunViewProps {
 
 export function RunView({ id, expectedMs }: RunViewProps) {
   const status = useReviewStatus(id);
-  const mode = status.data ? runMode(status.data.status) : null;
+
+  // RE-RUN resets the status query (@/lib/hooks' useRerunReview: `resetQueries`), which
+  // clears `status.data` to undefined for the moment between the reset and the next poll
+  // landing. Without this, that gap would hit the "no id yet" skeleton below — a full
+  // unmount of the header, gate area and stage rail (and, with it, keyboard focus) for a
+  // run whose identity we already know. Keeping the last good poll bridges that gap so
+  // the same continuity guarantee that covers the live → result transition also covers a
+  // RE-RUN — adjusted during render (React's own "storing information from previous
+  // renders" pattern), not in an effect, so there is no extra committed frame the old
+  // data is visible under a new id. Tagged with the id it belongs to so a navigation to a
+  // different run never shows the old one's cached header.
+  const [cachedStatus, setCachedStatus] = useState<{ id: string; data: NonNullable<typeof status.data> } | null>(null);
+  if (status.data && (cachedStatus?.id !== id || cachedStatus.data !== status.data)) {
+    setCachedStatus({ id, data: status.data });
+  }
+  const effectiveStatusData = status.data ?? (cachedStatus?.id === id ? cachedStatus.data : undefined);
+
+  const mode = effectiveStatusData ? runMode(effectiveStatusData.status) : null;
   const isLive = mode === "live";
   const isResult = mode === "result";
   const isMobile = useIsMobile();
@@ -50,30 +67,32 @@ export function RunView({ id, expectedMs }: RunViewProps) {
   const result = useReviewResult(id, { enabled: isResult });
   // Best-effort trigger lookup (ReviewStatus/ReviewResult carry no `trigger` — only
   // ReviewAccepted / the plan-A11 list item do). A miss just omits the field.
-  const list = useReviewList({ limit: 200 }, { enabled: !!status.data });
+  const list = useReviewList({ limit: 200 }, { enabled: !!effectiveStatusData });
   const listItem = list.data?.items.find((r) => r.review_id === id);
 
   const rerun = useRerunReview({ notify: true });
 
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(RESULT_TABS).withDefault("pipeline"));
 
-  const elapsedLive = useElapsedSeconds(status.data?.started_at, isLive);
+  const elapsedLive = useElapsedSeconds(effectiveStatusData?.started_at, isLive);
 
   const gateConclusion = result.data?.gate?.conclusion ?? null;
   useLiveFavicon(isLive ? "running" : gateConclusion === "failure" ? "blocked" : gateConclusion ? "clear" : null);
 
   const stageEntries: StageEntry[] = useMemo(() => {
-    if (!status.data) return STAGES.map((key) => ({ key, state: "pending" as const }));
-    return stageStatesFromReviewStatus(status.data);
-  }, [status.data]);
+    if (!effectiveStatusData) return STAGES.map((key) => ({ key, state: "pending" as const }));
+    return stageStatesFromReviewStatus(effectiveStatusData);
+  }, [effectiveStatusData]);
 
   const stageLabels = useMemo<Partial<Record<Stage, string>>>(() => {
-    const s = status.data;
+    const s = effectiveStatusData;
     if (!s?.stage || !s.stage_label) return {};
     return STAGES.includes(s.stage as Stage) ? { [s.stage as Stage]: s.stage_label } : {};
-  }, [status.data]);
+  }, [effectiveStatusData]);
 
-  if (status.isPending) {
+  // Only the very first load (no cached poll at all) gets the bare "no id yet" skeleton;
+  // a RE-RUN's reset-then-refetch gap falls through to the unified render below instead.
+  if (status.isPending && !effectiveStatusData) {
     return (
       <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
         <div className="h-24 animate-none rounded-panel border border-rule-hair bg-ink-1" aria-hidden="true" />
@@ -88,7 +107,7 @@ export function RunView({ id, expectedMs }: RunViewProps) {
     );
   }
 
-  if (status.isError) {
+  if (status.isError && !effectiveStatusData) {
     return (
       <div className="px-4 py-8 md:px-6">
         <ErrorState error={status.error} onRetry={() => status.refetch()} />
@@ -96,7 +115,7 @@ export function RunView({ id, expectedMs }: RunViewProps) {
     );
   }
 
-  const s = status.data;
+  const s = effectiveStatusData!;
   const handleRerun = () => rerun.mutate({ reviewId: id });
 
   // A true fetch failure on the result query swaps the whole page for an error state —
