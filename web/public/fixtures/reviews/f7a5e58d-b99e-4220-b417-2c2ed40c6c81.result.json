@@ -65,7 +65,7 @@
   "findings": [],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1117` in 16.2s · [full run ↗](https://prguard.acme.internal/runs/f7a5e58d-b99e-4220-b417-2c2ed40c6c81)\n\n**Gate: passing** — Two specialists reviewed 1 file and raised nothing, so nothing blocks.\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**PRGuard** reviewed `#1117` in 16.2s · [full run ↗](https://prguard.acme.internal/runs/f7a5e58d-b99e-4220-b417-2c2ed40c6c81)\n\n**Gate: passing** — two specialists reviewed 1 file and raised nothing, so nothing blocks.\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
     "commit_id": "d9df387a54a5c2335f363d291c04d3662ef85dae",
     "comments": []
   },

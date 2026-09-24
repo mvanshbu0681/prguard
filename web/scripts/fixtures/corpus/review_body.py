@@ -367,7 +367,7 @@ def summary_body(record: Any) -> str:
     parts = [header]
     if counts["raised"] == 0:
         parts.append(
-            f"**Gate: passing** — {_count_word(len(record.specialists)).capitalize()} specialists "
+            f"**Gate: passing** — {_count_word(len(record.specialists))} specialists "
             f"reviewed {plural(record.selection.files_reviewed, 'file')} and raised nothing, "
             "so nothing blocks."
         )
