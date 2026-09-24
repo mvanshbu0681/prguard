@@ -8,13 +8,12 @@ import {
   ANIM_READY_CLASS,
   ANIM_RUNTIME_ATTR,
   AnimHandshake,
-  FORCE_REVEAL_KEYFRAME,
   FORCE_REVEAL_MS,
   HANDSHAKE_CSS,
   NOSCRIPT_CSS,
   animReadyInfo,
   animReadyState,
-  forceRevealFired,
+  isShowing,
   markAnimReady,
   onAnimReady,
 } from "@/motion/handshake";
@@ -23,11 +22,24 @@ import { installIntersectionObserver, MockIntersectionObserver } from "./helpers
 
 const html = document.documentElement;
 
-/** Give `el` a fake force-reveal timer at `currentTime` (jsdom has no Web Animations). */
-function withTimer(el: Element, currentTime: number | null, playState: AnimationPlayState = "running"): Element {
-  const timer = { animationName: FORCE_REVEAL_KEYFRAME, currentTime, playState } as unknown as CSSAnimation;
-  Object.defineProperty(el, "getAnimations", { configurable: true, value: () => [timer] });
-  return el;
+/**
+ * jsdom runs no CSS animations, so `visibility` never changes by itself. Stub the
+ * computed visibility per element: `shown` elements report "visible" (one of the two
+ * force-reveal timers fired), the rest "hidden" (still held by the handshake).
+ */
+function stubVisibility(shown: Set<Element>): void {
+  const real = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation((el: Element, pseudo?: string | null) => {
+    const style = real(el, pseudo);
+    if (!el.hasAttribute("data-anim")) return style;
+    return new Proxy(style, {
+      get(target, key) {
+        if (key === "visibility") return shown.has(el) ? "visible" : "hidden";
+        const value: unknown = Reflect.get(target, key);
+        return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+  });
 }
 
 function anim(id: string): HTMLElement {
@@ -61,8 +73,12 @@ describe("<AnimHandshake />", () => {
 
   it("hides [data-anim] and force-reveals it at 1600ms (design §4.7)", () => {
     expect(FORCE_REVEAL_MS).toBe(1600);
-    expect(HANDSHAKE_CSS).toContain("[data-anim]{visibility:hidden;animation:prg-force-reveal 0s 1600ms forwards}");
+    // Per element (design §4.7), hidden unless the page clock's inherited flag says otherwise.
+    expect(HANDSHAKE_CSS).toContain("[data-anim]{visibility:var(--prg-forced,hidden);animation:prg-force-reveal 0s 1600ms forwards}");
     expect(HANDSHAKE_CSS).toContain("@keyframes prg-force-reveal{to{visibility:visible}}");
+    // The page clock on <html>: covers content-visibility:auto subtrees whose own timer has not started.
+    expect(HANDSHAKE_CSS).toContain("html:not(.anim-ready){animation:prg-force-reveal-page 0s 1600ms forwards}");
+    expect(HANDSHAKE_CSS).toContain("@keyframes prg-force-reveal-page{to{--prg-forced:visible}}");
   });
 
   it("lets html.anim-ready disarm it and data-anim-in reveal it", () => {
@@ -76,25 +92,13 @@ describe("<AnimHandshake />", () => {
   });
 });
 
-describe("forceRevealFired", () => {
-  it("reads the element's own timer", () => {
-    expect(forceRevealFired(withTimer(document.createElement("p"), 200))).toBe(false);
-    expect(forceRevealFired(withTimer(document.createElement("p"), FORCE_REVEAL_MS - 150))).toBe(false);
-    expect(forceRevealFired(withTimer(document.createElement("p"), FORCE_REVEAL_MS - 50))).toBe(true); // a frame away counts as fired
-    expect(forceRevealFired(withTimer(document.createElement("p"), FORCE_REVEAL_MS, "finished"))).toBe(true);
-  });
-
-  it("treats an element with no timer (not rendered) as pending", () => {
-    const el = document.createElement("p");
-    Object.defineProperty(el, "getAnimations", { configurable: true, value: () => [] });
-    expect(forceRevealFired(el)).toBe(false);
-  });
-
-  it("falls back to the page clock without the Web Animations API", () => {
-    const el = document.createElement("p");
-    expect(typeof el.getAnimations).not.toBe("function"); // jsdom
-    expect(forceRevealFired(el, 400)).toBe(false);
-    expect(forceRevealFired(el, FORCE_REVEAL_MS)).toBe(true);
+describe("isShowing", () => {
+  it("reads the computed visibility the handshake produces", () => {
+    const hidden = anim("hidden");
+    const shown = anim("shown");
+    stubVisibility(new Set([shown]));
+    expect(isShowing(hidden)).toBe(false);
+    expect(isShowing(shown)).toBe(true);
   });
 });
 
@@ -107,8 +111,9 @@ describe("markAnimReady", () => {
 
   it("disarms the force-reveal and hands every pending element to the revealer", () => {
     vi.spyOn(performance, "now").mockReturnValue(420);
-    const a = withTimer(anim("a"), 380);
-    const b = withTimer(anim("b"), 12);
+    const a = anim("a");
+    const b = anim("b");
+    stubVisibility(new Set()); // both still held by the handshake
     const ready = markAnimReady("gsap");
     expect(ready).toEqual({ runtime: "gsap", at: 420, kept: 0 });
     expect(html.classList.contains(ANIM_READY_CLASS)).toBe(true);
@@ -122,8 +127,9 @@ describe("markAnimReady", () => {
 
   it("a late runtime keeps every already force-revealed element as it is (static), never re-hidden", () => {
     vi.spyOn(performance, "now").mockReturnValue(2400);
-    const shown = withTimer(anim("shown"), FORCE_REVEAL_MS, "finished");
-    const later = withTimer(anim("later"), 300); // mounted later: its own timer has not fired
+    const shown = anim("shown"); // its force-reveal fired: visible now
+    const later = anim("later"); // mounted since: still hidden
+    stubVisibility(new Set([shown]));
     const ready = markAnimReady("motion");
     expect(ready?.kept).toBe(1);
     expect(shown.getAttribute(ANIM_IN_ATTR)).toBe("static");
