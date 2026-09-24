@@ -12,7 +12,12 @@
 //
 // brand-gaps §F "First load, JS disabled": the noscript line stating what
 // needs JavaScript lives here too, since the footer is the one place on every
-// marketing page that renders regardless of route.
+// marketing page that renders regardless of route. Written with
+// dangerouslySetInnerHTML, the same device src/motion/handshake.tsx's own
+// <noscript> uses — React does not reconcile ordinary children into a
+// client-rendered <noscript> (it mirrors a scripting-enabled browser's own
+// HTML parser, which never parses that content either), so plain JSX
+// children would silently vanish outside of server-rendered markup.
 import Link from "next/link";
 import { Lockup } from "@/components/brand";
 import { DEMO_SHORT } from "@/lib/demo-ids";
@@ -128,11 +133,12 @@ export function Footer() {
           </p>
         </div>
 
-        <noscript>
-          <p className="type-micro text-ink-8">
-            Replay, the audit chain tamper control and the live run view need JavaScript. Everything above is static.
-          </p>
-        </noscript>
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html:
+              '<p class="type-micro text-ink-8">Replay, the audit chain tamper control and the live run view need JavaScript. Everything above is static.</p>',
+          }}
+        />
 
         <p className="type-micro text-ink-8">
           Google Sans Code and Inter Variable, SIL OFL 1.1. · build {DEMO_SHORT.review} · {new Date().getFullYear()}
