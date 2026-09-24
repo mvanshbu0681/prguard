@@ -3,10 +3,10 @@
 // evidence components must not import gsap or @/motion/useReplay).
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StageRail, stageStatesFromReviewStatus, type StageEntry } from "@/components/evidence/StageRail";
-import { STAGES, type StageState } from "@/lib/contracts";
+import { STAGES, type Stage, type StageState } from "@/lib/contracts";
 
 const ALL_PENDING: StageEntry[] = STAGES.map((key) => ({ key, state: "pending" as StageState }));
 const SRC_DIR = path.resolve(import.meta.dirname, "../../../../src/components/evidence/StageRail");
@@ -75,5 +75,131 @@ describe("stageStatesFromReviewStatus wired end to end", () => {
     render(<StageRail mode="live" orientation="horizontal" stages={stages} stageIndex={6} secondsSinceHeartbeat={3} />);
     expect(document.querySelector('[data-stage="identity"][data-state="running"]')).not.toBeNull();
     expect(document.querySelector('[data-stage="proof"][data-state="pending"]')).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// replay mode — the schedule useSequence drives, the PLAY/PAUSE control (SC 2.2.2 — the
+// auto-triggered ~20s conveyor needs a way to be stopped, design §8.5) and the gate landing
+// only on the sequence's own terminal beat. `@/motion/in-view`'s own contract ("where
+// IntersectionObserver is missing, the callback runs immediately") means autoplay "in-view"
+// fires as soon as this mounts in jsdom (no polyfill installed here) — exactly what lets
+// these tests drive the schedule deterministically with no IntersectionObserver mock.
+// ---------------------------------------------------------------------------------------
+describe("replay mode — the schedule, PLAY/PAUSE and the gate's terminal beat", () => {
+  // specialists gets extra room so its own fork-completion stagger (STAGGER.lane) has space
+  // to assert on; every other stage is short, so the whole run advances fast under fake timers.
+  const SHORT_DURATIONS: Partial<Record<Stage, number>> = {
+    ingest: 40,
+    context: 40,
+    specialists: 200,
+    coordinator: 40,
+    severity: 40,
+    identity: 40,
+    proof: 40,
+    delivery: 40,
+    finalise: 40,
+  };
+  const TOTAL = Object.values(SHORT_DURATIONS).reduce((sum: number, ms) => sum + (ms ?? 0), 0);
+  const SPECIALISTS_DONE_AT = SHORT_DURATIONS.ingest! + SHORT_DURATIONS.context! + SHORT_DURATIONS.specialists!;
+
+  function stageState(container: HTMLElement, stage: Stage) {
+    return container.querySelector(`[data-stage="${stage}"]`)?.getAttribute("data-state");
+  }
+  function laneState(container: HTMLElement, lane: string) {
+    return container.querySelector(`[data-lane="${lane}"]`)?.getAttribute("data-state");
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "requestAnimationFrame", "cancelAnimationFrame", "performance"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("advances stage states at the instants durationsMs (x time_scale, already applied by the caller) schedules", () => {
+    const { container } = render(<StageRail mode="replay" orientation="horizontal" stages={[]} durationsMs={SHORT_DURATIONS} />);
+    // Autoplay's first step lands synchronously (createSequencer's own `begin(0)` contract).
+    expect(stageState(container, "ingest")).toBe("running");
+    expect(stageState(container, "context")).toBe("pending");
+
+    act(() => void vi.advanceTimersByTime(SHORT_DURATIONS.ingest!));
+    expect(stageState(container, "ingest")).toBe("done");
+    expect(stageState(container, "context")).toBe("running");
+
+    act(() => void vi.advanceTimersByTime(SHORT_DURATIONS.context!));
+    expect(stageState(container, "context")).toBe("done");
+    expect(stageState(container, "specialists")).toBe("running");
+  });
+
+  it("the fork's four lanes flip to done on the 0/60/120/180ms stagger, never all at once (motion tokens STAGGER.lane)", () => {
+    // useSequence lands each beat "on the frame nearest its time (±half a frame)"
+    // (src/motion/useSequence.ts's own header) — every checkpoint below sits well clear of
+    // its neighbouring lane's own due instant (a >=30ms margin either side) so the assertion
+    // never depends on which side of one frame a step happened to land.
+    const { container } = render(<StageRail mode="replay" orientation="horizontal" stages={[]} durationsMs={SHORT_DURATIONS} />);
+
+    act(() => void vi.advanceTimersByTime(SPECIALISTS_DONE_AT));
+    expect(stageState(container, "specialists")).toBe("done"); // the station itself flips atomically
+    expect(laneState(container, "bugs")).toBe("done"); // +0: synchronous with the station
+    expect(laneState(container, "security")).toBe("running"); // +60, not yet
+    expect(laneState(container, "tests")).toBe("running"); // +120, not yet
+    expect(laneState(container, "quality")).toBe("running"); // +180, not yet
+
+    act(() => void vi.advanceTimersByTime(40)); // +40: still short of security's own +60
+    expect(laneState(container, "security")).toBe("running");
+    expect(laneState(container, "quality")).toBe("running");
+
+    act(() => void vi.advanceTimersByTime(60)); // +100: past security's +60, short of tests' +120
+    expect(laneState(container, "security")).toBe("done");
+    expect(laneState(container, "tests")).toBe("running");
+    expect(laneState(container, "quality")).toBe("running");
+
+    act(() => void vi.advanceTimersByTime(100)); // +200: past every lane's own offset, incl. +180
+    expect(laneState(container, "tests")).toBe("done");
+    expect(laneState(container, "quality")).toBe("done");
+  });
+
+  it("the gate renders only once the sequence's terminal beat has applied, never before", () => {
+    const { container } = render(
+      <StageRail mode="replay" orientation="horizontal" stages={[]} durationsMs={SHORT_DURATIONS} gate="success" />,
+    );
+    expect(container.querySelector('[data-slot="gate-block"]')).toBeNull();
+
+    act(() => void vi.advanceTimersByTime(TOTAL - 40));
+    expect(container.querySelector('[data-slot="gate-block"]')).toBeNull();
+
+    act(() => void vi.advanceTimersByTime(80)); // past the last step; still inside the hold
+    expect(container.querySelector('[data-slot="gate-block"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="gate-block"]')?.getAttribute("data-conclusion")).toBe("success");
+  });
+
+  it("onPlay fires only when the PLAY control itself is pressed, never for the autoplay that armed it", () => {
+    const onPlay = vi.fn();
+    render(<StageRail mode="replay" orientation="horizontal" stages={[]} durationsMs={SHORT_DURATIONS} onPlay={onPlay} />);
+    expect(onPlay).not.toHaveBeenCalled(); // autoplay already ran to arm this render
+
+    act(() => void vi.advanceTimersByTime(TOTAL + 1200)); // past the run and its hold
+    fireEvent.click(screen.getByText("PLAY"));
+    expect(onPlay).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByText("PAUSE")); // pausing the fresh run is not a "play"
+    expect(onPlay).toHaveBeenCalledTimes(1);
+  });
+
+  it("PAUSE freezes the current frame (SC 2.2.2 — the auto-triggered conveyor can be stopped)", () => {
+    const onPlay = vi.fn();
+    const { container } = render(
+      <StageRail mode="replay" orientation="horizontal" stages={[]} durationsMs={SHORT_DURATIONS} onPlay={onPlay} />,
+    );
+    act(() => void vi.advanceTimersByTime(SHORT_DURATIONS.ingest!));
+    expect(stageState(container, "context")).toBe("running");
+
+    fireEvent.click(screen.getByText("PAUSE"));
+    act(() => void vi.advanceTimersByTime(5000)); // nothing advances while paused
+    expect(stageState(container, "context")).toBe("running");
+    expect(stageState(container, "specialists")).toBe("pending");
+    expect(onPlay).not.toHaveBeenCalled(); // pausing is never a "play"
+    expect(screen.getByText("PLAY")).toBeInTheDocument(); // the control's own face flips back
   });
 });

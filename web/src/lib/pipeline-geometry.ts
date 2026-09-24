@@ -178,6 +178,13 @@ function horizontalGeometry(name: "wide" | "medium"): PipelineGeometry {
   // The fork's own exit -> coordinator edge, inserted where specialists -> coordinator would sit.
   edges.splice(coordinatorIndex - 1, 0, { from: "specialists", to: "coordinator", d: elbow(exit, stations.coordinator, { axis: "x" }) });
 
+  // `medium` has no width floor of its own (it renders for every width below `wide`'s
+  // 1280, including far narrower than its own 900-logical design — orientation stays the
+  // caller's choice, not something this file auto-switches below 768px), so its caption
+  // needs more clearance under the outermost lane label than `wide` (which is never shown
+  // narrower than its own logical width): 42 keeps `quality`'s label and the caption apart
+  // even scaled down to a 375px container.
+  const captionGap = wide ? 26 : 42;
   return {
     name,
     orientation: "horizontal",
@@ -187,7 +194,7 @@ function horizontalGeometry(name: "wide" | "medium"): PipelineGeometry {
     stations,
     edges,
     fork: { entry, exit, lanes },
-    forkCaptionAt: { x: (entry.x + exit.x) / 2, y: baseline + laneGap * 2 + 26 },
+    forkCaptionAt: { x: (entry.x + exit.x) / 2, y: baseline + laneGap * 2 + captionGap },
   };
 }
 
@@ -219,10 +226,18 @@ function verticalGeometry(): PipelineGeometry {
     ["tests", indent + laneGap * 0.5],
     ["quality", indent + laneGap * 1.5],
   ];
-  const lanes: ForkLaneGeometry[] = laneOffsets.map(([key, dx]) => ({
+  // Every lane's own flat run sits at the SAME y (the indent stacks the four lanes in x, not
+  // y — unlike the horizontal breakpoints' parallel bars), so a label anchored to its own
+  // lane, as the horizontal sets do, would land all four on one line, on top of each other.
+  // Clear of every lane's indent instead: a small four-line legend, one row per lane, read
+  // top to bottom in fork-order (design §06 mobile treatment).
+  const legendX = spineX + indent + laneGap * 1.5 + 30;
+  const legendRowGap = 14;
+  const legendTop = entry.y + (exit.y - entry.y) / 2 - (1.5 * legendRowGap);
+  const lanes: ForkLaneGeometry[] = laneOffsets.map(([key, dx], i) => ({
     key,
     d: forkLane(entry, exit, dx, "y"),
-    labelAt: { x: dx, y: (entry.y + exit.y) / 2 },
+    labelAt: { x: legendX, y: legendTop + i * legendRowGap },
   }));
 
   const edges: PipelineEdge[] = [];
