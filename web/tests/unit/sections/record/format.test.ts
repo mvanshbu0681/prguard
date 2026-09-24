@@ -47,9 +47,11 @@ describe("occurrenceCountPhrase", () => {
   it("says 'both occurrences' at exactly two — the real occurrence_count in the corpus", () => {
     expect(occurrenceCountPhrase(2)).toBe("both occurrences");
   });
+  it("says 'the one occurrence' at exactly one, so a single-occurrence corpus still reads correctly", () => {
+    expect(occurrenceCountPhrase(1)).toBe("the one occurrence");
+  });
   it("says 'all N occurrences' at any other count, so a regenerated corpus still reads correctly", () => {
     expect(occurrenceCountPhrase(3)).toBe("all 3 occurrences");
-    expect(occurrenceCountPhrase(1)).toBe("all 1 occurrences");
   });
 });
 

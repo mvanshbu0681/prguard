@@ -62,7 +62,7 @@ export interface IdentityPanelProps {
 function OccurrenceRow({ occurrence }: { occurrence: OccurrenceView }) {
   const o = occurrence;
   return (
-    <li className="border-b border-rule-1 py-3 first:pt-0 last:border-b-0 last:pb-0" data-anim>
+    <li className="border-b border-rule-1 py-3 first:pt-0 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="type-label text-text-dim">
           PR #{o.prNumber} · review {o.reviewId.slice(0, 8)}
@@ -90,7 +90,7 @@ function OccurrenceRow({ occurrence }: { occurrence: OccurrenceView }) {
 function LedgerRow({ row }: { row: LedgerRowView }) {
   const revoked = row.state === "revoked";
   return (
-    <li className="border-b border-rule-1 py-2.5 first:pt-0 last:border-b-0 last:pb-0" data-anim>
+    <li className="border-b border-rule-1 py-2.5 first:pt-0 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="type-data w-12 shrink-0 tabular text-text-dim">seq {row.seq}</span>
         <span className={cn("type-chip uppercase", revoked ? "text-text-dim line-through" : "text-signal-text")}>

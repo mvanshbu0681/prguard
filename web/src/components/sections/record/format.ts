@@ -28,11 +28,13 @@ export function formatExpiry(expiresAt: string | null | undefined): string {
   return expiresAt ? `expires ${formatIsoDate(expiresAt)}` : "no expiry";
 }
 
-/** "both occurrences" at the real count 2, "all N occurrences" at any other real count —
- *  the fingerprint caption reads `getDemoProvenFinding().history.occurrence_count`, never
- *  a hardcoded "both" (plan A7). */
+/** "the one occurrence" at 1, "both occurrences" at the real count 2, "all N occurrences"
+ *  at any other real count — the fingerprint caption reads
+ *  `getDemoProvenFinding().history.occurrence_count`, never a hardcoded "both" (plan A7). */
 export function occurrenceCountPhrase(n: number): string {
-  return n === 2 ? "both occurrences" : `all ${n} occurrences`;
+  if (n === 1) return "the one occurrence";
+  if (n === 2) return "both occurrences";
+  return `all ${n} occurrences`;
 }
 
 export interface OccurrenceRunContext {
