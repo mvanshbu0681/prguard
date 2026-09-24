@@ -10,13 +10,15 @@ export interface BandLegendProps {
 export function BandLegend({ className }: BandLegendProps) {
   const entries = bandLegend();
   return (
-    <p className={cn("type-label text-text-dim", className)}>
-      {entries.map((e, i) => (
+    // flex-wrap, not inline text wrapping: two whitespace-nowrap spans with no space
+    // between them have no break opportunity at all and overflow the viewport as one
+    // unbroken line at narrow widths.
+    <div className={cn("flex flex-wrap gap-x-3 gap-y-1 type-label text-text-dim", className)}>
+      {entries.map((e) => (
         <span key={e.band} className="whitespace-nowrap">
-          {i > 0 ? <span aria-hidden="true"> &middot; </span> : null}
           {e.band} {e.op} {e.value}
         </span>
       ))}
-    </p>
+    </div>
   );
 }

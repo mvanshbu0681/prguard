@@ -15,14 +15,17 @@ export interface StageLatencyCaptionProps {
 export function StageLatencyCaption({ costSummary, className }: StageLatencyCaptionProps) {
   const rows = stageLatencies(costSummary);
   return (
-    <p className={cn("type-data text-[11px] text-text-dim", className)}>
-      {rows.map((row, i) => (
+    // flex-wrap, not inline text wrapping: each stage is one nowrap phrase, but the
+    // browser wraps freely BETWEEN phrases (a plain inline run with no space between
+    // two whitespace-nowrap spans has no break opportunity at all and overflows the
+    // viewport as one unbroken line — this is why it is a flex row, not a <p> of spans).
+    <div className={cn("flex flex-wrap items-baseline gap-x-4 gap-y-1 type-data text-[11px] text-text-dim", className)}>
+      {rows.map((row) => (
         <span key={row.stage} className="whitespace-nowrap">
-          {i > 0 ? <span aria-hidden="true"> &middot; </span> : null}
           {row.stage} p50 <span className="tabular text-text-body">{formatLatency(row.p50)}</span> / p95{" "}
           <span className="tabular text-text-body">{formatLatency(row.p95)}</span>
         </span>
       ))}
-    </p>
+    </div>
   );
 }

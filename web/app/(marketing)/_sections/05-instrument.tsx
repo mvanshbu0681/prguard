@@ -17,13 +17,10 @@
 // the ones that genuinely score 0.810 through the backend's own severity.compute
 // — the blueprint's own worked-example table is NOT copied here; every number
 // below renders from web/public/fixtures.
-import type { CSSProperties } from "react";
 import { Grain, SectionIndex } from "@/components/chrome";
 import { ContributionBar, toSeverityValues } from "@/components/evidence/ContributionBar";
 import { BandLegend } from "@/components/sections/instrument/BandLegend";
 import { getDemoProvenFinding } from "@/lib/fixtures";
-import { ANIM_PROPS, REVEAL_INDEX_VAR } from "@/motion/attrs";
-import { DUR_VAR } from "@/motion/tokens";
 
 export function InstrumentFace() {
   const finding = getDemoProvenFinding();
@@ -42,7 +39,7 @@ export function InstrumentFace() {
         <SectionIndex index="05" category="THE INSTRUMENT FACE" />
 
         <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,620px)_1fr] lg:gap-16">
-          <div {...ANIM_PROPS} className="reveal reveal-rise">
+          <div>
             <h2 className="type-display-h2 text-text-primary">Severity is arithmetic.</h2>
             <p className="mt-5 max-w-(--measure-body) type-lead text-text-body">
               Six inputs, each normalised to 0..1. Six fixed weights. The band thresholds are printed on the same axis as the
@@ -52,11 +49,7 @@ export function InstrumentFace() {
           </div>
 
           {severity ? (
-            <div
-              {...ANIM_PROPS}
-              className="reveal reveal-rise min-w-0"
-              style={{ [REVEAL_INDEX_VAR]: 1, "--motion-dur": `var(${DUR_VAR.enter})` } as CSSProperties}
-            >
+            <div className="min-w-0">
               <ContributionBar
                 score={severity.score}
                 inputs={severity.inputs}
