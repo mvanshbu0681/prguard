@@ -41,7 +41,7 @@ export default function T5Lab() {
         </header>
 
         <Section index="01" title="The demo proven finding" note="0.810, critical — plan A13's worked example, at all three densities. The demo run: a91f3c2e.">
-          <div className="grid gap-8">
+          <div className="grid grid-cols-1 gap-8">
             <Panel className="p-4 md:p-6">
               <p className="mb-3 type-label text-text-dim">detail · 640px · within an Exhibit</p>
               <ContributionBar
@@ -99,13 +99,13 @@ export default function T5Lab() {
         </Section>
 
         <Section index="03" title="Five more, spanning every band" note="One finding per band (info · low · medium · high · critical), at all three densities, read from getFindings().">
-          <div className="grid gap-8">
+          <div className="grid grid-cols-1 gap-8">
             {spanning.map((f) => (
               <Panel key={f.id} className="p-4 md:p-6">
                 <p className="mb-3 type-label text-text-dim">
                   {f.severity!.band} · finding {f.id.slice(0, 8)}
                 </p>
-                <div className="grid gap-6 lg:grid-cols-[640px_320px_auto] lg:items-start">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[640px_320px_auto] lg:items-start">
                   <ContributionBar
                     score={f.severity!.score}
                     inputs={f.severity!.inputs}

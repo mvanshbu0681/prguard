@@ -130,10 +130,12 @@ export function tickForBand(band: SeverityBand): TickKey | null {
  * stays legible instead of being rewritten." Printing the plain `< 0.150 →
  * info` rule next to a score of, say, 0.655 would read as a false inequality.
  * When the given band disagrees with what the score's own arithmetic would
- * produce, this prints the honest reason instead: the band was overridden.
+ * produce, this prints only `→ info` — short, on purpose: the full reason
+ * belongs in `severity.notes` (rendered above the bar), not crammed into a
+ * table cell built for a three-word rule.
  */
 export function bandRuleText(band: SeverityBand, score?: number): string {
-  if (score !== undefined && bandForScore(score) !== band) return `→ ${band} (severity.band overrides the arithmetic — see the note above)`;
+  if (score !== undefined && bandForScore(score) !== band) return `→ ${band}`;
   if (band === "info") return `< ${SEVERITY_THRESHOLDS.low.toFixed(3)} → info`;
   return `≥ ${SEVERITY_THRESHOLDS[band].toFixed(3)} → ${band}`;
 }

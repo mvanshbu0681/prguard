@@ -15,7 +15,12 @@ export function Section({ index, title, note, children }: { index: string; title
   );
 }
 
-/** A panel one rung up the ink ladder: hairline border, the milled inset highlight (§3.6). */
+/**
+ * A panel one rung up the ink ladder: hairline border, the milled inset highlight (§3.6).
+ * `min-w-0`: as a CSS grid item (every use here sits in a `grid` wrapper), a block would
+ * otherwise refuse to shrink below its widest descendant's content size — a 640px
+ * ContributionBar table forcing the whole page wider at 375px is exactly that bug.
+ */
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`relative rounded-panel border border-rule-1 bg-ink-1 shadow-[inset_0_1px_0_var(--inset-hi)] ${className}`}>{children}</div>;
+  return <div className={`relative min-w-0 rounded-panel border border-rule-1 bg-ink-1 shadow-[inset_0_1px_0_var(--inset-hi)] ${className}`}>{children}</div>;
 }

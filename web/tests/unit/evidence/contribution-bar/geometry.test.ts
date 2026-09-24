@@ -131,7 +131,8 @@ describe("bandRuleText — the Σ row's rule", () => {
 
   it("prints the honest override, not a false inequality, when the band disagrees with the score (a clamped finding)", () => {
     // The demo disproven finding's own shape: score .655, band clamped to info.
-    expect(bandRuleText("info", 0.655)).toBe("→ info (severity.band overrides the arithmetic — see the note above)");
+    // Short on purpose — the full reason lives in severity.notes, rendered above the bar.
+    expect(bandRuleText("info", 0.655)).toBe("→ info");
     // A band that agrees with the score's own arithmetic still gets the plain rule.
     expect(bandRuleText("critical", 0.81)).toBe("≥ 0.750 → critical");
   });

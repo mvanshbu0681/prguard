@@ -119,6 +119,16 @@ describe("3-decimal formatting — never 0.81, always 0.810", () => {
   });
 });
 
+describe("the sub-640px stacked-block fallback (landing §05 mobile: no readable width for a 4-column table)", () => {
+  it("renders all six inputs as raw × weight = contribution blocks, alongside (not instead of) the table", () => {
+    const { container } = detailBar();
+    const blocks = [...container.querySelectorAll<HTMLElement>("[data-mobile-row-input]")];
+    expect(blocks.map((b) => b.dataset.mobileRowInput)).toEqual([...SEVERITY_INPUTS]);
+    // Both markups exist in the DOM at once — a CSS breakpoint (sm:) picks one, not JS.
+    expect(container.querySelectorAll("[data-row-input]").length).toBe(SEVERITY_INPUTS.length);
+  });
+});
+
 describe("glyph density", () => {
   it("carries the exact aria-label the spec worked example gives", () => {
     render(<ContributionBar score={SCORE} inputs={DEMO_INPUTS} weights={WEIGHTS} density="glyph" band="critical" />);
@@ -142,13 +152,14 @@ describe("disproven findings render the clamp note honestly", () => {
   it("promotes no tick and prints the override — not a false '0.655 < 0.150' — when the score's own arithmetic disagrees with the clamped band", () => {
     // These raw inputs score .655 by the arithmetic (>= .55, naturally "high"), but the
     // finding is disproven, so severity.band arrives as "info" (severity.py compute()).
-    const { container, getByText } = detailBar({
+    const { container, getAllByText } = detailBar({
       score: 0.655,
       inputs: { reachability: 1, blast_radius: 0.3, path_sensitivity: 1, coverage_gap: 1, churn: 0.1, proof_confidence: 0 },
       band: "info",
     });
     expect(container.querySelectorAll("[data-promoted]")).toHaveLength(0);
-    expect(getByText("→ info (severity.band overrides the arithmetic — see the note above)")).toBeInTheDocument();
+    // Rendered twice (the sub-640px stacked blocks and the 640px+ table); either is fine.
+    expect(getAllByText("→ info").length).toBeGreaterThan(0);
   });
 });
 

@@ -208,7 +208,10 @@ function ContributionBarInstrument({
   const liveText = activeRow ? `${activeRow.name.replaceAll("_", " ")}: raw ${formatScore(activeRow.raw)}, weight ${activeRow.weight.toFixed(2)}, contribution ${formatScore(activeRow.contribution)}` : "";
 
   const instrument = (
-    <div ref={entranceRef} className={cn("w-full", className)} style={{ maxWidth: trackWidth }}>
+    // min-w-0: a flex or grid ancestor otherwise refuses to shrink this below the
+    // table's content width, which would push the WHOLE ancestor track wider than
+    // the viewport instead of the table's own overflow-x-auto taking the scroll.
+    <div ref={entranceRef} className={cn("w-full min-w-0", className)} style={{ maxWidth: trackWidth }}>
       {/* Readout — snaps, never counts up (§2.5, §4.8.1). */}
       <div
         className={cn("flex items-baseline gap-3", readoutStamps > 0 && "stamp")}
@@ -324,49 +327,75 @@ function ContributionBarInstrument({
       ) : null}
 
       {density === "detail" ? (
-        <table className="mt-4 w-full border-collapse type-data text-text-body">
-          <caption className="sr-only">Severity contribution table for finding {findingId ?? "unknown"}</caption>
-          <thead>
-            <tr className="border-b border-rule-1 text-text-dim">
-              <th scope="col" className="py-1.5 pr-3 text-left font-normal type-label">
-                input
-              </th>
-              <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
-                raw
-              </th>
-              <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
-                weight
-              </th>
-              <th scope="col" className="py-1.5 pl-3 text-right font-normal type-label">
-                contribution
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          {/* Below 640px: six stacked blocks, "input / raw × weight = contribution"
+              on two lines each (landing §05 mobile) — a four-column table has no
+              readable width left once "coverage_gap"/"proof_confidence" fit at all. */}
+          <dl className="mt-4 grid gap-3 sm:hidden">
             {rows.map((row) => (
-              <tr key={row.name} data-row-input={row.name} className={cn("border-b border-rule-hair", row.name === activeName && "bg-ink-3")}>
-                <th scope="row" className="py-1.5 pr-3 text-left font-normal">
-                  {row.name}
-                </th>
-                <td className="px-3 py-1.5 text-right tabular">{formatScore(row.raw)}</td>
-                <td className="px-3 py-1.5 text-right tabular">{row.weight.toFixed(2)}</td>
-                <td className="py-1.5 pl-3 text-right tabular">{formatScore(row.contribution)}</td>
-              </tr>
+              <div key={row.name} data-mobile-row-input={row.name} className={cn("border-b border-rule-hair pb-2 last:border-b-0", row.name === activeName && "bg-ink-3")}>
+                <dt className="type-label text-text-dim">{row.name}</dt>
+                <dd className="tabular">
+                  {formatScore(row.raw)} × {row.weight.toFixed(2)} = <span className="text-text-primary">{formatScore(row.contribution)}</span>
+                </dd>
+              </div>
             ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t border-rule-1">
-              <th scope="row" className="py-1.5 pr-3 text-left font-normal">
-                <Sigma />
-              </th>
-              <td className="px-3 py-1.5" />
-              <td className="px-3 py-1.5" />
-              <td className="py-1.5 pl-3 text-right tabular text-text-primary">
-                {reading} <span className="text-text-dim">{bandRuleText(resolvedBand, score)}</span>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+            <div className="flex items-baseline gap-2 pt-1 tabular text-text-primary">
+              <Sigma />
+              <span>{reading}</span>
+              <span className="text-text-dim">{bandRuleText(resolvedBand, score)}</span>
+            </div>
+          </dl>
+
+          {/* overflow-x-auto: a table's columns refuse to shrink below their content's
+              natural width even inside a `w-full` parent, so at 640px+ (where the row
+              headers have room) this scrolls its own axis rather than the page's. */}
+          <div className="mt-4 hidden overflow-x-auto sm:block">
+          <table className="w-full min-w-[420px] border-collapse type-data text-text-body">
+            <caption className="sr-only">Severity contribution table for finding {findingId ?? "unknown"}</caption>
+            <thead>
+              <tr className="border-b border-rule-1 text-text-dim">
+                <th scope="col" className="py-1.5 pr-3 text-left font-normal type-label">
+                  input
+                </th>
+                <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
+                  raw
+                </th>
+                <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
+                  weight
+                </th>
+                <th scope="col" className="py-1.5 pl-3 text-right font-normal type-label">
+                  contribution
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.name} data-row-input={row.name} className={cn("border-b border-rule-hair", row.name === activeName && "bg-ink-3")}>
+                  <th scope="row" className="py-1.5 pr-3 text-left font-normal">
+                    {row.name}
+                  </th>
+                  <td className="px-3 py-1.5 text-right tabular">{formatScore(row.raw)}</td>
+                  <td className="px-3 py-1.5 text-right tabular">{row.weight.toFixed(2)}</td>
+                  <td className="py-1.5 pl-3 text-right tabular">{formatScore(row.contribution)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-rule-1">
+                <th scope="row" className="py-1.5 pr-3 text-left font-normal">
+                  <Sigma />
+                </th>
+                <td className="px-3 py-1.5" />
+                <td className="px-3 py-1.5" />
+                <td className="py-1.5 pl-3 text-right tabular text-text-primary">
+                  {reading} <span className="text-text-dim">{bandRuleText(resolvedBand, score)}</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+          </div>
+        </>
       ) : null}
     </div>
   );
