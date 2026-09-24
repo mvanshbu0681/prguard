@@ -43,17 +43,12 @@ export function AccuracyReport() {
         <ProofCompositionChart weekly={series.weekly} />
 
         {selfCaught.value != null ? (
-          <div className="grid grid-cols-1 gap-6 border-t border-rule-1 pt-8 lg:grid-cols-[3fr_2fr]">
-            <blockquote className="font-mono text-text-primary text-[15px] leading-relaxed tabular border-l-2 border-signal pl-5">
+          <div className="border-t border-t-rule-1 pt-8">
+            <blockquote className="max-w-[60ch] border-l-2 border-l-signal pl-5 font-mono text-[15px] leading-relaxed text-text-primary tabular">
               <p>{`${formatScore(selfCaught.value)} (n = ${selfCaught.n}) is not our error rate.`}</p>
               <p>That is the rate at which the system caught itself</p>
               <p>before the claim reached your pull request.</p>
             </blockquote>
-            <p className="type-small text-text-body self-center">
-              {report.caveats.length > 0
-                ? "Read the six numbers above against the caveat strip: the corpus is not a random sample of your codebase, and every n here is small enough that the intervals are wide."
-                : null}
-            </p>
           </div>
         ) : null}
 

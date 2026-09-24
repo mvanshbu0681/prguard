@@ -27,8 +27,8 @@ const MAX_CHIPS = 3;
 
 /** The demo PR first, then up to two more distinct `owner/repo#n` pairs from the run list (plan A5). */
 function buildChips(): string[] {
-  const chips = [DEMO_SHORT.pullRequest];
-  const seen = new Set(chips);
+  const chips: string[] = [DEMO_SHORT.pullRequest];
+  const seen = new Set<string>(chips);
   for (const item of getReviewsIndex().items) {
     if (chips.length >= MAX_CHIPS) break;
     const label = `${item.repository.owner}/${item.repository.name}#${item.pull_request.number}`;
