@@ -9,6 +9,14 @@
 
 .root {
   position: relative;
+  /* A flex or grid item's default min-width/min-height is `auto` (its content's
+     min-content size), not 0 — so a caller who places two benches in a grid (this
+     track's own §05, and any dashboard master-detail layout) would otherwise have the
+     terminal panes' un-wrapped pytest lines (design: "never wrap") push the grid track,
+     and the page, wider than the viewport instead of scrolling inside the pane. The
+     bench owns its own horizontal scroll (TerminalBlock's .prg-terminal__viewport); it
+     must never force an ancestor wider to get it. */
+  min-width: 0;
 }
 
 /* -------------------------------------------------------------------------
