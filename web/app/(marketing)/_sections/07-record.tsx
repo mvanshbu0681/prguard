@@ -49,7 +49,12 @@ export function IdentityRecorder() {
       <Grain />
       <div className="mx-auto flex max-w-[1200px] flex-col gap-10">
         <div className="max-w-(--measure-body)">
-          <SectionIndex index="07" category="Identity & the record" />
+          {/* "/ 07 — IDENTITY + FLIGHT RECORDER" — verbatim from
+              src/components/marketing-shell/sections.ts's MARKETING_SECTIONS entry
+              for "record" (t8a, wave 3, frozen): the nav's live section index and
+              tests/unit/marketing-shell/sections.test.ts both read it from there, so
+              the index/category below must match it byte for byte. */}
+          <SectionIndex index="07" category="IDENTITY + FLIGHT RECORDER" />
           <h2 id="record-heading" className="type-display-h2 mt-3 text-text-primary">
             Say no once.
           </h2>
