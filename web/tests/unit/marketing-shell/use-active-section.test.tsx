@@ -58,7 +58,7 @@ describe("useActiveSection", () => {
     document.body.removeChild(a);
   });
 
-  it("switches to the id with the greatest intersection ratio", () => {
+  it("switches to the LAST id (document order) currently touching the strip", () => {
     const seen: string[] = [];
     const proof = document.createElement("section");
     proof.id = "proof";
@@ -69,14 +69,49 @@ describe("useActiveSection", () => {
     render(<Probe ids={["proof", "severity"]} onActive={(id) => seen.push(id)} />);
 
     const observer = FakeIntersectionObserver.instances.at(-1)!;
+    // Both still touch the thin strip (a fast scroll mid-transition); the
+    // later section in document order wins, not whichever has more overlap —
+    // a short early section must not out-rank a section that has already
+    // reached the header line underneath it.
     act(() => {
       observer.callback([
-        { target: proof, isIntersecting: true, intersectionRatio: 0.2 },
-        { target: severity, isIntersecting: true, intersectionRatio: 0.8 },
+        { target: proof, isIntersecting: true },
+        { target: severity, isIntersecting: true },
       ]);
     });
-
     expect(seen.at(-1)).toBe("severity");
+
+    // proof leaves the strip entirely; severity alone remains active.
+    act(() => {
+      observer.callback([{ target: proof, isIntersecting: false }]);
+    });
+    expect(seen.at(-1)).toBe("severity");
+
+    document.body.removeChild(proof);
+    document.body.removeChild(severity);
+  });
+
+  it("keeps the previous active id when nothing currently touches the strip", () => {
+    const seen: string[] = [];
+    const proof = document.createElement("section");
+    proof.id = "proof";
+    const severity = document.createElement("section");
+    severity.id = "severity";
+    document.body.append(proof, severity);
+
+    render(<Probe ids={["proof", "severity"]} onActive={(id) => seen.push(id)} />);
+    const observer = FakeIntersectionObserver.instances.at(-1)!;
+
+    act(() => {
+      observer.callback([{ target: severity, isIntersecting: true }]);
+    });
+    expect(seen.at(-1)).toBe("severity");
+
+    act(() => {
+      observer.callback([{ target: severity, isIntersecting: false }]);
+    });
+    expect(seen.at(-1)).toBe("severity");
+
     document.body.removeChild(proof);
     document.body.removeChild(severity);
   });
