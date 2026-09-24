@@ -5,7 +5,7 @@
 import { IndexStrip, ProvenanceLine, Surface } from "@/components/chrome";
 import { Warn } from "@/components/icons";
 import type { ContextInfo, CostInfo, TimingInfo } from "@/lib/api-types";
-import { cacheHitShare, formatDurationSeconds, formatPercent, formatTokenCount, formatUsd, NO_VALUE } from "./format";
+import { cacheHitShare, formatDurationSeconds, formatIsoSeconds, formatPercent, formatTokenCount, formatUsd, NO_VALUE } from "./format";
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -49,9 +49,9 @@ export function CostTimingPanel({ cost, timing, context, degradations, provenanc
         <section>
           <p className="type-label text-text-dim">TIMING</p>
           <div className="mt-2">
-            <Row label="queued" value={timing?.queued_at ?? NO_VALUE} />
-            <Row label="started" value={timing?.started_at ?? NO_VALUE} />
-            <Row label="finished" value={timing?.finished_at ?? NO_VALUE} />
+            <Row label="queued" value={formatIsoSeconds(timing?.queued_at)} />
+            <Row label="started" value={formatIsoSeconds(timing?.started_at)} />
+            <Row label="finished" value={formatIsoSeconds(timing?.finished_at)} />
             <Row label="wall clock" value={formatDurationSeconds(timing?.duration_seconds)} />
           </div>
         </section>

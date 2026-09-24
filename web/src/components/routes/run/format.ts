@@ -41,6 +41,13 @@ export function formatUsd(usd: number | null | undefined): string {
   return `$${usd.toFixed(4)}`;
 }
 
+/** An ISO 8601 timestamp trimmed to whole seconds (brand-gaps §D numeric style): the fixture
+ *  corpus carries Python's microsecond precision, which is real but not legible at 13px. */
+export function formatIsoSeconds(iso: string | null | undefined): string {
+  if (!iso) return NO_VALUE;
+  return iso.replace(/\.\d+(Z|[+-]\d{2}:\d{2})$/, "$1");
+}
+
 /** A duration in seconds, one decimal — matches the recorded fixture's own style (41.2s). */
 export function formatDurationSeconds(seconds: number | null | undefined): string {
   if (seconds == null || !Number.isFinite(seconds) || seconds < 0) return NO_VALUE;

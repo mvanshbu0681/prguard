@@ -53,8 +53,12 @@ export function FindingsTable({ findings, gateConclusion, provenance, className 
         </TableHeader>
         <TableBody>
           {findings.map((f) => (
-            <TableRow key={f.id} data-state={f.blocking ? "selected" : undefined}>
-              <TableCell>
+            // Blocking rows get a 2px --alarm left rail (design §2.6), the same inset-box-shadow
+            // technique src/styles/ui.css's own `[data-state="selected"] > :first-child` uses for
+            // the (unrelated) row-selection rail — a border on <tr> itself never renders in table
+            // layout, so it has to live on the first cell.
+            <TableRow key={f.id}>
+              <TableCell style={f.blocking ? { boxShadow: "inset 2px 0 0 var(--alarm)" } : undefined}>
                 {f.severity ? (
                   <ContributionBar
                     density="glyph"
