@@ -29,9 +29,16 @@ function requireProof(finding: Finding): FindingProof {
   return finding.proof;
 }
 
+// The 78%→100% fade (design §01 "reads as there is more product than fits here") is a
+// percentage of THIS element's own box, not of the bench's content height — so the box
+// needs a min-height comfortably taller than the bench's rendered content (~560px: index
+// strip + two 210px panes + seam + the 44px verdict rail + the 32px provenance strip).
+// Without it, 78% of the bench's OWN (auto) height lands mid-verdict-rail and fades the
+// one line the brief calls "NEVER CUT" almost to invisibility.
 const CALIBRATION_MASK_CSS = `
 @media (min-width: 1024px) {
   .hero-bench-bleed {
+    min-height: 840px;
     mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
   }
@@ -75,9 +82,9 @@ export function Hero() {
   return (
     <HeroBackdrop id="proof" className="relative isolate border-b border-rule-1">
       <style>{CALIBRATION_MASK_CSS}</style>
-      <div className="relative z-10 flex flex-col gap-14 pt-24 pb-16 md:pt-28 md:pb-20 lg:flex-row lg:items-center lg:gap-10 lg:pt-32 lg:pb-24">
+      <div className="relative z-10 flex flex-col gap-14 pt-24 pb-16 md:pt-28 md:pb-20 lg:flex-row lg:items-start lg:gap-10 lg:pt-32 lg:pb-24">
         {/* LEFT COLUMN */}
-        <div className="px-4 md:px-8 lg:w-[600px] lg:shrink-0 lg:pl-[max(32px,calc((100vw-1200px)/2+32px))]">
+        <div className="px-4 md:px-8 lg:w-[600px] lg:shrink-0 lg:pt-6 lg:pl-[max(32px,calc((100vw-1200px)/2+32px))]">
           <p className="type-label text-text-dim">/ 01 — THE PROOF BENCH</p>
           <p className="mt-3 type-label text-signal">PROOF BY EXECUTION · BASE SHA / HEAD SHA</p>
 
