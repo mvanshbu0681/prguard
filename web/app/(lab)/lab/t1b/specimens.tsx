@@ -68,6 +68,7 @@ const PAPER: CSSProperties = {
 const LAB_CSS = `
 .lab-inline [data-radix-popper-content-wrapper] { position: relative !important; transform: none !important; inset: auto !important; min-width: 0 !important; visibility: visible !important; order: 1; }
 .lab-contain { position: relative; contain: layout paint; }
+.lab-contain .ui-dialog { max-height: calc(100% - 2 * var(--sp-4)); }
 `;
 
 function Section({ id, index, title, note, children }: { id: string; index: string; title: string; note?: ReactNode; children: ReactNode }) {
@@ -143,7 +144,7 @@ function HoverSection({ data }: { data: LabData }) {
                 </State>
               ))}
             </StateRow>
-            <StateRow label="B · hover-surface — cards · hover-row — rows on an ink-2 panel">
+            <StateRow label="B · hover-surface (cards) · hover-row (rows on an ink-2 panel)">
               {(["rest", "hover"] as const).map((f) => (
                 <State key={f} label={f}>
                   <div data-force={f === "hover" ? "hover" : undefined} className="hover-surface flex h-12 w-40 items-center rounded-panel border border-rule-1 bg-ink-2 px-3">
@@ -176,7 +177,7 @@ function HoverSection({ data }: { data: LabData }) {
                 </State>
               ))}
             </StateRow>
-            <StateRow label="D · link-draw — single line · link-prose — inside a sentence">
+            <StateRow label="D · link-draw (single line) · link-prose (inside a sentence)">
               {(["rest", "hover"] as const).map((f) => (
                 <State key={f} label={f}>
                   <a href="#hover" data-force={f === "hover" ? "hover" : undefined} data-measure={f === "rest" ? `link-${s}` : undefined} className="link-draw type-data">
@@ -238,7 +239,7 @@ function ButtonSection() {
       id="button"
       index="02"
       title="Button"
-      note="Labels are 11px mono caps. A destructive action is a ghost with alarm text, never a red fill. Loading holds the label's width and types a stepped ellipsis; there is no spinner."
+      note="Labels are 11px mono caps. A destructive action is a ghost with alarm text, never a red fill. Loading holds the label's width and shows a static ellipsis; there is no spinner and no loop."
     >
       <SurfacePair>
         {(s) => (
@@ -901,7 +902,7 @@ function InlineOverlays({ data }: { data: LabData }) {
               </PopoverTrigger>
               <PopoverContent container={popBox} align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <PopoverTitle>What can block a merge</PopoverTitle>
-                <PopoverDescription>Only proven findings can block a merge. Everything else is a comment.</PopoverDescription>
+                <PopoverDescription>Only a finding with proof_status: proven can block a merge. Everything else is a comment.</PopoverDescription>
               </PopoverContent>
             </Popover>
           ) : null}
@@ -1028,7 +1029,7 @@ function ModalSection({ data }: { data: LabData }) {
     >
       <SurfacePair>
         {() => (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-6">
             <State label="dialog · error state" className="w-full">
               <ContainedDialog data={data} />
             </State>

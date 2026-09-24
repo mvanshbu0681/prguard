@@ -90,7 +90,7 @@ function Toaster({ className, style, toastOptions, ...props }: ToasterProps) {
       className={cn("ui-toaster", className)}
       style={{ "--width": "360px", ...style } as React.CSSProperties}
       // null suppresses sonner's default glyphs (a checkmark for success, among
-      // them); loading gets the stepped ellipsis instead of a spinner.
+      // them); loading gets the static ellipsis instead of a spinner.
       icons={{ success: null, info: null, warning: null, error: null, loading: <LoadingEllipsis />, close: <XIcon strokeWidth={1.5} aria-hidden="true" /> }}
       toastOptions={{ unstyled: true, ...toastOptions, classNames: { ...CLASS_NAMES, ...toastOptions?.classNames } }}
       {...props}

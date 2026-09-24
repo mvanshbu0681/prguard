@@ -22,7 +22,7 @@
      2. Hover language       @utility hover-row · hover-surface · hover-frame ·
                              hover-ghost · hover-quiet · hover-primary · hover-atom ·
                              link-draw · link-prose · press
-     3. Keyframes            ui-* enter / exit, the stepped ellipsis
+     3. Keyframes            ui-* enter / exit
      4. Components           @layer components  .ui-* (Tailwind utilities override them)
      5. Toaster              unlayered: sonner injects its own unlayered stylesheet
      6. Reduced motion       the designed second state (motion spec §5)
@@ -63,8 +63,6 @@
   --ui-slide-dur: var(--dur-2);        /* tabs indicator */
   --ui-draw-dur: var(--dur-3);         /* 240ms underline draw */
   --ui-list-dur: var(--dur-2);         /* ⌘K list height */
-  --ui-ellipsis-2: ui-ellipsis-2;      /* the stepped loading ellipsis */
-  --ui-ellipsis-3: ui-ellipsis-3;
 }
 
 
@@ -337,16 +335,6 @@
 @keyframes ui-tooltip-in {
   from { opacity: 0; transform: translate(var(--ui-tip-x, 0px), var(--ui-tip-y, 0px)); }
 }
-/* The loading ellipsis types itself on the heartbeat period: "." → ".." → "…".
-   steps(1, end) makes each dot appear, never fade. */
-@keyframes ui-ellipsis-2 {
-  0% { transform: scale(0); }
-  33.333% { transform: scale(1); }
-}
-@keyframes ui-ellipsis-3 {
-  0% { transform: scale(0); }
-  66.667% { transform: scale(1); }
-}
 
 
 /* ==========================================================================
@@ -463,7 +451,7 @@
   }
 
   /* Loading: the label keeps its box (so nothing reflows) and turns
-     transparent; a stepped ellipsis sits over it. No spinner, anywhere. */
+     transparent; a static ellipsis sits over it. No spinner, anywhere. */
   .ui-btn[data-loading] {
     color: transparent;
     cursor: default;
@@ -483,9 +471,10 @@
     pointer-events: none;
   }
 
-  /* The loading glyph: three 2px squares (4px apart) that type themselves out
-     on the heartbeat period, "." → ".." → "…". It stands still at "…" under
-     reduced motion. Used by the button and the loading toast. */
+  /* The loading glyph: three 2px squares (4px apart), a static "…". It never
+     loops: the heartbeat dot is the only loop in the product and it is driven
+     by the wire (motion §4.9.2), so this glyph is drawn at its end state for
+     every motion preference. Used by the button and the loading toast. */
   .ui-ellipsis {
     display: inline-flex;
     align-items: center;
@@ -494,16 +483,6 @@
   .ui-btn .ui-ellipsis svg { /* two classes deep: outranks `.ui-btn svg:not([class*="size-"])` */
     width: 14px;
     height: 2px;
-  }
-  .ui-ellipsis rect {
-    transform-box: fill-box;
-    transform-origin: center;
-  }
-  .ui-ellipsis rect:nth-child(2) {
-    animation: var(--ui-ellipsis-2) var(--heartbeat-period) steps(1, end) infinite;
-  }
-  .ui-ellipsis rect:nth-child(3) {
-    animation: var(--ui-ellipsis-3) var(--heartbeat-period) steps(1, end) infinite;
   }
 
   /* ---------- Input · textarea · select trigger — design §5.2, motion §4.1.6 */
@@ -528,6 +507,11 @@
     color: var(--text-disabled);
     opacity: 1;
   }
+  /* Hover moves the border one rung UP the ladder, --ink-7 -> --ink-8. Motion
+     §4.1.6 writes "--ink-6", but --ink-6 sits BELOW the --ink-7 rest border
+     (it would dim on hover) and under the 3.03:1 meaning-bearing floor (design
+     §5.2, SC 1.4.11; core.css marks --ink-6 "not meaning-bearing"). Raised as
+     a spec question; --ink-8 follows the hover language (motion §7: one rung). */
   @media (hover: hover) {
     .ui-input:hover:not(:disabled, :focus, [aria-invalid="true"], [data-disabled]) {
       border-color: var(--ink-8);
@@ -1767,6 +1751,7 @@
     transition-duration: var(--dur-1);
     transition-timing-function: var(--ease-snap);
   }
+  /* Hover: --ink-7 -> --ink-8, one rung up; see the .ui-input note. */
   @media (hover: hover) {
     .ui-input-group:hover:not(:has([aria-invalid="true"], :disabled, :focus)) {
       border-color: var(--ink-8);
@@ -1947,8 +1932,8 @@
    6. REDUCED MOTION — a designed second state, not an off switch (motion §5).
       One declaration list serves the OS preference and the footer toggle
       (data-motion="reduced" on <html>). Colour stays at 120ms; every
-      transform is dropped; overlays become opacity-only at 120ms; the
-      ellipsis stands still at "…". Nothing disappears.
+      transform is dropped; overlays become opacity-only at 120ms. Nothing
+      disappears.
    ========================================================================== */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -1966,8 +1951,6 @@
     --ui-slide-dur: var(--dur-0);
     --ui-draw-dur: var(--dur-0);
     --ui-list-dur: var(--dur-0);
-    --ui-ellipsis-2: none;
-    --ui-ellipsis-3: none;
   }
 }
 :root[data-motion="reduced"] {
@@ -1985,8 +1968,6 @@
   --ui-slide-dur: var(--dur-0);
   --ui-draw-dur: var(--dur-0);
   --ui-list-dur: var(--dur-0);
-  --ui-ellipsis-2: none;
-  --ui-ellipsis-3: none;
 }
 
 
