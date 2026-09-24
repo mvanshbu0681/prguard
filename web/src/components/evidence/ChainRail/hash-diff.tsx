@@ -10,7 +10,7 @@ function markAt(hash: string, at: number | null): ReactNode {
   return (
     <>
       {hash.slice(0, at)}
-      <mark className="rounded-[1px] bg-alarm-tint-hi text-alarm-hi" data-slot="chain-rail-nibble">
+      <mark className="rounded-[1px] bg-alarm-tint-hi text-alarm-text" data-slot="chain-rail-nibble">
         {hash[at]}
       </mark>
       {hash.slice(at + 1)}

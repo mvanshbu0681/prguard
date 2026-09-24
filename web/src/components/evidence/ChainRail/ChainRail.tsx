@@ -255,7 +255,7 @@ function ChainRow({
 
   return (
     <li
-      className={cn("chain-rail__row relative", desaturated && "[filter:saturate(0.25)]")}
+      className={cn("chain-rail__row relative", desaturated && "[opacity:.45] [filter:saturate(0.25)]")}
       data-seq={event.seq}
       data-broken={!intact ? "" : undefined}
       data-anim

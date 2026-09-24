@@ -47,7 +47,7 @@ export function ChainRailLab({ rawEventsText, tamperDemoSeq }: { rawEventsText: 
       <LabSection
         index="01"
         title="Marketing — the flight recorder"
-        note="Six events around the demo finding (seq 1428). The canonical_json field is contenteditable — type in it to break the chain, then restore it."
+        note={`Six events around the demo finding (seq ${tamperDemoSeq}). The canonical_json field is contenteditable — type in it to break the chain, then restore it.`}
         marketing
       >
         <ChainRail
@@ -65,7 +65,11 @@ export function ChainRailLab({ rawEventsText, tamperDemoSeq }: { rawEventsText: 
         />
       </LabSection>
 
-      <LabSection index="02" title="Dashboard — the full chain" note="All 1,450 events, windowed with @tanstack/react-virtual past 200 rows. No tamper button on this surface.">
+      <LabSection
+        index="02"
+        title="Dashboard — the full chain"
+        note={`All ${file.items.length.toLocaleString("en-US")} events, windowed with @tanstack/react-virtual past 200 rows. No tamper button on this surface.`}
+      >
         <ChainRail
           events={file.items as never}
           losslessEvents={file.items}
