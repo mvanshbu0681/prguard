@@ -1,0 +1,11 @@
+/* OWNER: d3 (wave 3). Paint for the disproven empty variant's strike-through
+   (dashboard-blueprint §2.7 "Empty variants"): one hairline drawn across the
+   claim block, the same `.draw` mechanism (src/styles/motion.css, T3 wave 1)
+   StageRail's connectors use for an edge — vector-effect here only, because
+   that property has to live in real CSS (a presentation attribute does not
+   reliably reach getComputedStyle() for src/motion/draw.ts's measurement). */
+.strike {
+  fill: none;
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}

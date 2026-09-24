@@ -24,21 +24,27 @@ export function ProofSection({ finding, baseSha, headSha, reviewShort }: { findi
     );
   }
   const duration = formatDurationMs(proof.duration_ms);
+  // Empty variant (dashboard-blueprint §2.7): `not_attempted` renders §04 as a
+  // 60%-opacity frame with the reason printed, rather than an absence — a
+  // composition-level wrapper around <ProofBench>, never a restyle of it.
+  const notAttempted = proof.status === "not_attempted";
   return (
     <div className="flex flex-col gap-4">
-      <ProofBench
-        proof={proof}
-        density="compact"
-        mode="static"
-        findingId={finding.id}
-        baseSha={baseSha}
-        headSha={headSha}
-        blocking={finding.blocking}
-        claim={finding.title}
-        index="04"
-        provenance={`GET /v1/reviews/${reviewShort}/result → findings[].proof`}
-        capturedAt={finding.created_at}
-      />
+      <div className={notAttempted ? "opacity-60" : undefined}>
+        <ProofBench
+          proof={proof}
+          density="compact"
+          mode="static"
+          findingId={finding.id}
+          baseSha={baseSha}
+          headSha={headSha}
+          blocking={finding.blocking}
+          claim={finding.title}
+          index="04"
+          provenance={`GET /v1/reviews/${reviewShort}/result → findings[].proof`}
+          capturedAt={finding.created_at}
+        />
+      </div>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-panel border border-rule-1 bg-ink-1 px-4 py-4 sm:grid-cols-3 md:px-6">
         <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Command</span>
