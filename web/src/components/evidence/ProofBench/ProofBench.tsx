@@ -105,7 +105,10 @@ export function ProofBench(props: ProofBenchProps) {
     [],
   );
 
-  const seq = useSequence<HTMLDivElement>(steps, {
+  // Destructured immediately: `seq.ref` (an unstructured access) makes the React Compiler
+  // lint treat the whole object as a ref (react-hooks/refs) and flags every `seq.x` read
+  // (src/motion/useSequence.ts's own header comment says so).
+  const { ref: benchRootRef } = useSequence<HTMLDivElement>(steps, {
     key: effectiveMode === "replay" ? replayKey : undefined,
     autoplay: effectiveMode === "replay" ? autoplay : "none",
     reset,
@@ -169,7 +172,7 @@ export function ProofBench(props: ProofBenchProps) {
 
   return (
     <div
-      ref={seq.ref}
+      ref={benchRootRef}
       className={styles.root}
       data-pb-anim={animating || undefined}
       data-pb-a0={flags.a0 || undefined}
