@@ -432,10 +432,16 @@ function RailFigure({ geometry, stateMap, expectedMs, stageLabels, setActiveKey,
           })
         : null}
 
+      {/* Horizontal geometries centre this under the fork, which has room either side.
+          The vertical spine's fork sits close to the left edge (indented, not centred), so
+          centring here would push half the caption off the frame — left-align it instead. */}
       <span
         aria-hidden="true"
-        className="absolute -translate-x-1/2 whitespace-nowrap type-data text-[9px] text-text-dim"
-        style={{ ...asPercent(geometry.forkCaptionAt, geometry), transform: "translate(-50%, 0)" }}
+        className={cn(
+          "absolute max-w-[11em] whitespace-normal type-data text-[9px] leading-tight text-text-dim",
+          geometry.orientation === "horizontal" && "-translate-x-1/2 whitespace-nowrap",
+        )}
+        style={asPercent(geometry.forkCaptionAt, geometry)}
       >
         wall clock = max(lane), not sum
       </span>
@@ -463,14 +469,18 @@ function RailFigure({ geometry, stateMap, expectedMs, stageLabels, setActiveKey,
             onFocus={() => setActiveKey(key)}
             onBlur={() => setActiveKey((k) => (k === key ? null : k))}
           >
+            {/* Five SHAPES, not five colours (design §1.11, §8.2): ring / ring / disc / triangle
+                / square, so the state survives greyscale — matching StageDot's own encoding
+                (@/components/badges/stage-dot.tsx), reimplemented at station size here because
+                a station also carries its identifying glyph, which StageDot does not. */}
             <span
               className={cn(
-                "relative inline-flex items-center justify-center rounded-full transition-none",
+                "relative inline-flex items-center justify-center transition-none",
                 isProof ? "h-8 w-8" : "h-6 w-6",
-                state === "pending" && "border border-stage-pending-node",
-                state === "running" && "border-2 border-stage-running-node",
-                state === "done" && "bg-stage-done-node",
-                state === "degraded" && "bg-stage-degraded-node",
+                state === "pending" && "rounded-full border border-stage-pending-node",
+                state === "running" && "rounded-full border-2 border-stage-running-node",
+                state === "done" && "rounded-full bg-stage-done-node",
+                state === "degraded" && "bg-stage-degraded-node [clip-path:polygon(50%_2%,4%_98%,96%_98%)]",
                 state === "failed" && "bg-stage-failed-node",
               )}
             >
