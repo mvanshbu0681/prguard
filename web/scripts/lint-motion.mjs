@@ -9,6 +9,9 @@
 //                         color, border-color, stroke-dashoffset, read as the colour-only
 //                         paints Tailwind's `transition-colors` covers (outline-color,
 //                         text-decoration-color, fill, stroke, gradient stops).
+//                         A bounded property is a one-shot of at most 240ms: a longer
+//                         duration on it (a time, a duration token, a Tailwind duration-*)
+//                         is a violation.
 //                         Documented exceptions: `visibility` (discrete; the fallback
 //                         handshake's force-reveal, design §4.7 / motion §3.5) and `height`
 //                         on the ⌘K list only (motion §4.3): a rule whose own `height` is
@@ -124,6 +127,37 @@ const HANDSHAKE_CLOCK = { keyframes: "prg-force-reveal-page", property: "--prg-f
 const isHandshakeClock = (keyframes, prop) => keyframes === HANDSHAKE_CLOCK.keyframes && prop === HANDSHAKE_CLOCK.property;
 
 const COLOUR_PROPS = new Set([...[...BOUNDED].filter((p) => p !== "stroke-dashoffset"), ...COLOUR_FAMILY]);
+
+/** §6.1: a bounded property (colour, stroke-dashoffset) may only be a one-shot transition of at most this long. */
+export const BOUNDED_MAX_MS = 240;
+const isBounded = (p) => BOUNDED.has(p) || COLOUR_FAMILY.has(p);
+/** Duration tokens (app/tokens/core.css) and their marketing values in ms. */
+const DUR_TOKEN_MS = {
+  "--dur-0": 0,
+  "--dur-1": 120,
+  "--dur-2": 180,
+  "--dur-3": 240,
+  "--dur-4": 420,
+  "--dur-5": 1400,
+  "--dur-exit": 160,
+  "--dur-active": 90,
+  "--dur-hover": 120,
+  "--dur-state": 180,
+  "--dur-reveal": 240,
+  "--dur-enter": 420,
+  "--dur-scan": 1400,
+};
+const TIME_VALUE = /^[+-]?(\d*\.)?\d+m?s$/i;
+/**
+ * A duration in ms from a CSS time (`300ms`, `.4s`) or a duration token (`var(--dur-4)`,
+ * or `(--dur-4)` inside a Tailwind utility). Null when unknowable.
+ */
+export function durationMs(token) {
+  const t = String(token).trim();
+  if (TIME_VALUE.test(t)) return /ms$/i.test(t) ? parseFloat(t) : parseFloat(t) * 1000;
+  const v = /^(?:var)?\(\s*(--[\w-]+)/.exec(t);
+  return v && Object.hasOwn(DUR_TOKEN_MS, v[1]) ? DUR_TOKEN_MS[v[1]] : null;
+}
 
 const TW_COLOURS = ["color", "background-color", "border-color", "outline-color", "text-decoration-color", "fill", "stroke", "--tw-gradient-from", "--tw-gradient-via", "--tw-gradient-to"];
 /** Tailwind 4.3's bare `transition` (verified against tailwindcss/dist). */
@@ -539,6 +573,30 @@ export function isVerdictSelector(selector) {
 // Checks shared by CSS files and CSS inside TS strings
 // ---------------------------------------------------------------------------
 
+/**
+ * The first bounded property (colour, stroke-dashoffset) a `transition` / `transition-property`
+ * declaration runs for longer than BOUNDED_MAX_MS, with that duration; null when none does
+ * or the duration is unknowable. `props` are the declaration's properties, in item order.
+ */
+function boundedOverrun(d, props, siblings) {
+  if (d.prop === "transition") {
+    const items = splitTop(d.value.replace(/!important\s*$/i, ""), ",");
+    for (let i = 0; i < items.length; i++) {
+      const prop = props[i];
+      if (!prop || !isBounded(prop)) continue;
+      // The first time in an item is its duration; a second one is the delay.
+      const ms = splitTop(items[i], " ").map(durationMs).find((v) => v !== null) ?? null;
+      if (ms !== null && ms > BOUNDED_MAX_MS) return { prop, ms };
+    }
+    return null;
+  }
+  const prop = props.find(isBounded);
+  const dur = siblings.find((s) => s.prop === "transition-duration");
+  if (!prop || !dur) return null;
+  const ms = Math.max(0, ...splitTop(dur.value, ",").map((t) => durationMs(t) ?? 0));
+  return ms > BOUNDED_MAX_MS ? { prop, ms } : null;
+}
+
 function checkCssDecls(parsed, file, report, keyframeIndex) {
   const byRule = new Map();
   for (const d of parsed.decls) {
@@ -576,6 +634,8 @@ function checkCssDecls(parsed, file, report, keyframeIndex) {
       if (isVerdictSelector(d.selector) && props.some((p) => p === "all" || COLOUR_PROPS.has(p))) {
         report({ ...where, rule: "stamp-colour", token: d.prop, message: `\`${d.selector}\` transitions its colour; verdict and gate colours flip in 0ms with no transition (plan §2 rule 3)` });
       }
+      const bounded = boundedOverrun(d, props, byRule.get(d.ruleId) ?? []);
+      if (bounded) report({ ...where, rule: "compositor", token: bounded.prop, message: `transition of \`${bounded.prop}\` over ${bounded.ms}ms; colour and stroke-dashoffset are bounded to a one-shot of at most ${BOUNDED_MAX_MS}ms (motion §6.1)` });
       if (targetsRoot(d.selector) && props.some((p) => p === "all" || p.startsWith("--"))) {
         report({ ...where, rule: "root-custom-property", token: d.prop, message: `\`${d.selector}\` transitions a custom property on :root; that recalculates every element (motion §6.1)` });
       }
@@ -659,8 +719,21 @@ function arbitraryValue(utility, prefix) {
  * holds the token). `classPosition`: the strings are known to be class lists
  * (className, cn(), clsx(), cva()), so the bare `transition` word is a utility.
  */
+/** A Tailwind duration utility's value in ms: duration-300, duration-(--dur-4), duration-[400ms]. Null otherwise. */
+export function utilityDurationMs(utility) {
+  if (!utility.startsWith("duration-")) return null;
+  const v = utility.slice("duration-".length);
+  if (/^\d+$/.test(v)) return Number(v);
+  if (v.startsWith("(") && v.endsWith(")")) return durationMs(v);
+  const arb = arbitraryValue(utility, "duration");
+  return arb === null ? null : durationMs(arb);
+}
+
 function checkClassTokens(entries, report, keyframeIndex, { classPosition }) {
   const verdict = entries.some((e) => splitUtility(e.token).utility === "stamp");
+  // §6.1 bounded: a class list that transitions colour may not run it for longer than 240ms.
+  const longDuration = entries.find((e) => (utilityDurationMs(splitUtility(e.token).utility) ?? 0) > BOUNDED_MAX_MS);
+  let boundedReported = false;
   for (const { token, where } of entries) {
     const { variants, utility } = splitUtility(token);
     if (!utility) continue;
@@ -699,6 +772,11 @@ function checkClassTokens(entries, report, keyframeIndex, { classPosition }) {
       }
       if (verdict && props.some((p) => p === "all" || COLOUR_PROPS.has(p))) {
         report({ ...where, rule: "stamp-colour", token, message: `\`${token}\` on a .stamp element softens the verdict flip; its colour changes in 0ms (plan §2 rule 3)` });
+      }
+      if (longDuration && !boundedReported && props.some(isBounded)) {
+        boundedReported = true;
+        const ms = utilityDurationMs(splitUtility(longDuration.token).utility);
+        report({ ...longDuration.where, rule: "compositor", token: longDuration.token, message: `\`${token}\` with \`${longDuration.token}\` runs colour for ${ms}ms; colour and stroke-dashoffset are bounded to a one-shot of at most ${BOUNDED_MAX_MS}ms (motion §6.1)` });
       }
     }
 

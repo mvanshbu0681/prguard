@@ -37,6 +37,9 @@ html.x { animation: hue 1s infinite; }                           /* @expect root
 .list { height: 40px; transition: height var(--dur-2) var(--ease-snap); } /* @expect compositor */
 @keyframes dash { from { stroke-dasharray: 0 1; } to { stroke-dasharray: 1 0; } } /* @expect compositor */
 @keyframes half { from { stroke-dasharray: 1 1; stroke-dashoffset: 1; } 50% { stroke-dasharray: 1 1; } } /* @expect compositor */
+.m { transition: background-color var(--dur-4) var(--ease-snap); }  /* @expect compositor */
+.n { transition: opacity 420ms, color 0.3s; }                    /* @expect compositor */
+.o { transition-property: stroke-dashoffset; transition-duration: var(--dur-5); } /* @expect compositor */
 `,
   "src/styles/good.css": `
 .a { transition: opacity var(--dur-3) var(--ease-instrument), transform var(--dur-3) var(--ease-instrument); }
@@ -63,6 +66,7 @@ html.anim-ready [data-anim] { animation: none; }
 html { background: var(--ink-0); }
 .h { transition: var(--my-transition); }
 .i { transition: color var(--dur-1) var(--ease-snap), outline-color var(--dur-1) var(--ease-snap), fill var(--dur-1) var(--ease-snap); }
+.j { transition: opacity var(--dur-4) var(--ease-instrument), border-color var(--dur-3) var(--ease-snap) 600ms; }
 @utility tick { animation: tick var(--heartbeat-period) steps(1, end) infinite; }
 @custom-variant motion-reduce {
   @media (prefers-reduced-motion: reduce) { @slot; }
@@ -139,6 +143,7 @@ export function Section() {
       <div className="[animation-timeline:view()]" />                  {/* @expect timeline */}
       <div className="ease-[cubic-bezier(0.34,1.56,0.64,1)]" />        {/* @expect overshoot */}
       <div className="animate-accordion-down" />                       {/* @expect compositor */}
+      <a className="transition-colors duration-500 hover:text-signal" /> {/* @expect compositor */}
       <div style={{ transition: "height 200ms", willChange: "opacity" }} /> {/* @expect compositor will-change */}
       <div data-verdict="proven" className="transition" />             {/* @expect compositor stamp-colour */}
       <style>{\`@keyframes wobble { to { top: 4px; } }\`}</style>      {/* @expect compositor */}
@@ -156,6 +161,7 @@ export function Good() {
     <div>
       <span className="stamp transition-none" data-stamp="a" />
       <button className="transition-colors duration-(--dur-1) ease-snap hover:bg-ink-3 motion-safe:transition-transform" />
+      <div className="transition-opacity duration-(--dur-4)" />
       <div className="transition-opacity [transition:opacity_120ms]" />
       <div className="supports-[animation-timeline:scroll()]:[animation-timeline:scroll()]" />
       <div className="animate-none animate-[prg-reveal_420ms_both] will-change-auto" />
