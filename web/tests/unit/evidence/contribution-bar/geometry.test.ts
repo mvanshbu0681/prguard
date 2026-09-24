@@ -20,6 +20,7 @@ import {
   readoutSnapMs,
   segmentSchedule,
   sumContributions,
+  tickForBand,
   TICKS,
   type SeverityValues,
 } from "@/components/evidence/ContributionBar";
@@ -127,6 +128,23 @@ describe("bandRuleText — the Σ row's rule", () => {
   it("prints the floor for info", () => {
     expect(bandRuleText("info")).toBe("< 0.150 → info");
   });
+
+  it("prints the honest override, not a false inequality, when the band disagrees with the score (a clamped finding)", () => {
+    // The demo disproven finding's own shape: score .655, band clamped to info.
+    expect(bandRuleText("info", 0.655)).toBe("→ info (severity.band overrides the arithmetic — see the note above)");
+    // A band that agrees with the score's own arithmetic still gets the plain rule.
+    expect(bandRuleText("critical", 0.81)).toBe("≥ 0.750 → critical");
+  });
+});
+
+describe("tickForBand — the on-screen promoted tick always matches the printed band", () => {
+  it("maps low/medium/high/critical to themselves", () => {
+    for (const key of TICKS) expect(tickForBand(key)).toBe(key);
+  });
+
+  it("has no tick for info, even when the score's own arithmetic would have crossed several", () => {
+    expect(tickForBand("info")).toBeNull();
+  });
 });
 
 describe("explanationClauses — matching severity.py's explain()/_phrase() by text", () => {
@@ -176,18 +194,27 @@ describe("segmentSchedule / readoutSnapMs — the 420ms entrance (brand-gaps §2
     expect(schedule.at(-1)!.endMs).toBe(420);
   });
 
-  it("readoutSnapMs falls back to the schedule's own end when no tick is crossed (info band)", () => {
+  it("readoutSnapMs falls back to the schedule's own end when there is no tick to cross (info band)", () => {
     const rows = contributionRows({ path_sensitivity: 0, reachability: 0, blast_radius: 0, coverage_gap: 0, proof_confidence: 0, churn: 0 }, WEIGHTS);
     const schedule = segmentSchedule(6, 420, 60);
-    expect(readoutSnapMs(rows, 0, schedule)).toBe(420);
+    expect(readoutSnapMs(rows, null, schedule)).toBe(420);
   });
 
-  it("readoutSnapMs lands on the segment whose growth carries the cumulative front across the promoted tick", () => {
+  it("readoutSnapMs lands on the segment whose growth carries the cumulative front across the given tick", () => {
     // path_sensitivity(.25) + reachability(.20) = .45 >= .35 (medium) after segment index 1 (reachability).
     const rows = contributionRows({ path_sensitivity: 1, reachability: 1, blast_radius: 0, coverage_gap: 0, proof_confidence: 0, churn: 0 }, WEIGHTS);
     const score = sumContributions(rows);
     expect(promotedTick(score)).toBe("medium");
     const schedule = segmentSchedule(6, 420, 60);
-    expect(readoutSnapMs(rows, score, schedule)).toBe(schedule[1].endMs);
+    expect(readoutSnapMs(rows, "medium", schedule)).toBe(schedule[1].endMs);
+  });
+
+  it("readoutSnapMs honours a tick that disagrees with the score's own arithmetic (a clamped band)", () => {
+    // The disproven finding's own shape: score .655 (naturally "high"), but the caller
+    // passes null because tickForBand("info") is null — the readout still snaps, at the end.
+    const rows = contributionRows({ reachability: 1, blast_radius: 0.3, path_sensitivity: 1, coverage_gap: 1, churn: 0.1, proof_confidence: 0 }, WEIGHTS);
+    expect(promotedTick(sumContributions(rows))).toBe("high");
+    const schedule = segmentSchedule(6, 420, 60);
+    expect(readoutSnapMs(rows, null, schedule)).toBe(420);
   });
 });

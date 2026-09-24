@@ -106,11 +106,34 @@ export function bandForScore(score: number): SeverityBand {
 }
 
 /**
+ * The tick that corresponds to a given (possibly server-overridden) band —
+ * `null` for `info`, which has no tick of its own. Used for the ON-SCREEN
+ * promoted tick instead of `promotedTick(score)` directly: a disproven
+ * finding's `severity.band` is clamped to `info` while its score stays as
+ * computed (severity.py `compute()`), so the score's own arithmetic can
+ * disagree with the band the backend actually printed. The promoted tick must
+ * always match the band the caller gave, never silently recompute one that
+ * contradicts it.
+ */
+export function tickForBand(band: SeverityBand): TickKey | null {
+  return (TICKS as readonly string[]).includes(band) ? (band as TickKey) : null;
+}
+
+/**
  * The band's own printed rule, e.g. `≥ 0.750 → critical` (the Σ row) or
  * `< 0.150 → info` when no tick is crossed. Numeric style: 3 decimals, always
  * (brand-gaps §D) — the worked examples' `.75` shorthand is not the display format.
+ *
+ * `score` is optional but should always be passed when it is known: a
+ * disproven finding's band is clamped to `info` (severity.py `compute()`)
+ * while its SCORE stays as computed — "the artifact of having been wrong
+ * stays legible instead of being rewritten." Printing the plain `< 0.150 →
+ * info` rule next to a score of, say, 0.655 would read as a false inequality.
+ * When the given band disagrees with what the score's own arithmetic would
+ * produce, this prints the honest reason instead: the band was overridden.
  */
-export function bandRuleText(band: SeverityBand): string {
+export function bandRuleText(band: SeverityBand, score?: number): string {
+  if (score !== undefined && bandForScore(score) !== band) return `→ ${band} (severity.band overrides the arithmetic — see the note above)`;
   if (band === "info") return `< ${SEVERITY_THRESHOLDS.low.toFixed(3)} → info`;
   return `≥ ${SEVERITY_THRESHOLDS[band].toFixed(3)} → ${band}`;
 }
@@ -193,12 +216,17 @@ export function segmentSchedule(count: number, totalMs: number, staggerMs: numbe
  * When the readout should snap: the moment the cumulative filled front (rows in
  * their fixed order, summed left to right) first reaches the promoted tick — i.e.
  * the end of the segment whose growth carries the front across that threshold.
- * Falls back to the entrance's own end when no tick is crossed (the info band)
- * or the schedule is empty, so the readout is never stranded invisible.
+ * Falls back to the entrance's own end when no tick is crossed (the info band,
+ * including a clamped-to-info override) or the schedule is empty, so the
+ * readout is never stranded invisible.
+ *
+ * Takes `tick` rather than re-deriving one from `score`: the caller passes
+ * whatever `tickForBand(resolvedBand)` resolved, so the readout always snaps
+ * in step with the SAME tick the track visually promotes — including when a
+ * disproven finding's band overrides what the raw score would promote.
  */
-export function readoutSnapMs(rows: readonly ContributionRow[], score: number, schedule: readonly SegmentSchedule[]): number {
+export function readoutSnapMs(rows: readonly ContributionRow[], tick: TickKey | null, schedule: readonly SegmentSchedule[]): number {
   const totalMs = schedule.length ? schedule[schedule.length - 1].endMs : 0;
-  const tick = promotedTick(score);
   if (tick === null) return totalMs;
   const target = SEVERITY_THRESHOLDS[tick];
   let cumulative = 0;

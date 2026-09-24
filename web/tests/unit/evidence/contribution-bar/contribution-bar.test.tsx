@@ -138,6 +138,18 @@ describe("disproven findings render the clamp note honestly", () => {
     detailBar({ score: 0.655, band: "info", notes: ["clamped to info: repro passed at head"] });
     expect(screen.getByText("clamped to info: repro passed at head")).toBeInTheDocument();
   });
+
+  it("promotes no tick and prints the override — not a false '0.655 < 0.150' — when the score's own arithmetic disagrees with the clamped band", () => {
+    // These raw inputs score .655 by the arithmetic (>= .55, naturally "high"), but the
+    // finding is disproven, so severity.band arrives as "info" (severity.py compute()).
+    const { container, getByText } = detailBar({
+      score: 0.655,
+      inputs: { reachability: 1, blast_radius: 0.3, path_sensitivity: 1, coverage_gap: 1, churn: 0.1, proof_confidence: 0 },
+      band: "info",
+    });
+    expect(container.querySelectorAll("[data-promoted]")).toHaveLength(0);
+    expect(getByText("→ info (severity.band overrides the arithmetic — see the note above)")).toBeInTheDocument();
+  });
 });
 
 describe("withFrame", () => {

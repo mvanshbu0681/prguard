@@ -33,9 +33,9 @@ import {
   contributionPercent,
   contributionRows,
   explanationClauses,
-  promotedTick,
   readoutSnapMs,
   segmentSchedule,
+  tickForBand,
   SEGMENT_MIN_PX,
   TICKS,
   TICK_LABEL,
@@ -142,7 +142,7 @@ function ContributionBarInstrument({
   const rows = useMemo(() => contributionRows(inputs, weights), [inputs, weights]);
   const resolvedBand: SeverityBand = band ?? badgeBandForScore(score);
   const reading = formatScore(score);
-  const tick = promotedTick(score);
+  const tick = tickForBand(resolvedBand);
   const clauses = useMemo(() => explanationClauses(explanation, rows), [explanation, rows]);
 
   // Active input, from either the pointer or the keyboard — "arrow keys move
@@ -158,7 +158,7 @@ function ContributionBarInstrument({
   // which must already be the end state."
   const animates = !disableEntrance;
   const schedule = useMemo(() => segmentSchedule(rows.length, DUR.enter, STAGGER.sibling), [rows.length]);
-  const snapAt = useMemo(() => readoutSnapMs(rows, score, schedule), [rows, score, schedule]);
+  const snapAt = useMemo(() => readoutSnapMs(rows, tick, schedule), [rows, tick, schedule]);
   const [grownCount, setGrownCount] = useState(rows.length);
   const [readoutRevealed, setReadoutRevealed] = useState(true);
   const steps = useMemo(() => {
@@ -362,7 +362,7 @@ function ContributionBarInstrument({
               <td className="px-3 py-1.5" />
               <td className="px-3 py-1.5" />
               <td className="py-1.5 pl-3 text-right tabular text-text-primary">
-                {reading} <span className="text-text-dim">{bandRuleText(resolvedBand)}</span>
+                {reading} <span className="text-text-dim">{bandRuleText(resolvedBand, score)}</span>
               </td>
             </tr>
           </tfoot>
