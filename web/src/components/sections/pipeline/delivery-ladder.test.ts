@@ -22,7 +22,7 @@ describe("deliveryLadder", () => {
   it("has four rungs in DELIVERY_RUNG_MODES order, never including not_delivered", () => {
     const rungs = deliveryLadder(undefined, []);
     expect(rungs.map((r) => r.mode)).toEqual([...DELIVERY_RUNG_MODES]);
-    expect(rungs.every((r) => r.mode !== "not_delivered")).toBe(true);
+    expect((rungs.map((r) => r.mode) as string[]).includes("not_delivered")).toBe(false);
   });
 
   it("reads every count from the ladder breakdown, never a typed literal", () => {

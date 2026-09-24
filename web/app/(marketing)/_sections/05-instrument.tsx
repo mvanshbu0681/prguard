@@ -33,7 +33,13 @@ export function InstrumentFace() {
     <section id="severity" className="relative isolate border-b border-rule-hair px-4 py-(--space-section) md:px-8">
       <Grain />
       <div className="relative mx-auto max-w-[1200px]">
-        <SectionIndex index="05" category="COMPUTED SEVERITY" />
+        {/* Section index grammar: "/ 05 — THE INSTRUMENT FACE" (marketing-shell's
+            MARKETING_SECTIONS, t8a, wave 3 — the nav's own category for this id).
+            The artifact's own <Exhibit> below prints its own, narrower category,
+            "COMPUTED SEVERITY" (<ContributionBar>'s own default, wave 2) — the
+            section describes the belief it changes, the exhibit describes the
+            evidence. */}
+        <SectionIndex index="05" category="THE INSTRUMENT FACE" />
 
         <div className="mt-6 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,620px)_1fr] lg:gap-16">
           <div {...ANIM_PROPS} className="reveal reveal-rise">

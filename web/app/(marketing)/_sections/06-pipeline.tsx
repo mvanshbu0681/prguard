@@ -46,7 +46,7 @@ export function Pipeline() {
   const findings = demoResult.findings ?? [];
   const counts = demoResult.counts;
   const reviewIdShort = demoRun.review_id.slice(0, 7);
-  const capturedAt = demoResult.timing?.finished_at;
+  const capturedAt = demoResult.timing?.finished_at ?? undefined;
   const provenance = `GET /v1/reviews/${reviewIdShort} → stage_index · stage_total · stage_label · heartbeat`;
   const lanes = specialistCounts(findings);
 
@@ -54,7 +54,12 @@ export function Pipeline() {
     <section id="pipeline" className="relative isolate border-b border-rule-hair px-4 py-(--space-section) md:px-8">
       <Grain />
       <div className="relative mx-auto max-w-[1200px]">
-        <SectionIndex index="06" category="NINE STAGES" />
+        {/* Section index grammar: "/ 06 — THE PIPELINE" (marketing-shell's
+            MARKETING_SECTIONS, t8a, wave 3 — the nav's own category for this id).
+            The two <StageRail> Exhibits below print their own, narrower category,
+            "NINE STAGES" — the section describes the belief it changes, the
+            exhibit describes the evidence. */}
+        <SectionIndex index="06" category="THE PIPELINE" />
 
         <div {...ANIM_PROPS} className="reveal reveal-rise mt-6 max-w-(--measure-body)">
           <h2 className="type-display-h2 text-text-primary">Nine stages. One comment.</h2>
