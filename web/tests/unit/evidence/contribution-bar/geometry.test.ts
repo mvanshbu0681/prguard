@@ -186,18 +186,18 @@ describe("explanationClauses — matching severity.py's explain()/_phrase() by t
   });
 });
 
-describe("segmentSchedule / readoutSnapMs — the 420ms entrance (brand-gaps §2 rulings 4, 7)", () => {
-  it("six segments, 60ms apart, the last finishing at exactly 420ms", () => {
+describe("segmentSchedule / readoutSnapMs — six segments at 420ms each, 60ms apart, ~720ms total (motion-spec §4.8.1; brand-gaps §2 ruling 7)", () => {
+  it("six segments, 60ms apart, each running the full 420ms, the last finishing at 720ms", () => {
     const schedule = segmentSchedule(6, 420, 60);
     expect(schedule.map((s) => s.startMs)).toEqual([0, 60, 120, 180, 240, 300]);
-    expect(schedule.every((s) => s.durationMs === 120)).toBe(true);
-    expect(schedule.at(-1)!.endMs).toBe(420);
+    expect(schedule.every((s) => s.durationMs === 420)).toBe(true);
+    expect(schedule.at(-1)!.endMs).toBe(720);
   });
 
   it("readoutSnapMs falls back to the schedule's own end when there is no tick to cross (info band)", () => {
     const rows = contributionRows({ path_sensitivity: 0, reachability: 0, blast_radius: 0, coverage_gap: 0, proof_confidence: 0, churn: 0 }, WEIGHTS);
     const schedule = segmentSchedule(6, 420, 60);
-    expect(readoutSnapMs(rows, null, schedule)).toBe(420);
+    expect(readoutSnapMs(rows, null, schedule)).toBe(720);
   });
 
   it("readoutSnapMs lands on the segment whose growth carries the cumulative front across the given tick", () => {
@@ -215,6 +215,6 @@ describe("segmentSchedule / readoutSnapMs — the 420ms entrance (brand-gaps §2
     const rows = contributionRows({ reachability: 1, blast_radius: 0.3, path_sensitivity: 1, coverage_gap: 1, churn: 0.1, proof_confidence: 0 }, WEIGHTS);
     expect(promotedTick(sumContributions(rows))).toBe("high");
     const schedule = segmentSchedule(6, 420, 60);
-    expect(readoutSnapMs(rows, null, schedule)).toBe(420);
+    expect(readoutSnapMs(rows, null, schedule)).toBe(720);
   });
 });

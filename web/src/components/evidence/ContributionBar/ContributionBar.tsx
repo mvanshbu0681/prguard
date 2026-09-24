@@ -70,7 +70,13 @@ const TRACK_HEIGHT: Record<"compact" | "detail", number> = { compact: 18, detail
 const TRACK_MAX_WIDTH: Record<"compact" | "detail", number> = { compact: 320, detail: 640 };
 const READOUT_CLASS: Record<"compact" | "detail", string> = { compact: "type-readout", detail: "type-readout-xl" };
 
-/** §3a's short form for the inline label row and density="compact" (worked example: "blast", "coverage", "proof_conf"). */
+/**
+ * §3a's short form for density="compact" (worked example: "blast", "coverage",
+ * "proof_conf"). At density="detail" the label row keeps `path_sensitivity`
+ * in full — the §3a worked example for detail prints the label row as
+ * "path_sensitivity reachability blast coverage proof_conf churn", i.e. only
+ * the multi-syllable non-path labels are shortened, path_sensitivity is not.
+ */
 const SHORT_LABEL: Record<SeverityInputName, string> = {
   path_sensitivity: "path_sens",
   reachability: "reachability",
@@ -212,8 +218,13 @@ function ContributionBarInstrument({
     // table's content width, which would push the WHOLE ancestor track wider than
     // the viewport instead of the table's own overflow-x-auto taking the scroll.
     <div ref={entranceRef} className={cn("w-full min-w-0", className)} style={{ maxWidth: trackWidth }}>
-      {/* Readout — snaps, never counts up (§2.5, §4.8.1). */}
+      {/* Readout — snaps, never counts up (§2.5, §4.8.1). `key` remounts the
+          element on every reveal so `.stamp` (a declarative "class arrives"
+          animation, src/styles/motion.css) actually retriggers at the visible
+          snap moment instead of having already "arrived" at the invisible
+          reset frame — same pattern as SeverityMeter (src/components/badges/severity-meter.tsx). */}
       <div
+        key={readoutStamps}
         className={cn("flex items-baseline gap-3", readoutStamps > 0 && "stamp")}
         style={{ opacity: readoutRevealed ? 1 : 0, transition: "none" }}
       >
@@ -307,7 +318,7 @@ function ContributionBarInstrument({
       <dl className="mt-1 flex flex-wrap gap-x-4 gap-y-1 type-data text-text-body">
         {rows.map((row) => (
           <div key={row.name} className={cn("flex items-baseline gap-1", row.name === activeName && "text-text-primary")}>
-            <dt className="text-text-dim">{SHORT_LABEL[row.name]}</dt>
+            <dt className="text-text-dim">{density === "detail" && row.name === "path_sensitivity" ? row.name : SHORT_LABEL[row.name]}</dt>
             <dd className="tabular">{formatScore(row.contribution)}</dd>
           </div>
         ))}

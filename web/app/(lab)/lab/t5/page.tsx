@@ -8,6 +8,7 @@
 // here and passed down as props — nothing in this file is typed by hand.
 import type { Metadata } from "next";
 import { ContributionBar, toSeverityValues } from "@/components/evidence/ContributionBar";
+import { formatScore } from "@/components/badges";
 import { SEVERITY_BANDS } from "@/lib/contracts";
 import { getDemoDisprovenFinding, getDemoProvenFinding, getFindings } from "@/lib/fixtures";
 import type { Finding } from "@/lib/api-types";
@@ -40,7 +41,11 @@ export default function T5Lab() {
           </p>
         </header>
 
-        <Section index="01" title="The demo proven finding" note="0.810, critical — plan A13's worked example, at all three densities. The demo run: a91f3c2e.">
+        <Section
+          index="01"
+          title="The demo proven finding"
+          note={`${formatScore(proven.severity!.score)}, ${proven.severity!.band} — plan A13's worked example, at all three densities. The demo run: ${proven.id.slice(0, 8)}.`}
+        >
           <div className="grid grid-cols-1 gap-8">
             <Panel className="p-4 md:p-6">
               <p className="mb-3 type-label text-text-dim">detail · 640px · within an Exhibit</p>

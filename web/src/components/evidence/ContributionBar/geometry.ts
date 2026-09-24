@@ -191,10 +191,12 @@ export function explanationClauses(explanation: string | undefined, rows: readon
 }
 
 // ---------------------------------------------------------------------------
-// Entrance timing — the 420ms total budget (brand-gaps §2 ruling 4 and 7;
-// motion spec §4.8.1). Six segments, `STAGGER.sibling` (60ms) apart, each
-// growing over the remaining span so the LAST segment finishes at exactly
-// `DUR.enter` (420ms): (n − 1) × stagger + perSegmentMs = 420.
+// Entrance timing — each segment runs its own full `DUR.enter` (420ms)
+// transition, staggered `STAGGER.sibling` (60ms) apart (brand-gaps §2 ruling
+// 7: "ContributionBar (6 × 420ms) in finding detail"; motion spec §4.8.1's
+// worked table: "Six segments at 420ms with a 60ms stagger totals 720ms").
+// `totalMs` is the PER-SEGMENT duration, not a budget shared across all six —
+// the last segment ends at (count − 1) × staggerMs + totalMs.
 // ---------------------------------------------------------------------------
 
 export interface SegmentSchedule {
@@ -207,10 +209,9 @@ export interface SegmentSchedule {
 }
 
 export function segmentSchedule(count: number, totalMs: number, staggerMs: number): SegmentSchedule[] {
-  const perSegmentMs = totalMs - Math.max(0, count - 1) * staggerMs;
   return Array.from({ length: count }, (_, i) => {
     const startMs = i * staggerMs;
-    return { startMs, durationMs: perSegmentMs, endMs: startMs + perSegmentMs };
+    return { startMs, durationMs: totalMs, endMs: startMs + totalMs };
   });
 }
 

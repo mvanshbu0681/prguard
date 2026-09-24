@@ -32,7 +32,7 @@ export function segmentColorHover(index: number, total: number): string {
  * about the system's own certainty rather than about the code (§3a). Drawn as a
  * darker diagonal repeat over the segment's own fill, not a second colour.
  */
-export const PROOF_CONFIDENCE_HATCH = "repeating-linear-gradient(45deg, oklch(0 0 0 / 0.32) 0px, oklch(0 0 0 / 0.32) 1px, transparent 1px, transparent 3px)";
+export const PROOF_CONFIDENCE_HATCH = "repeating-linear-gradient(45deg, oklch(0 0 0 / 0.32) 0px, oklch(0 0 0 / 0.32) 1px, transparent 1px, transparent 2px)";
 
 /**
  * The band colour for TEXT (band label, glyph letter). `--sev-critical` is
