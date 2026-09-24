@@ -4,7 +4,7 @@
 // dropped` accounting badge, computed rather than asserted (§2.5: "If it ever disagrees the
 // badge turns --alarm and reads `N unaccounted` — a product that claims nothing is silently
 // dropped must be able to fail that claim visibly").
-import { Check, Warn } from "@/components/icons";
+import { Check, SquareDot, Warn } from "@/components/icons";
 import { DeliveryModeChip } from "@/components/badges";
 import { IndexStrip, ProvenanceLine, Surface } from "@/components/chrome";
 import { DELIVERY_MODES, GATE_DELIVERIES, type DeliveryMode, type GateDelivery } from "@/lib/contracts";
@@ -61,9 +61,13 @@ export function DeliveryPanel({ delivery, gate, published, provenance, className
               return (
                 <li key={rung} className={cn("flex items-center justify-between gap-3 type-data text-[13px]", !fired && "opacity-45")}>
                   <span className="flex items-center gap-1.5">
-                    <span aria-hidden="true" className="text-text-dim">
-                      {fired ? "▣" : "▢"}
-                    </span>
+                    {fired ? (
+                      <SquareDot className="text-text-dim" />
+                    ) : (
+                      <span aria-hidden="true" className="text-text-dim">
+                        □
+                      </span>
+                    )}
                     {rungLabel(rung)}
                   </span>
                   {!fired ? <span className="type-data text-[11px] text-text-dim">— not attempted</span> : null}

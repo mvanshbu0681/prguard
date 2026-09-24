@@ -96,8 +96,8 @@ export function RunHeader({
           </p>
         </div>
         {onRerun ? (
-          <Button type="button" variant="ghost" size="sm" onClick={onRerun} disabled={rerunPending}>
-            {rerunPending ? "RE-RUNNING…" : "RE-RUN"}
+          <Button type="button" variant="ghost" size="sm" onClick={onRerun} loading={rerunPending}>
+            RE-RUN
           </Button>
         ) : null}
       </div>

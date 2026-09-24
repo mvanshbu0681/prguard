@@ -28,6 +28,7 @@ import { LiveRightRail } from "./LiveRightRail";
 import { PipelineSummaryStrip } from "./PipelineSummaryStrip";
 import { RunHeader } from "./RunHeader";
 import { useElapsedSeconds } from "./useElapsedSeconds";
+import { cn } from "@/lib/utils";
 
 const RESULT_TABS = ["pipeline", "findings", "delivery", "cost"] as const;
 type ResultTab = (typeof RESULT_TABS)[number];
@@ -98,71 +99,10 @@ export function RunView({ id, expectedMs }: RunViewProps) {
   const s = status.data;
   const handleRerun = () => rerun.mutate({ reviewId: id });
 
-  if (isLive) {
-    const p = partial.data;
-    return (
-      <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
-        <RunHeader
-          reviewId={id}
-          status={s.status}
-          repoLabel={p?.repository ? `${p.repository.owner}/${p.repository.name}` : undefined}
-          prNumber={p?.pull_request?.number}
-          prTitle={p?.pull_request?.title}
-          prAuthor={p?.pull_request?.author}
-          prUrl={p?.pull_request?.url}
-          headSha={p?.pull_request?.head_sha ?? s.head_sha}
-          baseSha={p?.pull_request?.base_sha}
-          riskTier={p?.risk_tier ?? s.risk_tier}
-          trigger={listItem?.trigger}
-          elapsedLabel={formatElapsed(elapsedLive)}
-          provenance={`GET /v1/reviews/${id}`}
-          onRerun={handleRerun}
-          rerunPending={rerun.isPending}
-        />
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <StageRail
-            mode="live"
-            orientation={isMobile ? "vertical" : "horizontal"}
-            stages={stageEntries}
-            stageIndex={s.stage_index}
-            secondsSinceHeartbeat={s.seconds_since_heartbeat}
-            stageLabels={stageLabels}
-            expectedMs={expectedMs}
-            index="02"
-            category="PIPELINE"
-            identifier={`run ${id.slice(0, 7)}`}
-            provenance={`GET /v1/reviews/${id} → stage_index · stage_total · stage_label · heartbeat`}
-          />
-          <LiveRightRail
-            counts={s.counts}
-            cost={p?.cost}
-            degradations={s.degradations ?? []}
-            countsProvenance={`GET /v1/reviews/${id} → counts`}
-            costProvenance={`GET /v1/reviews/${id}/result?partial=true → cost`}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // RESULT — terminal (succeeded, failed or cancelled).
-  if (result.isPending) {
-    return (
-      <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
-        <RunHeader
-          reviewId={id}
-          status={s.status}
-          headSha={s.head_sha}
-          riskTier={s.risk_tier}
-          trigger={listItem?.trigger}
-          elapsedLabel={formatDurationSeconds(undefined)}
-          provenance={`GET /v1/reviews/${id}`}
-        />
-        <div className="h-40 rounded-panel border border-rule-hair bg-ink-1" aria-hidden="true" />
-      </div>
-    );
-  }
-  if (result.isError) {
+  // A true fetch failure on the result query swaps the whole page for an error state —
+  // distinct from the ordinary "result not loaded yet" gap below, which keeps the header,
+  // gate area and stage rail mounted and simply waits for `r`.
+  if (isResult && result.isError) {
     return (
       <div className="px-4 py-8 md:px-6">
         <ErrorState error={result.error} onRetry={() => result.refetch()} />
@@ -170,8 +110,31 @@ export function RunView({ id, expectedMs }: RunViewProps) {
     );
   }
 
-  const r = result.data;
-  const rawPayload = r.review_payload;
+  const p = partial.data;
+  const r = isResult ? result.data : undefined;
+  const resultLoaded = isResult && !!r;
+  const rawPayload = r?.review_payload;
+
+  // RunHeader, GateArea and StageRail render at the SAME position/type across LIVE and
+  // RESULT (dashboard §2.4: "never a route change, never a remount — scroll position and
+  // selection survive"): only the values fed into them change as the run's own status and
+  // result resolve. `r` wins once the result has loaded; `p` (the live partial) covers the
+  // gap before it; `s` (the poll, always present here) is the final fallback.
+  const repoLabel = r
+    ? `${r.repository.owner}/${r.repository.name}`
+    : p?.repository
+      ? `${p.repository.owner}/${p.repository.name}`
+      : undefined;
+  const prNumber = r ? r.pull_request.number : p?.pull_request?.number;
+  const prTitle = r ? r.pull_request.title : p?.pull_request?.title;
+  const prAuthor = r ? r.pull_request.author : p?.pull_request?.author;
+  const prUrl = r ? r.pull_request.url : p?.pull_request?.url;
+  const headSha = r ? r.pull_request.head_sha : (p?.pull_request?.head_sha ?? s.head_sha);
+  const baseSha = r ? r.pull_request.base_sha : p?.pull_request?.base_sha;
+  const riskTier = r ? r.risk_tier : (p?.risk_tier ?? s.risk_tier);
+  const elapsedLabel = isLive ? formatElapsed(elapsedLive) : formatDurationSeconds(r?.timing?.duration_seconds);
+  const headerStatus = r ? r.status : s.status;
+  const headerProvenance = isResult ? `GET /v1/reviews/${id}/result` : `GET /v1/reviews/${id}`;
 
   return (
     <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
@@ -179,86 +142,123 @@ export function RunView({ id, expectedMs }: RunViewProps) {
         <RunHeader
           className="flex-1"
           reviewId={id}
-          status={r.status}
-          repoLabel={`${r.repository.owner}/${r.repository.name}`}
-          prNumber={r.pull_request.number}
-          prTitle={r.pull_request.title}
-          prAuthor={r.pull_request.author}
-          prUrl={r.pull_request.url}
-          headSha={r.pull_request.head_sha}
-          baseSha={r.pull_request.base_sha}
-          riskTier={r.risk_tier}
+          status={headerStatus}
+          repoLabel={repoLabel}
+          prNumber={prNumber}
+          prTitle={prTitle}
+          prAuthor={prAuthor}
+          prUrl={prUrl}
+          headSha={headSha}
+          baseSha={baseSha}
+          riskTier={riskTier}
           trigger={listItem?.trigger}
-          elapsedLabel={formatDurationSeconds(r.timing?.duration_seconds)}
-          provenance={`GET /v1/reviews/${id}/result`}
+          elapsedLabel={elapsedLabel}
+          provenance={headerProvenance}
           onRerun={handleRerun}
           rerunPending={rerun.isPending}
         />
-        <GateArea gate={r.gate} error={s.error} className="shrink-0" />
+        <GateArea gate={r?.gate ?? null} error={s.error} className="shrink-0" />
       </div>
 
-      <PipelineSummaryStrip stages={stageEntries} wallClockSeconds={r.timing?.duration_seconds} />
+      {isResult ? <PipelineSummaryStrip stages={stageEntries} wallClockSeconds={r?.timing?.duration_seconds} /> : null}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as ResultTab)}>
-        <div className="flex items-center justify-between gap-3">
-          <TabsList>
-            <TabsTrigger value="pipeline">PIPELINE</TabsTrigger>
-            <TabsTrigger value="findings">FINDINGS</TabsTrigger>
-            <TabsTrigger value="delivery">DELIVERY</TabsTrigger>
-            <TabsTrigger value="cost">COST &amp; TIMING</TabsTrigger>
-          </TabsList>
-          {rawPayload ? (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button type="button" variant="quiet" size="sm">
-                  RAW PAYLOAD
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl">
-                <DialogHeader>
-                  <DialogTitle>review_payload</DialogTitle>
-                </DialogHeader>
-                <CodeBlockClient code={JSON.stringify(rawPayload, null, 2)} lang="json" title="review_payload" maxHeight={480} />
-              </DialogContent>
-            </Dialog>
-          ) : null}
-        </div>
+        {isResult ? (
+          <div className="flex items-center justify-between gap-3">
+            <TabsList>
+              <TabsTrigger value="pipeline">PIPELINE</TabsTrigger>
+              <TabsTrigger value="findings">FINDINGS</TabsTrigger>
+              <TabsTrigger value="delivery">DELIVERY</TabsTrigger>
+              <TabsTrigger value="cost">COST &amp; TIMING</TabsTrigger>
+            </TabsList>
+            {rawPayload ? (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="button" variant="quiet" size="sm">
+                    RAW PAYLOAD
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>review_payload</DialogTitle>
+                  </DialogHeader>
+                  <CodeBlockClient code={JSON.stringify(rawPayload, null, 2)} lang="json" title="review_payload" maxHeight={480} />
+                </DialogContent>
+              </Dialog>
+            ) : null}
+          </div>
+        ) : null}
 
-        <TabsContent value="pipeline" className="pt-4">
+        {/* The stage rail is ONE persistent instance, never reparented under a TabsContent —
+            a live run keeps it (plus the counters rail) visible unconditionally; a terminal
+            run keeps this same node mounted and only toggles it with the `hidden` attribute
+            when another sub-tab is selected, so it survives the live → result transition and
+            every subsequent tab switch. */}
+        <div
+          role={isResult ? "tabpanel" : undefined}
+          aria-label={isResult ? "Pipeline" : undefined}
+          className={cn(
+            "grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]",
+            isResult && "pt-4",
+            isResult && tab !== "pipeline" && "hidden",
+          )}
+        >
           <StageRail
-            mode="static"
+            mode={isLive ? "live" : "static"}
             orientation={isMobile ? "vertical" : "horizontal"}
             stages={stageEntries}
+            stageIndex={isLive ? s.stage_index : undefined}
+            secondsSinceHeartbeat={isLive ? s.seconds_since_heartbeat : undefined}
+            stageLabels={isLive ? stageLabels : undefined}
+            expectedMs={isLive ? expectedMs : undefined}
             index="02"
             category="PIPELINE"
             identifier={`run ${id.slice(0, 7)}`}
-            provenance={`GET /v1/reviews/${id}/result → status`}
+            provenance={
+              isLive
+                ? `GET /v1/reviews/${id} → stage_index · stage_total · stage_label · heartbeat`
+                : `GET /v1/reviews/${id}/result → status`
+            }
           />
-        </TabsContent>
-        <TabsContent value="findings" className="pt-4">
-          <FindingsTable
-            findings={r.findings ?? []}
-            gateConclusion={r.gate?.conclusion}
-            provenance={`GET /v1/reviews/${id}/result → findings`}
-          />
-        </TabsContent>
-        <TabsContent value="delivery" className="pt-4">
-          <DeliveryPanel
-            delivery={r.delivery}
-            gate={r.gate}
-            published={r.counts?.published}
-            provenance={`GET /v1/reviews/${id}/result → delivery · gate · counts`}
-          />
-        </TabsContent>
-        <TabsContent value="cost" className="pt-4">
-          <CostTimingPanel
-            cost={r.cost}
-            timing={r.timing}
-            context={r.context}
-            degradations={r.degradations ?? []}
-            provenance={`GET /v1/reviews/${id}/result → cost · timing · context · degradations`}
-          />
-        </TabsContent>
+          {isLive ? (
+            <LiveRightRail
+              counts={s.counts}
+              cost={p?.cost}
+              degradations={s.degradations ?? []}
+              countsProvenance={`GET /v1/reviews/${id} → counts`}
+              costProvenance={`GET /v1/reviews/${id}/result?partial=true → cost`}
+            />
+          ) : null}
+        </div>
+
+        {resultLoaded && r ? (
+          <>
+            <TabsContent value="findings" className="pt-4">
+              <FindingsTable
+                findings={r.findings ?? []}
+                gateConclusion={r.gate?.conclusion}
+                provenance={`GET /v1/reviews/${id}/result → findings`}
+              />
+            </TabsContent>
+            <TabsContent value="delivery" className="pt-4">
+              <DeliveryPanel
+                delivery={r.delivery}
+                gate={r.gate}
+                published={r.counts?.published}
+                provenance={`GET /v1/reviews/${id}/result → delivery · gate · counts`}
+              />
+            </TabsContent>
+            <TabsContent value="cost" className="pt-4">
+              <CostTimingPanel
+                cost={r.cost}
+                timing={r.timing}
+                context={r.context}
+                degradations={r.degradations ?? []}
+                provenance={`GET /v1/reviews/${id}/result → cost · timing · context · degradations`}
+              />
+            </TabsContent>
+          </>
+        ) : null}
       </Tabs>
     </div>
   );
