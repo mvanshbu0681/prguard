@@ -25,16 +25,16 @@ const columnHelper = createColumnHelper<Finding>();
 
 /** Column widths, px — a fixed <colgroup> so virtualized rows never reflow independently of the header (design §5.5's "columns refuse to shrink" rule, applied deliberately here instead of fought). */
 export const COLUMN_WIDTHS = {
-  severity: 108,
-  score: 72,
-  title: 320,
-  location: 240,
-  proof: 128,
-  status: 132,
-  blocking: 96,
-  repository: 156,
-  fingerprint: 96,
-  created: 72,
+  severity: 92,
+  score: 68,
+  title: 166,
+  location: 150,
+  proof: 150,
+  status: 116,
+  blocking: 108,
+  repository: 118,
+  fingerprint: 90,
+  created: 48,
 } as const;
 
 export const findingsColumns = [
@@ -92,13 +92,13 @@ export const findingsColumns = [
   }),
   columnHelper.accessor("blocking", {
     id: "blocking",
-    header: "Blocking",
+    header: "Block",
     meta: { width: COLUMN_WIDTHS.blocking },
     cell: ({ getValue }) => (getValue() ? <GateChip conclusion="failure" /> : <span className="type-data text-text-dim">{NO_VALUE}</span>),
   }),
   columnHelper.display({
     id: "repository",
-    header: "Repository#PR",
+    header: "Repo#PR",
     meta: { width: COLUMN_WIDTHS.repository },
     cell: ({ row, table }) => {
       const entry = tableMeta(table).repoLookup.get(row.original.review_id);
@@ -124,3 +124,6 @@ export const findingsColumns = [
 ];
 
 export const FINDINGS_COLUMN_COUNT = findingsColumns.length;
+
+/** The table's natural width: table-layout:fixed + width:100% would otherwise stretch or squash every <col> proportionally to fit the container, defeating the whole point of a fixed colgroup. */
+export const FINDINGS_TABLE_MIN_WIDTH = Object.values(COLUMN_WIDTHS).reduce((sum, w) => sum + w, 0);

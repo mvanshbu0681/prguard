@@ -50,6 +50,11 @@ export function shortFingerprint(fingerprint: string | null | undefined): string
   return fingerprint.length <= 8 ? fingerprint : fingerprint.slice(0, 8);
 }
 
+/** A trailing-ellipsis truncation for values printed as prose (a filter chip, an empty-state sentence) — unlike shortFingerprint's bare first-8 (the table column's own convention), an un-dotted cut here reads as a typo. */
+export function ellipsisTruncate(value: string, maxChars: number): string {
+  return value.length <= maxChars ? value : `${value.slice(0, maxChars)}…`;
+}
+
 // ---------------------------------------------------------------------------
 // age — relative time, compact mono ("2h", "5d"), never a spinner-adjacent
 // count-up. Falls back to an absolute date past a year so the column never
@@ -143,10 +148,10 @@ export function activeFilterChips(filters: FindingUrlFilters): ActiveFilterChip[
     chips.push({ key: "pr_number", text: `PR #${filters.pr_number}`, clear: { pr_number: null } });
   }
   if (filters.review_id) {
-    chips.push({ key: "review_id", text: `run: ${filters.review_id.slice(0, 8)}`, clear: { review_id: null } });
+    chips.push({ key: "review_id", text: `run: ${ellipsisTruncate(filters.review_id, 12)}`, clear: { review_id: null } });
   }
   if (filters.fingerprint) {
-    chips.push({ key: "fingerprint", text: `fingerprint: ${shortFingerprint(filters.fingerprint)}`, clear: { fingerprint: null } });
+    chips.push({ key: "fingerprint", text: `fingerprint: ${ellipsisTruncate(filters.fingerprint, 12)}`, clear: { fingerprint: null } });
   }
   return chips;
 }
@@ -159,7 +164,9 @@ export function hasActiveFilters(filters: FindingUrlFilters): boolean {
 export function emptyStateMessage(filters: FindingUrlFilters): string {
   const chips = activeFilterChips(filters);
   if (chips.length === 0) return "No findings in this corpus.";
-  return `No findings match ${chips.map((c) => c.text).join(" + ")}.`;
+  const clause = chips.map((c) => c.text).join(" + ");
+  // Never a double stop when the last clause already ends in an ellipsis (a truncated fingerprint or run id).
+  return clause.endsWith("…") ? `No findings match ${clause}` : `No findings match ${clause}.`;
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@
 // `setFilters` as props rather than calling useFindingFilters() itself, so it
 // is testable without mounting the nuqs adapter or a router (see
 // tests/unit/routes/findings-list/filter-bar.test.tsx).
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,10 +31,10 @@ export interface FilterBarProps {
 const BLOCKING_VALUE = { any: "any", blocking: "true", clear: "false" } as const;
 const STATUS_ANY = "__any__";
 
-/** A small labeled control: 11px mono-caps label above, the control below — the dashboard's instrument-panel-legend register (design §0.2). */
-function FilterField({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
+/** A small labeled control: 11px mono-caps label above, the control below — the dashboard's instrument-panel-legend register (design §0.2). `wide`: takes the filter bar's full row width below the `sm` breakpoint, so a multi-item toggle group has something bounded to wrap inside instead of running off the 375px gutter. */
+function FilterField({ label, htmlFor, wide = false, children }: { label: string; htmlFor?: string; wide?: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className={cn("flex flex-col gap-1", wide && "w-full sm:w-auto")}>
       <span className="type-label text-text-dim" id={htmlFor ? `${htmlFor}-label` : undefined}>
         {label}
       </span>
@@ -61,7 +61,15 @@ function TextFilter({
 }) {
   const id = useId();
   const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  // Adjusting state during render (React's own pattern for "reset local state
+  // when a prop changes"), not an effect: a filter cleared from outside (a
+  // chip's ×, "Clear filters") must overwrite an in-progress, uncommitted
+  // keystroke, and this runs before paint instead of one render late.
+  const [syncedValue, setSyncedValue] = useState(value);
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setDraft(value);
+  }
   function commit() {
     if (draft !== value) onCommit(draft);
   }
@@ -97,10 +105,11 @@ export function FilterBar({ filters, setFilters, matched, total, className }: Fi
   return (
     <div className={cn("flex flex-col gap-3 border-b border-rule-1 bg-ink-1 px-4 py-3", className)} data-slot="findings-filter-bar">
       <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
-        <FilterField label="severity ≥">
+        <FilterField label="severity ≥" wide>
           <ToggleGroup
             type="single"
             size="sm"
+            className="w-full flex-wrap"
             value={filters.severity_min ?? ""}
             onValueChange={(v) => setFilters({ severity_min: (v || null) as SeverityBand | null })}
             aria-label="Minimum severity"
@@ -113,10 +122,11 @@ export function FilterBar({ filters, setFilters, matched, total, className }: Fi
           </ToggleGroup>
         </FilterField>
 
-        <FilterField label="proof">
+        <FilterField label="proof" wide>
           <ToggleGroup
             type="multiple"
             size="sm"
+            className="w-full flex-wrap"
             value={[...(filters.proof_status ?? [])]}
             onValueChange={(v) => setFilters({ proof_status: v.length ? (v as ProofStatus[]) : null })}
             aria-label="Proof status"
@@ -129,10 +139,11 @@ export function FilterBar({ filters, setFilters, matched, total, className }: Fi
           </ToggleGroup>
         </FilterField>
 
-        <FilterField label="blocking">
+        <FilterField label="blocking" wide>
           <ToggleGroup
             type="single"
             size="sm"
+            className="w-full flex-wrap"
             value={filters.blocking === null || filters.blocking === undefined ? BLOCKING_VALUE.any : filters.blocking ? BLOCKING_VALUE.blocking : BLOCKING_VALUE.clear}
             onValueChange={(v) => {
               if (!v || v === BLOCKING_VALUE.any) setFilters({ blocking: null });

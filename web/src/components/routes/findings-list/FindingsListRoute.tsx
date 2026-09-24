@@ -40,7 +40,10 @@ export function FindingsListRoute() {
 
   return (
     <div className="flex min-h-full flex-col" data-route="/findings">
-      <FilterBar filters={filters} setFilters={setFilters} matched={matched} total={total.data?.totals?.matched} className="sticky top-12 z-20" />
+      {/* sticky top-0, not an offset: TopBar/OfflineBanner/MobileBanner are AppShell's own
+          siblings of #main (AppShell.tsx), outside this scroll container, so nothing else
+          sticks above this within it. */}
+      <FilterBar filters={filters} setFilters={setFilters} matched={matched} total={total.data?.totals?.matched} className="sticky top-0 z-20" />
 
       <div className="flex flex-1 flex-col gap-3 px-4 py-4 md:px-6">
         {findings.isError ? (
@@ -48,11 +51,16 @@ export function FindingsListRoute() {
         ) : isEmpty ? (
           <EmptyState message={emptyStateMessage(filters)} actions={[{ label: "Clear filters", onClick: () => setFilters(null) }]} />
         ) : isMobile ? (
-          isInitialLoading ? (
-            <LoadingState rows={6} density={compact ? "compact" : "full"} label="Loading findings." />
-          ) : (
-            <FindingsCards rows={rows} repoLookup={repoLookup} />
-          )
+          <Surface elevation={0} variant="panel" className="flex flex-col overflow-hidden" data-slot="findings-panel">
+            <IndexStrip index="02" category="Findings" identifier={`${rows.length} loaded`} />
+            {isInitialLoading ? (
+              <LoadingState rows={6} density={compact ? "compact" : "full"} label="Loading findings." className="px-4" />
+            ) : (
+              <FindingsCards rows={rows} repoLookup={repoLookup} />
+            )}
+            <FindingsFooter matched={matched} loaded={rows.length} hasNextPage={!!findings.hasNextPage} isFetchingNextPage={findings.isFetchingNextPage} onLoadMore={() => findings.fetchNextPage()} />
+            <ProvenanceStrip source={findingsProvenanceSource(filters)} />
+          </Surface>
         ) : (
           <Surface elevation={0} variant="panel" className="flex flex-col overflow-hidden" data-slot="findings-panel">
             <IndexStrip index="02" category="Findings" identifier={`${rows.length} loaded`} />
@@ -66,20 +74,39 @@ export function FindingsListRoute() {
               onLoadMore={() => findings.fetchNextPage()}
               onOpenRow={openFinding}
             />
-            <div className="flex items-center justify-between gap-3 border-t border-rule-1 px-3 py-2">
-              <span className="type-data tabular text-text-dim">
-                {matched === undefined ? "…" : `Showing 1–${rows.length.toLocaleString()} of ${matched.toLocaleString()}`}
-              </span>
-              {findings.hasNextPage ? (
-                <Button variant="ghost" size="sm" onClick={() => findings.fetchNextPage()} disabled={findings.isFetchingNextPage}>
-                  {findings.isFetchingNextPage ? "LOADING…" : "LOAD MORE"}
-                </Button>
-              ) : null}
-            </div>
+            <FindingsFooter matched={matched} loaded={rows.length} hasNextPage={!!findings.hasNextPage} isFetchingNextPage={findings.isFetchingNextPage} onLoadMore={() => findings.fetchNextPage()} />
             <ProvenanceStrip source={findingsProvenanceSource(filters)} />
           </Surface>
         )}
       </div>
+    </div>
+  );
+}
+
+/** "Showing 1–K of N" + [Load more] — shared by the table and the mobile card list (design §5.5: cursor pagination, explicit, never silent infinite scroll). */
+function FindingsFooter({
+  matched,
+  loaded,
+  hasNextPage,
+  isFetchingNextPage,
+  onLoadMore,
+}: {
+  matched: number | undefined;
+  loaded: number;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  onLoadMore: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-rule-1 px-3 py-2">
+      <span className="type-data tabular text-text-dim">
+        {matched === undefined ? "…" : `Showing 1–${loaded.toLocaleString()} of ${matched.toLocaleString()}`}
+      </span>
+      {hasNextPage ? (
+        <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={isFetchingNextPage}>
+          {isFetchingNextPage ? "LOADING…" : "LOAD MORE"}
+        </Button>
+      ) : null}
     </div>
   );
 }

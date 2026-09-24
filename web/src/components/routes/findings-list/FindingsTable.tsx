@@ -19,7 +19,7 @@ import { useListKeys } from "@/components/app-shell";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow, TableSkeletonRows, TABLE_ROW_HEIGHT, type TableDensity } from "@/components/ui/table";
 import type { Finding } from "@/lib/api-types";
 import { cn } from "@/lib/utils";
-import { FINDINGS_COLUMN_COUNT, findingsColumns } from "./columns";
+import { FINDINGS_COLUMN_COUNT, FINDINGS_TABLE_MIN_WIDTH, findingsColumns } from "./columns";
 import type { RepoLookupEntry } from "./format";
 
 export interface FindingsTableProps {
@@ -69,8 +69,12 @@ export function FindingsTable({
     getScrollElement: () => scrollRef.current,
     estimateSize: () => rowHeight,
     overscan: 12,
-    // jsdom (tests/unit) has no ResizeObserver; a non-zero initial rect keeps
-    // virtualization exercised (a real window supersedes it on first measure).
+    // A safety net for an environment with no ResizeObserver at all (the
+    // library then skips measuring and would sit at 0x0 forever); a real
+    // browser's first measurement always supersedes it. jsdom (tests/unit)
+    // DOES have a ResizeObserver stub (dom-polyfills.ts) but still measures
+    // 0x0 (offsetHeight is always 0 there), so FindingsTable's own tests stub
+    // offsetHeight/offsetWidth directly rather than relying on this.
     initialRect: { width: 1200, height: 480 },
   });
   const virtualRows = virtualizer.getVirtualItems();
@@ -118,7 +122,7 @@ export function FindingsTable({
       style={{ height, "--ui-sticky-top": "0px" } as CSSProperties}
       data-slot="findings-table"
     >
-      <table className="ui-table" data-density={density === "compact" ? "compact" : undefined}>
+      <table className="ui-table" data-density={density === "compact" ? "compact" : undefined} style={{ tableLayout: "fixed", minWidth: FINDINGS_TABLE_MIN_WIDTH }}>
         <colgroup>
           {table.getAllLeafColumns().map((column) => (
             <col key={column.id} style={{ width: (column.columnDef.meta as { width?: number } | undefined)?.width }} />
@@ -128,7 +132,9 @@ export function FindingsTable({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
+                <TableHead key={header.id} className="truncate overflow-hidden">
+                  {flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
               ))}
             </TableRow>
           ))}
@@ -165,6 +171,7 @@ export function FindingsTable({
                       <TableCell
                         key={cell.id}
                         kind={cell.column.id === "title" ? "prose" : "data"}
+                        className="overflow-hidden"
                         style={i === 0 && finding.blocking ? { boxShadow: "inset 2px 0 0 var(--alarm)" } : undefined}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
