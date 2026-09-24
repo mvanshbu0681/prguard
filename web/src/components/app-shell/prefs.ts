@@ -1,3 +1,4 @@
+'use client';
 // OWNER: t9a (wave 2). Shell preferences: the projector-contrast toggle and the
 // compact-rows toggle (brief bullets 3), plus the sidebar's collapse state
 // (bullet 2). Same shape as src/motion/reduced.ts (owner T3, read-only here):
