@@ -132,8 +132,8 @@ export function Pipeline() {
             <p className="type-label text-text-dim">S3 &middot; the four specialists</p>
             <h3 className="mt-2 type-display-h4 text-text-primary">One diff, four passes, at once.</h3>
             <p className="mt-3 type-body text-text-body">
-              The specialists stage forks the review into four lanes that run in parallel &mdash; bugs, security, tests,
-              quality &mdash; each reading the same diff and proposing its own findings before the coordinator merges,
+              The specialists stage forks the review into four lanes that run in parallel: bugs, security, tests, and
+              quality, each reading the same diff and proposing its own findings before the coordinator merges,
               deduplicates and filters them into one review. In the run behind this page:{" "}
               {FORK_LANES.map((lane, i) => (
                 <span key={lane} className="tabular">

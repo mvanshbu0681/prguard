@@ -18,22 +18,24 @@ export function DeliveryLadder({ ladder, counts, findings, className }: Delivery
   const rungs = deliveryLadder(ladder, findings);
   const dropped = silentlyDropped(counts, ladder);
   return (
-    <dl className={cn("grid gap-1.5 type-data text-[13px]", className)}>
-      {rungs.map((rung) => {
-        const live = rung.count > 0;
-        return (
-          <div key={rung.mode} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-            <dt className={cn("w-[8.5em] shrink-0", live ? "text-text-primary" : "text-text-dim")}>{rung.mode}</dt>
-            <dd className={cn("tabular", live ? "text-text-primary" : "text-text-dim")}>
-              {live ? `${rung.count} finding${rung.count === 1 ? "" : "s"}` : "—"}
-            </dd>
-            {rung.note ? <dd className="type-micro text-text-dim">{rung.note}</dd> : null}
-          </div>
-        );
-      })}
-      <div className="mt-1 border-t border-rule-hair pt-1.5 text-text-dim">
+    <div className={className}>
+      <dl className="grid gap-1.5 type-data text-[13px]">
+        {rungs.map((rung) => {
+          const live = rung.count > 0;
+          return (
+            <div key={rung.mode} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+              <dt className={cn("w-[8.5em] shrink-0", live ? "text-text-primary" : "text-text-dim")}>{rung.mode}</dt>
+              <dd className={cn("tabular", live ? "text-text-primary" : "text-text-dim")}>
+                {live ? `${rung.count} finding${rung.count === 1 ? "" : "s"}` : "—"}
+              </dd>
+              {rung.note ? <dd className="type-micro text-text-dim">{rung.note}</dd> : null}
+            </div>
+          );
+        })}
+      </dl>
+      <p className="mt-1 border-t border-rule-hair pt-1.5 type-data text-[13px] text-text-dim">
         <span className="tabular text-text-body">{dropped}</span> silently dropped
-      </div>
-    </dl>
+      </p>
+    </div>
   );
 }

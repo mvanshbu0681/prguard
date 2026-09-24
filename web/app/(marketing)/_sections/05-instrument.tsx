@@ -61,7 +61,7 @@ export function InstrumentFace() {
                 density="detail"
                 withFrame
                 index="05"
-                provenance={`GET /v1/findings/${finding.id} → severity.inputs · severity.weights · severity.explanation`}
+                provenance={`GET /v1/findings/${finding.id.slice(0, 8)} → severity.inputs · severity.weights · severity.explanation`}
               />
             </div>
           ) : null}
