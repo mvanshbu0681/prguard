@@ -25,7 +25,6 @@ import {
   type SeverityValues,
 } from "@/components/evidence/ContributionBar";
 
-const inputName = fc.constantFrom(...SEVERITY_INPUTS);
 const unit = fc.double({ min: 0, max: 1, noNaN: true });
 
 function randomValues(): fc.Arbitrary<SeverityValues> {

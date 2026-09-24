@@ -20,7 +20,7 @@
 // importing Motion here would put it on the same DOM subtree as GSAP wherever
 // marketing renders this component (plan §2 hard rule 2).
 import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
-import { bandForScore as badgeBandForScore, formatScore, useStamp } from "@/components/badges";
+import { BAND_LETTER, bandForScore as badgeBandForScore, formatScore, useStamp } from "@/components/badges";
 import { Sigma } from "@/components/icons";
 import { SEVERITY_THRESHOLDS, type SeverityBand } from "@/lib/contracts";
 import { cn } from "@/lib/utils";
@@ -111,7 +111,7 @@ function ContributionBarGlyph({ score, inputs, weights, band, className }: Contr
         ))}
       </span>
       <span aria-hidden className={cn("type-label -me-[0.12em]", BAND_TEXT_CLASS[resolvedBand])}>
-        {resolvedBand === "info" ? "I" : resolvedBand === "low" ? "L" : resolvedBand === "medium" ? "M" : resolvedBand === "high" ? "H" : "C"}
+        {BAND_LETTER[resolvedBand]}
       </span>
     </span>
   );
@@ -351,49 +351,49 @@ function ContributionBarInstrument({
               natural width even inside a `w-full` parent, so at 640px+ (where the row
               headers have room) this scrolls its own axis rather than the page's. */}
           <div className="mt-4 hidden overflow-x-auto sm:block">
-          <table className="w-full min-w-[420px] border-collapse type-data text-text-body">
-            <caption className="sr-only">Severity contribution table for finding {findingId ?? "unknown"}</caption>
-            <thead>
-              <tr className="border-b border-rule-1 text-text-dim">
-                <th scope="col" className="py-1.5 pr-3 text-left font-normal type-label">
-                  input
-                </th>
-                <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
-                  raw
-                </th>
-                <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
-                  weight
-                </th>
-                <th scope="col" className="py-1.5 pl-3 text-right font-normal type-label">
-                  contribution
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.name} data-row-input={row.name} className={cn("border-b border-rule-hair", row.name === activeName && "bg-ink-3")}>
-                  <th scope="row" className="py-1.5 pr-3 text-left font-normal">
-                    {row.name}
+            <table className="w-full min-w-[420px] border-collapse type-data text-text-body">
+              <caption className="sr-only">Severity contribution table for finding {findingId ?? "unknown"}</caption>
+              <thead>
+                <tr className="border-b border-rule-1 text-text-dim">
+                  <th scope="col" className="py-1.5 pr-3 text-left font-normal type-label">
+                    input
                   </th>
-                  <td className="px-3 py-1.5 text-right tabular">{formatScore(row.raw)}</td>
-                  <td className="px-3 py-1.5 text-right tabular">{row.weight.toFixed(2)}</td>
-                  <td className="py-1.5 pl-3 text-right tabular">{formatScore(row.contribution)}</td>
+                  <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
+                    raw
+                  </th>
+                  <th scope="col" className="px-3 py-1.5 text-right font-normal type-label">
+                    weight
+                  </th>
+                  <th scope="col" className="py-1.5 pl-3 text-right font-normal type-label">
+                    contribution
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-rule-1">
-                <th scope="row" className="py-1.5 pr-3 text-left font-normal">
-                  <Sigma />
-                </th>
-                <td className="px-3 py-1.5" />
-                <td className="px-3 py-1.5" />
-                <td className="py-1.5 pl-3 text-right tabular text-text-primary">
-                  {reading} <span className="text-text-dim">{bandRuleText(resolvedBand, score)}</span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.name} data-row-input={row.name} className={cn("border-b border-rule-hair", row.name === activeName && "bg-ink-3")}>
+                    <th scope="row" className="py-1.5 pr-3 text-left font-normal">
+                      {row.name}
+                    </th>
+                    <td className="px-3 py-1.5 text-right tabular">{formatScore(row.raw)}</td>
+                    <td className="px-3 py-1.5 text-right tabular">{row.weight.toFixed(2)}</td>
+                    <td className="py-1.5 pl-3 text-right tabular">{formatScore(row.contribution)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-rule-1">
+                  <th scope="row" className="py-1.5 pr-3 text-left font-normal">
+                    <Sigma />
+                  </th>
+                  <td className="px-3 py-1.5" />
+                  <td className="px-3 py-1.5" />
+                  <td className="py-1.5 pl-3 text-right tabular text-text-primary">
+                    {reading} <span className="text-text-dim">{bandRuleText(resolvedBand, score)}</span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </>
       ) : null}
