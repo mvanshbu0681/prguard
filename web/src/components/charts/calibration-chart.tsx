@@ -80,7 +80,8 @@ export function CalibrationChart({ calibration, index = "09", provenance = "accu
     <ChartFrame index={index} category="Calibration — predicted vs observed" provenance={provenance} ext empty={empty} className={className}>
       <div className="flex flex-col gap-2">
         <ChartContainer config={CONFIG} className={cn("aspect-square h-72 w-full max-w-[420px]")}>
-          <ScatterChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }} accessibilityLayer>
+          {/* right: 24 — the last x-tick ("1.000") is centred on the axis's own right edge and clips without room past it. */}
+          <ScatterChart margin={{ top: 8, right: 24, bottom: 8, left: 8 }} accessibilityLayer>
             <XAxis type="number" dataKey="x" domain={[0, 1]} name="predicted" tickFormatter={(v: number) => v.toFixed(3)} tickLine={false} axisLine={false} tickMargin={8} />
             <YAxis type="number" dataKey="y" domain={[0, 1]} name="observed" tickFormatter={(v: number) => v.toFixed(3)} tickLine={false} axisLine={false} tickMargin={8} width={48} />
             <ZAxis range={[64, 64]} />
