@@ -902,7 +902,9 @@ function InlineOverlays({ data }: { data: LabData }) {
               </PopoverTrigger>
               <PopoverContent container={popBox} align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <PopoverTitle>What can block a merge</PopoverTitle>
-                <PopoverDescription>Only a finding with proof_status: proven can block a merge. Everything else is a comment.</PopoverDescription>
+                <PopoverDescription>
+                  Only a finding with <span className="type-data text-text-primary">proof_status: proven</span> can block a merge. Everything else is a comment.
+                </PopoverDescription>
               </PopoverContent>
             </Popover>
           ) : null}
