@@ -174,11 +174,17 @@ export function StageRail({
   const laneStateMap = useMemo<Record<ForkLaneKey, StageState>>(() => {
     const forkState = stateMap.specialists;
     const base = Object.fromEntries(FORK_LANES.map((lane) => [lane, forkState])) as Record<ForkLaneKey, StageState>;
-    if (mode === "replay" && forkState === "done") {
+    // The stagger only governs the WINDOW between the station's own flip to `done` and the
+    // last lane's own +180ms (mode === "replay" && !replayEnded): the pristine rest frame
+    // (replayEnded starts true — "rest state = end frame", useSequence's own contract) and
+    // reduced motion (autoplay never calls jumpToEnd there — "autoplay does nothing"; only a
+    // manual PLAY does) both need every lane to mirror the station directly, with no
+    // leftover-empty `laneOverride` making an already-`done` rest frame read as `running`.
+    if (mode === "replay" && !replayEnded && forkState === "done") {
       for (const lane of FORK_LANES) base[lane] = laneOverride[lane] ?? "running";
     }
     return base;
-  }, [stateMap.specialists, mode, laneOverride]);
+  }, [stateMap.specialists, mode, replayEnded, laneOverride]);
 
   const steps = useMemo<SequenceStep[]>(() => {
     if (mode !== "replay") return [];

@@ -7,6 +7,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StageRail, stageStatesFromReviewStatus, type StageEntry } from "@/components/evidence/StageRail";
 import { STAGES, type Stage, type StageState } from "@/lib/contracts";
+import { installIntersectionObserver } from "../../motion/helpers";
 
 const ALL_PENDING: StageEntry[] = STAGES.map((key) => ({ key, state: "pending" as StageState }));
 const SRC_DIR = path.resolve(import.meta.dirname, "../../../../src/components/evidence/StageRail");
@@ -185,6 +186,24 @@ describe("replay mode — the schedule, PLAY/PAUSE and the gate's terminal beat"
 
     fireEvent.click(screen.getByText("PAUSE")); // pausing the fresh run is not a "play"
     expect(onPlay).toHaveBeenCalledTimes(1);
+  });
+
+  it("the rest frame (stages all `done`, nothing ever played) shows the fork's four lanes done, not stuck in the stagger's own `running` fallback", () => {
+    // Regression: `replayEnded` starts true for replay mode ("rest state = end frame") —
+    // the fork-completion stagger must only read from `laneOverride` while an actual run is
+    // in flight (`!replayEnded`), or a rest frame handed an all-done `stages` (this lab
+    // page's own default prop, and every reduced-motion first paint, since autoplay never
+    // calls jumpToEnd there) would show the four lanes as `running` with nothing scheduled
+    // to ever flip them. IntersectionObserver is mocked and never told to `enter`, so
+    // autoplay stays armed but unfired — the true pre-interaction rest frame.
+    const uninstall = installIntersectionObserver();
+    try {
+      const ALL_DONE = STAGES.map((key) => ({ key, state: "done" as const }));
+      const { container } = render(<StageRail mode="replay" orientation="horizontal" stages={ALL_DONE} durationsMs={SHORT_DURATIONS} />);
+      for (const lane of ["bugs", "security", "tests", "quality"]) expect(laneState(container, lane)).toBe("done");
+    } finally {
+      uninstall();
+    }
   });
 
   it("PAUSE freezes the current frame (SC 2.2.2 — the auto-triggered conveyor can be stopped)", () => {
