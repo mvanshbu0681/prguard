@@ -3,6 +3,10 @@
 // blueprint, inserted here by the frozen app/(marketing)/page.tsx). Keep the
 // named export and the section id: the id is a deep-link target.
 //
+// The section-index grammar this renders: "/ 04 — WHAT LANDS IN YOUR PR"
+// (tests/unit/marketing-shell/sections.test.ts checks this string against
+// MARKETING_SECTIONS' category for id="comment" — keep them equal).
+//
 // Server component (no "use client" anywhere in this section's tree): every
 // string renders from ReviewResult.review_payload at build time, so the
 // section is complete server HTML at first paint — no IntersectionObserver,
@@ -31,7 +35,7 @@ export function WhatLandsInYourPR() {
   return (
     <section id="comment" aria-labelledby={INDEX_ID} className="border-b border-rule-hair">
       <div className="mx-auto max-w-[1200px] px-4 pb-12 pt-20 md:px-8 md:pb-16 md:pt-28">
-        <SectionIndex index="04" category="What lands in your PR" labelId={INDEX_ID} />
+        <SectionIndex index="04" category="WHAT LANDS IN YOUR PR" labelId={INDEX_ID} />
         <h2 className="type-display-h2 mt-6 max-w-[18ch] text-text-primary md:mt-8">One comment. Never an approval.</h2>
         <p className="type-body mt-5 max-w-[58ch] text-text-body md:mt-6">
           PRGuard posts exactly one review per run, with <code className="font-mono text-[0.92em] text-text-primary">event: COMMENT</code>. It has never posted{" "}
