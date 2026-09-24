@@ -111,7 +111,7 @@ export function CommandPalette({ open, onOpenChange, onOpenShortcuts }: CommandP
               <CommandGroup heading="Recent runs">
                 {filteredRuns.map((run) => (
                   <CommandItem key={run.review_id} value={`run-${run.review_id}`} onSelect={() => go(`/runs/${run.review_id}`)}>
-                    <GaugeIcon strokeWidth={1.5} aria-hidden="true" />
+                    <Icon icon={GaugeIcon} />
                     <span className="truncate">
                       {run.repository.owner}/{run.repository.name} #{run.pull_request.number}
                     </span>

@@ -34,7 +34,7 @@ export function ErrorState({ error, onRetry, className }: ErrorStateProps) {
   return (
     <div role="alert" className={cn('flex flex-col gap-3 rounded-panel border border-alarm p-4', className)} data-error-state="">
       <p className="type-data text-alarm-text">
-        {error.status || 'ERR'} · {error.endpoint}
+        {error.statusLabel} · {error.endpoint}
         {error.requestId ? ` · ${error.requestId}` : ''}
       </p>
       <p className="type-body text-text-body">{error.message}</p>

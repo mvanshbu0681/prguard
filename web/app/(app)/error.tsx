@@ -8,10 +8,10 @@
 // asks for. A link to /healthz, and [Retry] (Next's own `reset()`) alongside
 // the copy button.
 import { useState } from 'react';
-import Link from 'next/link';
 import { Lockup } from '@/components/brand';
 import { GraphPaper, ProvenanceLine } from '@/components/chrome';
 import { Button } from '@/components/ui/button';
+import { API_BASE } from '@/lib/env';
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -45,7 +45,9 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
             </Button>
           ) : null}
           <Button asChild variant="link">
-            <Link href="/healthz">/healthz →</Link>
+            <a href={`${API_BASE}/healthz`} target="_blank" rel="noreferrer">
+              /healthz →
+            </a>
           </Button>
         </div>
       </div>
