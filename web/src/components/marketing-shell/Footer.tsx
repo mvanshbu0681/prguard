@@ -2,11 +2,33 @@
 // set): Lockup B, link columns to things that exist, the close's line, and a
 // provenance-style build line. No competitor names, no social icon row.
 //
-// Static, server-rendered: "Animation: none" (§15). No client hook needed.
+// §15 Left/Centre also put the MOTION/CONTRAST toggle row and the four-glyph
+// proof-state legend in this footer (design-system §7.3, motion-spec §5: "the
+// OS preference and the visible footer toggle share one code path" — the same
+// setMotionOverride wired into app/(lab)/lab/t3/panel.tsx). That row is the
+// only interactive part; it is isolated in <FooterControls>, a small client
+// island, so the rest of this component stays server-rendered ("Animation:
+// none", §15).
+//
+// brand-gaps §F "First load, JS disabled": the noscript line stating what
+// needs JavaScript lives here too, since the footer is the one place on every
+// marketing page that renders regardless of route.
 import Link from "next/link";
 import { Lockup } from "@/components/brand";
 import { DEMO_SHORT } from "@/lib/demo-ids";
+import { FooterControls } from "./FooterControls";
 import { MARKETING_SECTIONS } from "./sections";
+
+/** design-system §6.1 / landing-blueprint §15 Centre: the four proof_status
+ *  glyphs the vial mark's silhouettes are drawn from (icons/marks.tsx's M1),
+ *  reproduced here as the plain-text legend the footer specifies — lowercase,
+ *  because a state is a value, not a chip label (brand-gaps §D). */
+const PROOF_STATUS_LEGEND: { glyph: string; label: string }[] = [
+  { glyph: "◆", label: "proven" },
+  { glyph: "◇", label: "disproven" },
+  { glyph: "◈", label: "inconclusive" },
+  { glyph: "◌", label: "not_attempted" },
+];
 
 interface FooterColumn {
   heading: string;
@@ -93,6 +115,25 @@ export function Footer() {
             <FooterColumnList column={REPO_LINKS} />
           </div>
         </div>
+
+        <div className="flex flex-col gap-4 border-t border-rule-hair pt-6 md:flex-row md:items-center md:justify-between">
+          <FooterControls />
+          <p className="type-chip flex flex-wrap items-center gap-x-2 gap-y-1 text-text-dim">
+            {PROOF_STATUS_LEGEND.map((state) => (
+              <span key={state.label}>
+                {state.glyph} {state.label}
+              </span>
+            ))}
+            <span className="text-ink-8">— proven and disproven share a hue because both are execution results</span>
+          </p>
+        </div>
+
+        <noscript>
+          <p className="type-micro text-ink-8">
+            Replay, the audit chain tamper control and the live run view need JavaScript. Everything above is static.
+          </p>
+        </noscript>
+
         <p className="type-micro text-ink-8">
           Google Sans Code and Inter Variable, SIL OFL 1.1. · build {DEMO_SHORT.review} · {new Date().getFullYear()}
         </p>

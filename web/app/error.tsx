@@ -1,9 +1,14 @@
 "use client"; // Error boundaries must be Client Components.
 // OWNER: t8a (wave 3). The root 500 — brand-gaps §F: identical structure to
 // the 404, "/ 500 — UNHANDLED", "Something on our side failed. The request
-// id is below.", a request id with click-to-copy, a way home. Never "we're
-// working on it" (nobody is, and the product's voice does not lie about
-// state).
+// id is below.", a request id with click-to-copy, a way home, a link to
+// /healthz. Never "we're working on it" (nobody is, and the product's voice
+// does not lie about state).
+//
+// There is no frontend /healthz page (plan: healthz is a backend route,
+// src/api/routes.ts) so the link is external, to the backend's own endpoint
+// at API_BASE — the same env var every data hook already reads (src/lib/env.ts).
+// A plain <a>, not <Link>: it leaves the Next app entirely.
 //
 // Renders inside the root layout (fonts, handshake, providers are intact —
 // only the failed segment below it is replaced), so unlike global-error it
@@ -16,6 +21,7 @@ import Link from "next/link";
 import { GraphPaper, IndexLabel, ProvenanceLine } from "@/components/chrome";
 import { Lockup } from "@/components/brand";
 import { Button } from "@/components/ui/button";
+import { API_BASE } from "@/lib/env";
 
 export default function Error({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   const requestId = error.digest ?? null;
@@ -48,6 +54,9 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
         <Link href="/" className="link-draw type-label text-signal-text">
           ← BACK TO THE PROOF BENCH
         </Link>
+        <a href={`${API_BASE}/healthz`} target="_blank" rel="noopener noreferrer" className="link-draw type-label text-text-dim">
+          /healthz →
+        </a>
       </div>
       <div className="flex flex-col items-center gap-2">
         <ProvenanceLine source={requestId ? `request id ${requestId}` : "request id unavailable"} />

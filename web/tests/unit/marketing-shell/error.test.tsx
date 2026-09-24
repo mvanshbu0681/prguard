@@ -52,4 +52,12 @@ describe("app/error (500)", () => {
     const home = screen.getByRole("link", { name: /back to the proof bench/i });
     expect(home).toHaveAttribute("href", "/");
   });
+
+  it("links to /healthz at the backend's own origin", () => {
+    const error = Object.assign(new Error("boom"), { digest: undefined });
+    render(<ErrorPage error={error} retry={() => {}} />);
+    const healthz = screen.getByRole("link", { name: /healthz/i });
+    expect(healthz).toHaveAttribute("href", expect.stringMatching(/\/healthz$/));
+    expect(healthz).toHaveAttribute("target", "_blank");
+  });
 });

@@ -1,11 +1,20 @@
 // OWNER: t8a (wave 3). Footer: no banned words (voice guidelines,
 // brand-gaps §D), the binding link set (brief step 5), no competitor names,
-// no social icon row.
+// no social icon row, the MOTION/CONTRAST toggle row and proof-state legend
+// (landing-blueprint §15 Left/Centre, design-system §7.3, motion-spec §5),
+// and the JS-disabled noscript line (brand-gaps §F).
 import "../ui/dom-polyfills";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+import { MOTION_ATTR } from "@/motion/reduced";
 import { Footer } from "@/components/marketing-shell/Footer";
 import { MARKETING_SECTIONS } from "@/components/marketing-shell/sections";
+
+afterEach(() => {
+  document.documentElement.removeAttribute(MOTION_ATTR);
+  document.documentElement.removeAttribute("data-contrast");
+});
 
 // brand-gaps §D "Banned words and constructions" — a representative sample
 // plausible in footer copy specifically (the full list also bans claims and
@@ -89,5 +98,43 @@ describe("Footer", () => {
     const { container } = render(<Footer />);
     const text = container.textContent ?? "";
     for (const name of COMPETITOR_NAMES) expect(text, `competitor name "${name}"`).not.toContain(name);
+  });
+
+  it("carries the MOTION toggle, writing data-motion on <html> through the one shared code path", async () => {
+    const user = userEvent.setup();
+    render(<Footer />);
+    const motion = screen.getByRole("button", { name: /motion: full/i });
+    expect(document.documentElement.hasAttribute(MOTION_ATTR)).toBe(false);
+    await user.click(motion);
+    expect(document.documentElement.getAttribute(MOTION_ATTR)).toBe("reduced");
+    expect(await screen.findByRole("button", { name: /motion: reduced/i })).toBeInTheDocument();
+  });
+
+  it("carries the CONTRAST toggle, writing data-contrast=\"high\" on <html>", async () => {
+    const user = userEvent.setup();
+    render(<Footer />);
+    const contrast = screen.getByRole("button", { name: /contrast: standard/i });
+    await user.click(contrast);
+    expect(document.documentElement.getAttribute("data-contrast")).toBe("high");
+    expect(await screen.findByRole("button", { name: /contrast: high/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /contrast: high/i }));
+    expect(document.documentElement.hasAttribute("data-contrast")).toBe(false);
+  });
+
+  it("carries the four-glyph proof-state legend", () => {
+    render(<Footer />);
+    expect(screen.getByText(/◆ proven/)).toBeInTheDocument();
+    expect(screen.getByText(/◇ disproven/)).toBeInTheDocument();
+    expect(screen.getByText(/◈ inconclusive/)).toBeInTheDocument();
+    expect(screen.getByText(/◌ not_attempted/)).toBeInTheDocument();
+  });
+
+  it("carries the JS-disabled noscript line inside a <noscript>", () => {
+    const { container } = render(<Footer />);
+    const noscript = container.querySelector("noscript");
+    expect(noscript).not.toBeNull();
+    expect(noscript?.textContent ?? "").toContain(
+      "Replay, the audit chain tamper control and the live run view need JavaScript. Everything above is static.",
+    );
   });
 });
