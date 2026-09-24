@@ -47,22 +47,25 @@ export function OverviewRoute({ weekly }: OverviewRouteProps) {
 
       <Band>
         {/*
-         * "At half height" (brief) — <ProofCompositionChart> renders its
-         * ChartContainer at a fixed h-64 with no height/className passthrough
-         * to that inner node (charts/proof-composition-chart.tsx only forwards
-         * `className` to the outer <ChartFrame>). Rebuilding or restyling the
-         * frozen wave-2 component is out of scope (plan §8), so the whole
-         * frame — header, plot and legend together — is uniformly scaled by
-         * 0.5 inside a height-clamped wrapper: a doubled-width inner box
-         * compensates the horizontal squeeze so the result still spans the
-         * column at full width, just at half the vertical footprint. Reported
-         * under 'raised': t10 should add a `height`/`className`-forwarding
-         * prop to the inner container so a caller can ask for this directly.
+         * "At half height" (brief) — <ProofCompositionChart> renders its plot
+         * in a ChartContainer fixed at h-64 (256px), with no height prop and
+         * no className passthrough to that inner node (charts/proof-composition-chart.tsx
+         * only forwards `className` to the outer <ChartFrame>). Rebuilding or
+         * restyling the frozen wave-2 component is out of scope (plan §8), so
+         * this halves only the plot's own rendered height with a scoped CSS
+         * rule targeting ChartContainer's stable `[data-slot="chart"]` hook —
+         * an unlayered <style> tag beats a Tailwind utility class under
+         * Tailwind 4's cascade layers regardless of specificity, no
+         * !important needed. Recharts' <ResponsiveContainer> measures
+         * whatever pixel height that div computes to and redraws the SVG
+         * there; every label (the header, the axis ticks, the legend) stays
+         * at its native, fully legible size — nothing is scaled or blurred,
+         * only the plot area is shorter. Reported under 'raised': t10 should
+         * add a `height` prop so a caller does not need this.
          */}
-        <div className="h-44 overflow-hidden">
-          <div className="w-[200%] origin-top-left" style={{ transform: "scale(0.5)" }}>
-            <ProofCompositionChart weekly={weekly} index="04" provenance="accuracy/series.json → weekly" />
-          </div>
+        <style>{`.prg-mini-proof-chart [data-slot="chart"] { height: 128px; }`}</style>
+        <div className="prg-mini-proof-chart">
+          <ProofCompositionChart weekly={weekly} index="04" provenance="accuracy/series.json → weekly" />
         </div>
       </Band>
 
