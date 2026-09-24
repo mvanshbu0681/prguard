@@ -37,7 +37,7 @@ export function LiveOverlays({ data }: { data: LabData }) {
     notifyWrite({ tone: "error", title: "Suppress rejected", ...data.endpoints.suppressRejected });
   }, [data]);
 
-  // A write in flight: sonner's loading toast, which carries the stepped ellipsis.
+  // A write in flight: sonner's loading toast, which carries the static ellipsis.
   const sendPending = useCallback(() => {
     const { method, path } = data.endpoints.suppressCreated;
     toast.loading("Suppressing", { description: `${method} ${path}` });

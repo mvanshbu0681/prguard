@@ -7,9 +7,11 @@
 // are 11px mono in --chart-axis; grid lines are the graticule (--chart-grid);
 // reference lines are --chart-reference (--ink-7, meaning-bearing). The
 // tooltip is the tooltip spec (--ink-2 on --rule-2, 2px radius, no shadow) with
-// tabular mono values. Numbers: integers print as they are and non-integers at
-// 3 decimals, so precision never varies inside one tooltip; pass valueFormatter
-// for money (4dp), latency (1dp + unit) and the rest. The container fades in
+// tabular mono values. Numbers: precision is chosen by the KIND of value, never
+// by whether a value happens to be an integer. A series is a "rate" (scores,
+// rates, fractions: always 3 decimals, 0 prints "0.000") unless its config says
+// format: "count" (whole numbers, 0 decimals). Pass valueFormatter for money
+// (4dp), latency (1dp + unit) and the rest. The container fades in
 // over 180ms — the only mount animation a chart gets. No donuts, pies, radars
 // or count-ups.
 import * as React from "react";
@@ -27,8 +29,12 @@ export type ChartConfig = Record<
     icon?: React.ComponentType;
     /** A token reference: "var(--chart-proven)". Dark only. */
     color?: string;
+    /** How the tooltip prints this series. Default "rate" (3 decimals); "count" prints whole numbers. */
+    format?: ChartValueFormat;
   }
 >;
+
+export type ChartValueFormat = "rate" | "count";
 
 type ChartContextProps = { config: ChartConfig };
 
@@ -40,10 +46,14 @@ function useChart() {
   return context;
 }
 
-/** The default tooltip number format: integers verbatim, everything else at 3 decimals. */
-export function formatChartValue(value: TooltipValueType): string {
-  if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(3);
-  if (Array.isArray(value)) return value.map((v) => formatChartValue(v as TooltipValueType)).join(" – ");
+/**
+ * The default tooltip number format. Precision depends on the kind of value,
+ * so it never varies inside one series: a "rate" is always 3 decimals (0 and 1
+ * print "0.000" and "1.000"), a "count" is always 0 decimals.
+ */
+export function formatChartValue(value: TooltipValueType, format: ChartValueFormat = "rate"): string {
+  if (typeof value === "number") return value.toFixed(format === "count" ? 0 : 3);
+  if (Array.isArray(value)) return value.map((v) => formatChartValue(v as TooltipValueType, format)).join(" – ");
   return String(value);
 }
 
@@ -97,7 +107,7 @@ function ChartTooltipContent({
   labelFormatter,
   labelClassName,
   formatter,
-  valueFormatter = formatChartValue,
+  valueFormatter,
   color,
   nameKey,
   labelKey,
@@ -108,6 +118,7 @@ function ChartTooltipContent({
     indicator?: "line" | "dot" | "dashed";
     nameKey?: string;
     labelKey?: string;
+    /** Overrides the per-series `format` from ChartConfig for every row. */
     valueFormatter?: (value: TooltipValueType) => string;
   } & Omit<RechartsPrimitive.DefaultTooltipContentProps<TooltipValueType, TooltipNameType>, "accessibilityLayer">) {
   const { config } = useChart();
@@ -156,7 +167,7 @@ function ChartTooltipContent({
                     {nestLabel ? tooltipLabel : null}
                     <span>{itemConfig?.label ?? item.name}</span>
                   </span>
-                  {item.value != null ? <span className="ui-chart-tooltip__value">{valueFormatter(item.value)}</span> : null}
+                  {item.value != null ? <span className="ui-chart-tooltip__value">{valueFormatter ? valueFormatter(item.value) : formatChartValue(item.value, itemConfig?.format)}</span> : null}
                 </>
               )}
             </div>

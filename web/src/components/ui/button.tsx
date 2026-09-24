@@ -5,7 +5,7 @@
 //   <Button variant="quiet" size="sm">CLEAR</Button>     no border, --text-dim → --text-body
 //   <Button variant="link">ALL SIX METRICS →</Button>    --signal-text, 1px rule drawn on hover
 //   <Button variant="destructive">REVOKE</Button>        a ghost with --alarm-text. Never a red fill.
-//   <Button loading>RUN</Button>                         stepped ellipsis, width held, aria-busy
+//   <Button loading>RUN</Button>                         static ellipsis, width held, aria-busy
 //
 // Labels are 11px Google Sans Code 500 caps +0.12em (type-label): write them in
 // caps, and keep them to four words. Hover, press and focus come from the shared
@@ -67,9 +67,9 @@ export function buttonVariants({ variant, size, className }: ButtonVariantProps 
 }
 
 /**
- * The loading glyph: three 2px squares that type themselves out on the
- * heartbeat period ("." → ".." → "…"), and stand still at "…" under reduced
- * motion. Drawn in SVG: Google Sans Code has no ⋯. Never a spinner.
+ * The loading glyph: three 2px squares, a static "…". It never loops (the
+ * heartbeat dot is the product's only loop, motion §4.9.2). Drawn in SVG:
+ * Google Sans Code has no ⋯. Never a spinner.
  */
 export function LoadingEllipsis({ className, ...props }: React.ComponentProps<"span">) {
   return (
@@ -86,7 +86,7 @@ export function LoadingEllipsis({ className, ...props }: React.ComponentProps<"s
 export interface ButtonProps extends React.ComponentProps<"button">, Omit<ButtonVariantProps, "className"> {
   /** Render the child element (a link, a Next <Link>) with the button's styling and behaviour. */
   asChild?: boolean;
-  /** An in-flight request: the label keeps its width, a stepped ellipsis replaces it, clicks are ignored. */
+  /** An in-flight request: the label keeps its width, a static ellipsis replaces it, clicks are ignored. */
   loading?: boolean;
 }
 

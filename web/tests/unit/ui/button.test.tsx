@@ -29,7 +29,7 @@ function spinnerParts(root: ParentNode): Element[] {
 }
 
 describe("Button loading renders no spinner", () => {
-  it("renders the stepped ellipsis — three squares — and nothing that spins", () => {
+  it("renders the static ellipsis (three squares) and nothing that spins", () => {
     render(<Button loading>RUN A REVIEW</Button>);
     const button = screen.getByRole("button", { name: "RUN A REVIEW" });
     expect(spinnerParts(button)).toEqual([]);

@@ -116,14 +116,11 @@ describe("ui.css — keyframes move only transform and opacity (motion §6.1)", 
     for (const n of names) expect(n).not.toMatch(/pulse|shimmer|sweep|spin|bounce|ping|rotate/);
   });
 
-  it("types the loading ellipsis in hard steps on the heartbeat period, never a rotation", () => {
-    const dots = findBlocks(TREE, ".ui-ellipsis rect:nth-child(2)").concat(findBlocks(TREE, ".ui-ellipsis rect:nth-child(3)"));
-    expect(dots).toHaveLength(2);
-    for (const d of dots) {
-      const animation = d.decls.find((x) => x.prop === "animation")?.value ?? "";
-      expect(animation).toMatch(/steps\(1, end\)/);
-      expect(animation).toMatch(/var\(--heartbeat-period\)/);
-    }
+  it("draws the loading ellipsis static: no loop, no rotation (the heartbeat dot is the only loop)", () => {
+    const ellipsis = BLOCKS.filter((b) => b.prelude.includes("ui-ellipsis"));
+    expect(ellipsis.length).toBeGreaterThan(0);
+    for (const b of ellipsis) for (const d of b.decls) expect(d.prop, b.prelude).not.toMatch(/^animation/);
+    expect(CSS).not.toMatch(/infinite/);
     expect(CSS).not.toMatch(/rotate\(/);
   });
 });
@@ -233,13 +230,11 @@ describe("ui.css — reduced motion is a designed second state (motion §5)", ()
     expect(mediaRoot.decls).toEqual(toggleRoot.decls);
   });
 
-  it("drops every transform, keeps colour, and stops the ellipsis at its end state", () => {
+  it("drops every transform and keeps colour", () => {
     const get = (p: string) => mediaRoot.decls.find((d) => d.prop === p)?.value;
     expect(get("--ui-press-y")).toBe("0px");
     for (const p of ["--ui-pop-from", "--ui-dialog-from", "--ui-palette-from", "--ui-sheet-from"]) expect(get(p)).toBe("none");
     expect(get("--ui-overlay-dur")).toBe("var(--dur-1)");
-    expect(get("--ui-ellipsis-2")).toBe("none");
-    expect(get("--ui-ellipsis-3")).toBe("none");
   });
 
   it("is not the forbidden `* { animation: none }`", () => {
