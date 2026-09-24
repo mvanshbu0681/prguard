@@ -77,12 +77,7 @@ export const RULES = {
  * vendored by T0 and being restyled by t1b. `fingerprint` is sha1(trimmed line)[0..12].
  */
 export const BASELINE = [
-  { file: "src/components/ui/badge.tsx", rule: "compositor", token: "transition-all", fingerprint: "47e774e05824" },
-  { file: "src/components/ui/button.tsx", rule: "compositor", token: "transition-all", fingerprint: "8a969ee08391" },
-  { file: "src/components/ui/scroll-area.tsx", rule: "compositor", token: "transition-[color,box-shadow]", fingerprint: "e33e2d6b8c1d" },
-  { file: "src/components/ui/sheet.tsx", rule: "compositor", token: "transition", fingerprint: "fd11351a6a80" },
-  { file: "src/components/ui/tabs.tsx", rule: "compositor", token: "transition-all", fingerprint: "c6f21a7bde44" },
-  { file: "src/components/ui/toggle.tsx", rule: "compositor", token: "transition-all", fingerprint: "b644f48be99c" },
+  // Empty: t1b restyled every vendored shadcn line that used to be exempted here.
 ];
 
 // ---------------------------------------------------------------------------

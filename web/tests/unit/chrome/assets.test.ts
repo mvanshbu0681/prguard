@@ -109,7 +109,9 @@ describe('app/apple-icon.png and the GitHub App avatar', () => {
   ];
 
   for (const { rel, size } of cases) {
-    describe(rel, () => {
+    // Pixel-walking a 512x512 decode in pure JS is ~1-3s alone and can pass 5s when the
+    // whole suite runs in parallel. The budget is honest; the checks are unchanged.
+    describe(rel, { timeout: 30_000 }, () => {
       const img = decodePng(new Uint8Array(file(rel)));
       const g = markGeometry(size, { crop: 'circle' });
       const ink = rgb(BRAND_HEX.ink0);
