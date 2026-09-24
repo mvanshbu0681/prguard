@@ -1,8 +1,15 @@
-// OWNER: d5 (wave 3). Stub from T0 — replace entirely.
+// OWNER: d5 (wave 3). /overview (plan A3) — a thin Server Component: the one
+// fixture-only prop <OverviewRoute> needs (accuracy/series.json → weekly, plan
+// A11 — no live endpoint serves it) is read here with the server-only fixture
+// loader and handed down; every other query is client-side (@/lib/hooks).
+import type { Metadata } from "next";
+import { OverviewRoute } from "@/components/routes/overview";
+import { asAccuracySeriesExt } from "@/components/charts";
+import { getAccuracySeries } from "@/lib/fixtures";
+
+export const metadata: Metadata = { title: "Overview" };
+
 export default function Page() {
-  return (
-    <section data-stub data-route="/overview" className="px-4 py-12 md:px-8">
-      <p className="type-label text-text-dim">/overview</p>
-    </section>
-  );
+  const series = asAccuracySeriesExt(getAccuracySeries());
+  return <OverviewRoute weekly={series.weekly} />;
 }
