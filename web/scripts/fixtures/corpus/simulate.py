@@ -1246,7 +1246,7 @@ class Simulation:
                 continue
             self.world.outcomes.append(
                 models.FindingOutcome(
-                    id=uuid4(stream(f"outcome:addressed:{item.row.id}")),
+                    id=uuid4(stream(f"outcome:addressed:{item.row.id}:{record.row.id}")),
                     tenant_id=TENANT_ID,
                     finding_id=item.row.id,
                     fingerprint_id=item.row.fingerprint_id,

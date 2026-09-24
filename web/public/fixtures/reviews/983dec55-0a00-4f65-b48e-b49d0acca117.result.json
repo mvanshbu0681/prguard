@@ -1,0 +1,385 @@
+{
+  "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "identity-gateway",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 223,
+    "title": "Add PKCE to the OAuth authorize flow",
+    "author": "farah-n",
+    "head_sha": "6c1a412823e219ac83407cf93583552cc2b69622",
+    "base_sha": "9e1d93e8ade59843853f2328effd9fdda05eea2d",
+    "url": "https://github.com/acme/identity-gateway/pull/223"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "2 findings carry a repro test that passes at base and fails at head.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": [
+      "c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca",
+      "43f5dda7-c839-4c53-a5de-3d2f0f77d46d"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2153250421,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 5,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 3,
+    "disproven": 0,
+    "blocking": 2
+  },
+  "cost": {
+    "usd_estimate": 1.3309,
+    "input_tokens": 94961,
+    "output_tokens": 49749,
+    "cache_read_tokens": 216339
+  },
+  "timing": {
+    "queued_at": "2026-09-10T13:50:56.533058Z",
+    "started_at": "2026-09-10T13:50:57.320304Z",
+    "finished_at": "2026-09-10T13:51:36.081304Z",
+    "duration_seconds": 38.761
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca",
+      "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+      "fingerprint": "109c8cf74dcbe0a6fbca1138809b5cdad78b33e0ff7618d2fa85d4f6e79dfaa0",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "pkce_plain_method",
+      "title": "verify_pkce() accepts code_challenge_method=plain",
+      "body_markdown": "OAuth 2.1 requires S256; `verify_pkce()` falls back to comparing the verifier with the challenge when the method is `plain` (line 35), so an intercepted authorization request carries everything needed to redeem the code.",
+      "location": {
+        "file_path": "app/oauth/authorize.py",
+        "start_line": 35,
+        "end_line": 37,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/oauth/authorize.py::verify_pkce"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.735,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × proven × file tested, symbol not × blast radius 0.20 × churn 0.30",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_8d3214.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/oauth/authorize.py::verify_pkce.\n\nClaim: the plain method is accepted.\n\"\"\"\n\nfrom app.oauth.authorize import verify_pkce\n\n\ndef test_plain_method_is_rejected():\n    assert verify_pkce(\"abc123\", \"abc123\", \"plain\") is False\n",
+        "command": "pytest tests/test_repro_8d3214.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.31s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n________________________ test_plain_method_is_rejected _________________________\n\n    def test_plain_method_is_rejected():\n>       assert verify_pkce(\"abc123\", \"abc123\", \"plain\") is False\nE       AssertionError: assert True is False\nE        +  where True = verify_pkce('abc123', 'abc123', 'plain')\n\ntests/test_repro_8d3214.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_8d3214.py::test_plain_method_is_rejected - AssertionE...\n1 failed in 0.30s"
+        },
+        "duration_ms": 1856,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 37,
+        "github_comment_id": 1939496126
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-10T13:51:24.672504Z"
+    },
+    {
+      "id": "43f5dda7-c839-4c53-a5de-3d2f0f77d46d",
+      "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+      "fingerprint": "6392b13b606b97792aea912915b1ad3591bff1d0ac78126aa95b702fe680d6f6",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "redirect_prefix_match",
+      "title": "_redirect_ok() matches registered redirect URIs by prefix",
+      "body_markdown": "`uri.startswith(registered)` (line 47) accepts `https://app.acme.test.evil.test/cb` for a client registered with `https://app.acme.test`, and the authorization code is sent there.",
+      "location": {
+        "file_path": "app/oauth/authorize.py",
+        "start_line": 47,
+        "end_line": 49,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/oauth/authorize.py::_redirect_ok"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.65,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.3,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × proven × reachable internally × file tested, symbol not × blast radius 0.30 × churn 0.30",
+        "llm_severity_hint": "critical",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_642f26.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/oauth/authorize.py::_redirect_ok.\n\nClaim: a look-alike host passes the redirect check.\n\"\"\"\n\nfrom app.oauth.authorize import redirect_allowed\n\n\ndef test_lookalike_host_is_rejected():\n    assert not redirect_allowed(\"https://app.acme.test.evil.test/cb\")\n",
+        "command": "pytest tests/test_repro_642f26.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.29s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_______________________ test_lookalike_host_is_rejected ________________________\n\n    def test_lookalike_host_is_rejected():\n>       assert not redirect_allowed(\"https://app.acme.test.evil.test/cb\")\nE       AssertionError: assert not True\nE        +  where True = redirect_allowed('https://app.acme.test.evil.test/cb')\n\ntests/test_repro_642f26.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_642f26.py::test_lookalike_host_is_rejected - Assertio...\n1 failed in 0.29s"
+        },
+        "duration_ms": 1656,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 49,
+        "github_comment_id": 2387462121
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-10T13:51:24.673904Z"
+    },
+    {
+      "id": "b7f4aea2-364d-42b7-a82e-a6abb51c7e07",
+      "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_regression_test",
+      "title": "Add a regression test for `verify_pkce()`.",
+      "body_markdown": "No test exercises the path in `verify_pkce()` that this change breaks.",
+      "location": {
+        "file_path": "app/oauth/authorize.py",
+        "start_line": 35,
+        "end_line": 37,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-10T13:51:24.675304Z"
+    },
+    {
+      "id": "297be7ff-91d3-4859-a60b-9d63e36e3d68",
+      "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_return_annotation",
+      "title": "Annotate the return type of `authorize()`.",
+      "body_markdown": "`authorize()` is the only function in `app/oauth/authorize.py` without a return annotation.",
+      "location": {
+        "file_path": "app/oauth/authorize.py",
+        "start_line": 12,
+        "end_line": 14,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-10T13:51:24.676704Z"
+    },
+    {
+      "id": "7b24cd20-2e29-4dde-b462-6a848c718c9e",
+      "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unvalidated_input",
+      "title": "Validate the argument to `issue_code()` before it is used.",
+      "body_markdown": "`issue_code()` passes its argument on without checking its shape.",
+      "location": {
+        "file_path": "app/oauth/authorize.py",
+        "start_line": 57,
+        "end_line": 59,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-10T13:51:24.678104Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#223` in 38.8s · [full run ↗](https://prguard.acme.internal/runs/983dec55-0a00-4f65-b48e-b49d0acca117)\n\n**Gate: failing** — 2 findings with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **2** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "05d8804e57a745fc43ffe233e294c53dd4df55c0",
+    "comments": [
+      {
+        "path": "app/oauth/authorize.py",
+        "body": "**`proof_status: proven`** · severity **`0.735`** high\n\nOAuth 2.1 requires S256; `verify_pkce()` falls back to comparing the verifier with the challenge when the method is `plain` (line 35), so an intercepted authorization request carries everything needed to redeem the code.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `9e1d93e` | `1 passed in 0.31s` |\n| head | `05d8804` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>05d8804</code></summary>\n\n    E       AssertionError: assert True is False\n    E        +  where True = verify_pkce('abc123', 'abc123', 'plain')\n    tests/test_repro_8d3214.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.735`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint 109c8cf7…faa0` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 37,
+        "side": "RIGHT",
+        "start_line": 35,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/oauth/authorize.py",
+        "body": "**`proof_status: proven`** · severity **`0.650`** high\n\n`uri.startswith(registered)` (line 47) accepts `https://app.acme.test.evil.test/cb` for a client registered with `https://app.acme.test`, and the authorization code is sent there.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `9e1d93e` | `1 passed in 0.29s` |\n| head | `05d8804` | `1 failed in 0.29s` |\n\n<details><summary>terminal output at head <code>05d8804</code></summary>\n\n    E       AssertionError: assert not True\n    E        +  where True = redirect_allowed('https://app.acme.test.evil.test/cb')\n    tests/test_repro_642f26.py:10: AssertionError\n    1 failed in 0.29s\n\n</details>\n\n**Severity `0.650`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/43f5dda7-c839-4c53-a5de-3d2f0f77d46d#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint 6392b13b…d6f6` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/43f5dda7-c839-4c53-a5de-3d2f0f77d46d#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 49,
+        "side": "RIGHT",
+        "start_line": 47,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=983dec55-0a00-4f65-b48e-b49d0acca117"
+}

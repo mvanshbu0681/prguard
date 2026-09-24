@@ -1,0 +1,201 @@
+{
+  "review_id": "8ab00e20-04e8-4174-8d62-b3c363a6d565",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "infra-terraform",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 77,
+    "title": "Tighten the invoices bucket policy",
+    "author": "tomasz-b",
+    "head_sha": "44ccae6bc65d7f990ba0d98da6192e5f806473ff",
+    "base_sha": "8c97b9216e5e09b353d33b064318fa0453880958",
+    "url": "https://github.com/acme/infra-terraform/pull/77"
+  },
+  "risk_tier": "trivial",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2314442613,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 2,
+    "published": 1,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.763,
+    "input_tokens": 100994,
+    "output_tokens": 21135,
+    "cache_read_tokens": 93178
+  },
+  "timing": {
+    "queued_at": "2026-08-22T10:40:27.900128Z",
+    "started_at": "2026-08-22T10:40:28.404067Z",
+    "finished_at": "2026-08-22T10:40:46.688067Z",
+    "duration_seconds": 18.284
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "cdce9917-dff7-4cd4-8ff6-0f51b6871577",
+      "review_id": "8ab00e20-04e8-4174-8d62-b3c363a6d565",
+      "fingerprint": "585594da79831552535733fd20f167bacc7fc05d2fb7435f4506d2ffa1c0219c",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "wildcard_principal",
+      "title": "The invoices bucket policy grants s3:GetObject to Principal \"*\"",
+      "body_markdown": "The new statement allows `Principal = \"*\"` with only an `aws:SourceVpce` condition (line 17); the condition key is misspelled `aws:sourceVpce`, and IAM matches condition keys case-insensitively but this module's policy validator does not.",
+      "location": {
+        "file_path": "terraform/s3_invoices.tf",
+        "start_line": 17,
+        "end_line": 20,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/s3_invoices.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "critical",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 20,
+        "github_comment_id": 1995887248
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "8ab00e20-04e8-4174-8d62-b3c363a6d565",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-22T10:40:44.812267Z"
+    },
+    {
+      "id": "d4f2e93b-3f69-49dc-8af0-d7cccc5474b3",
+      "review_id": "8ab00e20-04e8-4174-8d62-b3c363a6d565",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "missing_prevent_destroy",
+      "title": "Add `prevent_destroy` to `aws_s3_bucket.invoices`.",
+      "body_markdown": "A mistaken plan could destroy `aws_s3_bucket.invoices`.",
+      "location": {
+        "file_path": "terraform/s3_invoices.tf",
+        "start_line": 1,
+        "end_line": 3,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-22T10:40:44.813667Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#77` in 18.3s · [full run ↗](https://prguard.acme.internal/runs/8ab00e20-04e8-4174-8d62-b3c363a6d565)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "44ccae6bc65d7f990ba0d98da6192e5f806473ff",
+    "comments": [
+      {
+        "path": "terraform/s3_invoices.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe new statement allows `Principal = \"*\"` with only an `aws:SourceVpce` condition (line 17); the condition key is misspelled `aws:sourceVpce`, and IAM matches condition keys case-insensitively but this module's policy validator does not.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/s3_invoices.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/cdce9917-dff7-4cd4-8ff6-0f51b6871577#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 585594da…219c` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/cdce9917-dff7-4cd4-8ff6-0f51b6871577#suppress)",
+        "line": 20,
+        "side": "RIGHT",
+        "start_line": 17,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=8ab00e20-04e8-4174-8d62-b3c363a6d565"
+}

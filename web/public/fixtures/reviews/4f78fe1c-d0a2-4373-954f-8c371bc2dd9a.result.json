@@ -1,0 +1,327 @@
+{
+  "review_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 56,
+    "title": "Handle SMS delivery receipts",
+    "author": "kwame-a",
+    "head_sha": "d3aa89ed2886ef941dfd6c7b9241e2241628fa2b",
+    "base_sha": "a276ebc262f8ca454a3b8d0e852d0087c9f24d64",
+    "url": "https://github.com/acme/notifications/pull/56"
+  },
+  "risk_tier": "standard",
+  "context": {
+    "files_changed": 3,
+    "files_reviewed": 3,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2190914181,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 1,
+    "suppressed": 1,
+    "dropped": 2,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.984,
+    "input_tokens": 78668,
+    "output_tokens": 37581,
+    "cache_read_tokens": 124384
+  },
+  "timing": {
+    "queued_at": "2026-08-26T11:30:30.649453Z",
+    "started_at": "2026-08-26T11:30:30.978528Z",
+    "finished_at": "2026-08-26T11:31:02.242528Z",
+    "duration_seconds": 31.264
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "25836d16-ec7f-465e-a69c-2709d54db5ba",
+      "review_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+      "fingerprint": "32009a74132d1f6298bb176634746ce0aec6a49a17de93a9668438e748cfb6dc",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "webhook_signature_unchecked",
+      "title": "handle_delivery_receipt() does not verify the X-Twilio-Signature header",
+      "body_markdown": "The receipt endpoint marks messages delivered from any request (line 65); `RequestValidator` from the Twilio SDK is imported but never called.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 65,
+        "end_line": 67,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/providers/sms.py::handle_delivery_receipt"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.535,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.2,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × untested × proven × churn 0.20 × blast radius 0.10",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_d98e5f.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/providers/sms.py::handle_delivery_receipt.\n\nClaim: an unsigned receipt is accepted.\n\"\"\"\n\nfrom app.providers.sms import receipt_accepted\n\n\ndef test_unsigned_receipt_is_rejected():\n    assert receipt_accepted(\"unsigned\") is False\n",
+        "command": "pytest tests/test_repro_d98e5f.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.29s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________ test_unsigned_receipt_is_rejected _______________________\n\n    def test_unsigned_receipt_is_rejected():\n>       assert receipt_accepted(\"unsigned\") is False\nE       AssertionError: assert True is False\nE        +  where True = receipt_accepted('unsigned')\n\ntests/test_repro_d98e5f.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_d98e5f.py::test_unsigned_receipt_is_rejected - Assert...\n1 failed in 0.30s"
+        },
+        "duration_ms": 1901,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 67,
+        "github_comment_id": 1948420361
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-26T11:30:55.102928Z"
+    },
+    {
+      "id": "616de07d-64d3-4c2a-9d76-11b1a6a225f0",
+      "review_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+      "fingerprint": "95e67985a66fb87e83dc866a51c90939e52e9f12c2a7c176314b762762a57875",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "chunk_boundary",
+      "title": "_chunk() drops the last message when the batch is a multiple of 50",
+      "body_markdown": "`range(0, len(messages) - 1, size)` (line 30) stops one short, so a batch of exactly 100 messages sends 99.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 30,
+        "end_line": 32,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/providers/sms.py::_chunk"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.285,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.2,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × churn 0.20 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "4c8c8a88-133d-49d3-bfec-43ea012e7276",
+        "scope": "line",
+        "reason": "The upstream scheduler sends batches of 49 until the queue migration lands at the end of August; revisit then.",
+        "created_by": "yuki-t",
+        "expires_at": "2026-09-01T00:00:00Z"
+      },
+      "created_at": "2026-08-26T11:30:55.104328Z"
+    },
+    {
+      "id": "12422ae0-c7e1-4c99-82c3-f4f704c9b815",
+      "review_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unvalidated_input",
+      "title": "Validate the argument to `render_sms()` before it is used.",
+      "body_markdown": "`render_sms()` passes its argument on without checking its shape.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 40,
+        "end_line": 42,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-26T11:30:55.105728Z"
+    },
+    {
+      "id": "8c06f9fd-2d90-4029-8e46-55093d197938",
+      "review_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_edge_case_test",
+      "title": "Cover the empty-input branch of `send_batch()`.",
+      "body_markdown": "`send_batch()` has no test for an empty input.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 10,
+        "end_line": 12,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-26T11:30:55.107128Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#56` in 31.3s · [full run ↗](https://prguard.acme.internal/runs/4f78fe1c-d0a2-4373-954f-8c371bc2dd9a)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "d3aa89ed2886ef941dfd6c7b9241e2241628fa2b",
+    "comments": [
+      {
+        "path": "app/providers/sms.py",
+        "body": "**`proof_status: proven`** · severity **`0.535`** medium\n\nThe receipt endpoint marks messages delivered from any request (line 65); `RequestValidator` from the Twilio SDK is imported but never called.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `a276ebc` | `1 passed in 0.29s` |\n| head | `d3aa89e` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>d3aa89e</code></summary>\n\n    E       AssertionError: assert True is False\n    E        +  where True = receipt_accepted('unsigned')\n    tests/test_repro_d98e5f.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.535`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/25836d16-ec7f-465e-a69c-2709d54db5ba#severity)\n\nThis finding has `proof_status: proven` and scores `0.535` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 32009a74…b6dc` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/25836d16-ec7f-465e-a69c-2709d54db5ba#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 67,
+        "side": "RIGHT",
+        "start_line": 65,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=4f78fe1c-d0a2-4373-954f-8c371bc2dd9a"
+}

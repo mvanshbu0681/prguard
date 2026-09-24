@@ -1,0 +1,406 @@
+{
+  "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "web-storefront",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 1102,
+    "title": "Validate postcodes in the checkout address form",
+    "author": "jonas-w",
+    "head_sha": "69a16d51a8d3e776548c6bece94103f7a94c69bc",
+    "base_sha": "ab1a1a7e5391f0729bea1ba7677aed84143cddfa",
+    "url": "https://github.com/acme/web-storefront/pull/1102"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2528808394,
+    "event": "COMMENT",
+    "comments_posted": 3,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 5,
+    "published": 2,
+    "suppressed": 1,
+    "dropped": 2,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0467,
+    "input_tokens": 91408,
+    "output_tokens": 38759,
+    "cache_read_tokens": 235158
+  },
+  "timing": {
+    "queued_at": "2026-08-19T16:20:17.948810Z",
+    "started_at": "2026-08-19T16:20:19.336066Z",
+    "finished_at": "2026-08-19T16:20:46.753066Z",
+    "duration_seconds": 27.417
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "6ee007f6-12b6-4fc6-b36f-7b80d618a9c7",
+      "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+      "fingerprint": "4877a0c0df55eb68b58bd2b44dbcade8839166bd71cea6aee033930d26ae38aa",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "hardcoded_locale",
+      "title": "countryLabel() hard-codes English country names",
+      "body_markdown": "The label map is English-only (line 53); `Intl.DisplayNames` gives every locale.",
+      "location": {
+        "file_path": "src/checkout/AddressForm.tsx",
+        "start_line": 53,
+        "end_line": 55,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/checkout/AddressForm.tsx::#1"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.545,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × file tested, symbol not × unproven × churn 0.30 × blast radius 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 55,
+        "github_comment_id": 2383853929
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-19T16:20:44.015666Z"
+    },
+    {
+      "id": "4c5b51b8-a9d9-4184-86b9-b39d6958f88f",
+      "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+      "fingerprint": "a681ae48234806006e2923e0fb8a13c4c60397bc1bd63eeca41968f0c3480b12",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "postcode_pattern_too_strict",
+      "title": "validateAddress() rejects UK postcodes typed without the space",
+      "body_markdown": "The UK pattern requires the separating space (line 7); `SW1A1AA` is refused at checkout even though `normalizePostcode()` would accept it one call later.",
+      "location": {
+        "file_path": "src/checkout/AddressForm.tsx",
+        "start_line": 7,
+        "end_line": 9,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/checkout/AddressForm.tsx::#0"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.66,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × file tested, symbol not × unproven × blast radius 0.20 × churn 0.30",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 9,
+        "github_comment_id": 1969583388
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-19T16:20:44.017066Z"
+    },
+    {
+      "id": "5ace92d5-76e6-42ac-9709-812b14d2e184",
+      "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+      "fingerprint": "4ab013f0a98d20dbe66debe3f85c01b97556610f00710a7f9c6b8b242ead05ca",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unlabelled_input",
+      "title": "The postcode input in AddressForm has no associated label",
+      "body_markdown": "The `<label>` has no `htmlFor` and the input no `id` (line 36), so screen readers announce the field as \"edit text\".",
+      "location": {
+        "file_path": "src/checkout/AddressForm.tsx",
+        "start_line": 36,
+        "end_line": 38,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/checkout/AddressForm.tsx::#0"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.645,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × file tested, symbol not × unproven × churn 0.30 × blast radius 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 38,
+        "github_comment_id": 2579585609
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "32a4f7c9-c899-44a8-ac6c-eaace9eb7667",
+        "scope": "file",
+        "reason": "The label is wired up by the <Field> wrapper at render time; this raw input is never rendered on its own. Checked with axe in STORE-198.",
+        "created_by": "jonas-w",
+        "expires_at": null
+      },
+      "created_at": "2026-08-19T16:20:44.018466Z"
+    },
+    {
+      "id": "20bd1d67-96e3-49ce-90fd-4871bbe5abf7",
+      "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "explicit_any",
+      "title": "Replace `any` in `countryLabel` with the generated API type.",
+      "body_markdown": "`countryLabel` types its argument as `any`.",
+      "location": {
+        "file_path": "src/checkout/AddressForm.tsx",
+        "start_line": 52,
+        "end_line": 54,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-19T16:20:44.019866Z"
+    },
+    {
+      "id": "c32d3e12-3eaa-4f60-9320-21d0810526b9",
+      "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "missing_memoization",
+      "title": "Memoize `normalizePostcode`.",
+      "body_markdown": "`normalizePostcode` re-renders on every parent render.",
+      "location": {
+        "file_path": "src/checkout/AddressForm.tsx",
+        "start_line": 22,
+        "end_line": 24,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-19T16:20:44.021266Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#1102` in 27.4s · [full run ↗](https://prguard.acme.internal/runs/d9a4379f-e571-4016-8c7a-d4468bc7c895)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "69a16d51a8d3e776548c6bece94103f7a94c69bc",
+    "comments": [
+      {
+        "path": "src/checkout/AddressForm.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.545`** medium\n\nThe label map is English-only (line 53); `Intl.DisplayNames` gives every locale.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.545`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/6ee007f6-12b6-4fc6-b36f-7b80d618a9c7#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4877a0c0…38aa` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/6ee007f6-12b6-4fc6-b36f-7b80d618a9c7#suppress)",
+        "line": 55,
+        "side": "RIGHT",
+        "start_line": 53,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "src/checkout/AddressForm.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.660`** high\n\nThe UK pattern requires the separating space (line 7); `SW1A1AA` is refused at checkout even though `normalizePostcode()` would accept it one call later.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.660`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/4c5b51b8-a9d9-4184-86b9-b39d6958f88f#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a681ae48…0b12` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/4c5b51b8-a9d9-4184-86b9-b39d6958f88f#suppress)",
+        "line": 9,
+        "side": "RIGHT",
+        "start_line": 7,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "src/checkout/AddressForm.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.645`** high\n\nThe `<label>` has no `htmlFor` and the input no `id` (line 36), so screen readers announce the field as \"edit text\".\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.645`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/5ace92d5-76e6-42ac-9709-812b14d2e184#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4ab013f0…05ca` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/5ace92d5-76e6-42ac-9709-812b14d2e184#suppress)",
+        "line": 38,
+        "side": "RIGHT",
+        "start_line": 36,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=d9a4379f-e571-4016-8c7a-d4468bc7c895"
+}

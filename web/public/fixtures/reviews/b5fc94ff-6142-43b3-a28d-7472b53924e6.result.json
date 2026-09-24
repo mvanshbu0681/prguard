@@ -1,0 +1,290 @@
+{
+  "review_id": "b5fc94ff-6142-43b3-a28d-7472b53924e6",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 70,
+    "title": "Quiet hours for push notifications",
+    "author": "yuki-t",
+    "head_sha": "4d9fb54b0454348dafdfd592dcdb4c182d7cd4e0",
+    "base_sha": "b4433bafdd5097e42044e41a8e4f6c2f971e5d4f",
+    "url": "https://github.com/acme/notifications/pull/70"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2221606385,
+    "event": "COMMENT",
+    "comments_posted": 0,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 0,
+    "suppressed": 1,
+    "dropped": 3,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.9346,
+    "input_tokens": 79837,
+    "output_tokens": 35384,
+    "cache_read_tokens": 195351
+  },
+  "timing": {
+    "queued_at": "2026-09-17T10:30:02.485978Z",
+    "started_at": "2026-09-17T10:30:03.371965Z",
+    "finished_at": "2026-09-17T10:30:33.057965Z",
+    "duration_seconds": 29.686
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "1e456a4e-98d1-4b44-947a-6a177170a784",
+      "review_id": "b5fc94ff-6142-43b3-a28d-7472b53924e6",
+      "fingerprint": "c87e4daeb764461a307c42a4317b893dd86faec5066ddd31e15c042f6547a087",
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "unbounded_delete",
+      "title": "prune_seen() deletes every expired key in one SCAN loop",
+      "body_markdown": "The loop has no batch limit (line 38); on a large keyspace it blocks the worker.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 38,
+        "end_line": 40,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/push/dedupe.py::prune_seen"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.28,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.15,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × blast radius 0.10 × churn 0.15",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 3,
+        "first_seen_run_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "3e91cf97-2c69-4561-bc70-1808b653f1e7",
+        "scope": "tenant",
+        "reason": "The shared dedupe store is truncated nightly by the retention job, so a prune never sees more than a day of keys. Applies to every service on the shared helper.",
+        "created_by": "priya-raman",
+        "expires_at": null
+      },
+      "created_at": "2026-09-17T10:30:30.453165Z"
+    },
+    {
+      "id": "765690b3-66f9-4939-9cdc-ed07bf8c6d50",
+      "review_id": "b5fc94ff-6142-43b3-a28d-7472b53924e6",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `should_send()` against two callers running it at once.",
+      "body_markdown": "Two workers running `should_send()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 10,
+        "end_line": 12,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-17T10:30:30.454565Z"
+    },
+    {
+      "id": "463c210a-d9df-4308-aca1-3bfa808fcf54",
+      "review_id": "b5fc94ff-6142-43b3-a28d-7472b53924e6",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_docstring",
+      "title": "Document what `prune_seen()` returns when nothing matches.",
+      "body_markdown": "`prune_seen()` has no docstring and two different empty results.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 36,
+        "end_line": 38,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-17T10:30:30.455965Z"
+    },
+    {
+      "id": "46fc3e93-72b3-421a-96e3-9162376bb436",
+      "review_id": "b5fc94ff-6142-43b3-a28d-7472b53924e6",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unvalidated_input",
+      "title": "Validate the argument to `_dedupe_key()` before it is used.",
+      "body_markdown": "`_dedupe_key()` passes its argument on without checking its shape.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 27,
+        "end_line": 29,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-17T10:30:30.457365Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#70` in 29.7s · [full run ↗](https://prguard.acme.internal/runs/b5fc94ff-6142-43b3-a28d-7472b53924e6)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: nothing to deliver, no finding was published. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "4d9fb54b0454348dafdfd592dcdb4c182d7cd4e0",
+    "comments": []
+  },
+  "audit_url": "/v1/audit?review_id=b5fc94ff-6142-43b3-a28d-7472b53924e6"
+}

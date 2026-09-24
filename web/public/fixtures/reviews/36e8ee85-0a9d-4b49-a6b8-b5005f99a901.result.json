@@ -1,0 +1,202 @@
+{
+  "review_id": "36e8ee85-0a9d-4b49-a6b8-b5005f99a901",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "ledger",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 318,
+    "title": "Batch payouts by currency",
+    "author": "yuki-t",
+    "head_sha": "8d420315dddd30664f6b91e2a0fc7ad4aa51e9ad",
+    "base_sha": "e597c2cd1eb2625d66fe8d5c43392400242bf5de",
+    "url": "https://github.com/acme/ledger/pull/318"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2290565159,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 2,
+    "published": 0,
+    "suppressed": 1,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.2342,
+    "input_tokens": 109952,
+    "output_tokens": 41679,
+    "cache_read_tokens": 280503
+  },
+  "timing": {
+    "queued_at": "2026-08-26T10:02:27.564695Z",
+    "started_at": "2026-08-26T10:02:27.971320Z",
+    "finished_at": "2026-08-26T10:02:57.920320Z",
+    "duration_seconds": 29.949
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "c424e770-52d7-4943-9a35-f452ff9f1947",
+      "review_id": "36e8ee85-0a9d-4b49-a6b8-b5005f99a901",
+      "fingerprint": "dab532ad062766da1c2486ed89551dd802f1c71c7462e26bac29cc854ff4f7e5",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "empty_batch_index_error",
+      "title": "build_payout_batch() emits a zero-amount entry for a currency with no payouts",
+      "body_markdown": "`build_payout_batch()` seeds every currency's batch with a placeholder entry (line 13) and never removes it, so a currency with no payouts produces a zero-amount instruction that the bank rejects for the whole file.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 13,
+        "end_line": 15,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/payouts/batch.py::build_payout_batch"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.565,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.35,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × file tested, symbol not × unproven × churn 0.35 × blast radius 0.20",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "inconclusive",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_6028c7.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
+        "command": "pytest tests/test_repro_6028c7.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_empty_currency_builds_an_empty_batch ___________________\n\n    def test_empty_currency_builds_an_empty_batch():\n>       assert len(build_payout_batch([], \"sek\")) == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = len([{'amount_minor': 0, 'currency': 'sek'}])\nE        +    where [{'amount_minor': 0, 'currency': 'sek'}] = build_payout_batch([], 'sek')\n\ntests/test_repro_6028c7.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_6028c7.py::test_empty_currency_builds_an_empty_batch\n1 failed in 0.33s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_empty_currency_builds_an_empty_batch ___________________\n\n    def test_empty_currency_builds_an_empty_batch():\n>       assert len(build_payout_batch([], \"sek\")) == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = len([{'amount_minor': 0, 'currency': 'sek'}])\nE        +    where [{'amount_minor': 0, 'currency': 'sek'}] = build_payout_batch([], 'sek')\n\ntests/test_repro_6028c7.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_6028c7.py::test_empty_currency_builds_an_empty_batch\n1 failed in 0.34s"
+        },
+        "duration_ms": 2268,
+        "deps_install_ok": true
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 15,
+        "github_comment_id": 2607916095
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "ab13189c-21c3-4f02-bc90-8f0e47f06f24",
+        "scope": "line",
+        "reason": "The scheduler drops currencies with no payouts before build_payout_batch() is called; the repro calls it directly with an empty list, which production never does.",
+        "created_by": "yuki-t",
+        "expires_at": null
+      },
+      "created_at": "2026-08-26T10:02:50.131920Z"
+    },
+    {
+      "id": "f39eeb16-777f-4ede-979a-fbe34a00c54f",
+      "review_id": "36e8ee85-0a9d-4b49-a6b8-b5005f99a901",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unclear_function_name",
+      "title": "Rename `schedule_batch()` so the name says it has a side effect.",
+      "body_markdown": "`schedule_batch()` writes as well as reads; the name reads like a pure lookup.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 53,
+        "end_line": 55,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-26T10:02:50.133320Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#318` in 29.9s · [full run ↗](https://prguard.acme.internal/runs/36e8ee85-0a9d-4b49-a6b8-b5005f99a901)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "8d420315dddd30664f6b91e2a0fc7ad4aa51e9ad",
+    "comments": []
+  },
+  "audit_url": "/v1/audit?review_id=36e8ee85-0a9d-4b49-a6b8-b5005f99a901"
+}

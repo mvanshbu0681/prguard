@@ -1,0 +1,331 @@
+{
+  "review_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "identity-gateway",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 214,
+    "title": "Allow clock skew on SAML assertions",
+    "author": "farah-n",
+    "head_sha": "904af6a9d4b116575fc715d0333a661479cbb90b",
+    "base_sha": "8fad7a767501377aae2bbd8d56c12e5c5c0e7959",
+    "url": "https://github.com/acme/identity-gateway/pull/214"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": [
+      "05bdf7f5-34ea-44c6-99da-dd671ce24a40"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2603000701,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 2,
+    "disproven": 0,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 1.1429,
+    "input_tokens": 99189,
+    "output_tokens": 40010,
+    "cache_read_tokens": 247776
+  },
+  "timing": {
+    "queued_at": "2026-08-28T14:12:41.251681Z",
+    "started_at": "2026-08-28T14:12:42.569116Z",
+    "finished_at": "2026-08-28T14:13:12.426116Z",
+    "duration_seconds": 29.857
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "43fb9707-7cf0-428f-8da8-db2335d34fa5",
+      "review_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+      "fingerprint": "749055749c6fcccbd79be725a83d3d8dd9dc525c8bd242a366fa7f0421806285",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "case_insensitive_uri",
+      "title": "Compare SAML audiences exactly; audience_ok() lower-cases both sides",
+      "body_markdown": "Audience URIs are compared after `.lower()` (line 63); SAML treats them as case-sensitive strings.",
+      "location": {
+        "file_path": "app/sso/saml.py",
+        "start_line": 63,
+        "end_line": 65,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/sso/saml.py::audience_ok"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.46,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.2,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × churn 0.20 × blast radius 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 65,
+        "github_comment_id": 2664298270
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-28T14:13:05.425716Z"
+    },
+    {
+      "id": "05bdf7f5-34ea-44c6-99da-dd671ce24a40",
+      "review_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+      "fingerprint": "10104a742688a731162c7d733b0b65755eba67f9cd80eb4ba824df0cce1a81ea",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "assertion_clock_skew",
+      "title": "_check_conditions() accepts assertions issued ten minutes in the future",
+      "body_markdown": "The skew allowance is applied to both `NotBefore` and `NotOnOrAfter` with the same sign (line 32), so an assertion whose `NotBefore` is ten minutes ahead validates now. The IdP's own clocks are within 30 seconds.",
+      "location": {
+        "file_path": "app/sso/saml.py",
+        "start_line": 32,
+        "end_line": 35,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/sso/saml.py::_check_conditions"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.725,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.2,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × proven × file tested, symbol not × blast radius 0.20 × churn 0.20",
+        "llm_severity_hint": "critical",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_78a203.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/sso/saml.py::_check_conditions.\n\nClaim: a NotBefore ten minutes ahead validates.\n\"\"\"\n\nfrom app.sso.saml import conditions_hold\n\n\ndef test_not_before_ten_minutes_ahead_is_rejected():\n    assert not conditions_hold(600)\n",
+        "command": "pytest tests/test_repro_78a203.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.38s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n________________ test_not_before_ten_minutes_ahead_is_rejected _________________\n\n    def test_not_before_ten_minutes_ahead_is_rejected():\n>       assert not conditions_hold(600)\nE       assert not True\nE        +  where True = conditions_hold(600)\n\ntests/test_repro_78a203.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_78a203.py::test_not_before_ten_minutes_ahead_is_rejected\n1 failed in 0.37s"
+        },
+        "duration_ms": 1671,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 35,
+        "github_comment_id": 2295256635
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-28T14:13:05.427116Z"
+    },
+    {
+      "id": "65b9e1f5-9955-483b-840f-b46c788bbd63",
+      "review_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `parse_assertion()` against two callers running it at once.",
+      "body_markdown": "Two workers running `parse_assertion()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/sso/saml.py",
+        "start_line": 45,
+        "end_line": 47,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-28T14:13:05.428516Z"
+    },
+    {
+      "id": "a1fbf1f2-cc60-404b-a6c0-f3ef7dd76c34",
+      "review_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "printf_style_logging",
+      "title": "Use structured logging arguments in `audience_ok()`.",
+      "body_markdown": "`audience_ok()` logs with `%s` placeholders; structured fields are easier to query.",
+      "location": {
+        "file_path": "app/sso/saml.py",
+        "start_line": 62,
+        "end_line": 64,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-28T14:13:05.429916Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#214` in 29.9s · [full run ↗](https://prguard.acme.internal/runs/f263bc08-4544-4504-a2f7-78d46f97e985)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "856bff13acef8e3b15ce54d315f2b590d0521ff3",
+    "comments": [
+      {
+        "path": "app/sso/saml.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.460`** medium\n\nAudience URIs are compared after `.lower()` (line 63); SAML treats them as case-sensitive strings.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.460`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/43fb9707-7cf0-428f-8da8-db2335d34fa5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 74905574…6285` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/43fb9707-7cf0-428f-8da8-db2335d34fa5#suppress)",
+        "line": 65,
+        "side": "RIGHT",
+        "start_line": 63,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/sso/saml.py",
+        "body": "**`proof_status: proven`** · severity **`0.725`** high\n\nThe skew allowance is applied to both `NotBefore` and `NotOnOrAfter` with the same sign (line 32), so an assertion whose `NotBefore` is ten minutes ahead validates now. The IdP's own clocks are within 30 seconds.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `8fad7a7` | `1 passed in 0.38s` |\n| head | `856bff1` | `1 failed in 0.37s` |\n\n<details><summary>terminal output at head <code>856bff1</code></summary>\n\n    E       assert not True\n    E        +  where True = conditions_hold(600)\n    tests/test_repro_78a203.py:10: AssertionError\n    1 failed in 0.37s\n\n</details>\n\n**Severity `0.725`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.020`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/05bdf7f5-34ea-44c6-99da-dd671ce24a40#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 10104a74…81ea` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/05bdf7f5-34ea-44c6-99da-dd671ce24a40#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 35,
+        "side": "RIGHT",
+        "start_line": 32,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=f263bc08-4544-4504-a2f7-78d46f97e985"
+}

@@ -1,0 +1,286 @@
+{
+  "review_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "infra-terraform",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 81,
+    "title": "Add a read replica for the ledger database",
+    "author": "tomasz-b",
+    "head_sha": "ab17d517e9bd8bc520effb973d8f5a75497665f4",
+    "base_sha": "5c32c0678f7d42473dcd70ac33095b35e7d81e58",
+    "url": "https://github.com/acme/infra-terraform/pull/81"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2935026327,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 1,
+    "suppressed": 1,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.9389,
+    "input_tokens": 77377,
+    "output_tokens": 36189,
+    "cache_read_tokens": 189408
+  },
+  "timing": {
+    "queued_at": "2026-08-29T14:55:28.632817Z",
+    "started_at": "2026-08-29T14:55:29.845056Z",
+    "finished_at": "2026-08-29T14:55:58.064056Z",
+    "duration_seconds": 28.219
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "9aad09f1-8e58-4e17-ae98-90b9bf785fab",
+      "review_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+      "fingerprint": "1c348ee98138fa065fafff4f9356ae737ac4efff7c7bb1a6dc406059ea13a300",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unencrypted_replica",
+      "title": "The ledger read replica is created without storage_encrypted",
+      "body_markdown": "`storage_encrypted` defaults to false for a replica in another region (line 5); the primary is encrypted, and the replica would hold the same data in the clear.",
+      "location": {
+        "file_path": "terraform/rds_ledger.tf",
+        "start_line": 5,
+        "end_line": 8,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/rds_ledger.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "high",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 8,
+        "github_comment_id": 2608701326
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-29T14:55:55.334456Z"
+    },
+    {
+      "id": "d5ca1348-bdd6-46a2-9da2-f614c1c1f226",
+      "review_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+      "fingerprint": "106a30e3ed1ddfbc02dc50d1ebabb58d4720a1b1abd5b268129211d88972b661",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "retention_unset",
+      "title": "Set backup_retention_period on the replica explicitly",
+      "body_markdown": "The replica inherits a retention of 0 days (line 10).",
+      "location": {
+        "file_path": "terraform/rds_ledger.tf",
+        "start_line": 10,
+        "end_line": 12,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/rds_ledger.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "low",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 12,
+        "github_comment_id": 2536748935
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "82802e12-6d1d-41a8-bb69-3f622743c02d",
+        "scope": "repo",
+        "reason": "Retention for every database in this account comes from the AWS Backup plan (35 days); setting it per instance would fight the plan.",
+        "created_by": "tomasz-b",
+        "expires_at": null
+      },
+      "created_at": "2026-08-29T14:55:55.335856Z"
+    },
+    {
+      "id": "f411b388-f66e-4ad0-9351-b5f9a67e0af3",
+      "review_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_cost_tags",
+      "title": "Add cost-allocation tags to `aws_db_parameter_group.ledger`.",
+      "body_markdown": "`aws_db_parameter_group.ledger` has no `tags` block.",
+      "location": {
+        "file_path": "terraform/rds_ledger.tf",
+        "start_line": 20,
+        "end_line": 22,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-29T14:55:55.337256Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#81` in 28.2s · [full run ↗](https://prguard.acme.internal/runs/9b7c3184-c45f-4ac6-a41b-9f70d6a70564)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "ab17d517e9bd8bc520effb973d8f5a75497665f4",
+    "comments": [
+      {
+        "path": "terraform/rds_ledger.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`storage_encrypted` defaults to false for a replica in another region (line 5); the primary is encrypted, and the replica would hold the same data in the clear.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/rds_ledger.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/9aad09f1-8e58-4e17-ae98-90b9bf785fab#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1c348ee9…a300` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/9aad09f1-8e58-4e17-ae98-90b9bf785fab#suppress)",
+        "line": 8,
+        "side": "RIGHT",
+        "start_line": 5,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "terraform/rds_ledger.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe replica inherits a retention of 0 days (line 10).\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/rds_ledger.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d5ca1348-bdd6-46a2-9da2-f614c1c1f226#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 106a30e3…b661` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d5ca1348-bdd6-46a2-9da2-f614c1c1f226#suppress)",
+        "line": 12,
+        "side": "RIGHT",
+        "start_line": 10,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=9b7c3184-c45f-4ac6-a41b-9f70d6a70564"
+}

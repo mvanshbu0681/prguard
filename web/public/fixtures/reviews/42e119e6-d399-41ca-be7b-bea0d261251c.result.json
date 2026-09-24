@@ -1,0 +1,233 @@
+{
+  "review_id": "42e119e6-d399-41ca-be7b-bea0d261251c",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "infra-terraform",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 88,
+    "title": "Rotate the KMS key for application secrets",
+    "author": "tomasz-b",
+    "head_sha": "82265152452e4fac6583bb0542014ad740b7e0b9",
+    "base_sha": "2521a5d6190327c8eed0e82b2db1da727dfff6ef",
+    "url": "https://github.com/acme/infra-terraform/pull/88"
+  },
+  "risk_tier": "trivial",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2942012801,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 2,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 0,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.4846,
+    "input_tokens": 44919,
+    "output_tokens": 17257,
+    "cache_read_tokens": 37146
+  },
+  "timing": {
+    "queued_at": "2026-09-13T12:02:54.989565Z",
+    "started_at": "2026-09-13T12:02:55.251190Z",
+    "finished_at": "2026-09-13T12:03:13.745190Z",
+    "duration_seconds": 18.494
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "1da92f3e-1186-4c81-a8a7-cf183275d3e5",
+      "review_id": "42e119e6-d399-41ca-be7b-bea0d261251c",
+      "fingerprint": "31bd9016d82c73bf2353c2870151fad85336afe1df7b6e99f757cc331e8a76ed",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "minimum_deletion_window",
+      "title": "The secrets key uses the minimum 7-day deletion window",
+      "body_markdown": "`deletion_window_in_days = 7` (line 7) leaves one week to notice a scheduled deletion; the account default is 30.",
+      "location": {
+        "file_path": "terraform/kms.tf",
+        "start_line": 7,
+        "end_line": 9,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/kms.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "medium",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 9,
+        "github_comment_id": 2351814403
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "42e119e6-d399-41ca-be7b-bea0d261251c",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-13T12:03:11.752990Z"
+    },
+    {
+      "id": "201d03ab-2499-4637-8f79-69fbf66fc487",
+      "review_id": "42e119e6-d399-41ca-be7b-bea0d261251c",
+      "fingerprint": "563715a4fbd84c96d92c17a670d86e323cac8abdab87c6ff1f477c479c6492cb",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "key_rotation_disabled",
+      "title": "The new secrets key has enable_key_rotation = false",
+      "body_markdown": "Automatic rotation is off for the replacement key (line 4); the old key had it on.",
+      "location": {
+        "file_path": "terraform/kms.tf",
+        "start_line": 4,
+        "end_line": 6,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/kms.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "high",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 6,
+        "github_comment_id": 2203629760
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "42e119e6-d399-41ca-be7b-bea0d261251c",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-13T12:03:11.754390Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#88` in 18.5s · [full run ↗](https://prguard.acme.internal/runs/42e119e6-d399-41ca-be7b-bea0d261251c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "82265152452e4fac6583bb0542014ad740b7e0b9",
+    "comments": [
+      {
+        "path": "terraform/kms.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`deletion_window_in_days = 7` (line 7) leaves one week to notice a scheduled deletion; the account default is 30.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/kms.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/1da92f3e-1186-4c81-a8a7-cf183275d3e5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 31bd9016…76ed` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/1da92f3e-1186-4c81-a8a7-cf183275d3e5#suppress)",
+        "line": 9,
+        "side": "RIGHT",
+        "start_line": 7,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "terraform/kms.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nAutomatic rotation is off for the replacement key (line 4); the old key had it on.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/kms.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/201d03ab-2499-4637-8f79-69fbf66fc487#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 563715a4…92cb` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/201d03ab-2499-4637-8f79-69fbf66fc487#suppress)",
+        "line": 6,
+        "side": "RIGHT",
+        "start_line": 4,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=42e119e6-d399-41ca-be7b-bea0d261251c"
+}

@@ -1,0 +1,267 @@
+{
+  "review_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "web-storefront",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 1131,
+    "title": "Fix the double-submit on the pay button",
+    "author": "jonas-w",
+    "head_sha": "a4cd9090fcfd636907322ee8e220d0857b89ad67",
+    "base_sha": "80ed7a12d7773fbec187bfce45dd710316ea34d2",
+    "url": "https://github.com/acme/web-storefront/pull/1131"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "neutral",
+    "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "degraded",
+    "github_review_id": 2920019091,
+    "event": "COMMENT",
+    "comments_posted": 0,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 1
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 1,
+    "suppressed": 1,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0039,
+    "input_tokens": 100701,
+    "output_tokens": 32826,
+    "cache_read_tokens": 267297
+  },
+  "timing": {
+    "queued_at": "2026-09-17T17:20:12.034923Z",
+    "started_at": "2026-09-17T17:20:13.165022Z",
+    "finished_at": "2026-09-17T17:20:42.483022Z",
+    "duration_seconds": 29.318
+  },
+  "degradations": [
+    "review_comments_unreadable"
+  ],
+  "findings": [
+    {
+      "id": "a528585a-b1b9-49c9-acce-2723de6a2cd0",
+      "review_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+      "fingerprint": "283e1deec4fb66c55e6c7c70200bd0495d59cedbb482a0be8f5e4385d92a152b",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "guard_reset_early",
+      "title": "useDoubleSubmitGuard() re-enables the button before the redirect completes",
+      "body_markdown": "The guard resets in `finally` (line 41), which runs as soon as `submitPayment()` resolves and before `window.location` changes, so a second click in that window submits again.",
+      "location": {
+        "file_path": "src/checkout/PayButton.tsx",
+        "start_line": 41,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/checkout/PayButton.tsx::#0"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.73,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.4,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × untested × unproven × churn 0.40 × blast radius 0.10",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "summary_only",
+        "delivered_line": 41,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-17T17:20:39.215622Z"
+    },
+    {
+      "id": "8413ad70-e189-4f52-9f66-6b5f03a543b2",
+      "review_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+      "fingerprint": "a9a6da35c53d3078e2afdf8b27d71882f3c59ff89deaa8e8b73a9491cc65ee36",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "stale_state_label",
+      "title": "buttonLabel() has no label for the new 'redirecting' state",
+      "body_markdown": "The switch falls through to \"Pay now\" for `redirecting` (line 53).",
+      "location": {
+        "file_path": "src/checkout/PayButton.tsx",
+        "start_line": 53,
+        "end_line": 55,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/checkout/PayButton.tsx::#1"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.63,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.4,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × untested × reachable internally × unproven × churn 0.40 × blast radius 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "summary_only",
+        "delivered_line": 53,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "e6572e93-f533-42fc-a150-d8dcb0431044",
+        "scope": "line",
+        "reason": "The redirecting state lasts under 200 ms before navigation; nobody sees the label.",
+        "created_by": "jonas-w",
+        "expires_at": null
+      },
+      "created_at": "2026-09-17T17:20:39.217022Z"
+    },
+    {
+      "id": "634a227f-c9e8-4d5a-a4db-6e773257bbc8",
+      "review_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "explicit_any",
+      "title": "Replace `any` in `submitPayment` with the generated API type.",
+      "body_markdown": "`submitPayment` types its argument as `any`.",
+      "location": {
+        "file_path": "src/checkout/PayButton.tsx",
+        "start_line": 22,
+        "end_line": 24,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-17T17:20:39.218422Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#1131` in 29.3s · [full run ↗](https://prguard.acme.internal/runs/cb464ca0-5743-43f7-89bb-da89949f1b57)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 in the table below. **0 silently dropped.**\n\n**Findings not attachable to the diff**\n\n| finding | where | severity | proof_status |\n|---|---|---|---|\n| useDoubleSubmitGuard() re-enables the button before the redirect completes | `src/checkout/PayButton.tsx:41-44` | `0.730` high | `not_applicable` |\n| buttonLabel() has no label for the new 'redirecting' state | `src/checkout/PayButton.tsx:53-55` | `0.630` high | `not_applicable` |\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "a4cd9090fcfd636907322ee8e220d0857b89ad67",
+    "comments": []
+  },
+  "audit_url": "/v1/audit?review_id=cb464ca0-5743-43f7-89bb-da89949f1b57"
+}

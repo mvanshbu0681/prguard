@@ -3420,6 +3420,92 @@ RUNS: tuple[RunSpec, ...] = (
         uses=(D("tf_lifecycle", "terraform/kms.tf", "aws_kms_key.secrets"),),
         pr_state="closed",
     ),
+    # ------------------------------------------------------------------ later additions:
+    # repeat raises (the fingerprint's history), findings an existing rule suppresses, a
+    # finding that publishes again after its suppression was revoked, and quiet runs.
+    RunSpec(
+        key="co-4796", repo="checkout", pr=4796, author="farah-n", at="2026-08-31T10:05",
+        title="Log gateway decline codes on failed charges", tier="full",
+        uses=(
+            U("co.retry_magic_number"),
+            D("conv_logging", "app/billing/retry.py", "record_attempt"),
+            D("nit_docstring", "app/billing/retry.py", "_is_retryable"),
+            D("spec_race", "app/billing/retry.py", "create_charge_with_retry"),
+            D("ood_flaky", "app/billing/retry.py", "_backoff"),
+        ),
+        extra_files=("tests/billing/test_retry.py",), pr_state="closed",
+    ),
+    RunSpec(
+        key="ws-1110", repo="storefront", pr=1110, author="jonas-w", at="2026-08-27T13:15",
+        title="Lazy-load product images below the fold", tier="standard", padding_lines=42,
+        uses=(
+            U("ws.grid_columns_zero"),
+            D("ood_old_test", "src/components/ProductGrid.tsx", "ProductGrid"),
+            D("spec_input", "src/components/ProductGrid.tsx", "gridColumns"),
+            D("hallucinated", "src/components/LazyImage.tsx", "LazyImage"),
+        ),
+        pr_state="closed",
+    ),
+    RunSpec(
+        key="ig-225", repo="identity", pr=225, author="sana-q", at="2026-09-14T09:40",
+        title="Log the JWKS key id on verification failures", tier="full",
+        uses=(
+            U("ig.jwks_log_level"),
+            D("conv_logging", "app/auth/jwks.py", "get_signing_keys"),
+            D("spec_perf", "app/auth/jwks.py", "_fetch_jwks"),
+            D("ood_old_test", "app/auth/jwks.py", "get_signing_keys"),
+        ),
+        pr_state="closed",
+    ),
+    RunSpec(
+        key="co-4815", repo="checkout", pr=4815, author="mhollis", at="2026-09-16T14:10",
+        title="Cap page size on the order history export", tier="full",
+        uses=(
+            U("co.orders_page_cap"),
+            U("co.orders_n_plus_one", "nearest"),
+            D("spec_perf", "app/api/orders.py", "order_totals"),
+            D("nit_naming", "app/api/orders.py", "list_orders"),
+        ),
+        extra_files=("tests/api/test_orders.py",), padding_lines=210, pr_state="closed",
+    ),
+    RunSpec(
+        key="nt-70", repo="notifications", pr=70, author="yuki-t", at="2026-09-17T10:30",
+        title="Quiet hours for push notifications", tier="full",
+        uses=(
+            U("nt.prune_unbounded"),
+            D("spec_race", "app/push/dedupe.py", "should_send"),
+            D("nit_docstring", "app/push/dedupe.py", "prune_seen"),
+            D("spec_input", "app/push/dedupe.py", "_dedupe_key"),
+        ),
+        padding_lines=210, pr_state="closed",
+    ),
+    RunSpec(
+        key="lg-347", repo="ledger", pr=347, author="yuki-t", at="2026-09-19T13:25",
+        title="Add the settlement currency column to the finance export", tier="standard", padding_lines=42,
+        uses=(
+            U("lg.csv_injection"),
+            U("lg.export_filename_day"),
+            D("ood_old_test", "app/reports/export.py", "export_filename"),
+            D("hallucinated", "app/reports/ledger_csv.py", "write_rows"),
+        ),
+        pr_state="open",
+    ),
+    RunSpec(
+        key="it-91", repo="infra", pr=91, author="tomasz-b", at="2026-09-20T09:30",
+        title="Tag the reporting replica for cost allocation", tier="trivial",
+        uses=(D("tf_lifecycle", "terraform/rds_ledger.tf", "aws_db_instance.ledger_replica"),),
+        pr_state="closed",
+    ),
+    RunSpec(
+        key="ws-1135b", repo="storefront", pr=1135, author="farah-n", at="2026-09-22T15:40",
+        title="Analytics consent banner", tier="standard", padding_lines=42,
+        uses=(
+            U("ws.consent_default"),
+            D("ood_old_test", "src/consent/Banner.tsx", "readConsent"),
+            D("spec_race", "src/consent/Banner.tsx", "readConsent"),
+        ),
+        pr_state="open",
+    ),
 )
 
 REVOCATIONS: tuple[Revoke, ...] = (

@@ -11,6 +11,10 @@ than typed: every call the pipeline makes is costed from the size of what it was
 * S4: one coordinator call over every specialist's output.
 * S7: one generator call per proof candidate.
 
+Every call runs with extended thinking, and the reasoning tokens are billed as output
+(``REASONING_TOKENS``). The first specialist call *writes* the shared prefix to the prompt
+cache, which is billed at the cache-write premium; the other specialists read it.
+
 ``PRICE_PER_MTOK`` is the deployment's configured estimate table, a generator input.
 """
 
@@ -23,8 +27,15 @@ from corpus.rng import stream
 
 #: USD per million tokens (input / output / cache read) — the estimate table, an input.
 PRICE_PER_MTOK: dict[str, dict[str, float]] = {
-    "claude-sonnet-5": {"input": 3.00, "output": 15.00, "cache_read": 0.30},
-    "claude-opus-5": {"input": 5.00, "output": 25.00, "cache_read": 0.50},
+    "claude-sonnet-5": {"input": 3.00, "output": 15.00, "cache_read": 0.30, "cache_write": 3.75},
+    "claude-opus-5": {"input": 5.00, "output": 25.00, "cache_read": 0.50, "cache_write": 6.25},
+}
+
+#: Reasoning tokens per call (inclusive range), billed as output tokens.
+REASONING_TOKENS = {
+    "specialist": (4_200, 9_800),
+    "coordinator": (2_400, 5_200),
+    "generator": (1_800, 4_200),
 }
 
 #: Fixed prompt sizes: the specialist prompt (SHARED.md + its own), the coordinator's, the
@@ -55,10 +66,10 @@ def charge(record: Any) -> None:
         for index, name in enumerate(record.specialists):
             raised = sum(1 for f in record.findings if (f.row.specialist or "") == name)
             own = rng.randint(900, 1_600)  # the specialist's own instructions
-            output = 420 + 560 * raised + rng.randint(0, 380)
+            output = 420 + 560 * raised + rng.randint(0, 380) + rng.randint(*REASONING_TOKENS["specialist"])
             if index == 0:
                 input_tokens += shared + own
-                cost += _price(spec_model, "input", shared + own)
+                cost += _price(spec_model, "cache_write", shared) + _price(spec_model, "input", own)
             else:
                 input_tokens += own
                 cache_read += shared
@@ -71,6 +82,7 @@ def charge(record: Any) -> None:
         specialist_output = 420 * len(record.specialists) + 560 * len(record.findings)
         sent = PROMPT_TOKENS["coordinator"] + specialist_output + record.selection.estimated_tokens
         output = 300 + 480 * len(record.canonical) + rng.randint(0, 260)
+        output += rng.randint(*REASONING_TOKENS["coordinator"])
         input_tokens += sent
         output_tokens += output
         cost += _price(coord_model, "input", sent) + _price(coord_model, "output", output)
@@ -81,7 +93,7 @@ def charge(record: Any) -> None:
             if item.proof is None:
                 continue
             sent = PROMPT_TOKENS["generator"] + rng.randint(1_400, 3_200)
-            output = rng.randint(650, 1_350)
+            output = rng.randint(650, 1_350) + rng.randint(*REASONING_TOKENS["generator"])
             input_tokens += sent
             output_tokens += output
             cost += _price(gen_model, "input", sent) + _price(gen_model, "output", output)

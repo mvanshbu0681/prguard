@@ -1,0 +1,284 @@
+{
+  "review_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 58,
+    "title": "Retry failed webhooks with exponential backoff",
+    "author": "kwame-a",
+    "head_sha": "55cb1a5d8c120e3359d2804d061e34a22709d5f9",
+    "base_sha": "ad12b5b26c169dec9b8be9ee26d0517eb53e064a",
+    "url": "https://github.com/acme/notifications/pull/58"
+  },
+  "risk_tier": "standard",
+  "context": {
+    "files_changed": 3,
+    "files_reviewed": 3,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": [
+      "bfae553c-b4ad-4faf-9ad3-b61f1cc56a16"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2368300528,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 0.9493,
+    "input_tokens": 79226,
+    "output_tokens": 33682,
+    "cache_read_tokens": 128412
+  },
+  "timing": {
+    "queued_at": "2026-08-29T13:05:05.439364Z",
+    "started_at": "2026-08-29T13:05:05.965957Z",
+    "finished_at": "2026-08-29T13:05:33.876957Z",
+    "duration_seconds": 27.911
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "cd7f92ed-1f9d-460d-98bb-c4317aa8d105",
+      "review_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+      "fingerprint": "9542d25a4c535e34119ed2902bcd7ec7ce5a4144e8d9a416b7592c39a3a24700",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "signature_over_reserialised_body",
+      "title": "_sign() signs the re-serialised JSON, not the bytes that are sent",
+      "body_markdown": "`json.dumps(payload)` (line 43) can differ from the transmitted body in key order, and receivers verifying the raw body reject it.",
+      "location": {
+        "file_path": "app/workers/webhooks.py",
+        "start_line": 43,
+        "end_line": 45,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/workers/webhooks.py::_sign"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.295,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × churn 0.30 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 45,
+        "github_comment_id": 2526147851
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-29T13:05:27.051957Z"
+    },
+    {
+      "id": "bfae553c-b4ad-4faf-9ad3-b61f1cc56a16",
+      "review_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+      "fingerprint": "c5fb907bcbe89db777006a426382d153e286a644529b6f8eab732502aedfa3fe",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "unbounded_retry",
+      "title": "deliver_webhook() retries a 410 Gone endpoint forever",
+      "body_markdown": "The retry loop only stops on 2xx (line 14); an endpoint that returns 410 is retried with backoff indefinitely and the queue for that tenant never drains.",
+      "location": {
+        "file_path": "app/workers/webhooks.py",
+        "start_line": 14,
+        "end_line": 17,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/workers/webhooks.py::deliver_webhook"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.59,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.4,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.3,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × untested × proven × blast radius 0.40 × churn 0.30",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_c60e37.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/workers/webhooks.py::deliver_webhook.\n\nClaim: a 410 endpoint is retried without end.\n\"\"\"\n\nfrom app.workers.webhooks import attempts_for_status\n\n\ndef test_gone_endpoint_is_not_retried():\n    assert attempts_for_status(410) == 1\n",
+        "command": "pytest tests/test_repro_c60e37.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.41s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________ test_gone_endpoint_is_not_retried _______________________\n\n    def test_gone_endpoint_is_not_retried():\n>       assert attempts_for_status(410) == 1\nE       assert 25 == 1\nE        +  where 25 = attempts_for_status(410)\n\ntests/test_repro_c60e37.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_c60e37.py::test_gone_endpoint_is_not_retried - assert...\n1 failed in 0.43s"
+        },
+        "duration_ms": 1883,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 17,
+        "github_comment_id": 1999350670
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-29T13:05:27.053357Z"
+    },
+    {
+      "id": "f1b96eae-8ddd-4ca9-9758-a013d874eaf5",
+      "review_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `mark_failed()` against two callers running it at once.",
+      "body_markdown": "Two workers running `mark_failed()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/workers/webhooks.py",
+        "start_line": 53,
+        "end_line": 55,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-29T13:05:27.054757Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#58` in 27.9s · [full run ↗](https://prguard.acme.internal/runs/c54cb93c-ca9d-4862-b24a-a417399b3d64)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "6381fd5bde87499407d2a7b052951e7086ad3c1f",
+    "comments": [
+      {
+        "path": "app/workers/webhooks.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.295`** low\n\n`json.dumps(payload)` (line 43) can differ from the transmitted body in key order, and receivers verifying the raw body reject it.\n\n**Proof** — not attempted: severity `0.295` is below the `0.350` proof threshold.\n\n**Severity `0.295`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/cd7f92ed-1f9d-460d-98bb-c4317aa8d105#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 9542d25a…4700` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/cd7f92ed-1f9d-460d-98bb-c4317aa8d105#suppress)",
+        "line": 45,
+        "side": "RIGHT",
+        "start_line": 43,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/workers/webhooks.py",
+        "body": "**`proof_status: proven`** · severity **`0.590`** high\n\nThe retry loop only stops on 2xx (line 14); an endpoint that returns 410 is retried with backoff indefinitely and the queue for that tenant never drains.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `ad12b5b` | `1 passed in 0.41s` |\n| head | `6381fd5` | `1 failed in 0.43s` |\n\n<details><summary>terminal output at head <code>6381fd5</code></summary>\n\n    E       assert 25 == 1\n    E        +  where 25 = attempts_for_status(410)\n    tests/test_repro_c60e37.py:10: AssertionError\n    1 failed in 0.43s\n\n</details>\n\n**Severity `0.590`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bfae553c-b4ad-4faf-9ad3-b61f1cc56a16#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint c5fb907b…a3fe` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bfae553c-b4ad-4faf-9ad3-b61f1cc56a16#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 17,
+        "side": "RIGHT",
+        "start_line": 14,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=c54cb93c-ca9d-4862-b24a-a417399b3d64"
+}

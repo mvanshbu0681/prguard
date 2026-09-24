@@ -1,0 +1,196 @@
+{
+  "review_id": "d7afa3f4-2cbd-4cf8-a846-c46b44620b76",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4776,
+    "title": "Retry idempotent charge creation on gateway timeouts",
+    "author": "kwame-a",
+    "head_sha": "a71e47da57c9fe534f2e60311202af574900e263",
+    "base_sha": "3f7fdaa27523049a5b7e8858b78490cf2dfc9a4f",
+    "url": "https://github.com/acme/checkout-service/pull/4776"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2499355414,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 1,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 2,
+    "published": 1,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.9218,
+    "input_tokens": 74888,
+    "output_tokens": 35168,
+    "cache_read_tokens": 190539
+  },
+  "timing": {
+    "queued_at": "2026-08-20T15:02:30.002075Z",
+    "started_at": "2026-08-20T15:02:31.265096Z",
+    "finished_at": "2026-08-20T15:03:01.847096Z",
+    "duration_seconds": 30.582
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "c49f6143-f3de-4ee6-a754-96baf3a05654",
+      "review_id": "d7afa3f4-2cbd-4cf8-a846-c46b44620b76",
+      "fingerprint": "03d0d4f9c372b4574336467ea0c4a2c81adc2bb8900aac23fe231180916a028a",
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "unbounded_backoff",
+      "title": "Cap the retry backoff in _backoff(); the twelfth attempt sleeps for 34 minutes",
+      "body_markdown": "`_backoff()` returns `0.5 * 2 ** attempt` seconds with no ceiling (line 33). `MAX_ATTEMPTS` comes from config, and at the configured 12 the last sleep is 2048 seconds, held on the request thread that is serving the checkout.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 33,
+        "end_line": 34,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/retry.py::_backoff"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.4,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × churn 0.40 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "file_level",
+        "delivered_line": 33,
+        "github_comment_id": 2320379403
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T15:02:59.370496Z"
+    },
+    {
+      "id": "a93b83cb-97fa-4084-8009-ce92e7a65e5c",
+      "review_id": "d7afa3f4-2cbd-4cf8-a846-c46b44620b76",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_docstring",
+      "title": "Document what `create_charge_with_retry()` returns when nothing matches.",
+      "body_markdown": "`create_charge_with_retry()` has no docstring and two different empty results.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 11,
+        "end_line": 13,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T15:02:59.371896Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#4776` in 30.6s · [full run ↗](https://prguard.acme.internal/runs/d7afa3f4-2cbd-4cf8-a846-c46b44620b76)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 at file level. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "a71e47da57c9fe534f2e60311202af574900e263",
+    "comments": [
+      {
+        "path": "app/billing/retry.py",
+        "body": "> File-level comment. The issue is at `app/billing/retry.py:33-34`.\n\n**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`_backoff()` returns `0.5 * 2 ** attempt` seconds with no ceiling (line 33). `MAX_ATTEMPTS` comes from config, and at the configured 12 the last sleep is 2048 seconds, held on the request thread that is serving the checkout.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.040`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c49f6143-f3de-4ee6-a754-96baf3a05654#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 03d0d4f9…028a` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c49f6143-f3de-4ee6-a754-96baf3a05654#suppress)",
+        "subject_type": "file"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=d7afa3f4-2cbd-4cf8-a846-c46b44620b76"
+}

@@ -1,0 +1,235 @@
+{
+  "review_id": "42507a60-eddb-485c-9f59-362c2ec61ccf",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "infra-terraform",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 92,
+    "title": "Deploy role for the staging pipeline",
+    "author": "kwame-a",
+    "head_sha": "6831526496cca81652f290ae35141571d4856c4c",
+    "base_sha": "ff10fa948dc86fe87560bfe1e0011959b97f2a11",
+    "url": "https://github.com/acme/infra-terraform/pull/92"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "neutral",
+    "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
+    "delivery": "dry_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "degraded",
+    "github_review_id": null,
+    "event": "COMMENT",
+    "comments_posted": 0,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 2,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 0,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0146,
+    "input_tokens": 94226,
+    "output_tokens": 35677,
+    "cache_read_tokens": 246972
+  },
+  "timing": {
+    "queued_at": "2026-09-21T13:10:53.550337Z",
+    "started_at": "2026-09-21T13:10:53.869846Z",
+    "finished_at": "2026-09-21T13:11:21.360846Z",
+    "duration_seconds": 27.491
+  },
+  "degradations": [
+    "review_not_posted"
+  ],
+  "findings": [
+    {
+      "id": "477c7826-8ab4-48bc-b0dc-ca9a151ca252",
+      "review_id": "42507a60-eddb-485c-9f59-362c2ec61ccf",
+      "fingerprint": "d15457d982c897f36f3ce234d1b5722651a91bd186c6216864dd48337cc62267",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "oidc_trust_too_broad",
+      "title": "The deploy role trusts tokens from every repository in the organisation",
+      "body_markdown": "The trust condition matches `repo:acme/*` (line 33); any repository's workflow can assume the role.",
+      "location": {
+        "file_path": "terraform/iam_ci.tf",
+        "start_line": 33,
+        "end_line": 36,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/iam_ci.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.475,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × untested × unproven",
+        "llm_severity_hint": "high",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 36,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "42507a60-eddb-485c-9f59-362c2ec61ccf",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T13:11:19.600646Z"
+    },
+    {
+      "id": "989a6476-98e1-43d6-b007-c336d2216f45",
+      "review_id": "42507a60-eddb-485c-9f59-362c2ec61ccf",
+      "fingerprint": "f64aac36bbb2d764a4e8d68ea782ae5b83b7f2e4f4f7a62e36276507ace6c372",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "wildcard_iam_action",
+      "title": "The CI deploy role is granted ecs:* on every resource",
+      "body_markdown": "`Action = \"ecs:*\"` with `Resource = \"*\"` (line 18) lets the staging deploy job modify production services in the same account.",
+      "location": {
+        "file_path": "terraform/iam_ci.tf",
+        "start_line": 18,
+        "end_line": 21,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/iam_ci.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.475,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × untested × unproven",
+        "llm_severity_hint": "critical",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 21,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "42507a60-eddb-485c-9f59-362c2ec61ccf",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T13:11:19.602046Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#92` in 27.5s · [full run ↗](https://prguard.acme.internal/runs/42507a60-eddb-485c-9f59-362c2ec61ccf)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "6831526496cca81652f290ae35141571d4856c4c",
+    "comments": [
+      {
+        "path": "terraform/iam_ci.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.475`** medium\n\nThe trust condition matches `repo:acme/*` (line 33); any repository's workflow can assume the role.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/iam_ci.tf` is not Python.\n\n**Severity `0.475`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/477c7826-8ab4-48bc-b0dc-ca9a151ca252#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint d15457d9…2267` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/477c7826-8ab4-48bc-b0dc-ca9a151ca252#suppress)",
+        "line": 36,
+        "side": "RIGHT",
+        "start_line": 33,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "terraform/iam_ci.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.475`** medium\n\n`Action = \"ecs:*\"` with `Resource = \"*\"` (line 18) lets the staging deploy job modify production services in the same account.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/iam_ci.tf` is not Python.\n\n**Severity `0.475`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/989a6476-98e1-43d6-b007-c336d2216f45#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint f64aac36…c372` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/989a6476-98e1-43d6-b007-c336d2216f45#suppress)",
+        "line": 21,
+        "side": "RIGHT",
+        "start_line": 18,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=42507a60-eddb-485c-9f59-362c2ec61ccf"
+}

@@ -1,0 +1,329 @@
+{
+  "review_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 54,
+    "title": "Batch SMS sends through Twilio",
+    "author": "yuki-t",
+    "head_sha": "8f25d90530bd2fc7fc87f75a55f9e1db5191af75",
+    "base_sha": "028747254ecd6998adcf0a12257fe0ab00f079ef",
+    "url": "https://github.com/acme/notifications/pull/54"
+  },
+  "risk_tier": "standard",
+  "context": {
+    "files_changed": 3,
+    "files_reviewed": 3,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2137694861,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 1,
+    "suppressed": 1,
+    "dropped": 2,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.7964,
+    "input_tokens": 57809,
+    "output_tokens": 33044,
+    "cache_read_tokens": 93904
+  },
+  "timing": {
+    "queued_at": "2026-08-23T10:15:12.084526Z",
+    "started_at": "2026-08-23T10:15:13.110395Z",
+    "finished_at": "2026-08-23T10:15:36.697395Z",
+    "duration_seconds": 23.587
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "157a8bc2-8eea-4060-9654-ca1ee817beb2",
+      "review_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+      "fingerprint": "438a76d0439fdf5f566c3f8c1c61cd5d7550c88720700a0282c097405ecb7e1d",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "missing_template_variable",
+      "title": "render_sms() raises KeyError when a template variable is missing from the context",
+      "body_markdown": "`template.format(**context)` (line 42) fails the whole batch for one malformed message.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 42,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/providers/sms.py::render_sms"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.285,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.2,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × churn 0.20 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 44,
+        "github_comment_id": 2600816848
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-23T10:15:34.366995Z"
+    },
+    {
+      "id": "38522116-b6a4-468e-9b35-972e14de8cd6",
+      "review_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+      "fingerprint": "95e67985a66fb87e83dc866a51c90939e52e9f12c2a7c176314b762762a57875",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "chunk_boundary",
+      "title": "_chunk() drops the last message when the batch is a multiple of 50",
+      "body_markdown": "`range(0, len(messages) - 1, size)` (line 30) stops one short, so a batch of exactly 100 messages sends 99.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 30,
+        "end_line": 32,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/providers/sms.py::_chunk"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.285,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.2,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × churn 0.20 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 32,
+        "github_comment_id": 2597152041
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "4c8c8a88-133d-49d3-bfec-43ea012e7276",
+        "scope": "line",
+        "reason": "The upstream scheduler sends batches of 49 until the queue migration lands at the end of August; revisit then.",
+        "created_by": "yuki-t",
+        "expires_at": "2026-09-01T00:00:00Z"
+      },
+      "created_at": "2026-08-23T10:15:34.368395Z"
+    },
+    {
+      "id": "6b1cbb83-a412-4867-86f4-f6b2682b0320",
+      "review_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_edge_case_test",
+      "title": "Cover the empty-input branch of `render_sms()`.",
+      "body_markdown": "`render_sms()` has no test for an empty input.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 40,
+        "end_line": 42,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-23T10:15:34.369795Z"
+    },
+    {
+      "id": "fcf06adb-a114-4461-be99-10156bf57ce1",
+      "review_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unvalidated_input",
+      "title": "Validate the argument to `_client()` before it is used.",
+      "body_markdown": "`_client()` passes its argument on without checking its shape.",
+      "location": {
+        "file_path": "app/providers/sms.py",
+        "start_line": 53,
+        "end_line": 55,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-23T10:15:34.371195Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#54` in 23.6s · [full run ↗](https://prguard.acme.internal/runs/3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "8f25d90530bd2fc7fc87f75a55f9e1db5191af75",
+    "comments": [
+      {
+        "path": "app/providers/sms.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.285`** low\n\n`template.format(**context)` (line 42) fails the whole batch for one malformed message.\n\n**Proof** — not attempted: severity `0.285` is below the `0.350` proof threshold.\n\n**Severity `0.285`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/157a8bc2-8eea-4060-9654-ca1ee817beb2#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 438a76d0…7e1d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/157a8bc2-8eea-4060-9654-ca1ee817beb2#suppress)",
+        "line": 44,
+        "side": "RIGHT",
+        "start_line": 42,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/providers/sms.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.285`** low\n\n`range(0, len(messages) - 1, size)` (line 30) stops one short, so a batch of exactly 100 messages sends 99.\n\n**Proof** — not attempted: severity `0.285` is below the `0.350` proof threshold.\n\n**Severity `0.285`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/38522116-b6a4-468e-9b35-972e14de8cd6#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 95e67985…7875` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/38522116-b6a4-468e-9b35-972e14de8cd6#suppress)",
+        "line": 32,
+        "side": "RIGHT",
+        "start_line": 30,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0"
+}

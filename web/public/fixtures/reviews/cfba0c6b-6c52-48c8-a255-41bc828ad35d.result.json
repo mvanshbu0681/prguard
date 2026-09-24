@@ -1,0 +1,361 @@
+{
+  "review_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 65,
+    "title": "Group digest emails by topic",
+    "author": "yuki-t",
+    "head_sha": "beb0d1ed5277ece114ec8666796eabae51ac7b7d",
+    "base_sha": "bcdf9fcdf91bca1d5823301fdc1063e5ca44ffbb",
+    "url": "https://github.com/acme/notifications/pull/65"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "neutral",
+    "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2799534471,
+    "event": "COMMENT",
+    "comments_posted": 3,
+    "ladder_breakdown": {
+      "inline_exact": 3,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 3,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0762,
+    "input_tokens": 95738,
+    "output_tokens": 36777,
+    "cache_read_tokens": 228390
+  },
+  "timing": {
+    "queued_at": "2026-09-09T11:10:59.513796Z",
+    "started_at": "2026-09-09T11:10:59.797930Z",
+    "finished_at": "2026-09-09T11:11:29.034930Z",
+    "duration_seconds": 29.237
+  },
+  "degradations": [
+    "proof_skipped_no_env"
+  ],
+  "findings": [
+    {
+      "id": "ba741c7a-7b34-4b58-99f0-8f4d61d0e951",
+      "review_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+      "fingerprint": "b4c250fb25338d055c0ff9cb26a4e02538cb9574c80170e761c86bd410894440",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unpluralised_subject",
+      "title": "The digest subject reads \"1 updates\"",
+      "body_markdown": "The subject is built with `f\"{n} updates\"`-style formatting (line 47) and no singular form.",
+      "location": {
+        "file_path": "app/workers/digest.py",
+        "start_line": 47,
+        "end_line": 49,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/workers/digest.py::send_digest"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.29,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.25,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × churn 0.25 × blast radius 0.10",
+        "llm_severity_hint": "info",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 49,
+        "github_comment_id": 2079076286
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-09T11:11:23.767530Z"
+    },
+    {
+      "id": "63b35a54-c017-4174-822b-c366fc331df3",
+      "review_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+      "fingerprint": "d53fe124486115bceba20e14aeee4e32b9ca9b075810a1de097ed8b6dbe2fdf3",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "window_in_server_timezone",
+      "title": "digest_window() computes the week in the server's timezone, not the user's",
+      "body_markdown": "`digest_window()` uses `now.date()` on a UTC timestamp (line 60), so users east of UTC get Monday's items in the previous week's digest.",
+      "location": {
+        "file_path": "app/workers/digest.py",
+        "start_line": 60,
+        "end_line": 62,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/workers/digest.py::digest_window"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.41,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.4,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.25,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "untested × reachable internally × unproven × blast radius 0.40 × churn 0.25",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "skipped_no_env",
+        "runner": "subprocess",
+        "isolation": "degraded",
+        "baseline_mode": "skipped",
+        "test_file_path": "tests/test_repro_b4e9ed.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/workers/digest.py::digest_window.\n\nClaim: the window ignores the user's timezone.\n\"\"\"\n\nfrom app.workers.digest import week_start_for\n\n\ndef test_tokyo_monday_starts_a_new_week():\n    assert week_start_for(\"2026-09-06T16:00:00+00:00\", \"Asia/Tokyo\") == \"2026-09-07\"\n",
+        "command": "",
+        "base": {
+          "exit_code": null,
+          "excerpt": null
+        },
+        "head": {
+          "exit_code": null,
+          "excerpt": null
+        },
+        "duration_ms": 0,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 62,
+        "github_comment_id": 2342472159
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-09T11:11:23.768930Z"
+    },
+    {
+      "id": "bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d",
+      "review_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+      "fingerprint": "5dd6992ea4d0cd366f516c9983ccae24914961fb9891c42ecfbacbbf3458adb3",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "empty_section_rendered",
+      "title": "_group_by_topic() keeps topics with no items, which render as empty headings",
+      "body_markdown": "Topics are pre-seeded with empty lists (line 32) and never filtered.",
+      "location": {
+        "file_path": "app/workers/digest.py",
+        "start_line": 32,
+        "end_line": 34,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/workers/digest.py::_group_by_topic"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.215,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.0,
+          "churn": 0.25,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × unproven × churn 0.25 × blast radius 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 34,
+        "github_comment_id": 2291134406
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-09T11:11:23.770330Z"
+    },
+    {
+      "id": "8f1e7bf8-730f-41a3-b7b5-4c51636afc66",
+      "review_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_return_annotation",
+      "title": "Annotate the return type of `send_digest()`.",
+      "body_markdown": "`send_digest()` is the only function in `app/workers/digest.py` without a return annotation.",
+      "location": {
+        "file_path": "app/workers/digest.py",
+        "start_line": 45,
+        "end_line": 47,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-09T11:11:23.771730Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#65` in 29.2s · [full run ↗](https://prguard.acme.internal/runs/cfba0c6b-6c52-48c8-a255-41bc828ad35d)\n\n**Gate: neutral** — no sandbox was available to run a repro test, so nothing could be proven and no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "beb0d1ed5277ece114ec8666796eabae51ac7b7d",
+    "comments": [
+      {
+        "path": "app/workers/digest.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.290`** low\n\nThe subject is built with `f\"{n} updates\"`-style formatting (line 47) and no singular form.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.290`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/ba741c7a-7b34-4b58-99f0-8f4d61d0e951#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint b4c250fb…4440` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/ba741c7a-7b34-4b58-99f0-8f4d61d0e951#suppress)",
+        "line": 49,
+        "side": "RIGHT",
+        "start_line": 47,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/workers/digest.py",
+        "body": "**`proof_status: skipped_no_env`** · severity **`0.410`** medium\n\n`digest_window()` uses `now.date()` on a UTC timestamp (line 60), so users east of UTC get Monday's items in the previous week's digest.\n\n**Proof** — skipped: no sandbox was available for this run, so nothing was executed.\n\n**Severity `0.410`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/63b35a54-c017-4174-822b-c366fc331df3#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint d53fe124…fdf3` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/63b35a54-c017-4174-822b-c366fc331df3#suppress)",
+        "line": 62,
+        "side": "RIGHT",
+        "start_line": 60,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/workers/digest.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.215`** low\n\nTopics are pre-seeded with empty lists (line 32) and never filtered.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.215`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.025`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 5dd6992e…adb3` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d#suppress)",
+        "line": 34,
+        "side": "RIGHT",
+        "start_line": 32,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=cfba0c6b-6c52-48c8-a255-41bc828ad35d"
+}

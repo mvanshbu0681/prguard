@@ -1,0 +1,449 @@
+{
+  "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4776,
+    "title": "Retry idempotent charge creation on gateway timeouts",
+    "author": "kwame-a",
+    "head_sha": "a71e47da57c9fe534f2e60311202af574900e263",
+    "base_sha": "3f7fdaa27523049a5b7e8858b78490cf2dfc9a4f",
+    "url": "https://github.com/acme/checkout-service/pull/4776"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": [
+      "9140c254-d3f4-4e00-a09f-e2536f58039b"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2851541071,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 1
+    }
+  },
+  "counts": {
+    "proposed": 6,
+    "published": 3,
+    "suppressed": 0,
+    "dropped": 3,
+    "disproven": 0,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 1.0335,
+    "input_tokens": 70307,
+    "output_tokens": 40669,
+    "cache_read_tokens": 158415
+  },
+  "timing": {
+    "queued_at": "2026-08-20T10:14:02.241643Z",
+    "started_at": "2026-08-20T10:14:02.751998Z",
+    "finished_at": "2026-08-20T10:14:34.986998Z",
+    "duration_seconds": 32.235
+  },
+  "degradations": [
+    "review_422_demoted"
+  ],
+  "findings": [
+    {
+      "id": "d5e0c567-c113-4291-b9f8-7ecca5a5fc5f",
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "fingerprint": "b99e3b9de8a2e078f083fc2c67842e3395ab5e5c4f20dcd319d8cfb54eb5ff7d",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unnamed_constant",
+      "title": "Name the retry limit in create_charge_with_retry() instead of the literal 3",
+      "body_markdown": "The loop bound `3` (line 13) is the same limit `_is_retryable()` reads from config.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 13,
+        "end_line": 14,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/retry.py::create_charge_with_retry"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.6,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.4,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.4,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × file tested, symbol not × unproven × blast radius 0.40 × churn 0.40",
+        "llm_severity_hint": "info",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 14,
+        "github_comment_id": 2198261337
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T10:14:27.540798Z"
+    },
+    {
+      "id": "9140c254-d3f4-4e00-a09f-e2536f58039b",
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "fingerprint": "2fbed5db1deb8e19fd83cea589c84e64c6625593908a4f027386865a8cab2320",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "idempotency_key_regenerated",
+      "title": "Each retry sends a new idempotency key, so a timed-out charge can be taken twice",
+      "body_markdown": "`create_charge_with_retry()` builds the idempotency key inside the retry loop (line 15), so every attempt sends a different one. When the gateway times out after it has already created the charge, the retry creates a second charge and the customer pays twice for one order.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 15,
+        "end_line": 18,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/retry.py::create_charge_with_retry"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.675,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.4,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.4,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × proven × reachable internally × file tested, symbol not × blast radius 0.40 × churn 0.40",
+        "llm_severity_hint": "critical",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_58a651.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/billing/retry.py::create_charge_with_retry.\n\nClaim: each retry sends a new idempotency key.\n\"\"\"\n\nfrom app.billing.retry import create_charge_with_retry\n\n\nclass TimesOutOnce:\n    \"\"\"Times out on the first call after recording it, as the gateway does.\"\"\"\n\n    def __init__(self):\n        self.keys = []\n\n    def create_charge(self, params, idempotency_key):\n        self.keys.append(idempotency_key)\n        if len(self.keys) == 1:\n            raise TimeoutError(\"gateway read timeout\")\n        return {\"id\": \"ch_repro_0001\"}\n\n\ndef test_retry_reuses_the_idempotency_key():\n    gateway = TimesOutOnce()\n    create_charge_with_retry({\"amount_minor\": 1200, \"currency\": \"usd\"}, client=gateway)\n    first, second = gateway.keys\n    assert first == second\n",
+        "command": "pytest tests/test_repro_58a651.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.44s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____________________ test_retry_reuses_the_idempotency_key _____________________\n\n    def test_retry_reuses_the_idempotency_key():\n        gateway = TimesOutOnce()\n        create_charge_with_retry({\"amount_minor\": 1200, \"currency\": \"usd\"}, client=gateway)\n        first, second = gateway.keys\n>       assert first == second\nE       AssertionError: assert 'idem_4f1c9a2e' == 'idem_b7d3e016'\nE         \nE         - idem_b7d3e016\nE         + idem_4f1c9a2e\n\ntests/test_repro_58a651.py:26: AssertionError\n1 failed in 0.41s"
+        },
+        "duration_ms": 1548,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 18,
+        "github_comment_id": 2527171792
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T10:14:27.542198Z"
+    },
+    {
+      "id": "be69e6a3-e8de-495d-ba63-c073c56b1e46",
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "fingerprint": "03d0d4f9c372b4574336467ea0c4a2c81adc2bb8900aac23fe231180916a028a",
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "unbounded_backoff",
+      "title": "Cap the retry backoff in _backoff(); the twelfth attempt sleeps for 34 minutes",
+      "body_markdown": "`_backoff()` returns `0.5 * 2 ** attempt` seconds with no ceiling (line 33). `MAX_ATTEMPTS` comes from config, and at the configured 12 the last sleep is 2048 seconds, held on the request thread that is serving the checkout.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 33,
+        "end_line": 34,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/retry.py::_backoff"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.4,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × churn 0.40 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "summary_only",
+        "delivered_line": 33,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T10:14:27.543598Z"
+    },
+    {
+      "id": "c827262e-7cc7-4c42-9e54-03b1d337dc72",
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unclear_function_name",
+      "title": "Rename `record_attempt()` so the name says it has a side effect.",
+      "body_markdown": "`record_attempt()` writes as well as reads; the name reads like a pure lookup.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 52,
+        "end_line": 54,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T10:14:27.544998Z"
+    },
+    {
+      "id": "bf6d5843-d1b9-4b0b-bd1c-fbcfbf9b937c",
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `_is_retryable()` against two callers running it at once.",
+      "body_markdown": "Two workers running `_is_retryable()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 41,
+        "end_line": 43,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T10:14:27.546398Z"
+    },
+    {
+      "id": "6add8e6e-54a7-4adc-bd61-f0a968407ccc",
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_regression_test",
+      "title": "Add a regression test for `create_charge_with_retry()`.",
+      "body_markdown": "No test exercises the path in `create_charge_with_retry()` that this change breaks.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 15,
+        "end_line": 18,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-20T10:14:27.547798Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#4776` in 32.2s · [full run ↗](https://prguard.acme.internal/runs/172dadd9-c0c5-4bba-9919-a0af7023b7d1)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 6 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line, 1 in the table below. **0 silently dropped.**\n\n**Findings not attachable to the diff**\n\n| finding | where | severity | proof_status |\n|---|---|---|---|\n| Cap the retry backoff in _backoff(); the twelfth attempt sleeps for 34 minutes | `app/billing/retry.py:33-34` | `0.480` medium | `not_attempted` |\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "da8bc3328aeb7bb5131aa091c90e6d3c8a342fdd",
+    "comments": [
+      {
+        "path": "app/billing/retry.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.600`** high\n\nThe loop bound `3` (line 13) is the same limit `_is_retryable()` reads from config.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.600`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.040`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d5e0c567-c113-4291-b9f8-7ecca5a5fc5f#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint b99e3b9d…ff7d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d5e0c567-c113-4291-b9f8-7ecca5a5fc5f#suppress)",
+        "line": 14,
+        "side": "RIGHT",
+        "start_line": 13,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/billing/retry.py",
+        "body": "**`proof_status: proven`** · severity **`0.675`** high\n\n`create_charge_with_retry()` builds the idempotency key inside the retry loop (line 15), so every attempt sends a different one. When the gateway times out after it has already created the charge, the retry creates a second charge and the customer pays twice for one order.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `3f7fdaa` | `1 passed in 0.44s` |\n| head | `da8bc33` | `1 failed in 0.41s` |\n\n<details><summary>terminal output at head <code>da8bc33</code></summary>\n\n    E       AssertionError: assert 'idem_4f1c9a2e' == 'idem_b7d3e016'\n    E         \n    E         - idem_b7d3e016\n    E         + idem_4f1c9a2e\n    tests/test_repro_58a651.py:26: AssertionError\n    1 failed in 0.41s\n\n</details>\n\n**Severity `0.675`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.040`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/9140c254-d3f4-4e00-a09f-e2536f58039b#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. Two other findings in this review are advisory and do not block.\n\n`fingerprint 2fbed5db…2320` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/9140c254-d3f4-4e00-a09f-e2536f58039b#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 18,
+        "side": "RIGHT",
+        "start_line": 15,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=172dadd9-c0c5-4bba-9919-a0af7023b7d1"
+}
