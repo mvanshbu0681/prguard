@@ -1,0 +1,141 @@
+/* OWNER: t4 (wave 2). ProofBench's own visuals (motion spec §4.6.2, design-system §5.7).
+   Unlayered on purpose: it must beat the Tailwind utility classes wave-1 components ship
+   with (ProofChip's PROOF_CHIP colours, TerminalBlock's own rules) for the small number of
+   states that are ours to drive — see docs/design/02-design-system.md §4 cascade note
+   ("unlayered CSS beats every layer"). Everything here is gated behind [data-pb-anim]: with
+   that attribute absent (the static frame, and a settled replay after its hold) NONE of
+   these rules apply, so the DOM under this file always renders as its plain, un-animated,
+   fully-lit end state — the frame-0 guarantee (motion spec §0 rule 1). */
+
+.root {
+  position: relative;
+}
+
+/* -------------------------------------------------------------------------
+   The scan line. The global .scan class (src/styles/motion.css) owns the
+   travel keyframes and the 0-height rest state; this file only paints it.
+   ------------------------------------------------------------------------- */
+.scanLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(to bottom, var(--signal-hi) 0 2px, color-mix(in oklch, var(--signal-hi) 35%, transparent) 2px 26px, transparent 26px);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* -------------------------------------------------------------------------
+   Pane row groups — TerminalBlock's stable DOM contract
+   (.prg-terminal__group[data-row-group]). Dim to 0.35, then light each group
+   as its stage arrives; --dur-1 (120ms) on --ease-instrument (motion §4.6.2).
+   ------------------------------------------------------------------------- */
+.root[data-pb-anim] .paneA :global(.prg-terminal__group) {
+  opacity: 0.35;
+  transition: opacity var(--dur-1) var(--ease-instrument);
+}
+.root[data-pb-anim][data-pb-a0] .paneA :global(.prg-terminal__group[data-row-group="0"]) {
+  opacity: 1;
+}
+.root[data-pb-anim][data-pb-a1] .paneA :global(.prg-terminal__group[data-row-group="1"]) {
+  opacity: 1;
+}
+.root[data-pb-anim][data-pb-a2] .paneA :global(.prg-terminal__group[data-row-group="2"]) {
+  opacity: 1;
+}
+
+.root[data-pb-anim] .paneB :global(.prg-terminal__group) {
+  opacity: 0.35;
+  transition: opacity var(--dur-1) var(--ease-instrument);
+}
+.root[data-pb-anim][data-pb-b0] .paneB :global(.prg-terminal__group[data-row-group="0"]) {
+  opacity: 1;
+}
+.root[data-pb-anim][data-pb-b1] .paneB :global(.prg-terminal__group[data-row-group="1"]) {
+  opacity: 1;
+}
+.root[data-pb-anim][data-pb-b2] .paneB :global(.prg-terminal__group[data-row-group="2"]) {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------------------
+   Pane rails — TerminalBlock already renders `.prg-terminal__rail` with
+   `transform-origin: top` for exactly this (its own header comment says so).
+   Collapsed to scaleY(0) until the stage arrives, then wiped in over --dur-4
+   (420ms) on --ease-instrument.
+   ------------------------------------------------------------------------- */
+.root[data-pb-anim] .paneA :global(.prg-terminal__rail) {
+  transform: scaleY(0);
+}
+.root[data-pb-anim][data-pb-rail-a] .paneA :global(.prg-terminal__rail) {
+  transform: scaleY(1);
+  transition: transform var(--dur-4) var(--ease-instrument);
+}
+.root[data-pb-anim] .paneB :global(.prg-terminal__rail) {
+  transform: scaleY(0);
+}
+.root[data-pb-anim][data-pb-rail-b] .paneB :global(.prg-terminal__rail) {
+  transform: scaleY(1);
+  transition: transform var(--dur-4) var(--ease-instrument);
+}
+
+/* -------------------------------------------------------------------------
+   The failing pane's run-summary line ("1 failed in 0.39s") — TerminalBlock
+   marks it data-mark="summary" (PYTEST_TONES). A 1px rule under it, scaleX
+   0 -> 1 from the left, --dur-3 (240ms) on --ease-instrument.
+   ------------------------------------------------------------------------- */
+.failPane :global([data-mark~="summary"]) {
+  display: inline-block;
+  transform-origin: left;
+}
+.root[data-pb-anim] .failPane :global([data-mark~="summary"]) {
+  border-bottom: 1px solid var(--alarm);
+  transform: scaleX(0);
+}
+.root[data-pb-anim][data-pb-underline] .failPane :global([data-mark~="summary"]) {
+  transform: scaleX(1);
+  transition: transform var(--dur-3) var(--ease-instrument);
+}
+
+/* -------------------------------------------------------------------------
+   The header proof chip, pre-stamp: ProofChip's own span carries
+   data-slot="proof-chip" (src/components/badges/proof-chip.tsx — stable, it
+   is how the badge's own tests find it). Neutral until the stamp stage: the
+   design's "flips --ink-8/--rule-2 -> solid --signal" (motion §4.6.2 t=2200).
+   The colour swap itself is instant (no transition): the 0ms verdict rule.
+   ------------------------------------------------------------------------- */
+.root[data-pb-anim]:not([data-pb-stamped]) .chip :global([data-slot="proof-chip"]) {
+  background-color: var(--ink-8);
+  border-color: var(--rule-2);
+  color: var(--text-dim);
+}
+
+/* -------------------------------------------------------------------------
+   Verdict rail: the left clause is a 0ms flip at the stamp stage (no fade —
+   a state is a value, never a transition, motion §2.5). The right clause
+   (the consequence) fades in 160ms later (--dur-1... consequence keeps its
+   own opacity transition below since it lands on a duration off this file's
+   grid: --dur-1 = 120ms is close enough for the reveal per motion's 0/120/240
+   stagger family; see the component for the literal 160ms motion asks for).
+   ------------------------------------------------------------------------- */
+.verdictLeft {
+  visibility: hidden;
+}
+.root[data-pb-anim][data-pb-stamped] .verdictLeft {
+  visibility: visible;
+}
+.root:not([data-pb-anim]) .verdictLeft {
+  visibility: visible;
+}
+
+.verdictRight {
+  opacity: 0;
+}
+.root[data-pb-anim][data-pb-consequence] .verdictRight {
+  opacity: 1;
+  transition: opacity 160ms var(--ease-instrument);
+}
+.root:not([data-pb-anim]) .verdictRight {
+  opacity: 1;
+}
