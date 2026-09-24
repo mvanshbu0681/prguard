@@ -27,6 +27,7 @@ import styles from "./bench.module.css";
 import {
   CONSEQUENCE_TEXT_CLASS,
   consequence,
+  DETAIL_PANE_VISIBLE_LINES,
   failingPane,
   hasExecution,
   paneBackground,
@@ -35,6 +36,7 @@ import {
   railTone,
   runnerIsolation,
   sha7,
+  tailLines,
   verdictLeft,
 } from "./format";
 import type { ProofBenchProps } from "./props";
@@ -222,7 +224,11 @@ export function ProofBench(props: ProofBenchProps) {
             ) : null}
             <div className={cn(styles.paneA, fail === "base" && styles.failPane)}>
               <TerminalBlock
-                text={paneText(base7, proof.command, proof.base)}
+                text={
+                  density === "detail"
+                    ? tailLines(paneText(base7, proof.command, proof.base), DETAIL_PANE_VISIBLE_LINES)
+                    : paneText(base7, proof.command, proof.base)
+                }
                 label={base7 ? `base ${base7}` : "base"}
                 highlight={PYTEST_TONES}
                 rail={railTone(baseTone)}
@@ -234,7 +240,11 @@ export function ProofBench(props: ProofBenchProps) {
             <Seam headShort={head7} />
             <div className={cn(styles.paneB, fail === "head" && styles.failPane)}>
               <TerminalBlock
-                text={paneText(head7, proof.command, proof.head)}
+                text={
+                  density === "detail"
+                    ? tailLines(paneText(head7, proof.command, proof.head), DETAIL_PANE_VISIBLE_LINES)
+                    : paneText(head7, proof.command, proof.head)
+                }
                 label={head7 ? `head ${head7}` : "head"}
                 highlight={PYTEST_TONES}
                 rail={railTone(headTone)}

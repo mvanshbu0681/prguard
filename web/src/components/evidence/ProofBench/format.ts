@@ -118,3 +118,33 @@ export function paneText(shaShort: string | null, command: string | null | undef
 export function hasExecution(proof: Pick<FindingProof, "base" | "head" | "command">): boolean {
   return Boolean(proof.base?.excerpt && proof.head?.excerpt && proof.command);
 }
+
+/**
+ * density="detail" panes are a fixed 210px (design §01 "TERMINAL PANE A/B"). That height is
+ * `.prg-terminal__pre`'s own contract (src/styles/code.css): 8px top+bottom padding
+ * (`--sp-2`) around 22px lines (`--lh-terminal`, the desktop terminal line-height — the
+ * narrower figure of the two breakpoints code.css defines, so this budget is the safe one
+ * for the 20px/mobile line-height too). (210 - 16) / 22 = 8.8, so 8 lines are the most a
+ * detail-density pane can show with none of them clipped by the viewport's own scroll.
+ *
+ * A real capture (public/fixtures/reviews/4e8b1d0c…: a 13-line command+excerpt) is longer
+ * than that, and the tail — the assertion, the `E` line, the run summary — is what a viewer
+ * must see without touching the pane (motion spec §0 rule 1: the static frame is the whole
+ * claim). Rather than truncating with an ellipsis (which would cut the summary line itself
+ * on a long enough capture) this keeps the last N lines: on every captured pytest excerpt
+ * the failure and its summary sit at the end, so the tail is the evidence that matters.
+ */
+export const DETAIL_PANE_VISIBLE_LINES = 8;
+
+/**
+ * Keep only the last `maxLines` lines of `text`, unchanged when it already fits. Used to
+ * pre-fit a detail-density pane's content instead of letting the viewport's own scroll hide
+ * the tail on load (the pane is never programmatically scrolled: this is a static, SSR-safe
+ * substitute for that).
+ */
+export function tailLines(text: string, maxLines: number): string {
+  if (!text) return text;
+  const lines = text.split("\n");
+  if (lines.length <= maxLines) return text;
+  return lines.slice(lines.length - maxLines).join("\n");
+}

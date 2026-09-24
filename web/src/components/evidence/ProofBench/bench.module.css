@@ -105,6 +105,16 @@
   transform: scaleX(1);
   transition: transform var(--dur-3) var(--ease-instrument);
 }
+/* The static frame (mode="static", density="compact", reduced motion, and a replay once its
+   hold has ended and [data-pb-anim] is gone) carries the same underline permanently, with no
+   transition — it is part of the end state the animated draw-in only ever arrives at (motion
+   spec §0 rule 1: "the designed state and the end state are the same frame"). Without this
+   rule the underline existed only while [data-pb-anim] sat on the root, so it vanished the
+   moment a replay settled or in any non-animated render. */
+.root:not([data-pb-anim]) .failPane :global([data-mark~="summary"]) {
+  border-bottom: 1px solid var(--alarm);
+  transform: scaleX(1);
+}
 
 /* -------------------------------------------------------------------------
    The header proof chip, pre-stamp: ProofChip's own span carries

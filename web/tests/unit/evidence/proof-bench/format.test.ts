@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CONSEQUENCE_TEXT_CLASS,
   consequence,
+  DETAIL_PANE_VISIBLE_LINES,
   failingPane,
   hasExecution,
   paneBackground,
@@ -11,6 +12,7 @@ import {
   railTone,
   runnerIsolation,
   sha7,
+  tailLines,
   verdictLeft,
 } from "@/components/evidence/ProofBench/format";
 import type { FindingProof } from "@/components/evidence/ProofBench/props";
@@ -151,5 +153,38 @@ describe("paneText", () => {
   });
   it("never invents a sha: omits the checkout clause when none is known", () => {
     expect(paneText(null, "pytest -q tests/test_repro_7e3f1a.py", PASS)).toBe("$ pytest -q tests/test_repro_7e3f1a.py\n.\n1 passed in 0.42s");
+  });
+});
+
+describe("tailLines — pre-fitting a fixed-height detail pane to its tail", () => {
+  it("returns text unchanged when it already fits", () => {
+    const text = "a\nb\nc";
+    expect(tailLines(text, 8)).toBe(text);
+  });
+  it("keeps exactly the last maxLines lines when text is longer", () => {
+    const text = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].join("\n");
+    expect(tailLines(text, 8)).toBe(["3", "4", "5", "6", "7", "8", "9", "10"].join("\n"));
+  });
+  it("a realistic 13-line captured pane (command + the real demo excerpt) keeps the error and summary lines", () => {
+    const text = [
+      "$ git checkout 9c2d4b1 && pytest tests/test_repro_7e3f1a.py -q -p no:cacheprovider",
+      "F                                                                        [100%]",
+      "=================================== FAILURES ===================================",
+      "______________________ test_charge_uses_account_currency _______________________",
+      "",
+      "    def test_charge_uses_account_currency():",
+      '        acct = resolve_account("acct_7f31")',
+      '>       assert charge(acct, 1200).currency == "usd"',
+      "               ^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+      "E       AttributeError: 'NoneType' object has no attribute 'currency'",
+      "",
+      "tests/test_repro_7e3f1a.py:41: AttributeError",
+      "1 failed in 0.39s",
+    ].join("\n");
+    const kept = tailLines(text, DETAIL_PANE_VISIBLE_LINES);
+    expect(kept.split("\n")).toHaveLength(DETAIL_PANE_VISIBLE_LINES);
+    expect(kept).toContain("E       AttributeError: 'NoneType' object has no attribute 'currency'");
+    expect(kept).toContain("1 failed in 0.39s");
+    expect(kept).not.toContain("git checkout");
   });
 });
