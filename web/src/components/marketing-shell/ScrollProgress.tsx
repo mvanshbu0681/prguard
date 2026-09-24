@@ -52,7 +52,7 @@ export function ScrollProgress() {
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[2px] overflow-hidden bg-transparent">
-      {/* eslint-disable-next-line react/no-danger -- static keyframes/@supports, no interpolation */}
+      {/* Static keyframes/@supports, no interpolation. */}
       <style dangerouslySetInnerHTML={{ __html: SCROLL_RAIL_CSS }} />
       <div ref={railRef} data-scroll-rail className="h-full w-full origin-left bg-signal-lo" style={{ transform: "scaleX(0)" }} />
     </div>

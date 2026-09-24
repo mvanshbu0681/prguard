@@ -18,6 +18,7 @@
 // async/server here and still read the URL (see not-found.md "If you need to
 // use Client Component hooks like usePathname ... you must fetch data on the
 // client-side instead").
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { GraphPaper, IndexLabel, ProvenanceLine } from "@/components/chrome";
 import { Lockup } from "@/components/brand";
@@ -35,9 +36,9 @@ export default function NotFound() {
         <IndexLabel as="p" index="404" category="NO SUCH ROUTE" aria-hidden="true" className="text-text-dim" />
         <p className="type-body max-w-[36ch] text-text-body">There is nothing at this path.</p>
       </div>
-      <a href="/#proof" className="link-draw type-label text-signal-text">
+      <Link href="/#proof" className="link-draw type-label text-signal-text">
         ← BACK TO THE PROOF BENCH
-      </a>
+      </Link>
       <ProvenanceLine source={`GET ${pathname || "/"} · 404`} className="mt-4" />
     </GraphPaper>
   );

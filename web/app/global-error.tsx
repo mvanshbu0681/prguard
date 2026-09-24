@@ -33,6 +33,10 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
             <button type="button" onClick={() => retry()} className="ui-btn ui-btn--ghost hover-ghost">
               TRY AGAIN
             </button>
+            {/* A plain <a>, not next/link: the root layout that provides the
+                App Router context has itself just crashed, so this page does
+                not assume that context still exists. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a href="/" className="link-draw type-label text-signal-text">
               ← BACK TO THE PROOF BENCH
             </a>

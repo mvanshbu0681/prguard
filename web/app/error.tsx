@@ -12,6 +12,7 @@
 // Next 16.3: the stable recovery prop is `retry` (`reset` still exists but
 // the docs now lead with `retry`); this file uses it.
 import { useState } from "react";
+import Link from "next/link";
 import { GraphPaper, IndexLabel, ProvenanceLine } from "@/components/chrome";
 import { Lockup } from "@/components/brand";
 import { Button } from "@/components/ui/button";
@@ -44,9 +45,9 @@ export default function Error({ error, retry }: { error: Error & { digest?: stri
         <Button type="button" variant="ghost" size="sm" onClick={() => retry()}>
           TRY AGAIN
         </Button>
-        <a href="/" className="link-draw type-label text-signal-text">
+        <Link href="/" className="link-draw type-label text-signal-text">
           ← BACK TO THE PROOF BENCH
-        </a>
+        </Link>
       </div>
       <div className="flex flex-col items-center gap-2">
         <ProvenanceLine source={requestId ? `request id ${requestId}` : "request id unavailable"} />
