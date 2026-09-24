@@ -15,12 +15,16 @@
 // construction — easing it fights the scroll input, motion §1.6).
 import { useEffect, useRef } from "react";
 
-const SCROLL_RAIL_CSS = [
-  "@keyframes prg-scroll-rail-scale{from{transform:scaleX(0)}to{transform:scaleX(1)}}",
-  "@supports (animation-timeline: scroll()) {",
-  "[data-scroll-rail]{animation:prg-scroll-rail-scale linear;animation-timeline:scroll(root block)}",
-  "}",
-].join("");
+// ONE string literal (a no-substitution template, not concatenation and not
+// an array joined at runtime): scripts/lint-motion.mjs statically parses each
+// <style dangerouslySetInnerHTML> string as its own AST node, so the
+// @supports wrapper has to be textually present, in the same node, around
+// the property it guards for the "timeline outside @supports" check to see
+// it that way.
+const SCROLL_RAIL_CSS = `@keyframes prg-scroll-rail-scale{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@supports (animation-timeline: scroll()) {
+  [data-scroll-rail]{animation:prg-scroll-rail-scale linear;animation-timeline:scroll(root block)}
+}`;
 
 export function ScrollProgress() {
   const railRef = useRef<HTMLDivElement>(null);

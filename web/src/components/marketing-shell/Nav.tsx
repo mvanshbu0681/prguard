@@ -34,7 +34,10 @@ export function Nav() {
         backdropFilter: scrolled ? "blur(16px) saturate(1.2)" : "none",
         WebkitBackdropFilter: scrolled ? "blur(16px) saturate(1.2)" : "none",
         borderBottom: `1px solid ${scrolled ? "var(--rule-1)" : "transparent"}`,
-        transitionProperty: "background-color, border-color, backdrop-filter",
+        // backdrop-filter is not in the compositor allowlist (motion §6.1: transform,
+        // opacity, clip-path, filter only) — it pops in with the border/background
+        // rather than transitioning; the 120ms flip is on the two properties allowed.
+        transitionProperty: "background-color, border-color",
         transitionDuration: "var(--dur-1)",
         transitionTimingFunction: "var(--ease-snap)",
       }}
