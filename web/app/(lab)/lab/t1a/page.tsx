@@ -189,12 +189,13 @@ export default function T1aLab() {
             <Caption>forceHover · marks 0.22, hairline --rule-2, fill unchanged</Caption>
           </div>
           <div>
-            <Exhibit index="06" category="Recent runs" density="compact" provenance="GET /v1/reviews?limit=8 → items[0]" ext padded>
+            <Exhibit index="01" category="Proof" identifier={`finding ${FINDING}`} density="compact" provenance={`${PROOF_SOURCE} · base.excerpt, head.excerpt`} padded>
               <p className="type-data text-text-body">
-                {REVIEW} <span className="text-text-dim">·</span> {ids.repository.owner}/{ids.repository.name}#{ids.pr_number}
+                base {ids.base_sha.slice(0, 7)} <span className="text-text-dim">·</span> exit 0 <span className="text-text-dim">·</span> head{" "}
+                {ids.head_sha.slice(0, 7)} <span className="text-text-dim">·</span> exit 1
               </p>
             </Exhibit>
-            <Caption>compact · 24px strip · ext provenance (plan A11: the list is fixture-only)</Caption>
+            <Caption>compact · 24px strip · still an evidence frame (a proof result), never a list of runs</Caption>
           </div>
           <div data-surface="marketing">
             <Exhibit

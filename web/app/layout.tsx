@@ -22,6 +22,12 @@ export const metadata: Metadata = {
     template: "%s — PRGuard",
     default: "PRGuard — proven, or it doesn't block",
   },
+  description:
+    "An AI code reviewer that executes its own claims. Every finding carries a repro test run at your base SHA and your head SHA. Only proven findings can block a merge.",
+  // icon.svg, favicon.ico, apple-icon.png and the OG/Twitter cards are picked up from
+  // app/ by file convention. The Safari pinned-tab mask is not, so it is declared here
+  // (brand-gaps §C; t1a review, minor 2).
+  icons: { other: [{ rel: "mask-icon", url: "/brand/icon-mask.svg", color: "#2ECEDD" }] },
 };
 
 export const viewport: Viewport = {

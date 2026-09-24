@@ -166,6 +166,12 @@ export function markGeometry(size: number, options: { crop?: MarkCrop; form?: Ma
   if (form === 'two-bars') {
     // The ≤19px form, drawn on a 16-unit grid: bars 14 × 5, gap 2, and the
     // stroke bumped to 2px (brand-gaps §A) — a 1px hollow at 16px, 2px at 32.
+    // This form is deliberately re-proportioned, not merely stripped: a hollow
+    // bar with 2px walls needs >= 5px of height, which the 24-unit grid cannot
+    // give at 16px, so the spec's own stroke rule forces the larger bars. The
+    // step at the 19/20px boundary is therefore expected; in-page marks never
+    // render below 20px (nav and footer lockups are 20px+), so the two sizes
+    // never appear together — only favicon contexts use this form.
     const u = px / 16;
     const barW = nearestWithParity(14 * u, parity, 4);
     const { barH, gap } = barsAndGap(px, 5 * u, 2 * u, 3, 1);
