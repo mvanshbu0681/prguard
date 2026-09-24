@@ -19,8 +19,9 @@ import { useStamp } from "./use-stamp";
 export type StatusBadgeProps = Omit<ComponentProps<"span">, "children"> & { status: FindingStatus };
 
 /**
- * A 1.5px dashed outline over the chip's (transparent) 1px border. The svg is inset 0.75px, so
- * a stroke centred on its edge reaches exactly the chip's outer edge; rx matches the 2px
+ * A 1.5px dashed outline over the chip's (transparent) 1px border. Absolute boxes resolve
+ * against the padding box (inside that border), so -0.25px puts the svg 0.75px in from the
+ * chip's outer edge, and a stroke centred on its edge reaches that edge exactly; rx matches the 2px
  * --radius-data corner at the stroke's centre line.
  */
 function DashedOutline() {
@@ -29,7 +30,7 @@ function DashedOutline() {
       data-slot="status-badge-outline"
       aria-hidden="true"
       focusable="false"
-      className="pointer-events-none absolute inset-[0.75px] h-[calc(100%-1.5px)] w-[calc(100%-1.5px)] overflow-visible text-status-suppressed-border"
+      className="pointer-events-none absolute inset-[-0.25px] h-[calc(100%+0.5px)] w-[calc(100%+0.5px)] overflow-visible text-status-suppressed-border"
     >
       <rect x="0" y="0" width="100%" height="100%" rx="1.25" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 2" />
     </svg>
