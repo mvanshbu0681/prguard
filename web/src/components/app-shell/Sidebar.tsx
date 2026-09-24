@@ -63,7 +63,9 @@ export function Sidebar() {
       data-app-sidebar=""
       data-collapsed={collapsed ? '' : undefined}
       className={cn(
-        'flex h-dvh shrink-0 flex-col border-r border-rule-1 bg-ink-1 transition-[width] duration-(--dur-2) ease-snap',
+        // width is not on the compositor allowlist (motion §6.1: transform, opacity, clip-path,
+        // filter only) — the rail snaps instead of tweening, same as every other 0ms state flip.
+        'flex h-dvh shrink-0 flex-col border-r border-rule-1 bg-ink-1',
         collapsed ? 'w-[52px]' : 'w-[224px]',
       )}
     >
