@@ -72,14 +72,14 @@
       "risk_tier": "standard",
       "gate_conclusion": "success",
       "counts": {
-        "proposed": 3,
-        "published": 1,
+        "proposed": 2,
+        "published": 2,
         "suppressed": 0,
-        "dropped": 2,
+        "dropped": 0,
         "disproven": 0,
         "blocking": 0
       },
-      "cost_usd_estimate": 0.8933,
+      "cost_usd_estimate": 0.8945,
       "duration_seconds": 18.783,
       "created_at": "2026-09-22T15:40:48.146665Z",
       "finished_at": "2026-09-22T15:41:07.193988Z"
@@ -409,13 +409,13 @@
       "gate_conclusion": "success",
       "counts": {
         "proposed": 3,
-        "published": 1,
+        "published": 2,
         "suppressed": 0,
-        "dropped": 2,
+        "dropped": 1,
         "disproven": 0,
         "blocking": 0
       },
-      "cost_usd_estimate": 0.8177,
+      "cost_usd_estimate": 0.8302,
       "duration_seconds": 27.877,
       "created_at": "2026-09-19T11:05:03.088236Z",
       "finished_at": "2026-09-19T11:05:32.354484Z"
@@ -604,14 +604,14 @@
       "risk_tier": "full",
       "gate_conclusion": "success",
       "counts": {
-        "proposed": 4,
+        "proposed": 3,
         "published": 1,
         "suppressed": 1,
-        "dropped": 2,
+        "dropped": 1,
         "disproven": 0,
         "blocking": 0
       },
-      "cost_usd_estimate": 1.0282,
+      "cost_usd_estimate": 1.017,
       "duration_seconds": 26.573,
       "created_at": "2026-09-16T14:10:21.421546Z",
       "finished_at": "2026-09-16T14:10:48.889017Z"
@@ -1528,14 +1528,14 @@
       "risk_tier": "full",
       "gate_conclusion": "success",
       "counts": {
-        "proposed": 5,
+        "proposed": 4,
         "published": 1,
         "suppressed": 0,
-        "dropped": 4,
+        "dropped": 3,
         "disproven": 0,
         "blocking": 0
       },
-      "cost_usd_estimate": 1.0094,
+      "cost_usd_estimate": 0.9982,
       "duration_seconds": 28.63,
       "created_at": "2026-08-31T10:05:31.047102Z",
       "finished_at": "2026-08-31T10:05:59.952859Z"
@@ -1724,14 +1724,14 @@
       "risk_tier": "standard",
       "gate_conclusion": "success",
       "counts": {
-        "proposed": 4,
+        "proposed": 3,
         "published": 1,
         "suppressed": 0,
-        "dropped": 3,
+        "dropped": 2,
         "disproven": 0,
         "blocking": 0
       },
-      "cost_usd_estimate": 0.7614,
+      "cost_usd_estimate": 0.7502,
       "duration_seconds": 23.097,
       "created_at": "2026-08-27T13:15:56.091504Z",
       "finished_at": "2026-08-27T13:16:19.447233Z"
@@ -1920,14 +1920,14 @@
       "risk_tier": "standard",
       "gate_conclusion": "success",
       "counts": {
-        "proposed": 4,
-        "published": 1,
+        "proposed": 5,
+        "published": 2,
         "suppressed": 1,
         "dropped": 2,
         "disproven": 0,
         "blocking": 0
       },
-      "cost_usd_estimate": 0.7964,
+      "cost_usd_estimate": 0.8198,
       "duration_seconds": 23.587,
       "created_at": "2026-08-23T10:15:12.084526Z",
       "finished_at": "2026-08-23T10:15:36.697395Z"

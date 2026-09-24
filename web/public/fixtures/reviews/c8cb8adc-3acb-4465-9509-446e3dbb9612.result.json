@@ -42,17 +42,17 @@
     }
   },
   "counts": {
-    "proposed": 5,
+    "proposed": 4,
     "published": 1,
     "suppressed": 0,
-    "dropped": 4,
+    "dropped": 3,
     "disproven": 0,
     "blocking": 0
   },
   "cost": {
-    "usd_estimate": 1.0094,
-    "input_tokens": 65552,
-    "output_tokens": 43181,
+    "usd_estimate": 0.9982,
+    "input_tokens": 64992,
+    "output_tokens": 42621,
     "cache_read_tokens": 158313
   },
   "timing": {
@@ -272,58 +272,11 @@
       },
       "suppression": null,
       "created_at": "2026-08-31T10:05:56.783659Z"
-    },
-    {
-      "id": "e763497b-553c-43f3-897c-e7fa47733cc0",
-      "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
-      "fingerprint": null,
-      "specialist": "tests",
-      "category": "test_integrity",
-      "rule_key": "sleep_in_test",
-      "title": "Replace the sleep in the test for `_backoff()` with a fake clock.",
-      "body_markdown": "The test for `_backoff()` sleeps for two seconds to cross a boundary.",
-      "location": {
-        "file_path": "app/billing/retry.py",
-        "start_line": 32,
-        "end_line": 34,
-        "side": "RIGHT",
-        "language": "python",
-        "symbol_path": null
-      },
-      "severity": null,
-      "proof": {
-        "status": "not_attempted",
-        "runner": null,
-        "isolation": null,
-        "baseline_mode": null,
-        "test_file_path": null,
-        "test_code": null,
-        "command": null,
-        "base": null,
-        "head": null,
-        "duration_ms": null,
-        "deps_install_ok": null
-      },
-      "status": "dropped",
-      "blocking": false,
-      "delivery": {
-        "mode": "not_delivered",
-        "delivered_line": null,
-        "github_comment_id": null
-      },
-      "history": {
-        "occurrence_count": 1,
-        "first_seen_run_id": null,
-        "previously_addressed": 0,
-        "previously_dismissed": 0
-      },
-      "suppression": null,
-      "created_at": "2026-08-31T10:05:56.785059Z"
     }
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4796` in 28.6s · [full run ↗](https://prguard.acme.internal/runs/c8cb8adc-3acb-4465-9509-446e3dbb9612)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 4 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**PRGuard** reviewed `#4796` in 28.6s · [full run ↗](https://prguard.acme.internal/runs/c8cb8adc-3acb-4465-9509-446e3dbb9612)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
     "commit_id": "7b5e21b69e35d187a6206be49acc7b9581be8ef9",
     "comments": [
       {

@@ -2511,6 +2511,20 @@ advisory("co.refund_notify_retry", "quality", "maintainability", "silent_notific
          "notify_refund() swallows the email error without logging it",
          "The bare `except` (line {start}) hides a refund confirmation that never went out.",
          "low", 0.63, internal_callers=1, file_is_tested=True, commits_90d=5)
+advisory("nt.chunk_test_weak", "tests", "test_integrity", "assertion_too_weak",
+         "tests/providers/test_sms.py", "test_chunks_by_fifty", (2, 4),
+         "Assert batch sizes in test_chunks_by_fifty(), not only the number of batches",
+         "The test sends 120 messages and checks `len(batches) == 3` (line {start}). A `_chunk()` "
+         "that drops the last message still returns three batches, so the test passes either way; "
+         "comparing `[len(b) for b in batches]` with `[50, 50, 20]` would catch it.",
+         "low", 0.71, internal_callers=0, file_is_tested=False, commits_90d=3)
+advisory("ws.placeholder_unused", "quality", "maintainability", "unreferenced_function",
+         "src/components/ProductGrid.tsx", "placeholderFor", (0, 2),
+         "placeholderFor() has no callers left; delete it or wire it into <ZoomImage>",
+         "After this change `ProductGrid` renders `<ZoomImage>`, which draws its own placeholder, "
+         "so nothing calls `placeholderFor()` (line {start}). Its test still passes, which is why "
+         "the dead branch would survive.",
+         "info", 0.64, internal_callers=0, symbol_is_tested=True, commits_90d=4)
 
 TEMPLATES = dict(T)
 
@@ -3185,6 +3199,7 @@ RUNS: tuple[RunSpec, ...] = (
         uses=(
             U("nt.render_missing_key"),
             U("nt.chunk_off_by_one"),
+            U("nt.chunk_test_weak"),
             D("ood_old_test", "app/providers/sms.py", "render_sms"),
             D("spec_input", "app/providers/sms.py", "_client"),
         ),
@@ -3357,8 +3372,8 @@ RUNS: tuple[RunSpec, ...] = (
         title="Zoom on product images", tier="full",
         uses=(
             U("ws.observer_leak"),
+            U("ws.placeholder_unused"),
             D("ts_memo", "src/components/ProductGrid.tsx", "ProductGrid"),
-            D("ts_any", "src/components/ProductGrid.tsx", "placeholderFor"),
         ),
         padding_lines=210, pr_state="closed",
     ),
@@ -3431,7 +3446,6 @@ RUNS: tuple[RunSpec, ...] = (
             D("conv_logging", "app/billing/retry.py", "record_attempt"),
             D("nit_docstring", "app/billing/retry.py", "_is_retryable"),
             D("spec_race", "app/billing/retry.py", "create_charge_with_retry"),
-            D("ood_flaky", "app/billing/retry.py", "_backoff"),
         ),
         extra_files=("tests/billing/test_retry.py",), pr_state="closed",
     ),
@@ -3442,7 +3456,6 @@ RUNS: tuple[RunSpec, ...] = (
             U("ws.grid_columns_zero"),
             D("ood_old_test", "src/components/ProductGrid.tsx", "ProductGrid"),
             D("spec_input", "src/components/ProductGrid.tsx", "gridColumns"),
-            D("hallucinated", "src/components/LazyImage.tsx", "LazyImage"),
         ),
         pr_state="closed",
     ),
@@ -3464,7 +3477,6 @@ RUNS: tuple[RunSpec, ...] = (
             U("co.orders_page_cap"),
             U("co.orders_n_plus_one", "nearest"),
             D("spec_perf", "app/api/orders.py", "order_totals"),
-            D("nit_naming", "app/api/orders.py", "list_orders"),
         ),
         extra_files=("tests/api/test_orders.py",), padding_lines=210, pr_state="closed",
     ),
@@ -3500,9 +3512,8 @@ RUNS: tuple[RunSpec, ...] = (
         key="ws-1135b", repo="storefront", pr=1135, author="farah-n", at="2026-09-22T15:40",
         title="Analytics consent banner", tier="standard", padding_lines=42,
         uses=(
+            U("ws.consent_months"),
             U("ws.consent_default"),
-            D("ood_old_test", "src/consent/Banner.tsx", "readConsent"),
-            D("spec_race", "src/consent/Banner.tsx", "readConsent"),
         ),
         pr_state="open",
     ),

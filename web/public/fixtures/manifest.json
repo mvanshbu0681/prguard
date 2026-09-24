@@ -45,27 +45,27 @@
       "neutral": 5,
       "success": 53
     },
-    "findings": 249,
+    "findings": 246,
     "findings_by_status": {
       "disproven": 5,
-      "dropped": 128,
+      "dropped": 122,
       "proposed": 3,
-      "published": 86,
+      "published": 89,
       "suppressed": 27
     },
     "proof_status": {
       "disproven": 5,
       "inconclusive": 10,
-      "not_applicable": 34,
-      "not_attempted": 173,
+      "not_applicable": 36,
+      "not_attempted": 168,
       "proven": 26,
       "skipped_no_env": 1
     },
     "delivery_modes": {
       "file_level": 2,
-      "inline_exact": 92,
+      "inline_exact": 95,
       "inline_nearest": 5,
-      "not_delivered": 147,
+      "not_delivered": 141,
       "summary_only": 3
     },
     "suppressions": {

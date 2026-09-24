@@ -6,7 +6,7 @@
       "disproven": 1,
       "inconclusive": 0,
       "skipped_no_env": 0,
-      "not_attempted": 6
+      "not_attempted": 7
     },
     {
       "week_start": "2026-08-24",
@@ -53,7 +53,7 @@
     {
       "category": "correctness",
       "dismissed": 4,
-      "published": 44
+      "published": 45
     },
     {
       "category": "security",
@@ -63,7 +63,7 @@
     {
       "category": "test_integrity",
       "dismissed": 0,
-      "published": 0
+      "published": 1
     },
     {
       "category": "performance",
@@ -73,7 +73,7 @@
     {
       "category": "maintainability",
       "dismissed": 6,
-      "published": 26
+      "published": 27
     }
   ],
   "calibration": [
@@ -91,21 +91,21 @@
     },
     {
       "band": "medium",
-      "predicted_score_mean": 0.449,
-      "addressed": 4,
-      "n": 58
+      "predicted_score_mean": 0.448,
+      "addressed": 3,
+      "n": 59
     },
     {
       "band": "low",
-      "predicted_score_mean": 0.284,
+      "predicted_score_mean": 0.281,
       "addressed": 1,
-      "n": 14
+      "n": 15
     },
     {
       "band": "info",
-      "predicted_score_mean": null,
+      "predicted_score_mean": 0.095,
       "addressed": 0,
-      "n": 0
+      "n": 1
     }
   ],
   "raw_counts": {
@@ -118,10 +118,10 @@
       "median_duration_seconds": 28.707
     },
     "findings": {
-      "proposed": 249,
-      "published": 86,
+      "proposed": 246,
+      "published": 89,
       "suppressed": 27,
-      "dropped": 128,
+      "dropped": 122,
       "disproven": 5,
       "proposed_unresolved": 3
     },
@@ -135,11 +135,11 @@
     "precision": {
       "executed_and_published": 25,
       "published_proven": 25,
-      "ever_published": 102,
+      "ever_published": 105,
       "dismissed": 16,
       "rerun_prs": 13,
-      "published_on_rerun_prs": 30,
-      "addressed": 15
+      "published_on_rerun_prs": 31,
+      "addressed": 14
     },
     "gate": {
       "runs_red": 14,

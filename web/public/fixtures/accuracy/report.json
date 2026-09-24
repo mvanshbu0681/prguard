@@ -12,11 +12,11 @@
     "median_duration_seconds": 28.707
   },
   "findings": {
-    "proposed": 249,
-    "published": 86,
+    "proposed": 246,
+    "published": 89,
     "suppressed": 27,
-    "dropped_by_coordinator": 128,
-    "per_review_published_mean": 1.132
+    "dropped_by_coordinator": 122,
+    "per_review_published_mean": 1.171
   },
   "proof": {
     "attempted": 42,
@@ -39,13 +39,13 @@
       "definition": "disproven / attempted — findings the system itself refuted before publishing"
     },
     "human_dismissal_rate": {
-      "value": 0.157,
-      "n": 102,
+      "value": 0.152,
+      "n": 105,
       "definition": "findings with a finding_outcomes row of 'dismissed' / findings that were ever published (published now, plus those a human dismissed off that set)"
     },
     "addressed_rate": {
-      "value": 0.5,
-      "n": 30,
+      "value": 0.452,
+      "n": 31,
       "definition": "findings whose fingerprint disappeared on a later run of the same PR / published findings on PRs run more than once inside the window"
     }
   },

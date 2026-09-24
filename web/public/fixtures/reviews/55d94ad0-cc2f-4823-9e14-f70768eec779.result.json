@@ -124,9 +124,9 @@
         "github_comment_id": 2612667496
       },
       "history": {
-        "occurrence_count": 1,
+        "occurrence_count": 2,
         "first_seen_run_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
-        "previously_addressed": 1,
+        "previously_addressed": 0,
         "previously_dismissed": 0
       },
       "suppression": null,

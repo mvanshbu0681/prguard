@@ -33,27 +33,27 @@
     "status": "posted",
     "github_review_id": 2598231133,
     "event": "COMMENT",
-    "comments_posted": 1,
+    "comments_posted": 2,
     "ladder_breakdown": {
-      "inline_exact": 1,
+      "inline_exact": 2,
       "inline_nearest": 0,
       "file_level": 0,
       "summary_only": 0
     }
   },
   "counts": {
-    "proposed": 3,
-    "published": 1,
+    "proposed": 2,
+    "published": 2,
     "suppressed": 0,
-    "dropped": 2,
+    "dropped": 0,
     "disproven": 0,
     "blocking": 0
   },
   "cost": {
-    "usd_estimate": 0.8933,
-    "input_tokens": 97712,
-    "output_tokens": 28605,
-    "cache_read_tokens": 175260
+    "usd_estimate": 0.8945,
+    "input_tokens": 97242,
+    "output_tokens": 28525,
+    "cache_read_tokens": 175350
   },
   "timing": {
     "queued_at": "2026-09-22T15:40:48.146665Z",
@@ -65,6 +65,75 @@
   "findings": [
     {
       "id": "63edfd3a-836d-4997-ba4b-f457ea664b26",
+      "review_id": "006da01c-0e2d-4903-93e4-c0a3259447f3",
+      "fingerprint": "52fc92cb5f55769c04198088da8608af05a52c4ba213a9437b33fc5642bbabea",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "month_as_thirty_days",
+      "title": "consentExpired() counts 13 months as 390 days",
+      "body_markdown": "The limit is `13 * 30` days (line 47); regulators mean calendar months.",
+      "location": {
+        "file_path": "src/consent/Banner.tsx",
+        "start_line": 47,
+        "end_line": 49,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/consent/Banner.tsx::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.35,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "untested × reachable internally × unproven × blast radius 0.10 × churn 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 49,
+        "github_comment_id": 2612667496
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T15:41:05.425988Z"
+    },
+    {
+      "id": "5a4acf01-e27a-4911-bc21-822598555505",
       "review_id": "006da01c-0e2d-4903-93e4-c0a3259447f3",
       "fingerprint": "986c85547b30e0d60430ee30bf8f5bf1a326924578834835f99bfe7ac1a8006e",
       "specialist": "security",
@@ -130,106 +199,12 @@
         "previously_dismissed": 0
       },
       "suppression": null,
-      "created_at": "2026-09-22T15:41:05.425988Z"
-    },
-    {
-      "id": "5a4acf01-e27a-4911-bc21-822598555505",
-      "review_id": "006da01c-0e2d-4903-93e4-c0a3259447f3",
-      "fingerprint": null,
-      "specialist": "tests",
-      "category": "test_integrity",
-      "rule_key": "missing_edge_case_test",
-      "title": "Cover the empty-input branch of `readConsent()`.",
-      "body_markdown": "`readConsent()` has no test for an empty input.",
-      "location": {
-        "file_path": "src/consent/Banner.tsx",
-        "start_line": 22,
-        "end_line": 24,
-        "side": "RIGHT",
-        "language": "typescript",
-        "symbol_path": null
-      },
-      "severity": null,
-      "proof": {
-        "status": "not_attempted",
-        "runner": null,
-        "isolation": null,
-        "baseline_mode": null,
-        "test_file_path": null,
-        "test_code": null,
-        "command": null,
-        "base": null,
-        "head": null,
-        "duration_ms": null,
-        "deps_install_ok": null
-      },
-      "status": "dropped",
-      "blocking": false,
-      "delivery": {
-        "mode": "not_delivered",
-        "delivered_line": null,
-        "github_comment_id": null
-      },
-      "history": {
-        "occurrence_count": 1,
-        "first_seen_run_id": null,
-        "previously_addressed": 0,
-        "previously_dismissed": 0
-      },
-      "suppression": null,
       "created_at": "2026-09-22T15:41:05.427388Z"
-    },
-    {
-      "id": "cb70efaf-5550-47ef-9df4-744d8e7c9256",
-      "review_id": "006da01c-0e2d-4903-93e4-c0a3259447f3",
-      "fingerprint": null,
-      "specialist": "bugs",
-      "category": "correctness",
-      "rule_key": "concurrent_invocation",
-      "title": "Guard `readConsent()` against two callers running it at once.",
-      "body_markdown": "Two workers running `readConsent()` together could each overwrite the other's result.",
-      "location": {
-        "file_path": "src/consent/Banner.tsx",
-        "start_line": 22,
-        "end_line": 24,
-        "side": "RIGHT",
-        "language": "typescript",
-        "symbol_path": null
-      },
-      "severity": null,
-      "proof": {
-        "status": "not_attempted",
-        "runner": null,
-        "isolation": null,
-        "baseline_mode": null,
-        "test_file_path": null,
-        "test_code": null,
-        "command": null,
-        "base": null,
-        "head": null,
-        "duration_ms": null,
-        "deps_install_ok": null
-      },
-      "status": "dropped",
-      "blocking": false,
-      "delivery": {
-        "mode": "not_delivered",
-        "delivered_line": null,
-        "github_comment_id": null
-      },
-      "history": {
-        "occurrence_count": 1,
-        "first_seen_run_id": null,
-        "previously_addressed": 0,
-        "previously_dismissed": 0
-      },
-      "suppression": null,
-      "created_at": "2026-09-22T15:41:05.428788Z"
     }
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1135` in 18.8s · [full run ↗](https://prguard.acme.internal/runs/006da01c-0e2d-4903-93e4-c0a3259447f3)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**PRGuard** reviewed `#1135` in 18.8s · [full run ↗](https://prguard.acme.internal/runs/006da01c-0e2d-4903-93e4-c0a3259447f3)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
     "commit_id": "88b513d07f01fed0d4fbffb29e9a22a85bd36de5",
     "comments": []
   },
