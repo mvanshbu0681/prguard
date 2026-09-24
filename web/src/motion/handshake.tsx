@@ -5,39 +5,39 @@
 // script, so nothing for React to warn about and nothing to hydrate):
 //
 //   [data-anim]                                hidden, with a 0s animation that turns it
-//                                              visible at 1600ms (fill: forwards)
-//   html.anim-ready [data-anim]                a runtime loaded: the timer is disarmed
+//                                              visible 1600ms after it renders (forwards)
+//   html:not(.anim-ready)                      the page clock: at 1600ms it sets
+//                                              --prg-forced: visible, which every
+//                                              [data-anim] element inherits
+//   html.anim-ready [data-anim]                a runtime loaded: both timers are disarmed
 //   html.anim-ready [data-anim][data-anim-in]  revealed (animated by .reveal / .draw in
 //                                              src/styles/motion.css, or "static")
 //   <noscript>                                 JS disabled: nothing is ever hidden
 //   @media print                               nothing is ever hidden
 //
-// So if every script fails (a bundle 404 on venue wifi), [data-anim] content appears in
-// its final state at t = 1600ms. markAnimReady() is called by the runtime entries ONLY
-// after GSAP (src/motion/gsap.ts: the first ticker frame after <GsapRuntime /> or a
-// useReplay mounted) or Motion (src/motion/motion.tsx: the features chunk loaded, then
-// one frame) actually ran, and always after hydration, because it writes attributes on
-// server-rendered elements.
+// Two timers because one is not enough. The per-element timer is design §4.7 verbatim,
+// but an element's CSS animation only starts when the element renders, and
+// content-visibility: auto (motion spec §6.3: sections 04–09) skips rendering
+// off-screen subtrees: their timers sit at 0 until a judge scrolls there. The page clock
+// runs on <html>, which always renders, so at 1600ms after first paint every [data-anim]
+// element is visible, rendered yet or not. So if every script fails (a bundle 404 on
+// venue wifi), [data-anim] content is in its final state by t = 1600ms, everywhere.
 //
-// A late runtime never flashes content. markAnimReady() checks every pending
-// [data-anim] element's own force-reveal: one that already fired (or is within
-// FIRED_MARGIN_MS of firing) is marked data-anim-in="static" and stays exactly as it
-// is; the rest are disarmed and handed to the revealer (./reveal), which reveals every
-// [data-anim] element in the document, including ones mounted later, as it scrolls
-// into view. Components never wire a reveal themselves.
+// markAnimReady() is called by the runtime entries ONLY after GSAP (src/motion/gsap.ts:
+// the first ticker frame after <GsapRuntime /> or a useReplay mounted) or Motion
+// (src/motion/motion.tsx: the features chunk loaded, then one frame) actually ran, and
+// always after hydration, because it writes attributes on server-rendered elements.
 //
-// This module is imported by the root layout (a server component): it must never
-// import React hooks or anything with browser side effects at module scope.
+// A late runtime never flashes content. In the same task that disarms the timers,
+// markAnimReady() marks every pending [data-anim] element that is visible right now
+// data-anim-in="static", so it stays exactly as it is; the rest are handed to the
+// revealer (./reveal), which reveals every [data-anim] element in the document,
+// including ones mounted later, as it scrolls into view. Components never wire a reveal.
+//
+// This module is imported by the root layout (a server component): it must never import
+// React hooks or anything with browser side effects at module scope.
 
-import {
-  ANIM_READY_CLASS,
-  ANIM_RUNTIME_ATTR,
-  FIRED_MARGIN_MS,
-  FORCE_REVEAL_KEYFRAME,
-  FORCE_REVEAL_MS,
-  ANIM_ATTR,
-  ANIM_IN_ATTR,
-} from "./attrs";
+import { ANIM_READY_CLASS, ANIM_RUNTIME_ATTR } from "./attrs";
 import { PENDING_SELECTOR, showStatic, startAutoReveal } from "./reveal";
 
 export {
@@ -47,22 +47,29 @@ export {
   ANIM_PROPS,
   ANIM_READY_CLASS,
   ANIM_RUNTIME_ATTR,
-  FIRED_MARGIN_MS,
+  FORCED_VAR,
   FORCE_REVEAL_KEYFRAME,
   FORCE_REVEAL_MS,
+  FORCE_REVEAL_PAGE_KEYFRAME,
 } from "./attrs";
 
-/** The inline stylesheet, byte for byte what the browser receives. */
+/**
+ * The inline stylesheet, byte for byte what the browser receives. Written out literally
+ * (not assembled from the ./attrs constants, which a unit test holds equal) so that
+ * `npm run motion:lint` reads the real selectors and keyframe names.
+ */
 export const HANDSHAKE_CSS = [
-  `[${ANIM_ATTR}]{visibility:hidden;animation:${FORCE_REVEAL_KEYFRAME} 0s ${FORCE_REVEAL_MS}ms forwards}`,
-  `@keyframes ${FORCE_REVEAL_KEYFRAME}{to{visibility:visible}}`,
-  `html.${ANIM_READY_CLASS} [${ANIM_ATTR}]{animation:none}`,
-  `html.${ANIM_READY_CLASS} [${ANIM_ATTR}][${ANIM_IN_ATTR}]{visibility:visible}`,
-  `@media print{[${ANIM_ATTR}]{visibility:visible!important;animation:none!important}}`,
+  "[data-anim]{visibility:var(--prg-forced,hidden);animation:prg-force-reveal 0s 1600ms forwards}",
+  "@keyframes prg-force-reveal{to{visibility:visible}}",
+  "html:not(.anim-ready){animation:prg-force-reveal-page 0s 1600ms forwards}",
+  "@keyframes prg-force-reveal-page{to{--prg-forced:visible}}",
+  "html.anim-ready [data-anim]{animation:none}",
+  "html.anim-ready [data-anim][data-anim-in]{visibility:visible}",
+  "@media print{[data-anim]{visibility:visible!important;animation:none!important}}",
 ].join("");
 
 /** The <noscript> override: with JS disabled nothing is ever hidden. */
-export const NOSCRIPT_CSS = `[${ANIM_ATTR}]{visibility:visible!important;animation:none!important}`;
+export const NOSCRIPT_CSS = "[data-anim]{visibility:visible!important;animation:none!important}";
 
 /** Render inside <head> (app/layout.tsx does). Server-safe, no client JS. */
 export function AnimHandshake() {
@@ -82,7 +89,7 @@ export interface AnimReady {
   runtime: AnimRuntime | null;
   /** performance.now() at the moment it was disarmed (ms since navigation start). */
   at: number;
-  /** [data-anim] elements whose force-reveal had already fired: kept visible, never re-hidden. */
+  /** [data-anim] elements already visible (force-revealed): kept as they are, never re-hidden. */
   kept: number;
 }
 
@@ -104,17 +111,12 @@ export function animReadyInfo(): AnimReady | null {
 }
 
 /**
- * True when `el`'s force-reveal has fired or is about to: it is (or is a frame from
- * being) visible, so it must be shown statically rather than hidden for a reveal.
- * Without the Web Animations API it falls back to the page clock, which is
- * conservative: an element's timer never starts before navigation does.
+ * True when `el` is visible right now: one of the two force-reveal timers has fired
+ * (or something else shows it). Read in the same task that disarms the timers, so no
+ * frame can paint between the answer and the decision.
  */
-export function forceRevealFired(el: Element, now: number = pageNow()): boolean {
-  if (typeof el.getAnimations !== "function") return now >= FORCE_REVEAL_MS - FIRED_MARGIN_MS;
-  const timer = el.getAnimations().find((a) => (a as CSSAnimation).animationName === FORCE_REVEAL_KEYFRAME);
-  if (!timer) return false; // not rendered (display: none, a closed <details>): the revealer shows it when it appears
-  if (timer.playState === "finished") return true;
-  return Number(timer.currentTime ?? 0) >= FORCE_REVEAL_MS - FIRED_MARGIN_MS;
+export function isShowing(el: Element): boolean {
+  return typeof getComputedStyle === "function" && getComputedStyle(el).visibility === "visible";
 }
 
 /**
@@ -129,7 +131,7 @@ export function markAnimReady(runtime?: AnimRuntime): AnimReady | null {
   const at = pageNow();
   let kept = 0;
   document.querySelectorAll(PENDING_SELECTOR).forEach((el) => {
-    if (!forceRevealFired(el, at)) return;
+    if (!isShowing(el)) return;
     showStatic(el);
     kept++;
   });

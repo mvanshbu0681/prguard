@@ -55,6 +55,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_ROOT = path.resolve(HERE, "..");
 export const DEFAULT_DIRS = ["app", "src"];
 
+/** Stands in for a `${…}` inside CSS text: a value known only at runtime. */
+const EXPR = "__expr__";
+
 export const RULES = {
   compositor: "transition or animation of a property outside the compositor allowlist (motion §6.1)",
   "stamp-colour": "transition on a verdict / gate / stamp colour (plan §2 rule 3, motion §2.5)",
@@ -112,6 +115,13 @@ const KEYFRAME_META = new Set(["animation-timing-function", "animation-compositi
  * interpolated. The draw technique needs exactly one: its dash (src/motion/draw.ts).
  */
 const CONSTANT_OK = new Set(["stroke-dasharray"]);
+/**
+ * The fallback handshake's page clock (src/motion/handshake.tsx, design §4.7): a 0s,
+ * one-shot keyframe on <html> that sets one inherited flag at 1600ms. A single discrete
+ * switch, not per-frame work, so the :root custom-property rule does not apply to it.
+ */
+const HANDSHAKE_CLOCK = { keyframes: "prg-force-reveal-page", property: "--prg-forced" };
+const isHandshakeClock = (keyframes, prop) => keyframes === HANDSHAKE_CLOCK.keyframes && prop === HANDSHAKE_CLOCK.property;
 
 const COLOUR_PROPS = new Set([...[...BOUNDED].filter((p) => p !== "stroke-dashoffset"), ...COLOUR_FAMILY]);
 
@@ -538,6 +548,7 @@ function checkCssDecls(parsed, file, report, keyframeIndex) {
     }
   }
   for (const d of parsed.decls) {
+    if (d.prop.includes(EXPR)) continue; // a property name computed at runtime: not checkable
     const where = { file, line: d.line, col: d.col };
     const inSupportsTimeline = d.atRules.some((a) => a.name === "supports" && /animation-timeline/i.test(a.params) && !/^not\b/i.test(a.params));
 
@@ -545,6 +556,7 @@ function checkCssDecls(parsed, file, report, keyframeIndex) {
 
     if (d.keyframes) {
       if (d.prop.startsWith("--")) {
+        if (isHandshakeClock(d.keyframes, d.prop)) continue;
         report({ ...where, rule: "compositor", token: d.prop, message: `@keyframes ${d.keyframes} animates the custom property ${d.prop}; animate the property that consumes it (motion §6.1)` });
       } else if (!KEYFRAME_META.has(d.prop) && !allowedProperty(d.prop) && !constantOverride(parsed.keyframes.find((k) => k.id === d.keyframesId), d.prop)) {
         report({ ...where, rule: "compositor", token: d.prop, message: `@keyframes ${d.keyframes} animates \`${d.prop}\`; only transform, opacity, clip-path, filter (and bounded colour / stroke-dashoffset) may move (motion §6.1)` });
@@ -556,6 +568,7 @@ function checkCssDecls(parsed, file, report, keyframeIndex) {
       const props = d.prop === "transition" ? transitionProperties(d.value) : transitionPropertyList(d.value);
       if (props === null) continue;
       for (const p of props) {
+        if (p.includes(EXPR)) continue; // computed at runtime: not checkable
         if (p === "all") report({ ...where, rule: "compositor", token: "all", message: "`transition: all` transitions layout properties too; name the compositor properties (motion §6.1)" });
         else if (p === "none") continue;
         else if (!allowedProperty(p, d.selector, byRule.get(d.ruleId) ?? [])) report({ ...where, rule: "compositor", token: p, message: `transition of \`${p}\`; only transform, opacity, clip-path, filter (and bounded colour / stroke-dashoffset) may transition (motion §6.1)` });
@@ -607,8 +620,9 @@ function indexKeyframes(parsedList) {
     for (const kf of parsed.keyframes) {
       const entry = index.get(kf.name) ?? { custom: false, banned: [] };
       for (const p of kf.props) {
-        if (p.prop.startsWith("--")) entry.custom = true;
-        else if (!KEYFRAME_META.has(p.prop) && !allowedProperty(p.prop) && !constantOverride(kf, p.prop)) entry.banned.push(p.prop);
+        if (p.prop.startsWith("--")) {
+          if (!isHandshakeClock(kf.name, p.prop)) entry.custom = true;
+        } else if (!KEYFRAME_META.has(p.prop) && !allowedProperty(p.prop) && !constantOverride(kf, p.prop)) entry.banned.push(p.prop);
       }
       index.set(kf.name, entry);
     }
@@ -777,9 +791,14 @@ function stringsIn(node) {
 }
 
 /** Template literal text with each ${…} replaced by `0`, for CSS parsing. */
+/**
+ * Template literal text for CSS parsing. A `${…}` before a unit becomes `0` (so
+ * `${ms}ms` still reads as a time); anywhere else it becomes EXPR, which the checks
+ * treat as unknowable rather than guessing (a dynamic property name is not a violation).
+ */
 function templateText(n) {
   if (ts.isNoSubstitutionTemplateLiteral(n) || ts.isStringLiteral(n)) return n.text;
-  if (ts.isTemplateExpression(n)) return n.head.text + n.templateSpans.map((s) => `0${s.literal.text}`).join("");
+  if (ts.isTemplateExpression(n)) return n.head.text + n.templateSpans.map((s) => `${/^(ms|s|px|%|deg|em|rem|vh|vw|fr)\b/.test(s.literal.text) ? "0" : EXPR}${s.literal.text}`).join("");
   return null;
 }
 
@@ -945,6 +964,7 @@ function analyzeTs(rel, text, report, keyframeIndex) {
           else if (value !== null && (css === "transition" || css === "transition-property")) {
             const props = css === "transition" ? transitionProperties(value) : transitionPropertyList(value);
             for (const q of props ?? []) {
+              if (q.includes(EXPR)) continue;
               if (q === "all") report({ ...w, rule: "compositor", token: key, message: "inline `transition: all` transitions layout too (motion §6.1)" });
               else if (!allowedProperty(q)) report({ ...w, rule: "compositor", token: key, message: `inline transition of \`${q}\` (motion §6.1)` });
             }

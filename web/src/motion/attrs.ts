@@ -13,6 +13,15 @@ export const FORCE_REVEAL_MS = HANDSHAKE.forceRevealMs;
 /** The keyframe that turns a [data-anim] element visible at FORCE_REVEAL_MS. */
 export const FORCE_REVEAL_KEYFRAME = "prg-force-reveal";
 
+/**
+ * The page clock: a keyframe run on <html> that sets FORCED_VAR at FORCE_REVEAL_MS, which
+ * every [data-anim] element inherits. It covers content with no running timer of its
+ * own: content-visibility: auto skips off-screen subtrees, and their timers only start
+ * when they render.
+ */
+export const FORCE_REVEAL_PAGE_KEYFRAME = "prg-force-reveal-page";
+export const FORCED_VAR = "--prg-forced";
+
 /** Marks an element whose FIRST appearance the runtime animates (a scroll reveal, a draw). */
 export const ANIM_ATTR = "data-anim";
 
@@ -35,9 +44,3 @@ export const ANIM_PROPS = { [ANIM_ATTR]: "" } as const;
 
 /** The batch position a reveal was given (drives the capped stagger in motion.css). */
 export const REVEAL_INDEX_VAR = "--reveal-index";
-
-/**
- * A force-reveal this close to firing counts as fired: the element is shown statically
- * instead of being hidden again for a reveal (one frame of style recalc plus slack).
- */
-export const FIRED_MARGIN_MS = 100;
