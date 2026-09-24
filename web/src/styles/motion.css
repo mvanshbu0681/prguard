@@ -1,4 +1,317 @@
-/* OWNER: T3 (wave 1). Stub from T0 — replace entirely.
-   Holds: keyframes (heartbeat tick, scan), the reduced-motion second state, [data-anim] handshake helpers.
-   Imported by app/globals.css after the token files. Reference tokens by their
-   short names (var(--ink-2)), never var(--color-*) — see app/tokens/core.css. */
+/* ==========================================================================
+   src/styles/motion.css — the motion substrate's stylesheet.
+
+   OWNER: T3 (wave 1). Imported by app/globals.css after the token files.
+   Values: motion spec (docs/design/05-motion-spec.md) §2, §4, §5, §6.1.
+   Every duration and curve is a token (app/tokens/core.css); nothing here is a
+   literal. `npm run motion:lint` checks this file with the rest of the tree.
+
+   The rules, in one place:
+   - Compositor only: opacity, the individual transforms (scale / translate) and
+     stroke-dashoffset. Nothing animates layout, nothing animates a custom property
+     on :root, and no will-change lives in a stylesheet (§6.1).
+   - The static stylesheet hides no content. Hiding is the handshake's job
+     (src/motion/handshake.tsx): [data-anim] is hidden until the runtime reveals it
+     (data-anim-in) or the 1600ms force-reveal fires. The reveal keyframes below only
+     ever run under html.anim-ready. (The one collapsed-at-rest element is the scan
+     line, which is decoration that exists only while it travels.)
+   - .stamp, .draw and .scan restart by flipping their data attribute "a" ↔ "b"
+     (src/motion/stamp.ts). Absent or "rest", .draw and .scan sit on their end frame;
+     a .stamp without data-stamp plays once when the class arrives (declarative).
+   - Reduced motion is a designed second state (§5), written for BOTH triggers:
+     @media (prefers-reduced-motion: reduce) and html[data-motion="reduced"].
+     Never `* { animation: none }`.
+
+   Cascade: the handshake's inline rules are unlayered, and unlayered CSS beats every
+   layer, so the rules that must override them (reveal, first-appearance draw) are
+   unlayered too. Everything a component may restyle sits in @layer components, with
+   box defaults in :where() (zero specificity). The stamp's no-transition rule is
+   !important in @layer base: an important declaration in the earliest layer beats
+   every utility, including an important one.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   0. Tailwind variants. motion-reduce: / motion-safe: are redefined so every
+      utility honours both triggers of the reduced-motion state, not just the OS.
+   -------------------------------------------------------------------------- */
+@custom-variant motion-reduce {
+  @media (prefers-reduced-motion: reduce) {
+    @slot;
+  }
+  &:where([data-motion="reduced"], [data-motion="reduced"] *) {
+    @slot;
+  }
+}
+
+@custom-variant motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(:where([data-motion="reduced"], [data-motion="reduced"] *)) {
+      @slot;
+    }
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   1. Keyframes. Each a/b pair is identical; two names let an attribute flip
+      restart the animation without touching layout.
+   -------------------------------------------------------------------------- */
+
+/* The heartbeat: an instrument ticks, it does not breathe (§4.9.2). */
+@keyframes prg-tick {
+  0%, 100% { opacity: 0.35; }
+  12% { opacity: 1; }
+}
+
+/* The verdict stamp's only motion: scale(1.045) → 1 (§2.5). The colour does not animate. */
+@keyframes prg-stamp {
+  from { scale: 1.045; }
+  to { scale: 1; }
+}
+@keyframes prg-stamp-a {
+  from { scale: 1.045; }
+  to { scale: 1; }
+}
+@keyframes prg-stamp-b {
+  from { scale: 1.045; }
+  to { scale: 1; }
+}
+
+/* Reveal: opacity only by default (§4.5, §4.10.2). */
+@keyframes prg-reveal {
+  from { opacity: 0; }
+}
+/* .reveal-rise: plus a rise, clamped to at most 8px either way. */
+@keyframes prg-reveal-rise {
+  from {
+    opacity: 0;
+    translate: 0 clamp(-8px, var(--reveal-rise, 8px), 8px);
+  }
+}
+
+/* A path with pathLength="1" drawing from its start (§4.7, §4.8.2). The dash exists only
+   inside the keyframes (constant, never interpolated), so a path at rest is solid; its
+   length is --draw-len, measured by src/motion/draw.ts for non-scaling strokes. */
+@keyframes prg-draw-a {
+  from { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: var(--draw-len, 1); }
+  to { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: 0; }
+}
+@keyframes prg-draw-b {
+  from { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: var(--draw-len, 1); }
+  to { stroke-dasharray: var(--draw-len, 1) var(--draw-len, 1); stroke-dashoffset: 0; }
+}
+
+/* The scan line's one travel (§4.6.2): at 60% opacity, only while it moves. */
+@keyframes prg-scan-a {
+  from { translate: 0 0; scale: 1 1; opacity: 0.6; }
+  to { translate: 0 var(--scan-travel, 0px); scale: 1 1; opacity: 0.6; }
+}
+@keyframes prg-scan-b {
+  from { translate: 0 0; scale: 1 1; opacity: 0.6; }
+  to { translate: 0 var(--scan-travel, 0px); scale: 1 1; opacity: 0.6; }
+}
+
+
+/* --------------------------------------------------------------------------
+   2. .stamp: the verdict / gate / chain.verified element (§2.5, plan hard rule 3).
+      Its colour change has NO transition, ever: the flip is 0ms. The paired motion
+      is scale 1.045 → 1 over --dur-2 on --ease-snap (--dur-2, not --dur-state: the
+      stamp is 180ms on both surfaces).
+        declarative   the class arrives (or the element re-mounts with it): plays once
+        controlled    data-stamp="rest" never plays; each "a" ↔ "b" flip replays
+                      (useStamp / retrigger in src/motion/stamp.ts)
+   -------------------------------------------------------------------------- */
+@layer base {
+  .stamp {
+    transition: none !important;
+  }
+}
+
+@layer components {
+  /* A scale needs a box: inline elements get one; any display utility overrides it. */
+  :where(span, a, b, i, em, strong, small, code, kbd, samp, abbr, time, output, label, mark):where(.stamp) {
+    display: inline-block;
+  }
+  /* SVG children scale about their own centre, like an HTML box does. */
+  :where(svg .stamp) {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .stamp {
+    animation: prg-stamp var(--dur-2) var(--ease-snap);
+  }
+  .stamp[data-stamp] {
+    animation: none;
+  }
+  .stamp[data-stamp="a"] {
+    animation: prg-stamp-a var(--dur-2) var(--ease-snap);
+  }
+  .stamp[data-stamp="b"] {
+    animation: prg-stamp-b var(--dur-2) var(--ease-snap);
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   3. .heartbeat: the only loop in the product (§4.9.2, §4.9.3). Driven by the
+      wire: the real period is written on the dot, never on :root
+      (heartbeatProps() in src/motion/heartbeat.ts does it):
+        <span class="heartbeat" style="--heartbeat-period: 1200ms">
+      data-lagging  10–20s since the last output: --marker, still ticking (colour 120ms)
+      data-stale    past 20s: --marker, the tick stops (colour flips at 0ms)
+      Pair it with `12s since last output` as text; a 1 Hz ticker updates only the text.
+      On an SVG shape (a stage ring) only the tick applies; the shape keeps its colours.
+   -------------------------------------------------------------------------- */
+@layer components {
+  :where(.heartbeat:not(svg *)) {
+    display: inline-block;
+    inline-size: 6px;
+    block-size: 6px;
+    border-radius: var(--radius-dot); /* the only pill-shaped element in the product */
+    background-color: var(--heartbeat-live);
+    vertical-align: middle;
+    transition: background-color var(--dur-1) var(--ease-snap);
+  }
+  :where(.heartbeat[data-lagging]:not(svg *)) {
+    background-color: var(--heartbeat-stale);
+  }
+  :where(.heartbeat[data-stale]:not(svg *)) {
+    background-color: var(--heartbeat-stale);
+    transition: none;
+  }
+  .heartbeat {
+    animation: prg-tick var(--heartbeat-period) steps(1, end) infinite;
+  }
+  .heartbeat[data-stale] {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   4. .reveal: a [data-anim] element's first appearance (§4.5, §4.10.2).
+        <li data-anim class="reveal">               opacity 0 → 1
+        <li data-anim class="reveal reveal-rise">   … plus a rise of at most 8px
+      On --dur-enter (420ms marketing, 180ms on [data-surface="app"]) and
+      --ease-instrument, delayed by --motion-delay plus
+      min(--reveal-index, 5) × --stagger-sibling: six items, 300ms, then the cap.
+      Evidence components override the duration: style="--motion-dur: var(--dur-4)".
+      Runs only under html.anim-ready for data-anim-in=""; "static" never animates.
+   -------------------------------------------------------------------------- */
+html.anim-ready .reveal[data-anim][data-anim-in=""] {
+  animation: prg-reveal var(--motion-dur, var(--dur-enter)) var(--ease-instrument) both;
+  animation-delay: calc(var(--motion-delay, 0ms) + min(var(--reveal-index, 0), 5) * var(--stagger-sibling));
+}
+html.anim-ready .reveal.reveal-rise[data-anim][data-anim-in=""] {
+  animation-name: prg-reveal-rise;
+}
+
+@layer components {
+  .reveal-rise {
+    --reveal-rise: 8px;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   5. .draw: stroke-dashoffset on a path with pathLength="1", so one keyframe draws
+      an 80px fork and a 2400px spine at the same perceived speed (§4.7). Add
+      vector-effect="non-scaling-stroke" for hairlines. Rests drawn and solid: the
+      dash lives only in the keyframes, and fill-mode is `backwards` (it holds the
+      undrawn frame through a stagger delay, then hands back to the solid path).
+        first appearance   <path pathLength="1" class="draw" data-anim>
+                           (replay it with replayReveal() from src/motion/reveal.ts)
+        replay             <path pathLength="1" class="draw"> + retrigger(el, "data-draw")
+      Both measure --draw-len first (src/motion/draw.ts). One mechanism per element.
+      Paint property: at most 6 paths drawing at once (§6.1).
+   -------------------------------------------------------------------------- */
+@layer components {
+  .draw[data-draw="a"] {
+    animation: prg-draw-a var(--motion-dur, var(--dur-enter)) var(--ease-instrument) backwards;
+    animation-delay: var(--motion-delay, 0ms);
+  }
+  .draw[data-draw="b"] {
+    animation: prg-draw-b var(--motion-dur, var(--dur-enter)) var(--ease-instrument) backwards;
+    animation-delay: var(--motion-delay, 0ms);
+  }
+}
+
+html.anim-ready .draw[data-anim][data-anim-in=""] {
+  animation: prg-draw-a var(--motion-dur, var(--dur-enter)) var(--ease-instrument) backwards;
+  animation-delay: calc(var(--motion-delay, 0ms) + min(var(--reveal-index, 0), 5) * var(--stagger-sibling));
+}
+
+
+/* --------------------------------------------------------------------------
+   6. .scan: the proof-bench scan line's single travel on --ease-mass over --dur-5,
+      the only long movement and the only use of that curve (§4.6.2). Set
+      --scan-travel to the distance. At rest the line is collapsed (scale 1 0): it
+      exists only while it travels, so a server-rendered line never shows as a bar.
+   -------------------------------------------------------------------------- */
+@layer components {
+  .scan {
+    scale: 1 0;
+  }
+  .scan[data-scan="a"] {
+    animation: prg-scan-a var(--dur-5) var(--ease-mass);
+  }
+  .scan[data-scan="b"] {
+    animation: prg-scan-b var(--dur-5) var(--ease-mass);
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   7. Reduced motion: the designed second state (§5), per animation type.
+        heartbeat   stops; the dot is static at opacity 1 (the age text keeps ticking)
+        stamp       the colour still flips at 0ms; the scale is dropped
+        reveal      opacity only, over --dur-1, no rise
+        draw        rendered complete
+        scan        never runs
+      Written twice: the OS preference and html[data-motion="reduced"].
+   -------------------------------------------------------------------------- */
+@layer components {
+  @media (prefers-reduced-motion: reduce) {
+    .heartbeat {
+      animation: none;
+      opacity: 1;
+    }
+    .stamp,
+    .stamp[data-stamp],
+    .draw[data-draw],
+    .scan[data-scan] {
+      animation: none;
+    }
+  }
+  [data-motion="reduced"] .heartbeat {
+    animation: none;
+    opacity: 1;
+  }
+  [data-motion="reduced"] .stamp,
+  [data-motion="reduced"] .stamp[data-stamp],
+  [data-motion="reduced"] .draw[data-draw],
+  [data-motion="reduced"] .scan[data-scan] {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.anim-ready .reveal[data-anim][data-anim-in=""],
+  html.anim-ready .reveal.reveal-rise[data-anim][data-anim-in=""] {
+    animation-name: prg-reveal;
+    animation-duration: var(--dur-1);
+  }
+  html.anim-ready .draw[data-anim][data-anim-in=""] {
+    animation: none;
+  }
+}
+html.anim-ready[data-motion="reduced"] .reveal[data-anim][data-anim-in=""],
+html.anim-ready[data-motion="reduced"] .reveal.reveal-rise[data-anim][data-anim-in=""] {
+  animation-name: prg-reveal;
+  animation-duration: var(--dur-1);
+}
+html.anim-ready[data-motion="reduced"] .draw[data-anim][data-anim-in=""] {
+  animation: none;
+}
