@@ -23,7 +23,7 @@ async function withRealHashes(events: LosslessAuditEvent[]): Promise<LosslessAud
   let prevHash: string | null = null;
   const hashed: LosslessAuditEvent[] = [];
   for (const event of events) {
-    const document = auditHashDocument({ ...event, payload: event.payload as Record<string, unknown> });
+    const document = auditHashDocument({ ...event, tenant_id: event.tenant_id ?? "t1", payload: event.payload as Record<string, unknown> });
     void canonicalJson(document);
     const hash = await eventHash(prevHash, document);
     hashed.push({ ...event, prev_hash: prevHash, event_hash: hash });

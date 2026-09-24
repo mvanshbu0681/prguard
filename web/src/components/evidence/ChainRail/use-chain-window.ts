@@ -108,6 +108,18 @@ export interface UseChainWindowOptions {
   debounceMs?: number;
 }
 
+const EMPTY_RESULT: ChainVerifyResult = { verified: true, checked: 0, brokenAtSeq: null, results: [] };
+
+/** The three guards that are known synchronously, from props and the environment alone —
+ *  never from an async check. `null` means "no synchronous guard applies; an async
+ *  verification may proceed" (guard 2's "checking" / "serialiser-mismatch" / "ready"). */
+function syncGuardFor(missingTenantId: boolean, baseCount: number): Exclude<ChainGuard, "checking" | "serialiser-mismatch" | "ready"> | null {
+  if (missingTenantId) return "missing-tenant";
+  if (!hasSecureCrypto()) return "no-crypto";
+  if (baseCount === 0) return "no-data";
+  return null;
+}
+
 export function useChainWindow(events: readonly LosslessAuditEvent[] | null, options: UseChainWindowOptions = {}): UseChainWindowResult {
   const { tamperable = false, missingTenantId = false, debounceMs = 120 } = options;
 
@@ -123,7 +135,7 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
   );
 
   // A content signature, not `bases`' own (recreated-every-render-if-`events`-is-unstable)
-  // array identity: guards the mount-verify effect below against re-firing — and so
+  // array identity: guards the reset-on-change logic below against re-firing — and so
   // against looping forever — when a caller passes `events` as an unstable reference
   // (e.g. an inline array literal) whose CONTENT does not actually change.
   const signature = useMemo(
@@ -131,30 +143,48 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
     [bases],
   );
 
+  // Guards 1, "no-data" and A9's missing-tenant are pure functions of props and the
+  // environment — computed during render, never via an effect. Only guard 2 (the async
+  // untouched-window check) needs state.
+  const syncGuard = syncGuardFor(missingTenantId, bases.length);
+
+  const [asyncGuard, setAsyncGuard] = useState<"checking" | "serialiser-mismatch" | "ready">("checking");
+  const [result, setResult] = useState<ChainVerifyResult>(EMPTY_RESULT);
+  const [overrides, setOverrides] = useState<ReadonlyMap<number, string>>(new Map());
+  const [generations, setGenerations] = useState<ReadonlyMap<number, number>>(new Map());
+
+  // "Adjusting state when a prop changes" (react.dev): a state update made DURING RENDER,
+  // not inside an effect, is the supported way to reset local state exactly once when the
+  // window's content signature changes — React re-renders immediately with the reset
+  // state, before anything commits, so no stale UI is ever shown and no effect ever calls
+  // setState synchronously in its body.
+  const [syncedSignature, setSyncedSignature] = useState(signature);
+  if (syncedSignature !== signature) {
+    setSyncedSignature(signature);
+    setAsyncGuard("checking");
+    setResult(EMPTY_RESULT);
+    setOverrides(new Map());
+    setGenerations(new Map());
+  }
+
+  const guard: ChainGuard = syncGuard ?? asyncGuard;
+
+  // Refs are never read during render (only inside the debounce timer and the event
+  // handlers that also update `overrides` above) — this shadow exists purely so the
+  // 120ms-debounced callback can see the LATEST edits without a stale closure. It is
+  // written only from an effect or an event handler, never during render.
   const requestIdRef = useRef(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const overridesRef = useRef<Map<number, string>>(new Map());
-  const generationsRef = useRef<Map<number, number>>(new Map());
-
-  const [guard, setGuard] = useState<ChainGuard>("checking");
-  const [result, setResult] = useState<ChainVerifyResult>({ verified: true, checked: 0, brokenAtSeq: null, results: [] });
-  const [editedSeqs, setEditedSeqs] = useState<ReadonlySet<number>>(new Set());
-  const [generationTick, setGenerationTick] = useState(0);
+  const overridesShadowRef = useRef<ReadonlyMap<number, string>>(overrides);
+  useEffect(() => {
+    overridesShadowRef.current = overrides;
+  }, [overrides]);
 
   const runVerify = useCallback(
-    async (overrideMap: ReadonlyMap<number, string>, options2: { asInitialCheck: boolean }) => {
-      if (missingTenantId) {
-        setGuard("missing-tenant");
-        return;
-      }
-      if (!hasSecureCrypto()) {
-        setGuard("no-crypto");
-        return;
-      }
-      if (bases.length === 0) {
-        setGuard("no-data");
-        return;
-      }
+    async (overrideMap: ReadonlyMap<number, string>, verifyOptions: { asInitialCheck: boolean }) => {
+      // Callers only invoke this once `syncGuard` is null (preconditions hold) — nothing
+      // here runs synchronously before the `await`, so no setState happens inside this
+      // function's synchronous prologue.
       const id = (requestIdRef.current += 1);
       const items: ChainVerifyItem[] = bases.map((base) => {
         const text = overrideMap.get(base.seq) ?? base.originalText;
@@ -173,38 +203,38 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
       setResult(verified);
       // Guard 2 fires only for the untouched window; an edit that breaks the chain is the
       // feature, not a serialiser bug.
-      setGuard(options2.asInitialCheck && !verified.verified ? "serialiser-mismatch" : "ready");
+      setAsyncGuard(verifyOptions.asInitialCheck && !verified.verified ? "serialiser-mismatch" : "ready");
     },
-    [bases, missingTenantId],
+    [bases],
   );
 
-  // Guard 2: verify the untouched window once whenever it (re)appears. Keyed on the
-  // content `signature`, not `bases`' array identity (see above) or `guard`/`result`
-  // (setting either is what this effect does — including them would loop forever).
+  // Guard 2: verify the untouched window once whenever it (re)appears, provided no
+  // synchronous guard already rules it out.
   useEffect(() => {
-    overridesRef.current = new Map();
-    generationsRef.current = new Map();
-    setEditedSeqs(new Set());
-    setGuard("checking");
+    if (syncGuard !== null) return;
     void runVerify(new Map(), { asInitialCheck: true });
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, missingTenantId]);
+  }, [signature, syncGuard]);
 
   const setRowText = useCallback(
     (seq: number, text: string) => {
-      if (!tamperable || guard !== "ready" || bases.every((b) => b.seq !== seq)) return;
+      if (!tamperable || guard !== "ready") return;
       const base = bases.find((b) => b.seq === seq);
       if (!base) return;
-      if (text === base.originalText) overridesRef.current.delete(seq);
-      else overridesRef.current.set(seq, text);
-      setEditedSeqs(new Set(overridesRef.current.keys()));
+
+      setOverrides((prev) => {
+        const next = new Map(prev);
+        if (text === base.originalText) next.delete(seq);
+        else next.set(seq, text);
+        return next;
+      });
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        void runVerify(new Map(overridesRef.current), { asInitialCheck: false });
+        void runVerify(new Map(overridesShadowRef.current), { asInitialCheck: false });
       }, debounceMs);
     },
     [tamperable, guard, bases, debounceMs, runVerify],
@@ -212,14 +242,20 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
 
   const restoreRow = useCallback(
     (seq: number) => {
-      overridesRef.current.delete(seq);
-      generationsRef.current.set(seq, (generationsRef.current.get(seq) ?? 0) + 1);
-      setEditedSeqs(new Set(overridesRef.current.keys()));
-      setGenerationTick((t) => t + 1);
+      if (guard !== "ready") return;
+      const withoutSeq = new Map(overridesShadowRef.current);
+      withoutSeq.delete(seq);
+
+      setOverrides(withoutSeq);
+      setGenerations((prev) => {
+        const next = new Map(prev);
+        next.set(seq, (next.get(seq) ?? 0) + 1);
+        return next;
+      });
       if (debounceRef.current) clearTimeout(debounceRef.current);
-      void runVerify(new Map(overridesRef.current), { asInitialCheck: false });
+      void runVerify(withoutSeq, { asInitialCheck: false });
     },
-    [runVerify],
+    [guard, runVerify],
   );
 
   const resultBySeq = useMemo(() => {
@@ -228,23 +264,23 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
     return map;
   }, [result]);
 
-  const rows = useMemo<ChainRowState[]>(() => {
-    void generationTick; // rows must recompute when a restore bumps a row's generation
-    return bases.map((base) => {
-      const text = overridesRef.current.get(base.seq) ?? base.originalText;
-      const computedRow = resultBySeq.get(base.seq);
-      return {
-        seq: base.seq,
-        expected: base.expected,
-        computed: computedRow?.computed ?? base.expected,
-        linked: computedRow?.linked ?? true,
-        text,
-        edited: editedSeqs.has(base.seq),
-        generation: generationsRef.current.get(base.seq) ?? 0,
-      };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bases, resultBySeq, editedSeqs, generationTick]);
+  const rows = useMemo<ChainRowState[]>(
+    () =>
+      bases.map((base) => {
+        const text = overrides.get(base.seq) ?? base.originalText;
+        const computedRow = resultBySeq.get(base.seq);
+        return {
+          seq: base.seq,
+          expected: base.expected,
+          computed: computedRow?.computed ?? base.expected,
+          linked: computedRow?.linked ?? true,
+          text,
+          edited: overrides.has(base.seq),
+          generation: generations.get(base.seq) ?? 0,
+        };
+      }),
+    [bases, resultBySeq, overrides, generations],
+  );
 
   return {
     guard,
@@ -252,7 +288,7 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
     checked: result.checked,
     brokenAtSeq: result.brokenAtSeq,
     rows,
-    anyEdited: editedSeqs.size > 0,
+    anyEdited: overrides.size > 0,
     setRowText,
     restoreRow,
   };
