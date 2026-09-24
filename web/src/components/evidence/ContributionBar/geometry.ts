@@ -20,6 +20,19 @@ export interface ContributionRow {
   contribution: number;
 }
 
+/**
+ * `FindingSeverity.weights` comes off the wire typed as `{ [key: string]: number }`
+ * (the generated client cannot know it always carries exactly the six
+ * SEVERITY_INPUTS keys) — that index-signature shape is not structurally
+ * assignable to `SeverityValues`'s six named keys, so a caller reading real API
+ * or fixture data needs this adapter rather than an `as` cast at every call site.
+ * Missing keys default to 0 — a weights object short a key is a backend defect
+ * the caller should already be catching, not something to hide.
+ */
+export function toSeverityValues(record: Record<string, number>): SeverityValues {
+  return Object.fromEntries(SEVERITY_INPUTS.map((name) => [name, record[name] ?? 0])) as SeverityValues;
+}
+
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(1, Math.max(0, value));

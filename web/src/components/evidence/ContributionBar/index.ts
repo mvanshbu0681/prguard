@@ -16,6 +16,7 @@ export {
   readoutSnapMs,
   segmentSchedule,
   sumContributions,
+  toSeverityValues,
   SEGMENT_MIN_PX,
   TICK_LABEL,
   TICKS,
