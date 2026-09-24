@@ -29,18 +29,24 @@ function requireProof(finding: Finding): FindingProof {
   return finding.proof;
 }
 
-// The 78%→100% fade (design §01 "reads as there is more product than fits here") is a
-// percentage of THIS element's own box, not of the bench's content height — so the box
-// needs a min-height comfortably taller than the bench's rendered content (~560px: index
-// strip + two 210px panes + seam + the 44px verdict rail + the 32px provenance strip).
-// Without it, 78% of the bench's OWN (auto) height lands mid-verdict-rail and fades the
-// one line the brief calls "NEVER CUT" almost to invisibility.
+// design §01 "reads as there is more product than fits here": the panel fades out
+// toward its own bottom edge. A percentage-of-box stop (the blueprint's literal
+// "0% 78% 100%") only lands where intended if the box is exactly as tall as its
+// content — forcing a fixed min-height (as this used to) instead leaves a blank
+// graph-paper gap below the real content and moves the fade past everything
+// visible. The bench's last two children are the verdict rail (44px, "NEVER
+// CUT" — design §01 line 324) and, below it, the Exhibit's own provenance strip
+// (prg-strip[data-strip="provenance"], min-height 24px, src/styles/chrome.css).
+// A fixed pixel offset from the bottom — sized to sit inside that provenance
+// strip — fades only that trailing line, on the box's own intrinsic (auto)
+// height, so the verdict rail always stays fully opaque and no space is added
+// past the bench's real content, at any viewport width or for either finding
+// (the disproven state's extra claim line just shifts the whole fade down with it).
 const CALIBRATION_MASK_CSS = `
 @media (min-width: 1024px) {
   .hero-bench-bleed {
-    min-height: 840px;
-    mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 78%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 20px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 20px), transparent 100%);
   }
 }`;
 

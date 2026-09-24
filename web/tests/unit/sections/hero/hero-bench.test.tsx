@@ -87,6 +87,34 @@ describe("HeroBench — P/D key switching", () => {
     expect(container.textContent).toMatch(/finding 5d20b7f4/);
   });
 
+  it("R is an alias for P: returns to the proven finding from the disproven one", () => {
+    const { container } = render(<HeroBench proven={PROVEN} disproven={DISPROVEN} />);
+    fireEvent.keyDown(window, { key: "d" });
+    fireEvent.keyDown(window, { key: "r" });
+    expect(container.textContent).toMatch(/finding a91f3c2e/);
+    expect(container.textContent).not.toContain(DISPROVEN.claim!);
+  });
+
+  it("R replays the proven bench even when it is already showing (re-keys, does not error)", () => {
+    const { container } = render(<HeroBench proven={PROVEN} disproven={DISPROVEN} />);
+    expect(() => fireEvent.keyDown(window, { key: "r" })).not.toThrow();
+    expect(container.textContent).toMatch(/finding a91f3c2e/);
+  });
+
+  it("ignores r while typing in an input", () => {
+    const { container } = render(
+      <div>
+        <input aria-label="search" />
+        <HeroBench proven={PROVEN} disproven={DISPROVEN} />
+      </div>,
+    );
+    fireEvent.keyDown(window, { key: "d" });
+    const input = screen.getByLabelText("search");
+    input.focus();
+    fireEvent.keyDown(input, { key: "r" });
+    expect(container.textContent).toMatch(/finding 5d20b7f4/);
+  });
+
   it("ignores d/p while typing in an input (src/motion/keys.ts's typing guard)", () => {
     const { container } = render(
       <div>

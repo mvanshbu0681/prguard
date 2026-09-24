@@ -5,19 +5,20 @@
 //
 // ProofBench (wave 2, src/components/evidence/ProofBench) has no imperative replay
 // handle, and its own `replayKey` only restarts ITS current props — it cannot swap
-// which finding it is showing. So this file does the swap itself: pressing "p" or
-// "d" changes which finding's data is passed down and bumps a nonce, and both are
-// baked into this <ProofBench>'s React `key`. A changed `key` unmounts the old
-// instance and mounts a fresh one with `autoplay="mount"`, which is exactly
-// ProofBench's own "play once after document.fonts.ready" path (src/motion/autoplay.ts)
-// — so "re-keying" the bench IS the replay, frame-identical every time, and under
-// reduced motion autoplay does nothing and the static end frame stands (design §0
-// rule 1; motion spec §5), which is the required reduced-motion behaviour for P/D too.
+// which finding it is showing. So this file does the swap itself: pressing "p" (or
+// its published alias "r" — motion-spec §4.6.1) or "d" changes which finding's data
+// is passed down and bumps a nonce, and both are baked into this <ProofBench>'s
+// React `key`. A changed `key` unmounts the old instance and mounts a fresh one
+// with `autoplay="mount"`, which is exactly ProofBench's own "play once after
+// document.fonts.ready" path (src/motion/autoplay.ts) — so "re-keying" the bench
+// IS the replay, frame-identical every time, and under reduced motion autoplay
+// does nothing and the static end frame stands (design §0 rule 1; motion spec §5),
+// which is the required reduced-motion behaviour for P/R/D too.
 //
 // No `replayKey` prop is passed to <ProofBench>: that would bind a SECOND window
 // keydown listener (useSequence -> useKeyBinding) racing this file's own, restarting
 // the about-to-unmount instance's stale animation a frame before the remount lands.
-// This file is the only "p"/"d" listener the hero ever has.
+// This file is the only "p"/"r"/"d" listener the hero ever has.
 import { useEffect, useState } from "react";
 import { ProofBench } from "@/components/evidence/ProofBench";
 import type { FindingProof } from "@/lib/api-types";
@@ -52,7 +53,9 @@ export function HeroBench({ proven, disproven, className }: HeroBenchProps) {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (shouldHandleKey(event, "p")) {
+      // motion-spec §4.6.1: "R key | alias for P ... both are bound" — R replays
+      // the bench exactly as P does (return to the proven finding and replay).
+      if (shouldHandleKey(event, ["p", "r"])) {
         event.preventDefault();
         setState((s) => ({ which: "proven", nonce: s.nonce + 1 }));
       } else if (shouldHandleKey(event, "d")) {
