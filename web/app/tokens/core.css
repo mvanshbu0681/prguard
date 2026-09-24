@@ -274,6 +274,8 @@
   --chart-proven:        var(--signal);
   --chart-inconclusive:  var(--marker);
   --chart-not-attempted: var(--ink-8);
+  --chart-skipped-no-env: var(--ink-5);  /* integrator: fixture weekly series (README) */
+  --chart-not-applicable: var(--ink-7);  /* integrator: fixture weekly series (README) */
   --chart-series:    var(--signal);    /* T0 addition: single-series bars/histograms */
   --chart-axis:      var(--text-dim);  /* T0 addition: 11px mono caps axis labels */
   --chart-grid:      var(--grid-dash); /* T0 addition: charts sit on the graticule */
@@ -548,6 +550,8 @@
   --color-chart-disproven: var(--chart-disproven);
   --color-chart-inconclusive: var(--chart-inconclusive);
   --color-chart-not-attempted: var(--chart-not-attempted);
+  --color-chart-skipped-no-env: var(--chart-skipped-no-env);
+  --color-chart-not-applicable: var(--chart-not-applicable);
   --color-chart-series: var(--chart-series);
   --color-chart-axis: var(--chart-axis);
   --color-chart-grid: var(--chart-grid);

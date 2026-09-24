@@ -29,6 +29,14 @@ export interface DemoIds {
   repro_test_path: string;
   failing_test: string;
   tamper_demo_seq: number;
+  // Added by the generator after the binding ids (web/public/fixtures/README.md).
+  superseded_review_id: string;
+  first_push_sha: string;
+  not_attempted_finding_id: string;
+  suppressed_finding_id: string;
+  demo_suppression_id: string;
+  proven_fingerprint: string;
+  break_glass_seq: number;
 }
 
 /** manifest.json */
@@ -78,9 +86,10 @@ export interface CanonicalVectorsFile {
 
 /** accuracy/series.json — Ext. Every number carries its n. */
 export interface AccuracySeries {
-  weekly: { week_start: string; proven: number; disproven: number; inconclusive: number; not_attempted: number }[];
+  weekly: { week_start: string; proven: number; disproven: number; inconclusive: number; skipped_no_env: number; not_attempted: number; not_applicable: number }[];
   dismissal_by_category: { category: string; dismissed: number; published: number }[];
-  calibration: { band: SeverityBand; predicted_score_mean: number; addressed: number; n: number }[];
+  /** n = the addressed_rate population in the band; published_n = every published finding in it. */
+  calibration: { band: SeverityBand; predicted_score_mean: number; addressed: number; n: number; published_n: number }[];
   /** The raw counts accuracy/report.json was computed from (plan A7). */
   raw_counts: Record<string, unknown>;
 }

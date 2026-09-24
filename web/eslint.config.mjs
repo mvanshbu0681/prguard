@@ -20,7 +20,10 @@ const BANNED_EVERYWHERE = [
   { group: ["lenis", "lenis/*", "@studio-freight/lenis"], message: "Banned (plan §3): smooth scroll adds a frame of latency; Motion never drives scroll." },
 ];
 const NO_GSAP = { group: ["gsap", "gsap/*", "@gsap/*"], message: "GSAP is marketing-only (plan §2 rule 2). Dashboard motion is Motion via LazyMotion." };
-const NO_MOTION = { group: ["motion", "motion/*", "framer-motion", "framer-motion/*"], message: "Motion is dashboard-only (plan §2 rule 2). Marketing motion is GSAP." };
+// Anchored regex, not a gitignore-style group: the bare group pattern "motion" matches ANY
+// path segment named motion, which banned our own @/motion/GsapRuntime from the marketing
+// layout (the one import it is required to make). This bans only the Motion package.
+const NO_MOTION = { regex: "^(motion|framer-motion)(/|$)", message: "Motion is dashboard-only (plan §2 rule 2). Marketing motion is GSAP." };
 
 const dynamicImportBan = (pattern, message) => ({ selector: `ImportExpression[source.value=${pattern}]`, message });
 const DYN_EVERYWHERE = [dynamicImportBan("/^(three|lenis)(\\u002F|$)|^@react-three\\u002F/", "D1 / plan §3: no WebGL and no smooth scroll.")];

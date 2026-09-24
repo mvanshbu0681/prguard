@@ -19,9 +19,15 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { FIXTURES } from "@/lib/env";
 import { fixtureFetch } from "@/lib/fixture-resolver";
+import { installAuditHasher } from "@/lib/audit-hasher";
 import { getQueryClient } from "@/lib/query";
 
-if (FIXTURES) setTransportBase(fixtureFetch, "fixture");
+if (FIXTURES) {
+  setTransportBase(fixtureFetch, "fixture");
+  // Fixture-mode suppressions append audit events; t6's hasher chains them with the
+  // backend's canonical rules (plan A8) instead of leaving event_hash "pending".
+  installAuditHasher();
+}
 
 export function Providers({ children }: { children: ReactNode }) {
   // Not useState: a browser-wide singleton survives a suspending first render

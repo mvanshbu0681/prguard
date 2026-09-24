@@ -166,7 +166,10 @@ async function withRuntime(page: Page): Promise<void> {
 type Ready = { runtime: string | null; at: number; kept: number } | null;
 const markReady = (page: Page) => page.evaluate(() => (window as unknown as { __motion: { markAnimReady(r: string): Ready } }).__motion.markAnimReady("gsap"));
 
-describe.skipIf(!HAS_BROWSER)("the fallback handshake in Chromium", () => {
+// Real-clock Chromium checks: under many parallel builds the page can take longer than the
+// animation itself to become scriptable. The behaviour is deterministic on an idle machine;
+// retries absorb scheduler noise without loosening any assertion.
+describe.skipIf(!HAS_BROWSER)("the fallback handshake in Chromium", { retry: 2 }, () => {
   it("hides [data-anim] until the force-reveal fires at 1600ms when no runtime loads", async () => {
     const { page, context } = await open(`<p id="t" data-anim>content</p>`);
     expect(await style(page, "#t", "visibility")).toBe("hidden");
@@ -404,6 +407,10 @@ describe.skipIf(!HAS_BROWSER)("motion.css in Chromium", () => {
     expect((await animations(page, "#d"))[0]).toMatchObject({ name: "prg-draw-a", duration: 420, fill: "backwards", easing: "cubic-bezier(0.33, 0, 0.12, 1)" });
     const frames = await page.$eval("#d", (el) => {
       const a = el.getAnimations()[0];
+      // Pause before seeking: left running at 419ms, the 420ms animation finishes (and is
+      // removed, fill: backwards) before the next $eval can .finish() it, a race that
+      // failed under load.
+      a.pause();
       const at = (t: number) => {
         a.currentTime = t;
         const cs = getComputedStyle(el);
@@ -422,6 +429,7 @@ describe.skipIf(!HAS_BROWSER)("motion.css in Chromium", () => {
     await page.$eval("#scan", (el) => el.setAttribute("data-scan", "a"));
     expect((await animations(page, "#scan"))[0]).toMatchObject({ name: "prg-scan-a", duration: 1400, easing: "cubic-bezier(0.52, 0, 0.08, 1)" });
     const mid = await page.$eval("#scan", (el) => {
+      el.getAnimations()[0].pause();
       el.getAnimations()[0].currentTime = 700;
       const cs = getComputedStyle(el);
       return { scale: cs.scale, opacity: cs.opacity };

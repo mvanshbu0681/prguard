@@ -25,12 +25,12 @@ const CONFIG = {
   proven: { label: "Proven", color: "var(--chart-proven)", format: "count" },
   disproven: { label: "Disproven", color: "var(--chart-disproven)", format: "count" },
   inconclusive: { label: "Inconclusive", color: "var(--chart-inconclusive)", format: "count" },
-  skipped_no_env: { label: "Skipped, no env", color: "var(--ink-5)", format: "count" },
+  skipped_no_env: { label: "Skipped, no env", color: "var(--chart-skipped-no-env)", format: "count" },
   not_attempted: { label: "Not attempted", color: "var(--chart-not-attempted)", format: "count" },
   // --chart-not-attempted is --ink-8, the lightest of the three greys. --ink-5 and
   // --ink-7 keep the other two two rungs apart each, on a --ink-2 card — close
   // together (--ink-4, say) reads as a single indistinguishable dark smear.
-  not_applicable: { label: "Not applicable", color: "var(--ink-7)", format: "count" },
+  not_applicable: { label: "Not applicable", color: "var(--chart-not-applicable)", format: "count" },
 } satisfies ChartConfig;
 
 /** Draw order, floor first — proven at the bottom, disproven directly above it (see file header). */

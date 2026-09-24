@@ -21,5 +21,9 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}", "scripts/**/*.test.ts"],
     exclude: ["tests/e2e/**", "node_modules/**", ".next/**"],
     css: false,
+    // Up to eight worktrees run this suite at once during a build wave; several honest
+    // tests (a 512x512 PNG walk, the Shiki highlighter, lint-motion over the tree) pass 5s
+    // under that load. 15s is a budget, not a loosened assertion.
+    testTimeout: 15_000,
   },
 });

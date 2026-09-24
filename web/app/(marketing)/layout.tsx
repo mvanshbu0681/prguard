@@ -16,16 +16,6 @@
 // section's head under the header — sections are frozen files wave 3 owns,
 // so the rule lives here instead of on each one.
 import type { ReactNode } from "react";
-// eslint.config.mjs's marketing NO_MOTION ban is a gitignore-style pattern
-// ("motion/*") meant to block the npm "motion"/"framer-motion" packages; it is
-// unanchored, so it also matches any path with a literal "motion" segment,
-// including this required, GSAP-only, plan-mandated import of the wave-1
-// chrome T3 ships at src/motion/GsapRuntime.tsx. Raised (t8a): the frozen
-// config needs an exception for "@/motion/GsapRuntime" and "@/motion/*"
-// generally, since every GSAP-only helper (useSequence, reduced-motion,
-// tokens) lives under the same directory the npm-package ban's pattern
-// collides with.
-// eslint-disable-next-line no-restricted-imports
 import { GsapRuntime } from "@/motion/GsapRuntime";
 import { Footer, Nav, SkipLink } from "@/components/marketing-shell";
 
