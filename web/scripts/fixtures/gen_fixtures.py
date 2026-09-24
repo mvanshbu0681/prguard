@@ -162,12 +162,15 @@ def generate() -> tuple[dict[str, Any], dict[str, Any]]:
 
     rows = [(run, item) for run in world.runs for item in run.findings]
     rows.sort(key=lambda pair: (pair[1].row.created_at, pair[1].row.id), reverse=True)
-    files["findings/index.json"] = {"items": [emit.finding(world, run, item) for run, item in rows]}
+    finding_items = [emit.finding(world, run, item) for run, item in rows]
+    files["findings/index.json"] = {"items": finding_items}
     files["suppressions/index.json"] = emit.suppressions(world)
+    audit_items = emit.audit_items(events)
     files["audit/events.json"] = {
-        "items": emit.audit_items(events),
+        "items": audit_items,
         "chain": emit.audit_chain(verification),
     }
+    _roundtrip_lists(finding_items, audit_items, files["audit/events.json"]["chain"])
     files["audit/vectors.json"] = vectors.build()
 
     counts = reports.raw_counts(world, events)
@@ -194,6 +197,20 @@ def generate() -> tuple[dict[str, Any], dict[str, Any]]:
     extra_ids = check(files, context)
     files["manifest.json"] = manifest(files, context, extra_ids)
     return files, context
+
+
+def _roundtrip_lists(findings: list[dict[str, Any]], audit_items: list[dict[str, Any]], chain: dict[str, Any]) -> None:
+    """The index files as ``GET /v1/findings`` and ``GET /v1/audit`` would page them, whole."""
+    from corpus.backend import schemas
+    from corpus.emit import roundtrip
+
+    page = {"limit": len(findings), "next_cursor": None, "has_more": False}
+    listed = roundtrip(schemas.FindingList, {"items": findings, "page": page, "totals": {"matched": len(findings)}})
+    assert listed["items"] == findings
+    served = [{key: value for key, value in item.items() if key != "tenant_id"} for item in audit_items]
+    page = {"limit": len(served), "next_cursor": None, "has_more": False}
+    listed = roundtrip(schemas.AuditList, {"items": served, "chain": chain, "page": page})
+    assert listed["items"] == served and listed["chain"] == chain
 
 
 # =======================================================================================
