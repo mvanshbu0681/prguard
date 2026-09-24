@@ -90,18 +90,46 @@
 
 /* -------------------------------------------------------------------------
    The failing pane's run-summary line ("1 failed in 0.39s") — TerminalBlock
-   marks it data-mark="summary" (PYTEST_TONES). A 1px rule under it, scaleX
-   0 -> 1 from the left, --dur-3 (240ms) on --ease-instrument.
+   marks it data-mark="summary" (PYTEST_TONES), on the *whole line* span
+   (Line.tsx puts data-mark on .prg-terminal__line, not on a wrapper around
+   only the visible text). Motion §4.6.2 t=1900 draws a 1px --alarm rule
+   under it, scaleX 0 -> 1 from the left, --dur-3 (240ms) on --ease-instrument
+   — the rule, not the line's own text: an earlier version of this file
+   scaled the marked span itself, which is the line's real content (its
+   gutter number and every character of "1 failed in 0.39s"), so the
+   evidence read as blank for most of the sequence instead of merely
+   lacking its underline. The rule is drawn on a ::before overlay instead
+   (code.css already claims this element's own ::after for the hover data-
+   atom wash — display: inset 0, z-index 1 — so re-using it here fought
+   that rule for `top`/`bottom` and the bar drew at the top of the row
+   instead of under it; ::before is unclaimed), so the summary text stays
+   exactly as legible as every other row in its group (row-group opacity is
+   the only thing gating it, same as any other line) while the underline
+   draws in on its own. `top: auto` is explicit: an inline-block's own
+   position:relative (code.css) still resolves an unset `top` to 0 on this
+   element in some engines once any offset is set, which pins the bar to
+   the row's top edge instead of letting `bottom: 0` place it.
    ------------------------------------------------------------------------- */
 .failPane :global([data-mark~="summary"]) {
+  position: relative;
   display: inline-block;
-  transform-origin: left;
 }
-.root[data-pb-anim] .failPane :global([data-mark~="summary"]) {
-  border-bottom: 1px solid var(--alarm);
+.failPane :global([data-mark~="summary"])::before {
+  content: "";
+  position: absolute;
+  top: auto;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--alarm);
+  transform-origin: left;
+  pointer-events: none;
+}
+.root[data-pb-anim] .failPane :global([data-mark~="summary"])::before {
   transform: scaleX(0);
 }
-.root[data-pb-anim][data-pb-underline] .failPane :global([data-mark~="summary"]) {
+.root[data-pb-anim][data-pb-underline] .failPane :global([data-mark~="summary"])::before {
   transform: scaleX(1);
   transition: transform var(--dur-3) var(--ease-instrument);
 }
@@ -111,8 +139,7 @@
    spec §0 rule 1: "the designed state and the end state are the same frame"). Without this
    rule the underline existed only while [data-pb-anim] sat on the root, so it vanished the
    moment a replay settled or in any non-animated render. */
-.root:not([data-pb-anim]) .failPane :global([data-mark~="summary"]) {
-  border-bottom: 1px solid var(--alarm);
+.root:not([data-pb-anim]) .failPane :global([data-mark~="summary"])::before {
   transform: scaleX(1);
 }
 
