@@ -79,13 +79,14 @@ describe("GateBlock", () => {
     expect(all).not.toMatch(/\bproven (bug|finding)/i);
   });
 
-  it("keeps one box in every state: the 2px rule comes out of the padding", () => {
-    const top = (reading: GateReading, withLine: boolean) => {
+  it("keeps one 64px box in every state: fixed height, the detail row reserved and clamped to one line", () => {
+    const REASON = "Nothing could be executed in this run, so nothing is claimed or blocked.";
+    const frameOf = (reading: GateReading, withLine: boolean) => {
       const { container } = render(
         <GateBlock
           conclusion={reading}
           blocking={withLine ? 1 : undefined}
-          reason={withLine ? "Nothing could be executed in this run." : undefined}
+          reason={withLine ? REASON : undefined}
           delivery={withLine ? "check_run" : null}
           announce={false}
         />,
@@ -93,14 +94,50 @@ describe("GateBlock", () => {
       const frame = container.querySelector('[data-slot="gate-block-frame"]')!;
       const cls = [...frame.classList];
       const border = cls.includes("border-t-2") ? 2 : 1;
-      const pad = cls.includes("pt-[11px]") ? 11 : cls.includes("pt-[7px]") ? 7 : cls.includes("py-3") ? 12 : cls.includes("py-2") ? 8 : NaN;
-      return border + pad;
+      const pad = cls.includes("pt-[11px]") ? 11 : cls.includes("py-3") ? 12 : NaN;
+      const row = frame.querySelector('[data-slot="gate-block-detail"], [data-slot="gate-block-detail-empty"]');
+      return { frame, cls, top: border + pad, row };
     };
-    expect(top("failure", true)).toBe(13);
-    expect(top("success", true)).toBe(13);
-    expect(top("neutral", true)).toBe(13);
-    expect(top("failure", false)).toBe(9);
-    expect(top(null, false)).toBe(9);
+    const cases: [GateReading, boolean][] = [
+      ["failure", true],
+      ["success", true],
+      ["neutral", true],
+      [null, true],
+      ["failure", false],
+      ["success", false],
+      ["neutral", false],
+      [null, false],
+    ];
+    for (const [reading, withLine] of cases) {
+      const { cls, top, row } = frameOf(reading, withLine);
+      const what = `${reading ?? "running"} ${withLine ? "with" : "without"} a second line`;
+      // one height class, no min-height that lets content grow the box
+      expect(cls.filter((c) => /^(min-|max-)?h-/.test(c)), what).toEqual(["h-16"]);
+      expect(cls, what).toContain("overflow-hidden");
+      // the 2px rule comes out of the padding
+      expect(top, what).toBe(13);
+      // the second row exists in every state and can never wrap
+      expect(row, what).not.toBeNull();
+      expect(row!.classList.contains("truncate"), what).toBe(true);
+      expect(row!.classList.contains("leading-[1.4]"), what).toBe(true);
+    }
+  });
+
+  it("clamps the API's neutral reason to one line and keeps the whole sentence in title and in the DOM", () => {
+    const REASON = "Nothing could be executed in this run, so nothing is claimed or blocked.";
+    const { container } = render(<GateBlock conclusion="neutral" reason={REASON} announce={false} />);
+    const row = container.querySelector('[data-slot="gate-block-detail"]')!;
+    expect(row.textContent).toBe(REASON);
+    expect(row.getAttribute("title")).toBe(REASON);
+    expect(row.classList.contains("truncate")).toBe(true);
+    expect(row.className).not.toMatch(/overflow-wrap|break-/);
+  });
+
+  it("reserves an empty, hidden row while RUNNING", () => {
+    const { container } = render(<GateBlock conclusion={null} announce={false} />);
+    const empty = container.querySelector('[data-slot="gate-block-detail-empty"]')!;
+    expect(empty.getAttribute("aria-hidden")).toBe("true");
+    expect(empty.textContent!.trim()).toBe("");
   });
 
   it("paints CLEAR achromatic: --text-body on --signal-tint-lo, a --signal-lo underline, no check", () => {

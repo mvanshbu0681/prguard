@@ -36,11 +36,20 @@ describe("StatusBadge — border style is the encoding", () => {
     expect(tokenFor(el, "text")).toBe("--text-body");
   });
 
-  it("suppressed: 1.5px dashed --ink-7 with the ledger glyph", () => {
+  it("suppressed: 1.5px dashed --ink-7 with the ledger glyph, stroked in SVG so the 1.5px survives", () => {
     const { el, glyph } = badge("suppressed");
-    expect(el.classList.contains("border-dashed")).toBe(true);
-    expect(el.classList.contains("border-[1.5px]")).toBe(true);
-    expect(tokenFor(el, "border")).toBe("--ink-7");
+    // a CSS border would snap 1.5px to 1px: the border is a transparent 1px spacer ...
+    expect(tokenFor(el, "border")).toBe("transparent");
+    expect(el.className).not.toMatch(/border-\[1\.5px\]/);
+    // ... and the dashes are an svg stroke of exactly 1.5px in --ink-7
+    const outline = el.querySelector('[data-slot="status-badge-outline"]')!;
+    expect(outline.getAttribute("aria-hidden")).toBe("true");
+    expect(tokenFor(outline, "text")).toBe("--ink-7");
+    const rect = outline.querySelector("rect")!;
+    expect(rect.getAttribute("stroke")).toBe("currentColor");
+    expect(rect.getAttribute("stroke-width")).toBe("1.5");
+    expect(rect.getAttribute("stroke-dasharray")).toMatch(/^\d+(\.\d+)? \d+(\.\d+)?$/);
+    expect(rect.getAttribute("fill")).toBe("none");
     expect(glyph?.getAttribute("data-glyph")).toBe("ledger");
   });
 
@@ -62,10 +71,13 @@ describe("StatusBadge — border style is the encoding", () => {
   it("gives every status a distinct border style / label pair", () => {
     const keys = STATUSES.map((s) => {
       const { el, label } = badge(s);
-      const style = ["border-dotted", "border-dashed", "border-l-2"].find((c) => el.classList.contains(c)) ?? tokenFor(el, "border");
+      const svgDashes = el.querySelector('[data-slot="status-badge-outline"]') ? "svg-dashed" : null;
+      const style = svgDashes ?? ["border-dotted", "border-dashed", "border-l-2"].find((c) => el.classList.contains(c)) ?? tokenFor(el, "border");
       return `${style}|${label.textContent}`;
     });
     expect(new Set(keys).size).toBe(STATUSES.length);
+    // and the border style alone (no label) still separates proposed / published / suppressed / dropped
+    expect(new Set(keys.slice(0, 4).map((k) => k.split("|")[0])).size).toBe(4);
     expect(STATUSES.map((s) => badge(s).label.textContent)).toEqual(["PROPOSED", "PUBLISHED", "SUPPRESSED", "DROPPED", "DISPROVEN"]);
   });
 });
