@@ -279,14 +279,14 @@ function ChainRow({
         onClick={() => onToggle(event.seq)}
         className="chain-rail__row-head flex w-full min-w-0 items-center gap-2 py-1.5 pl-8 pr-3 text-left type-data hover:bg-ink-2"
       >
-        <span className="w-14 shrink-0 tabular text-text-body">{event.seq}</span>
-        <time dateTime={event.created_at} className="w-[76px] shrink-0 tabular text-text-dim">
+        <span className="w-10 shrink-0 tabular text-text-body sm:w-14">{event.seq}</span>
+        <time dateTime={event.created_at} className="hidden w-[76px] shrink-0 tabular text-text-dim sm:block">
           {formatAbsoluteUtc(event.created_at)}
         </time>
-        <span className="w-14 shrink-0 tabular text-text-dim">{relative ?? ""}</span>
-        <span className="flex w-24 shrink-0 items-center gap-1 text-text-dim">
+        <span className="hidden w-14 shrink-0 tabular text-text-dim sm:block">{relative ?? ""}</span>
+        <span className="flex shrink-0 items-center gap-1 text-text-dim sm:w-24">
           <ActorGlyph actor={event.actor_type as ActorType} />
-          {actorLabel(event.actor_type)}
+          <span className="hidden sm:inline">{actorLabel(event.actor_type)}</span>
         </span>
         <span className="type-chip min-w-0 flex-1 truncate uppercase text-text-body">{event.event_type}</span>
         <span
@@ -333,7 +333,7 @@ function ChainRow({
               aria-label={canEdit ? `canonical_json for seq ${event.seq}` : undefined}
               aria-multiline={canEdit ? false : undefined}
               className={cn(
-                "type-data min-w-0 flex-1 overflow-x-auto whitespace-pre text-text-body outline-none",
+                "type-data min-w-0 flex-1 [overflow-wrap:anywhere] whitespace-pre-wrap text-text-body outline-none",
                 canEdit && "cursor-text rounded-data border border-dashed border-rule-2 px-1 focus-visible:[box-shadow:var(--focus-ring)]",
               )}
             >

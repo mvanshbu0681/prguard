@@ -74,12 +74,17 @@ export async function verifyWindow(items: readonly ChainVerifyItem[]): Promise<C
   for (let i = 0; i < items.length; i += 1) {
     const item = items[i];
     const computed = computedHashes[i];
-    let intact = computed === item.expectedHash;
+    const ownHashIntact = computed === item.expectedHash;
 
+    // `linked` is independent of `ownHashIntact` on purpose: it answers "does this row's
+    // prevHash still point at its neighbour's hash", not "is this row valid overall" —
+    // conflating the two would make an edited PAYLOAD (own hash breaks, pointer is still
+    // fine) misreport as "prev_hash no longer links to the row above", which is simply
+    // false and would mislead whoever reads it.
     const previous = i > 0 ? items[i - 1] : null;
     const contiguous = previous !== null && item.seq === previous.seq + 1;
-    const linked = !contiguous || (intact && item.prevHash === previous.expectedHash);
-    if (contiguous && intact) intact = linked;
+    const linked = !contiguous || item.prevHash === previous.expectedHash;
+    const intact = ownHashIntact && linked;
 
     results.push({ seq: item.seq, expected: item.expectedHash, computed, linked });
     if (!intact && brokenAtSeq === null) brokenAtSeq = item.seq;

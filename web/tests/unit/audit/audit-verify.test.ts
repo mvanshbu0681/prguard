@@ -106,6 +106,25 @@ describe("verifyWindow — the full audit corpus (audit/events.json)", () => {
     for (const row of before) expect(row.computed).toBe(row.expected);
   });
 
+  it("an edited row's own broken hash does not falsely report a broken prev_hash link", async () => {
+    // `linked` must answer "does this row's prevHash still point at its neighbour's hash"
+    // independently of whether THIS row's own payload was tampered — editing only the
+    // payload (never prev_hash) must never show "prev_hash no longer links to the row
+    // above", because it didn't.
+    const raw = file.items.find((item) => item.seq === 1428)!;
+    const editedPayload = { ...(raw.payload as Record<string, unknown>), severity_score: 0.8 };
+    const window = file.items
+      .filter((item) => item.seq >= 1425 && item.seq <= 1430)
+      .map((item) => toVerifyItem(item, item.seq === 1428 ? editedPayload : undefined));
+
+    const result = await verifyWindow(window);
+    const editedRow = result.results.find((r) => r.seq === 1428)!;
+    expect(editedRow.computed).not.toBe(editedRow.expected); // its own hash is broken
+    expect(editedRow.linked).toBe(true); // but its prev_hash pointer is still exactly right
+    const nextRow = result.results.find((r) => r.seq === 1429)!;
+    expect(nextRow.linked).toBe(true); // and the row after it still links to it correctly
+  });
+
   it("no linkage is asserted across a gap (a filtered/non-contiguous window)", async () => {
     const window = [file.items.find((i) => i.seq === 10)!, file.items.find((i) => i.seq === 50)!].map((item) => toVerifyItem(item));
     const result = await verifyWindow(window);

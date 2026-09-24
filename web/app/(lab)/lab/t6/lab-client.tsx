@@ -80,25 +80,23 @@ export function ChainRailLab({ rawEventsText, tamperDemoSeq }: { rawEventsText: 
       </LabSection>
 
       <LabSection index="03" title="Guards" note="Read-only fallbacks the same component renders when a guard trips.">
-        <div className="grid gap-6 md:grid-cols-3">
-          <Surface elevation={2} variant="card" as="div">
-            <p className="type-label text-text-dim">missing tenant_id (plan A9)</p>
-            <div className="mt-4">
-              <ChainRail
-                events={marketingWindow.slice(0, 3) as never}
-                verified={file.chain.verified}
-                brokenAtSeq={null}
-                checked={3}
-                firstSeq={marketingWindow[0]?.seq ?? null}
-                lastSeq={marketingWindow[2]?.seq ?? null}
-                surface="marketing"
-                missingTenantId
-                index="—"
-                provenance="GET /v1/audit"
-              />
-            </div>
-          </Surface>
-        </div>
+        <Surface elevation={2} variant="card" as="div" className="max-w-[420px]">
+          <p className="type-label text-text-dim">missing tenant_id (plan A9)</p>
+          <div className="mt-4">
+            <ChainRail
+              events={marketingWindow.slice(0, 3) as never}
+              verified={file.chain.verified}
+              brokenAtSeq={null}
+              checked={3}
+              firstSeq={marketingWindow[0]?.seq ?? null}
+              lastSeq={marketingWindow[2]?.seq ?? null}
+              surface="marketing"
+              missingTenantId
+              index="09"
+              provenance="GET /v1/audit"
+            />
+          </div>
+        </Surface>
       </LabSection>
     </div>
   );
