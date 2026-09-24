@@ -110,12 +110,16 @@ export interface UseChainWindowOptions {
 
 const EMPTY_RESULT: ChainVerifyResult = { verified: true, checked: 0, brokenAtSeq: null, results: [] };
 
-/** The three guards that are known synchronously, from props and the environment alone —
- *  never from an async check. `null` means "no synchronous guard applies; an async
- *  verification may proceed" (guard 2's "checking" / "serialiser-mismatch" / "ready"). */
-function syncGuardFor(missingTenantId: boolean, baseCount: number): Exclude<ChainGuard, "checking" | "serialiser-mismatch" | "ready"> | null {
+/** The guards known synchronously from PROPS alone — safe to compute during render,
+ *  including the very first (server) render, because they never read `window` or
+ *  `crypto`. Guard 1 (secure context / `crypto.subtle`) is NOT here: `window` does not
+ *  exist during SSR, so folding it into this function would render "no-crypto" on the
+ *  server and something else on the client's first render — a hydration mismatch. It is
+ *  checked instead inside the mount effect below, which never runs during SSR and runs
+ *  identically (client-only) whether the page was static or hydrated. `null` means "no
+ *  synchronous guard applies yet". */
+function propsGuardFor(missingTenantId: boolean, baseCount: number): "missing-tenant" | "no-data" | null {
   if (missingTenantId) return "missing-tenant";
-  if (!hasSecureCrypto()) return "no-crypto";
   if (baseCount === 0) return "no-data";
   return null;
 }
@@ -143,12 +147,14 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
     [bases],
   );
 
-  // Guards 1, "no-data" and A9's missing-tenant are pure functions of props and the
-  // environment — computed during render, never via an effect. Only guard 2 (the async
-  // untouched-window check) needs state.
-  const syncGuard = syncGuardFor(missingTenantId, bases.length);
+  // "no-data" and A9's missing-tenant are pure functions of props — computed during
+  // render, never via an effect (and safe during SSR: see propsGuardFor). Guard 1
+  // (secure context) and guard 2 (the async untouched-window check) are both resolved
+  // in the mount effect below, since guard 1 needs `window`/`crypto`, which do not exist
+  // during SSR.
+  const propsGuard = propsGuardFor(missingTenantId, bases.length);
 
-  const [asyncGuard, setAsyncGuard] = useState<"checking" | "serialiser-mismatch" | "ready">("checking");
+  const [envGuard, setEnvGuard] = useState<"checking" | "no-crypto" | "serialiser-mismatch" | "ready">("checking");
   const [result, setResult] = useState<ChainVerifyResult>(EMPTY_RESULT);
   const [overrides, setOverrides] = useState<ReadonlyMap<number, string>>(new Map());
   const [generations, setGenerations] = useState<ReadonlyMap<number, number>>(new Map());
@@ -161,13 +167,13 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
   const [syncedSignature, setSyncedSignature] = useState(signature);
   if (syncedSignature !== signature) {
     setSyncedSignature(signature);
-    setAsyncGuard("checking");
+    setEnvGuard("checking");
     setResult(EMPTY_RESULT);
     setOverrides(new Map());
     setGenerations(new Map());
   }
 
-  const guard: ChainGuard = syncGuard ?? asyncGuard;
+  const guard: ChainGuard = propsGuard ?? envGuard;
 
   // Refs are never read during render (only inside the debounce timer and the event
   // handlers that also update `overrides` above) — this shadow exists purely so the
@@ -182,9 +188,16 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
 
   const runVerify = useCallback(
     async (overrideMap: ReadonlyMap<number, string>, verifyOptions: { asInitialCheck: boolean }) => {
-      // Callers only invoke this once `syncGuard` is null (preconditions hold) — nothing
-      // here runs synchronously before the `await`, so no setState happens inside this
-      // function's synchronous prologue.
+      // Yield once before touching `window`/`crypto` (guard 1): this function only ever
+      // runs from an effect (never during render or SSR), but the yield keeps every
+      // setState call below strictly asynchronous relative to whatever triggered this
+      // call, so a burst of calls (a fast-typing tamper edit) never cascades synchronous
+      // re-renders within one commit.
+      await Promise.resolve();
+      if (!hasSecureCrypto()) {
+        setEnvGuard("no-crypto");
+        return;
+      }
       const id = (requestIdRef.current += 1);
       const items: ChainVerifyItem[] = bases.map((base) => {
         const text = overrideMap.get(base.seq) ?? base.originalText;
@@ -203,21 +216,29 @@ export function useChainWindow(events: readonly LosslessAuditEvent[] | null, opt
       setResult(verified);
       // Guard 2 fires only for the untouched window; an edit that breaks the chain is the
       // feature, not a serialiser bug.
-      setAsyncGuard(verifyOptions.asInitialCheck && !verified.verified ? "serialiser-mismatch" : "ready");
+      setEnvGuard(verifyOptions.asInitialCheck && !verified.verified ? "serialiser-mismatch" : "ready");
     },
     [bases],
   );
 
-  // Guard 2: verify the untouched window once whenever it (re)appears, provided no
-  // synchronous guard already rules it out.
+  // Guard 1 and guard 2: verify the untouched window once whenever it (re)appears,
+  // provided no props guard already rules it out. `runVerify` itself yields before
+  // touching `window`/`crypto` or calling setState (see above), so nothing here runs
+  // synchronously in this effect's own call stack — but react-hooks/set-state-in-effect
+  // flags the call site by call-graph reachability (it can see `runVerify` eventually
+  // calls a setter) regardless of that internal await, which is exactly the "subscribe
+  // to an external system, call setState when it changes" case the rule's own docs carve
+  // out (react.dev/learn/you-might-not-need-an-effect): `crypto.subtle.digest` is exactly
+  // such an external system. Disabled with that read, not to silence a real bug.
   useEffect(() => {
-    if (syncGuard !== null) return;
+    if (propsGuard !== null) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void runVerify(new Map(), { asInitialCheck: true });
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature, syncGuard]);
+  }, [signature, propsGuard]);
 
   const setRowText = useCallback(
     (seq: number, text: string) => {

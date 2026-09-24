@@ -416,7 +416,7 @@ export function ChainRail({
 }: ChainRailComponentProps) {
   const baseId = useId();
   const [expandedSeqs, setExpandedSeqs] = useState<ReadonlySet<number>>(
-    () => new Set(defaultExpanded ?? surface === "marketing" ? events.map((e) => e.seq) : []),
+    () => new Set((defaultExpanded ?? surface === "marketing") ? events.map((e) => e.seq) : []),
   );
 
   const toggle = useCallback((seq: number) => {
@@ -466,7 +466,10 @@ export function ChainRail({
       const text = rowState?.text ?? safeDisplayCanonicalJson(row.event, "—");
       const computed = ready ? (rowState?.computed ?? null) : null;
       const linked = rowState?.linked ?? true;
-      const intact = ready ? computed === row.event.event_hash && linked : true;
+      // Not ready yet (or verification isn't available): fall back to the props-reported
+      // break point rather than defaulting every row to "intact" — a genuinely broken
+      // server verdict (A9's missing-tenant case, say) must still show as broken here.
+      const intact = ready ? computed === row.event.event_hash && linked : displayBrokenAtSeq == null || seq < displayBrokenAtSeq;
       const desaturated = displayBrokenAtSeq != null && seq > displayBrokenAtSeq;
       const nextRow = rows[index + 1];
       let connector: Connector = "none";
