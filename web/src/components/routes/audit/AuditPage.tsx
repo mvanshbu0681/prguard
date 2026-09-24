@@ -56,7 +56,7 @@ export function AuditPage() {
     actor_type: filters.actor_type,
   });
 
-  const pages = query.data?.pages ?? [];
+  const pages = useMemo(() => query.data?.pages ?? [], [query.data]);
   const losslessEvents = useMemo<LosslessAuditEvent[]>(
     () => pages.flatMap((p) => (p.items ?? []) as unknown as LosslessAuditEvent[]),
     [pages],

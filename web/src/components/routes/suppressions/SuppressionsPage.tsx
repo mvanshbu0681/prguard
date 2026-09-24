@@ -13,6 +13,7 @@
 // response correctly even though no column can print it per row (raised: props.ts's
 // SuppressionItem should probably grow a fingerprint field so the deep link's target
 // row is identifiable on screen, not just present in a filtered result).
+import { useState } from "react";
 import { useCompactRowsToggle, EmptyState, ErrorState, LoadingState, useListKeys } from "@/components/app-shell";
 import { IndexStrip, ProvenanceStrip, Surface } from "@/components/chrome";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,11 @@ function TotalsMeta({ active, expired, revoked }: { active: number; expired: num
 export function SuppressionsPage() {
   const [filters, setFilters] = useSuppressionFilters();
   const [compact] = useCompactRowsToggle();
+  // Computed once, at mount: a state (active vs. expired) only actually changes when
+  // the ledger refetches (a revoke, a filter change), so there is no need to re-derive
+  // it every render — and Date.now() called directly during render is impure
+  // (react-hooks/purity), same as OfflineBanner's own now/setNow (src/components/app-shell).
+  const [nowMs] = useState(() => Date.now());
   const query = useSuppressions({
     scope: filters.scope,
     repository: filters.repository,
@@ -69,7 +75,7 @@ export function SuppressionsPage() {
         <IndexStrip
           index="01"
           category="Suppression ledger"
-          identifier={`${(totals.active + totals.expired + totals.revoked).toLocaleString("en-US")} entries in scope`}
+          identifier={`${((totals.active ?? 0) + (totals.expired ?? 0) + (totals.revoked ?? 0)).toLocaleString("en-US")} entries in scope`}
           meta={<TotalsMeta active={totals.active ?? 0} expired={totals.expired ?? 0} revoked={totals.revoked ?? 0} />}
           labelId="suppressions-strip"
         />
@@ -156,7 +162,7 @@ export function SuppressionsPage() {
         ) : (
           <ol {...gridProps} className="m-0 list-none p-0" aria-label="Suppression ledger rows">
             {items.map((item, i) => {
-              const state = ledgerState(item, Date.now());
+              const state = ledgerState(item, nowMs);
               return (
                 <li
                   key={item.suppression_id}
