@@ -47,9 +47,17 @@ export function FindingsListRoute() {
 
       <div className="flex flex-1 flex-col gap-3 px-4 py-4 md:px-6">
         {findings.isError ? (
-          <ErrorState error={findings.error} onRetry={() => findings.refetch()} />
+          <Surface elevation={0} variant="panel" className="flex flex-col overflow-hidden" data-slot="findings-panel">
+            <IndexStrip index="02" category="Findings" identifier="error" />
+            <ErrorState error={findings.error} onRetry={() => findings.refetch()} />
+            <ProvenanceStrip source={findingsProvenanceSource(filters)} />
+          </Surface>
         ) : isEmpty ? (
-          <EmptyState message={emptyStateMessage(filters)} actions={[{ label: "Clear filters", onClick: () => setFilters(null) }]} />
+          <Surface elevation={0} variant="panel" className="flex flex-col overflow-hidden" data-slot="findings-panel">
+            <IndexStrip index="02" category="Findings" identifier="0 loaded" />
+            <EmptyState message={emptyStateMessage(filters)} actions={[{ label: "Clear filters", onClick: () => setFilters(null) }]} />
+            <ProvenanceStrip source={findingsProvenanceSource(filters)} />
+          </Surface>
         ) : isMobile ? (
           <Surface elevation={0} variant="panel" className="flex flex-col overflow-hidden" data-slot="findings-panel">
             <IndexStrip index="02" category="Findings" identifier={`${rows.length} loaded`} />

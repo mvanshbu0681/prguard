@@ -90,10 +90,11 @@ export function FindingsTable({
     },
   });
 
-  // Keyboard focus is logical (the grid wrapper holds real DOM focus, per
-  // useListKeys' own contract — see tests/unit/app-shell); bring the active
-  // row into the virtualized viewport so j/k still reads as navigation and
-  // WCAG 2.4.11's scroll-margin actually has something to scroll past.
+  // Keyboard focus is a roving tabIndex on the rows themselves (useListKeys'
+  // rowProps — real DOM focus moves row to row, one Tab stop total; see
+  // tests/unit/app-shell). Bring the active row into the virtualized viewport
+  // so j/k still reads as navigation and WCAG 2.4.11's scroll-margin actually
+  // has something to scroll past.
   useEffect(() => {
     if (activeIndex >= 0) virtualizer.scrollToIndex(activeIndex, { align: "auto" });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- virtualizer identity is stable per mount; re-running on it would fight user scroll.
@@ -108,16 +109,12 @@ export function FindingsTable({
     if (last && last.index >= tableRows.length - LOAD_MORE_THRESHOLD) onLoadMore();
   }, [virtualRows, tableRows.length, hasNextPage, isFetchingNextPage, onLoadMore]);
 
-  const activeRowId = activeIndex >= 0 ? tableRows[activeIndex]?.id : undefined;
-
   return (
     <div
       ref={scrollRef}
       {...gridProps}
-      tabIndex={0}
       aria-label="Findings"
       aria-rowcount={rows.length}
-      aria-activedescendant={activeRowId ? `finding-row-${activeRowId}` : undefined}
       className={cn("ui-table-wrap overflow-auto rounded-panel border border-rule-1 outline-offset-[-2px]", className)}
       style={{ height, "--ui-sticky-top": "0px" } as CSSProperties}
       data-slot="findings-table"

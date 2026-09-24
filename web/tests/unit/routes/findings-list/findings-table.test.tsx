@@ -152,10 +152,20 @@ describe("FindingsTable — interaction", () => {
   it("j then Enter on the focused grid opens the second row", async () => {
     const user = userEvent.setup();
     const { onOpenRow } = renderTable({ rows: [finding(0), finding(1), finding(2)] });
-    screen.getByRole("grid", { name: "Findings" }).focus();
+    // The grid wrapper itself is not a Tab stop (dashboard §1.5: one roving-tabindex
+    // stop, not two) — real DOM focus starts on the active row, tabIndex 0.
+    screen.getAllByRole("row").find((r) => r.getAttribute("tabindex") === "0")!.focus();
     await user.keyboard("j{Enter}");
     expect(onOpenRow).toHaveBeenCalledTimes(1);
     expect(onOpenRow.mock.calls[0][0].id).toBe("finding-1");
+  });
+
+  it("the grid wrapper carries no tabIndex of its own — the active row is the single Tab stop (dashboard §1.5)", () => {
+    renderTable({ rows: [finding(0), finding(1), finding(2)] });
+    const grid = screen.getByRole("grid", { name: "Findings" });
+    expect(grid).not.toHaveAttribute("tabindex");
+    const rows = screen.getAllByRole("row").filter((r) => r.hasAttribute("data-index"));
+    expect(rows.filter((r) => r.getAttribute("tabindex") === "0")).toHaveLength(1);
   });
 
   it("the initial-loading state renders the real header plus skeleton rows, not the data", () => {

@@ -23,18 +23,27 @@ export function tableMeta(table: Table<Finding>): FindingsTableMeta {
 
 const columnHelper = createColumnHelper<Finding>();
 
-/** Column widths, px — a fixed <colgroup> so virtualized rows never reflow independently of the header (design §5.5's "columns refuse to shrink" rule, applied deliberately here instead of fought). */
+/**
+ * Column widths, px — a fixed <colgroup> so virtualized rows never reflow independently
+ * of the header (design §5.5's "columns refuse to shrink" rule, applied deliberately here
+ * instead of fought). Every width is >= its own header label's rendered width (11px mono
+ * caps, 0.12em tracking, 12px cell padding each side) at every supported density, and the
+ * SUM stays under the narrowest required breakpoint's available panel width (1280px: a
+ * 1004px table wrap) so the table never grows its own horizontal scrollbar — title/location/
+ * proof are the ones tightened to make that fit; fingerprint and created are the two that
+ * grew, since their header text was the actual overflow.
+ */
 export const COLUMN_WIDTHS = {
-  severity: 92,
-  score: 68,
-  title: 166,
-  location: 150,
-  proof: 150,
-  status: 116,
+  severity: 100,
+  score: 66,
+  title: 90,
+  location: 88,
+  proof: 152,
+  status: 118,
   blocking: 108,
-  repository: 118,
-  fingerprint: 90,
-  created: 48,
+  repository: 82,
+  fingerprint: 116,
+  created: 82,
 } as const;
 
 export const findingsColumns = [
