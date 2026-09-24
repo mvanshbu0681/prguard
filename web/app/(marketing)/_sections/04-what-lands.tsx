@@ -16,6 +16,7 @@
 // revealer, src/motion/reveal.ts) — no GSAP import, so src/components/evidence's
 // dashboard-safety rule (no gsap in this tree) is moot here, but this file
 // avoids it anyway on principle.
+import type { CSSProperties } from "react";
 import { ProvenanceLine, SectionIndex } from "@/components/chrome";
 import { getDemoResult } from "@/lib/fixtures";
 import { ANIM_PROPS } from "@/motion/attrs";
@@ -45,9 +46,16 @@ export function WhatLandsInYourPR() {
       </div>
 
       {/* Full-bleed #f6f8fa band: the only section on the site in GitHub's own light chrome
-          (brand-gaps §E). One 240ms opacity reveal, once, nothing else — no hover on the mock,
-          no scroll parallax, no typing. It is a photograph of a thing that already happened. */}
-      <div {...ANIM_PROPS} className="reveal w-full bg-[#f6f8fa] py-12 md:py-16" style={{ colorScheme: "light" }}>
+          (brand-gaps §E). One 240ms (--dur-reveal) opacity reveal, once, nothing else — no
+          hover on the mock, no scroll parallax, no typing. It is a photograph of a thing that
+          already happened. .reveal (src/styles/motion.css) falls back to --dur-enter (420ms on
+          this, the marketing, surface) unless --motion-dur is set here, so the override below
+          is what actually pins this to --dur-reveal rather than the default enter duration. */}
+      <div
+        {...ANIM_PROPS}
+        className="reveal w-full bg-[#f6f8fa] py-12 md:py-16"
+        style={{ colorScheme: "light", "--motion-dur": "var(--dur-reveal)" } as CSSProperties}
+      >
         <div className="mx-auto max-w-[880px] px-4 md:px-8">
           <GithubCommentMock payload={payload} provenComment={provenComment} finishedAt={result.timing?.finished_at} />
           <GithubSummaryMock payload={payload} />

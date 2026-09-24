@@ -13,6 +13,7 @@
 // that one block out, renders the markdown either side of it through
 // react-markdown, and renders the block itself as a native <details> (closed
 // by default — no JS needed for the collapse).
+import { isValidElement, type ReactNode } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -68,6 +69,16 @@ function renderSummaryText(summary: string) {
   );
 }
 
+/** Flattens a react-markdown child tree to its plain text, to tell an empty `<th>` (the review-summary
+ *  table's `| | |` header) from one with real header text (the Proof table's `SHA` / `result`). */
+function textContent(node: ReactNode): string {
+  if (node === null || node === undefined || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textContent).join("");
+  if (isValidElement(node)) return textContent((node.props as { children?: ReactNode }).children);
+  return "";
+}
+
 const components: Components = {
   h1: (p) => <h1 className="mb-2 mt-0 text-[20px] font-semibold text-[#1f2328]" {...p} />,
   h2: (p) => <h2 className="mb-2 mt-0 text-[18px] font-semibold text-[#1f2328]" {...p} />,
@@ -87,7 +98,11 @@ const components: Components = {
   // each <tr> becomes a flex row (first cell = label, second = value) and the
   // rows stack vertically, rather than a 2-column grid squeezed into 375px.
   table: (p) => <table className="mb-3 w-full border-collapse text-[13px] max-sm:block max-sm:border-none" {...p} />,
-  thead: (p) => <thead className="sr-only" {...p} />,
+  // The review-summary table's header cells are empty (`| | |`, no header text to show at any
+  // width — sr-only unconditionally). The Proof table's header cells carry real text (`SHA`,
+  // `result`) and GitHub renders those visibly at desktop widths, so only the mobile,
+  // stacked-rows layout (brand-gaps §E "Mobile") hides them here.
+  thead: (p) => <thead className={textContent(p.children).trim() ? "max-sm:sr-only" : "sr-only"} {...p} />,
   tbody: (p) => <tbody className="max-sm:block" {...p} />,
   tr: (p) => <tr className="border-b border-[#d0d7de] max-sm:flex max-sm:items-baseline max-sm:justify-between max-sm:gap-3 max-sm:border-0 max-sm:border-b max-sm:py-2 max-sm:last:border-b-0" {...p} />,
   th: (p) => <th className="border border-[#d0d7de] px-3 py-2 text-left font-semibold text-[#1f2328] max-sm:border-0 max-sm:p-0" {...p} />,
