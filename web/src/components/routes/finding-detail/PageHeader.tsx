@@ -14,11 +14,11 @@ function formatAbsoluteUtc(iso: string): string {
 }
 
 const META_LABEL = "type-label text-text-dim";
-const META_VALUE = "type-data text-text-body";
+const META_VALUE = "type-data break-words text-text-body";
 
 function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex min-w-0 flex-col gap-0.5">
       <span className={META_LABEL}>{label}</span>
       <span className={META_VALUE}>{children}</span>
     </div>
@@ -39,8 +39,8 @@ export function PageHeader({ finding }: { finding: Finding }) {
           {finding.blocking ? <GateChip conclusion="failure" /> : null}
         </div>
       </div>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
-        <div className="flex flex-col gap-0.5">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Severity</span>
           {finding.severity ? (
             <SeverityMeter score={finding.severity.score} band={finding.severity.band} density="inline" />

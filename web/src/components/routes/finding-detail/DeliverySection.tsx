@@ -16,7 +16,7 @@ import { deliveredExactLine, githubCommentUrl, locationRangeLabel } from "./form
 import { OrdinaryPanel } from "./OrdinaryPanel";
 
 const META_LABEL = "type-label text-text-dim";
-const META_VALUE = "type-data text-text-body";
+const META_VALUE = "type-data break-words text-text-body";
 
 export interface DeliverySectionProps {
   finding: Finding;
@@ -26,7 +26,12 @@ export interface DeliverySectionProps {
 
 export function DeliverySection({ finding, repository, prNumber }: DeliverySectionProps) {
   const delivery = finding.delivery;
-  const exact = deliveredExactLine(delivery?.delivered_line, finding.location.start_line);
+  // Only inline_exact/inline_nearest carry a line-level claim; file_level and
+  // summary_only can still have SOME delivered_line value in the fixture data,
+  // but comparing it to the reported line would assert a precision the rung
+  // itself does not claim.
+  const isLineRung = delivery?.mode === "inline_exact" || delivery?.mode === "inline_nearest";
+  const exact = isLineRung ? deliveredExactLine(delivery?.delivered_line, finding.location.start_line) : null;
   const commentUrl = delivery?.github_comment_id && repository && prNumber ? githubCommentUrl(repository.owner, repository.name, prNumber, delivery.github_comment_id) : null;
 
   return (
@@ -42,11 +47,11 @@ export function DeliverySection({ finding, repository, prNumber }: DeliverySecti
             ) : null}
           </div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-            <div className="flex flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col gap-0.5">
               <span className={META_LABEL}>Delivered line</span>
               <span className={META_VALUE}>{delivery.delivered_line ?? "—"}</span>
             </div>
-            <div className="flex flex-col gap-0.5">
+            <div className="flex min-w-0 flex-col gap-0.5">
               <span className={META_LABEL}>GitHub comment</span>
               <span className={META_VALUE}>
                 {commentUrl ? (

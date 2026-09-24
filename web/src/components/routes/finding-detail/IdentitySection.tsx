@@ -17,18 +17,18 @@ import { formatRelativeAge, locationRangeLabel } from "./format";
 import { OrdinaryPanel } from "./OrdinaryPanel";
 
 const META_LABEL = "type-label text-text-dim";
-const META_VALUE = "type-data text-text-body";
+const META_VALUE = "type-data break-words text-text-body";
 
 function HistoryCounters({ finding }: { finding: Finding }) {
   const history = finding.history;
   if (!history) return <p className="type-small text-text-dim">No occurrence history recorded.</p>;
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-      <div className="flex flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <span className={META_LABEL}>Occurrences</span>
         <span className={META_VALUE}>{history.occurrence_count ?? "—"}</span>
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <span className={META_LABEL}>First seen</span>
         <span className={META_VALUE}>
           {history.first_seen_run_id ? (
@@ -40,11 +40,11 @@ function HistoryCounters({ finding }: { finding: Finding }) {
           )}
         </span>
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <span className={META_LABEL}>Previously addressed</span>
         <span className={META_VALUE}>{history.previously_addressed ?? 0}</span>
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-0.5">
         <span className={META_LABEL}>Previously dismissed</span>
         <span className={META_VALUE}>{history.previously_dismissed ?? 0}</span>
       </div>
@@ -69,19 +69,19 @@ function SuppressionStatus({ finding, onSuppress }: { finding: Finding; onSuppre
     <div className="flex flex-col gap-3 border-t border-rule-hair pt-4">
       <p className="type-label text-text-dim">Suppression</p>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Scope</span>
           <span className={META_VALUE}>{suppression.scope}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>By</span>
           <span className={META_VALUE}>{suppression.created_by ?? "—"}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Expires</span>
           <span className={META_VALUE}>{suppression.expires_at ?? "never"}</span>
         </div>
-        <div className="flex flex-col gap-0.5 sm:col-span-1">
+        <div className="flex min-w-0 flex-col gap-0.5 sm:col-span-1">
           <Link className="link-draw" href={href}>
             View in ledger →
           </Link>

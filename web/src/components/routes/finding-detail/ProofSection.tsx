@@ -9,7 +9,7 @@ import type { Finding } from "@/lib/api-types";
 import { formatDurationMs } from "./format";
 
 const META_LABEL = "type-label text-text-dim";
-const META_VALUE = "type-data text-text-body";
+const META_VALUE = "type-data break-words text-text-body";
 
 export function ProofSection({ finding, baseSha, headSha, reviewShort }: { finding: Finding; baseSha: string | null; headSha: string | null; reviewShort: string }) {
   const proof = finding.proof;
@@ -40,27 +40,27 @@ export function ProofSection({ finding, baseSha, headSha, reviewShort }: { findi
         capturedAt={finding.created_at}
       />
       <dl className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-panel border border-rule-1 bg-ink-1 px-4 py-4 sm:grid-cols-3 md:px-6">
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Command</span>
           <span className={`${META_VALUE} break-all`}>{proof.command ?? "—"}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Runner</span>
           <span className={META_VALUE}>{proof.runner ?? "—"}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Isolation</span>
           <span className={META_VALUE}>{proof.isolation ?? "—"}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Baseline mode</span>
           <span className={META_VALUE}>{proof.baseline_mode ?? "—"}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Duration</span>
           <span className={META_VALUE}>{duration ?? "—"}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className={META_LABEL}>Deps install ok</span>
           <span className={META_VALUE}>{proof.deps_install_ok === null || proof.deps_install_ok === undefined ? "—" : proof.deps_install_ok ? "yes" : "no"}</span>
         </div>

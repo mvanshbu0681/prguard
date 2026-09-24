@@ -17,7 +17,7 @@ import type { Finding } from "@/lib/api-types";
 import { locationRangeLabel } from "./format";
 
 const META_LABEL = "type-label text-text-dim";
-const META_VALUE = "type-data text-text-body";
+const META_VALUE = "type-data break-words text-text-body";
 
 export function LocationSection({ finding }: { finding: Finding }) {
   const { location, proof } = finding;
@@ -31,19 +31,19 @@ export function LocationSection({ finding }: { finding: Finding }) {
     >
       <div className="flex flex-col gap-6 p-4 md:p-6">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span className={META_LABEL}>File</span>
             <span className={META_VALUE}>{locationRangeLabel(location.file_path, location.start_line, location.end_line)}</span>
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span className={META_LABEL}>Side</span>
             <span className={META_VALUE}>{location.side ?? "—"}</span>
           </div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span className={META_LABEL}>Language</span>
             <span className={META_VALUE}>{location.language ?? "—"}</span>
           </div>
-          <div className="flex flex-col gap-0.5 sm:col-span-1">
+          <div className="flex min-w-0 flex-col gap-0.5 sm:col-span-1">
             <span className={META_LABEL}>Symbol</span>
             <span className={META_VALUE}>{location.symbol_path ?? "—"}</span>
           </div>

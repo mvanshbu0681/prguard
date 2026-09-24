@@ -25,24 +25,35 @@ export function StickyMiniHeader({ finding, onSuppress, onExport, suppressed }: 
   return (
     <div
       data-slot="finding-sticky-header"
-      className="sticky top-0 z-20 -mx-4 flex h-12 items-center gap-4 border-b border-rule-1 bg-ink-1/92 px-4 backdrop-blur-[16px] md:-mx-8 md:px-8"
+      className="sticky top-0 z-20 -mx-4 flex h-12 items-center gap-2 overflow-hidden border-b border-rule-1 bg-ink-1/92 px-4 backdrop-blur-[16px] sm:gap-4 md:-mx-8 md:px-8"
     >
       <span className="type-readout shrink-0 text-text-primary" title="severity score">
         {finding.severity ? formatScore(finding.severity.score) : "—"}
-        {finding.severity ? <span className="ml-2 type-label text-text-dim">{finding.severity.band.toUpperCase()}</span> : null}
+        {/* The band letter alone at <640px (matches the findings-list glyph density); the full word from sm up. */}
+        {finding.severity ? <span className="ml-1.5 type-label text-text-dim sm:ml-2">{finding.severity.band.toUpperCase().slice(0, 1)}</span> : null}
       </span>
       {finding.proof ? <ProofChip status={finding.proof.status} /> : null}
       {finding.fingerprint ? (
-        <CopyableValue label="fingerprint" display={`${finding.fingerprint.slice(0, 8)}…${finding.fingerprint.slice(-4)}`} full={finding.fingerprint} />
+        <CopyableValue
+          label="fingerprint"
+          display={`${finding.fingerprint.slice(0, 8)}…${finding.fingerprint.slice(-4)}`}
+          full={finding.fingerprint}
+          className="hidden sm:inline-flex"
+        />
       ) : null}
-      <span className={cn("type-data hidden truncate sm:inline", CONSEQUENCE_TEXT_CLASS[impact.tone])}>{impact.text}</span>
-      <div className="ms-auto flex shrink-0 items-center gap-2">
-        <Button variant={suppressed ? "quiet" : "ghost"} size="sm" onClick={onSuppress} aria-disabled={suppressed}>
-          {suppressed ? "SUPPRESSED" : "SUPPRESS"}
+      <span className={cn("type-data hidden truncate lg:inline", CONSEQUENCE_TEXT_CLASS[impact.tone])}>{impact.text}</span>
+      <div className="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <Button variant={suppressed ? "quiet" : "ghost"} size="sm" onClick={onSuppress} aria-disabled={suppressed} aria-label={suppressed ? "Suppressed" : "Suppress"}>
+          <span aria-hidden="true">{suppressed ? "SUPPRESSED" : "SUPPRESS"}</span>
           <Kbd className="ml-1.5 hidden sm:inline">S</Kbd>
         </Button>
-        <Button variant="ghost" size="sm" onClick={onExport}>
-          EXPORT EVIDENCE
+        <Button variant="ghost" size="sm" onClick={onExport} aria-label="Export evidence">
+          <span aria-hidden="true" className="sm:hidden">
+            EXPORT
+          </span>
+          <span aria-hidden="true" className="hidden sm:inline">
+            EXPORT EVIDENCE
+          </span>
           <Kbd className="ml-1.5 hidden sm:inline">E</Kbd>
         </Button>
       </div>

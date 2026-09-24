@@ -18,17 +18,17 @@ export function ClaimSection({ finding }: { finding: Finding }) {
     <OrdinaryPanel index="01" category="Claim" provenance={`GET /v1/findings/${finding.id.slice(0, 8)} → body`}>
       <ClaimMarkdown>{finding.body_markdown}</ClaimMarkdown>
       <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-rule-hair pt-4 sm:grid-cols-3">
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className="type-label text-text-dim">Rule</span>
-          <span className="type-data text-text-body">{finding.rule_key}</span>
+          <span className="type-data break-words text-text-body">{finding.rule_key}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className="type-label text-text-dim">Category</span>
           <span className="type-data text-text-body">{chipLabel(finding.category)}</span>
         </div>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
           <span className="type-label text-text-dim">Specialist</span>
-          <span className="type-data text-text-body">{finding.specialist ?? "—"}</span>
+          <span className="type-data break-words text-text-body">{finding.specialist ?? "—"}</span>
         </div>
       </dl>
     </OrdinaryPanel>
