@@ -31,12 +31,13 @@
 import { useCallback, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { Exhibit } from "@/components/chrome";
 import { GateBlock, STAGE_DOT_COLOR } from "@/components/badges";
-import { Play, StageGlyph } from "@/components/icons";
+import { DoubleBar, Play, StageGlyph } from "@/components/icons";
 import type { EvidenceFrameProps } from "../props";
 import { heartbeatLabel, heartbeatProps } from "@/motion/heartbeat";
 import { useSequence, type SequenceStep } from "@/motion/useSequence";
+import { STAGGER } from "@/motion/tokens";
 import { STAGES, type GateConclusion, type Stage, type StageState } from "@/lib/contracts";
-import { asPercent, PIPELINE_GEOMETRY, type ForkLaneKey, type PipelineGeometry } from "@/lib/pipeline-geometry";
+import { asPercent, FORK_LANES, PIPELINE_GEOMETRY, type ForkLaneKey, type PipelineGeometry } from "@/lib/pipeline-geometry";
 import { cn } from "@/lib/utils";
 import { animatedEdgeCount, stageStatesFromReviewStatus, type ReviewStatusLike, type StageEntry } from "./state";
 import styles from "./StageRail.module.css";
@@ -159,9 +160,25 @@ export function StageRail({
   // gate below always reads the CURRENT `gate` prop, never one closed over when the
   // schedule was built (which only happens once — see the deps comment on `steps`).
   const [replayEnded, setReplayEnded] = useState(mode === "replay");
+  // The four S3 lanes' own completion paint, layered over `replayMap.specialists` (motion
+  // tokens STAGGER.lane = [0, 60, 120, 180] — "applied to COMPLETION only, never to start":
+  // every lane starts running in lockstep with the station, but each lane's flip to `done`
+  // lands on its own instant, still a 0ms paint each (no CSS transition — the hard rule
+  // covers the colour, not the stagger between colours). `laneOverride` only ever holds
+  // "done"; see `laneStateMap` below for how it composes with the station's own state.
+  const [laneOverride, setLaneOverride] = useState<Partial<Record<ForkLaneKey, StageState>>>({});
   const givenMap = useMemo(() => toMap(stages), [stages]);
   const stateMap = mode === "replay" ? replayMap : givenMap;
   const effectiveGate = mode === "replay" ? (replayEnded ? gate : undefined) : gate;
+
+  const laneStateMap = useMemo<Record<ForkLaneKey, StageState>>(() => {
+    const forkState = stateMap.specialists;
+    const base = Object.fromEntries(FORK_LANES.map((lane) => [lane, forkState])) as Record<ForkLaneKey, StageState>;
+    if (mode === "replay" && forkState === "done") {
+      for (const lane of FORK_LANES) base[lane] = laneOverride[lane] ?? "running";
+    }
+    return base;
+  }, [stateMap.specialists, mode, laneOverride]);
 
   const steps = useMemo<SequenceStep[]>(() => {
     if (mode !== "replay") return [];
@@ -181,6 +198,21 @@ export function StageRail({
           return next;
         }),
     }));
+    // The fork's own completion stagger (motion tokens STAGGER.lane): the specialists station
+    // flips to `done` atomically at `coordinator`'s own start (the loop above), but each of
+    // the four lanes lands its `done` paint 0/60/120/180ms after that same instant — never
+    // a stop point for beat-stepping (`beat: false`), since it refines an existing beat
+    // rather than adding a new one.
+    const specialistsIdx = STAGES.indexOf("specialists");
+    const specialistsDoneAt = starts[specialistsIdx + 1][1];
+    FORK_LANES.forEach((lane, i) => {
+      out.push({
+        at: specialistsDoneAt + STAGGER.lane[i],
+        beat: false,
+        label: `lane-${lane}`,
+        apply: () => setLaneOverride((prev) => ({ ...prev, [lane]: "done" as const })),
+      });
+    });
     out.push({
       at: t,
       beat: false,
@@ -203,11 +235,12 @@ export function StageRail({
   // Destructured, never kept as one `sequence` object: @/motion/useSequence's own header
   // warns that `ref={seq.ref}` makes the lint treat the whole return value as a ref and
   // flag every `seq.x` read as "accessed during render".
-  const { ref: sequenceRef, restart } = useSequence<HTMLDivElement>(steps, {
+  const { ref: sequenceRef, restart, pause, isPlaying } = useSequence<HTMLDivElement>(steps, {
     autoplay: mode === "replay" ? "in-view" : "none",
     reset: () => {
       setReplayMap(allPending());
       setReplayEnded(false);
+      setLaneOverride({});
     },
     hold: mode === "replay" ? holdMs : 0,
   });
@@ -246,10 +279,12 @@ export function StageRail({
         <RailFigure
           geometry={PIPELINE_GEOMETRY.vertical}
           stateMap={stateMap}
+          laneStateMap={laneStateMap}
           expectedMs={expectedMs}
           stageLabels={stageLabels}
           setActiveKey={setActiveKey}
           showCaptions
+          showLaneLabels
         />
       ) : (
         <>
@@ -257,6 +292,7 @@ export function StageRail({
             <RailFigure
               geometry={PIPELINE_GEOMETRY.wide}
               stateMap={stateMap}
+              laneStateMap={laneStateMap}
               expectedMs={expectedMs}
               stageLabels={stageLabels}
               setActiveKey={setActiveKey}
@@ -268,14 +304,26 @@ export function StageRail({
             <RailFigure
               geometry={PIPELINE_GEOMETRY.medium}
               stateMap={stateMap}
+              laneStateMap={laneStateMap}
               expectedMs={expectedMs}
               stageLabels={stageLabels}
               setActiveKey={setActiveKey}
               showCaptions={false}
+              showLaneLabels
             />
           </div>
         </>
       )}
+
+      {/* The fork's own argument, in real text, at every breakpoint (design §06's "parallel
+          fork ... the diagram's whole argument") — the SVG is aria-hidden and the visual
+          lane labels above are decorative (`aria-hidden`, kept off the ladder of every
+          station's own accessible name), so this is the only place a screen reader is ever
+          told the four lane names, regardless of which breakpoint rendered above. */}
+      <p className="sr-only">
+        The specialists stage forks into four parallel lanes — {FORK_LANES.map((l) => FORK_LANE_LABEL[l]).join(", ")} — that rejoin at the
+        coordinator.
+      </p>
 
       {/* The hover/focus readout: always present (reserved height), so a station's info
           never shifts layout when it arrives. */}
@@ -310,13 +358,18 @@ export function StageRail({
       {mode === "replay" || effectiveGate !== undefined ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {mode === "replay" ? (
+            // SC 2.2.2: the sequence auto-triggers on first viewport entry and can run past
+            // 20s (the demo run's own durations x time_scale) — a PLAY-only control leaves it
+            // unstoppable once armed. One control, two faces: PAUSE freezes the current frame
+            // (useSequence's own `pause`, no rewind); PLAY is always a fresh run from t = 0
+            // (`onPlay`'s documented contract) so it never silently resumes mid-sequence.
             <button
               type="button"
-              onClick={handlePlay}
+              onClick={isPlaying ? pause : handlePlay}
               className="hover-ghost inline-flex h-6 items-center gap-1.5 rounded-data border border-rule-2 px-2 type-label text-text-body"
             >
-              <Play />
-              <span>PLAY</span>
+              {isPlaying ? <DoubleBar speak={false} /> : <Play />}
+              <span>{isPlaying ? "PAUSE" : "PLAY"}</span>
             </button>
           ) : null}
           {/* The terminal gate (props.gate for live/static, the sequence's own resolved value
@@ -356,6 +409,8 @@ export function StageRail({
 interface RailFigureProps {
   geometry: PipelineGeometry;
   stateMap: Record<Stage, StageState>;
+  /** Per-lane paint, overriding `stateMap.specialists` — see the fork completion stagger. */
+  laneStateMap: Record<ForkLaneKey, StageState>;
   expectedMs?: Partial<Record<Stage, number>>;
   stageLabels?: Partial<Record<Stage, string>>;
   setActiveKey: Dispatch<SetStateAction<Stage | null>>;
@@ -388,9 +443,7 @@ function edgeColor(state: StageState): string {
   }
 }
 
-function RailFigure({ geometry, stateMap, expectedMs, stageLabels, setActiveKey, showCaptions, showLaneLabels }: RailFigureProps) {
-  const forkState = stateMap.specialists;
-
+function RailFigure({ geometry, stateMap, laneStateMap, expectedMs, stageLabels, setActiveKey, showCaptions, showLaneLabels }: RailFigureProps) {
   return (
     <div className="relative w-full" style={{ aspectRatio: `${geometry.width} / ${geometry.height}` }} data-breakpoint={geometry.name}>
       <svg viewBox={geometry.viewBox} aria-hidden="true" className="absolute inset-0 h-full w-full overflow-visible">
@@ -402,15 +455,19 @@ function RailFigure({ geometry, stateMap, expectedMs, stageLabels, setActiveKey,
             <path key={`${edge.from}-${edge.to}`} d={edge.d} pathLength={1} className={cn(styles.edge, edgeColor(state), edgeClass(state))} />
           );
         })}
-        {geometry.fork.lanes.map((lane) => (
-          <path
-            key={lane.key}
-            d={lane.d}
-            pathLength={1}
-            className={cn(styles.edge, edgeColor(forkState), edgeClass(forkState))}
-            data-lane={lane.key}
-          />
-        ))}
+        {geometry.fork.lanes.map((lane) => {
+          const laneState = laneStateMap[lane.key];
+          return (
+            <path
+              key={lane.key}
+              d={lane.d}
+              pathLength={1}
+              className={cn(styles.edge, edgeColor(laneState), edgeClass(laneState))}
+              data-lane={lane.key}
+              data-state={laneState}
+            />
+          );
+        })}
       </svg>
 
       {showLaneLabels
