@@ -125,15 +125,23 @@ export function gateDetail(state: GateGlyphState, blocking?: number, reason?: st
    Finding status — §1.9 (border STYLE is the encoding)
    ------------------------------------------------------------------------------------ */
 
-export type StatusSpec = { label: string; className: string; glyph?: ReactNode; strike?: true };
+/**
+ * `dashes`: the outline is drawn as an SVG stroke instead of a CSS border. Chromium snaps a
+ * 1.5px border to 1px at DPR 1 and 2 (measured), so a `border-[1.5px] border-dashed` never
+ * renders the 1.5px dash §1.9 asks for; an SVG stroke keeps its fractional width.
+ */
+export type StatusSpec = { label: string; className: string; glyph?: ReactNode; strike?: true; dashes?: true };
 
 export const FINDING_STATUS: Record<FindingStatus, StatusSpec> = {
   proposed: { label: "PROPOSED", className: "text-status-proposed-fg border-dotted border-status-proposed-border" },
   published: { label: "PUBLISHED", className: "text-status-published-fg border-transparent border-l-2 border-l-status-published-rail" },
   suppressed: {
     label: "SUPPRESSED",
-    className: "text-status-suppressed-fg border-[1.5px] border-dashed border-status-suppressed-border",
+    // The 1px border stays (transparent) so the box matches every other chip; the 1.5px
+    // --ink-7 dashes are the SVG outline StatusBadge draws on top of it.
+    className: "text-status-suppressed-fg border-transparent",
     glyph: <LedgerGlyph size={12} />,
+    dashes: true,
   },
   dropped: { label: "DROPPED", className: "text-status-dropped-fg border-transparent", strike: true },
   // §1.9 lists four statuses; the API has a fifth. A refuted finding reads the same
