@@ -4,9 +4,9 @@
 import "./dom-polyfills";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Badge, badgeVariants, resolveBadgeVariant } from "@/components/ui/badge";
-import { formatChartValue } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent, formatChartValue } from "@/components/ui/chart";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -197,11 +197,41 @@ describe("Tooltip", () => {
 });
 
 describe("formatChartValue", () => {
-  it("prints integers verbatim and every other number at 3 decimals", () => {
-    expect(formatChartValue(312)).toBe("312");
+  it("prints every rate at 3 decimals, including 0 and 1", () => {
+    expect(formatChartValue(0)).toBe("0.000");
+    expect(formatChartValue(1)).toBe("1.000");
+    expect(formatChartValue(0.14)).toBe("0.140");
     expect(formatChartValue(0.81)).toBe("0.810");
     expect(formatChartValue(0.55)).toBe("0.550");
+    expect(formatChartValue([0, 0.25])).toBe("0.000 – 0.250");
     expect(formatChartValue([0.1, 0.25])).toBe("0.100 – 0.250");
     expect(formatChartValue("proven")).toBe("proven");
+  });
+
+  it("prints a count only when the series says so, at 0 decimals", () => {
+    expect(formatChartValue(312, "count")).toBe("312");
+    expect(formatChartValue(0, "count")).toBe("0");
+    expect(formatChartValue([0, 40], "count")).toBe("0 – 40");
+    expect(formatChartValue(312)).toBe("312.000");
+  });
+
+  it("formats each tooltip row by its series' format, rates at 3dp even when 0", () => {
+    // jsdom has no layout; give the ResponsiveContainer a size so it keeps its children.
+    const size = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(rect(0, 320));
+    const { container } = render(
+      <ChartContainer config={{ fp: { label: "FP rate" }, n: { label: "n", format: "count" } }}>
+        <ChartTooltipContent
+          active
+          label="week 1"
+          payload={[
+            { name: "fp", dataKey: "fp", value: 0, color: "var(--chart-series)", graphicalItemId: "line-fp", payload: { fp: 0, n: 40 } },
+            { name: "n", dataKey: "n", value: 40, color: "var(--chart-series)", graphicalItemId: "line-n", payload: { fp: 0, n: 40 } },
+          ]}
+        />
+      </ChartContainer>,
+    );
+    const values = [...container.querySelectorAll(".ui-chart-tooltip__value")].map((el) => el.textContent);
+    size.mockRestore();
+    expect(values).toEqual(["0.000", "40"]);
   });
 });
