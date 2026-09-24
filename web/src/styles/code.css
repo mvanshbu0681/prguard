@@ -1,4 +1,581 @@
-/* OWNER: T1b (wave 1). Stub from T0 — replace entirely.
-   Holds: the .prg-code / .prg-terminal / .prg-diff quarantine, Shiki theme classes, anser ANSI classes.
-   Imported by app/globals.css after the token files. Reference tokens by their
-   short names (var(--ink-2)), never var(--color-*) — see app/tokens/core.css. */
+/* ==========================================================================
+   src/styles/code.css — the code-surface quarantine.
+
+   OWNER: t1d (wave 1). Imported by app/globals.css after the token files.
+   Components: src/components/code/ (TerminalBlock, CodeBlock, PRGuardDiff).
+
+   The three scopes are .prg-terminal, .prg-code and .prg-diff (design Appendix A).
+   Every green and every diff red in this file is written under one of them:
+   they encode direction of edit inside captured code, never a verdict, and they
+   must never style chrome (design §1.10, R1). Tokens only, by their short names;
+   the single literal is the hover-atom wash, oklch(1 0 0 / 0.04) (motion §7, class E).
+
+   Hard rules implemented here:
+   - NEVER wrap. Long lines scroll sideways; wrapping destroys traceback alignment.
+   - 13px / 22px Google Sans Code, tracking 0, no ligatures (12px / 20px for the
+     terminal below 768px, motion §6.5).
+   - Line numbers are CSS content on aria-hidden spans: never copied, never read.
+   - No shadows. Rails are 2px background layers. --alarm is only ever a fill.
+   - Hover is the data-atom wash: a 120ms background-color step on --ease-snap.
+   - Nothing is hidden by opacity or visibility in this file (R8, motion §3.5).
+   - Each surface is its own stacking context (isolation: isolate). The z-indexes
+     inside (sticky gutter 1, hover wash 1, pane rail 2, annotation 2, focus ring 3)
+     never compete with anything outside it: the bench's scan line, a sticky header
+     or a popover paints over a pane without needing a z-index race.
+
+   @layer components, so a caller's utility class (className="rounded-none") wins.
+   ========================================================================== */
+
+@layer components {
+  /* ------------------------------------------------------------------------
+     1. The surface contract shared by all three
+     ------------------------------------------------------------------------ */
+  :where(.prg-terminal, .prg-code, .prg-diff) {
+    --prg-fs: var(--fs-terminal); /* 13px */
+    --prg-lh: var(--lh-terminal); /* 22px */
+    --prg-pane-bg: var(--ink-1);
+    --prg-gutter-w: var(--sp-4); /* 16px text inset; 40px with line numbers */
+    --prg-rail-color: transparent;
+    position: relative;
+    isolation: isolate; /* the internal z-indexes stay inside the surface (header note) */
+    display: block;
+    inline-size: 100%;
+    min-inline-size: 0; /* a long line never widens a flex or grid parent: the pane scrolls */
+    overflow: clip;
+    border-radius: var(--radius-data);
+    background: var(--prg-pane-bg);
+    color: var(--text-body);
+    font-family: var(--font-mono);
+    font-size: var(--prg-fs);
+    font-weight: 400;
+    line-height: var(--prg-lh);
+    font-variant-ligatures: none;
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0;
+    text-align: left;
+    tab-size: 4;
+  }
+
+  :where(.prg-terminal, .prg-code, .prg-diff) ::selection {
+    background: var(--signal-tint);
+  }
+
+  /* The scroller: role=region, tabIndex=0. Both axes scroll. */
+  :where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport) {
+    overflow: auto;
+    overscroll-behavior-x: contain; /* a sideways scroll never swipes the page back */
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-5) transparent;
+  }
+  :where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport):focus-visible {
+    outline: 2px solid var(--signal-hi);
+    outline-offset: -2px; /* inside the pane: panes sit edge to edge in the bench */
+  }
+
+  /* Focus ring, 2px --signal-hi (§8.3). Where :has() exists it is drawn on an overlay
+     above the sticky gutters and the pane rail, which would otherwise paint over the
+     scroller's own outline; the scroller's outline is only handed over, never removed. */
+  @supports selector(:has(*)) {
+    :where(.prg-terminal, .prg-code, .prg-diff):has(> :where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport):focus-visible)::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      outline: 2px solid var(--signal-hi);
+      outline-offset: -2px;
+      pointer-events: none;
+    }
+    :where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport):focus-visible {
+      outline-color: transparent;
+    }
+  }
+
+  /* NEVER wrap. The pre is as wide as its longest line and at least as wide as the pane. */
+  :where(.prg-terminal__pre, .prg-code__pre, .prg-diff__pre) {
+    display: block;
+    margin: 0;
+    padding-block: var(--sp-2);
+    inline-size: max-content;
+    min-inline-size: 100%;
+    font: inherit;
+    color: inherit;
+    background: none;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+  :where(.prg-terminal__code, .prg-code__code, .prg-diff__code) {
+    font: inherit;
+    white-space: inherit;
+  }
+
+  /* One line. Inline-block at full sheet width, separated by literal "\n" text nodes,
+     so a copy yields the captured text byte for byte in every engine. */
+  :where(.prg-terminal__line, .prg-code__line, .prg-diff__row) {
+    --prg-row-base: var(--prg-pane-bg); /* opaque: the sticky gutter hides text under it */
+    --prg-row-tint: transparent;
+    --prg-row-rail: transparent;
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    min-inline-size: 100%;
+    block-size: var(--prg-lh);
+    padding-inline-end: var(--sp-4);
+    background: linear-gradient(var(--prg-row-tint), var(--prg-row-tint)), var(--prg-row-base);
+  }
+
+  /* The gutter: sticky, so numbers and rails stay put while text scrolls under them. */
+  :where(.prg-terminal__gutter, .prg-code__gutter, .prg-diff__gutter) {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    display: inline-block;
+    vertical-align: top;
+    inline-size: var(--prg-gutter-w);
+    block-size: var(--prg-lh);
+    background:
+      linear-gradient(var(--prg-row-rail), var(--prg-row-rail)) left top / 2px 100% no-repeat,
+      linear-gradient(var(--prg-row-tint), var(--prg-row-tint)),
+      var(--prg-row-base);
+    color: var(--text-dim);
+    font-size: min(var(--fs-data), var(--prg-fs)); /* 12.5px, never larger than the text */
+    text-align: right;
+    user-select: none;
+  }
+  :where(.prg-terminal__gutter, .prg-code__gutter)::before {
+    content: attr(data-ln);
+    content: attr(data-ln) / "";
+  }
+  :where(.prg-terminal__gutter, .prg-code__gutter) {
+    padding-inline-end: var(--sp-3);
+  }
+  /* 40px, until the numbers need more: past 999 the component sets --prg-digits and the
+     gutter grows by whole digits (1ch resolves on the 12.5px gutter), never overflowing. */
+  :where(.prg-terminal, .prg-code)[data-gutter] {
+    --prg-gutter-w: max(var(--sp-10), calc(var(--prg-digits, 0) * 1ch + var(--sp-3) + var(--sp-1)));
+  }
+
+  /* ------------------------------------------------------------------------
+     Windowed surfaces (more than 400 rows, shared/windowing.ts). Only rows near the view
+     are rendered; aria-hidden block spacers hold the height of the rest. The sheet keeps
+     the width of the widest line (--prg-cols, set by the component) while that line is not
+     rendered, so the horizontal scroll never jumps. With no height from the caller the
+     viewport stops at min(70vh, 32 lines) and scrolls, so there is a window to fill.
+     ------------------------------------------------------------------------ */
+  :where(.prg-terminal__viewport, .prg-code__viewport, .prg-diff__viewport)[data-windowed] {
+    max-block-size: min(70vh, calc(32 * var(--prg-lh)));
+  }
+  :where(.prg-terminal__spacer, .prg-code__spacer, .prg-diff__spacer) {
+    display: block;
+  }
+  :where(.prg-terminal__pre, .prg-code__pre)[data-windowed] {
+    min-inline-size: max(100%, calc(var(--prg-cols, 0) * 1ch + var(--prg-gutter-w) + var(--sp-4)));
+  }
+
+  /* Hover: the data-atom wash (motion §7, class E): background oklch(1 0 0 / 0.04), no fill
+     step, no border. An overlay, so it lies over the sticky gutter and the rail as well as the
+     text. Transparent at rest, never hidden by opacity (R8); the wash is a one-shot background-color
+     step on one element, --dur-1 on --ease-snap (motion §6.1 bounds colour transitions). */
+  @media (hover: hover) {
+    :where(.prg-terminal__line, .prg-code__line, .prg-diff__row)::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background-color: transparent;
+      pointer-events: none;
+      transition: background-color var(--dur-1) var(--ease-snap);
+    }
+    :where(.prg-terminal__line, .prg-code__line, .prg-diff__row):hover::after {
+      background-color: oklch(1 0 0 / 0.04);
+    }
+    .prg-diff__row:is([data-kind="hunk"], [data-kind="empty"])::after {
+      content: none;
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     2. Rail tones — 2px FILLS (terminal pane rail, highlighted lines, annotations)
+     ------------------------------------------------------------------------ */
+  :where(.prg-terminal[data-rail="signal"], .prg-code__line[data-hl="signal"], .prg-diff__row[data-hl="signal"], .prg-diff__annotation[data-hl="signal"]) {
+    --prg-rail-color: var(--signal);
+  }
+  :where(.prg-terminal[data-rail="signal-lo"], .prg-code__line[data-hl="signal-lo"], .prg-diff__row[data-hl="signal-lo"], .prg-diff__annotation[data-hl="signal-lo"]) {
+    --prg-rail-color: var(--signal-lo);
+  }
+  :where(.prg-terminal[data-rail="alarm"], .prg-code__line[data-hl="alarm"], .prg-diff__row[data-hl="alarm"], .prg-diff__annotation[data-hl="alarm"]) {
+    --prg-rail-color: var(--alarm);
+  }
+  :where(.prg-terminal[data-rail="marker"], .prg-code__line[data-hl="marker"], .prg-diff__row[data-hl="marker"], .prg-diff__annotation[data-hl="marker"]) {
+    --prg-rail-color: var(--marker);
+  }
+  :where(.prg-terminal[data-rail="critical"], .prg-code__line[data-hl="critical"], .prg-diff__row[data-hl="critical"], .prg-diff__annotation[data-hl="critical"]) {
+    --prg-rail-color: var(--sev-critical);
+  }
+  :where(.prg-terminal[data-rail="high"], .prg-code__line[data-hl="high"], .prg-diff__row[data-hl="high"], .prg-diff__annotation[data-hl="high"]) {
+    --prg-rail-color: var(--sev-high);
+  }
+  :where(.prg-terminal[data-rail="medium"], .prg-code__line[data-hl="medium"], .prg-diff__row[data-hl="medium"], .prg-diff__annotation[data-hl="medium"]) {
+    --prg-rail-color: var(--sev-medium);
+  }
+  :where(.prg-terminal[data-rail="low"], .prg-code__line[data-hl="low"], .prg-diff__row[data-hl="low"], .prg-diff__annotation[data-hl="low"]) {
+    --prg-rail-color: var(--sev-low);
+  }
+  :where(.prg-terminal[data-rail="info"], .prg-code__line[data-hl="info"], .prg-diff__row[data-hl="info"], .prg-diff__annotation[data-hl="info"]) {
+    --prg-rail-color: var(--sev-info);
+  }
+
+  /* A highlighted finding line: the rail in its tone + the row one rung up (--ink-3).
+     In a diff the row also trades its diff tint for the band tint (section 5). */
+  :where(.prg-code__line, .prg-diff__row)[data-hl] {
+    --prg-row-base: var(--ink-3);
+    --prg-row-rail: var(--prg-rail-color);
+  }
+
+  /* ------------------------------------------------------------------------
+     3. TerminalBlock — design §5.7
+     ------------------------------------------------------------------------ */
+  .prg-terminal {
+    tab-size: 8;
+  }
+  .prg-terminal[data-bg="signal-tint-lo"] {
+    --prg-pane-bg: var(--signal-tint-lo); /* base-SHA pane */
+  }
+  .prg-terminal[data-bg="alarm-tint-lo"] {
+    --prg-pane-bg: var(--alarm-tint-lo); /* head-SHA pane */
+  }
+
+  /* The pane rail: a real element so the bench can wipe it in (scaleY 0 → 1, origin top). */
+  .prg-terminal__rail {
+    position: absolute;
+    inset-block: 0;
+    left: 0;
+    z-index: 2;
+    inline-size: 2px;
+    background: var(--prg-rail-color);
+    transform-origin: top;
+    pointer-events: none;
+  }
+
+  /* Row groups are inline wrappers: invisible to layout, targets for the stepped reveal. */
+  .prg-terminal__group {
+    display: inline;
+  }
+
+  /* `$ ` prompt lines: the glyph dim, the command primary. */
+  .prg-terminal__prompt {
+    color: var(--text-dim);
+  }
+  .prg-terminal__command {
+    color: var(--text-primary);
+  }
+
+  /* anser classes → the quarantined ANSI palette (design §1.12). Bright shares the token. */
+  .prg-terminal .prg-ansi-fg-black { color: var(--ansi-black); }
+  .prg-terminal .prg-ansi-fg-red { color: var(--ansi-red); }
+  .prg-terminal .prg-ansi-fg-green { color: var(--ansi-green); }
+  .prg-terminal .prg-ansi-fg-yellow { color: var(--ansi-yellow); }
+  .prg-terminal .prg-ansi-fg-blue { color: var(--ansi-blue); }
+  .prg-terminal .prg-ansi-fg-magenta { color: var(--ansi-magenta); }
+  .prg-terminal .prg-ansi-fg-cyan { color: var(--ansi-cyan); }
+  .prg-terminal .prg-ansi-fg-white { color: var(--ansi-white); }
+
+  /* Backgrounds become tints of the same families: a captured background never outshouts
+     the verdict. Reverse video (fg black on bg white) stays legible. */
+  .prg-terminal .prg-ansi-bg-black { background-color: var(--ink-0); }
+  .prg-terminal .prg-ansi-bg-red { background-color: var(--alarm-tint-hi); }
+  .prg-terminal .prg-ansi-bg-green { background-color: var(--diff-add-bg); }
+  .prg-terminal .prg-ansi-bg-yellow { background-color: var(--marker-tint); }
+  .prg-terminal :is(.prg-ansi-bg-blue, .prg-ansi-bg-cyan, .prg-ansi-bg-magenta) { background-color: var(--signal-tint); }
+  .prg-terminal .prg-ansi-bg-white { background-color: var(--text-body); }
+
+  .prg-terminal .prg-ansi-bold { font-weight: 600; }
+  /* Dim is a token, never opacity (R4); an explicit fg colour wins over it. */
+  .prg-terminal :where(.prg-ansi-dim:not([class*="prg-ansi-fg-"])) { color: var(--text-dim); }
+  .prg-terminal .prg-ansi-italic { font-style: italic; }
+  .prg-terminal .prg-ansi-underline {
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .prg-terminal .prg-ansi-strike {
+    text-decoration-line: line-through;
+    text-decoration-thickness: 1px;
+  }
+  .prg-terminal .prg-ansi-underline.prg-ansi-strike { text-decoration-line: underline line-through; }
+  .prg-terminal .prg-ansi-hidden { color: transparent; }
+
+  /* Line tones from the caller's highlight rules. After the ANSI block on purpose:
+     the bench's rules beat captured colour (pytest paints `passed` green). */
+  .prg-terminal [data-tone="signal"] { color: var(--signal-text); }
+  .prg-terminal [data-tone="alarm"] { color: var(--alarm-text); }
+  .prg-terminal [data-tone="marker"] { color: var(--marker-text); }
+  .prg-terminal [data-tone="primary"] { color: var(--text-primary); }
+  .prg-terminal [data-tone="body"] { color: var(--text-body); }
+  .prg-terminal [data-tone="dim"] { color: var(--text-dim); }
+  .prg-terminal .prg-terminal__gutter { color: var(--text-dim); }
+
+  @media (max-width: 767.98px) {
+    .prg-terminal {
+      --prg-fs: 0.75rem; /* 12px */
+      --prg-lh: 20px;
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     4. CodeBlock — design §5.6
+     ------------------------------------------------------------------------ */
+  .prg-code {
+    border: 1px solid var(--rule-1);
+  }
+
+  /* The 32px header strip. When the title and the meta (language, or the "unavailable" note,
+     plus actions) cannot share one row with at least 16ch of title, the meta drops to a
+     second row (48px in all) instead of truncating the path to its first letters: the file
+     name is the one thing that identifies the source, and the note is a stated degradation
+     that must print whole. Flex line-breaking reads the title's 16ch basis, not its content. */
+  :where(.prg-code__header, .prg-diff__header) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: var(--sp-3);
+    min-block-size: var(--sp-8); /* 32px */
+    padding: var(--sp-1) var(--sp-3);
+    background: var(--ink-2);
+    border-bottom: 1px solid var(--rule-1);
+    line-height: var(--sp-5); /* 20px rows: 4 + 20 + 4 = 32, and 4 + 20 + 20 + 4 = 48 wrapped */
+  }
+  :where(.prg-code__title, .prg-diff__path) {
+    flex: 1 1 16ch;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-data); /* 12.5px */
+    color: var(--text-body);
+  }
+  .prg-code__meta {
+    display: inline-flex;
+    flex: 0 1 auto; /* alone on its row and still too wide: the note wraps at its spaces */
+    min-inline-size: 0;
+    align-items: center;
+    gap: var(--sp-3);
+  }
+  .prg-code__lang {
+    font-size: var(--fs-label); /* 11px mono caps, the instrument legend */
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .prg-code__note {
+    font-size: var(--fs-micro); /* 11px */
+    color: var(--text-dim);
+  }
+
+  /* prguard-cold: Shiki roles → the --syn-* tokens (design §1.12). Plain is the default. */
+  .prg-code__line { color: var(--syn-plain); }
+  .prg-code .prg-syn-comment { color: var(--syn-comment); }
+  .prg-code .prg-syn-keyword { color: var(--syn-keyword); }
+  .prg-code .prg-syn-string { color: var(--syn-string); }
+  .prg-code .prg-syn-number { color: var(--syn-number); }
+  .prg-code .prg-syn-entity { color: var(--syn-entity); font-weight: 500; }
+  .prg-code .prg-syn-inserted { color: var(--diff-add-text); }
+  .prg-code .prg-syn-deleted { color: var(--diff-del-text); }
+
+  /* ------------------------------------------------------------------------
+     5. PRGuardDiff — design §5.8
+     ------------------------------------------------------------------------ */
+  .prg-diff {
+    border: 1px solid var(--rule-1);
+  }
+  .prg-diff__stat {
+    flex-shrink: 0;
+    font-size: var(--fs-data);
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  .prg-diff__viewport {
+    container-type: inline-size; /* 100cqw = the visible width, for annotations */
+  }
+  /* The sheet carries the vertical padding, so an annotation sits flush under its line
+     and the segments either side of it read as one continuous file. */
+  .prg-diff__sheet {
+    inline-size: max-content;
+    min-inline-size: 100%;
+    padding-block: var(--sp-2);
+  }
+  .prg-diff__sheet > .prg-diff__pre {
+    inline-size: auto;
+    min-inline-size: 0;
+    padding-block: 0;
+  }
+  .prg-diff__sheet[data-view="split"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* equal columns, each at least its longest line */
+  }
+  .prg-diff__pre[data-side="new"] {
+    border-inline-start: 1px solid var(--rule-1);
+  }
+
+  /* Gutter: old | new (32px each) + the 16px marker cell; split view shows one number.
+     Past line 999 the component sets --prg-digits and each number column grows by whole
+     digits (1ch on the 12.5px gutter) plus its 8px padding and a 4px clearance from the
+     rail, so 1234 and 1236 never run into each other or into the pane edge. */
+  .prg-diff {
+    --prg-diff-num-w: max(var(--sp-8), calc(var(--prg-digits, 0) * 1ch + var(--sp-3))); /* 32px */
+    --prg-diff-marker-w: var(--sp-4); /* 16px: a 12px glyph column + 4px before the text */
+  }
+  /* Windowed (shared/windowing.ts): the sheet keeps the widest row's width (--prg-cols), and
+     a spacer spans both columns of the split grid. */
+  .prg-diff__sheet[data-windowed] {
+    min-inline-size: max(100%, calc(var(--prg-cols, 0) * 1ch + 2 * var(--prg-diff-num-w) + var(--prg-diff-marker-w) + var(--sp-4)));
+  }
+  .prg-diff__sheet[data-windowed][data-view="split"] {
+    min-inline-size: max(100%, calc(2 * (var(--prg-cols, 0) * 1ch + var(--prg-diff-num-w) + var(--prg-diff-marker-w) + var(--sp-4)) + 1px));
+  }
+  .prg-diff__sheet[data-view="split"] > .prg-diff__spacer {
+    grid-column: 1 / -1;
+  }
+  .prg-diff__gutter {
+    --prg-gutter-w: calc(2 * var(--prg-diff-num-w) + var(--prg-diff-marker-w));
+    white-space: nowrap;
+  }
+  .prg-diff[data-view="split"] .prg-diff__gutter {
+    --prg-gutter-w: calc(var(--prg-diff-num-w) + var(--prg-diff-marker-w));
+  }
+  .prg-diff__num {
+    display: inline-block;
+    vertical-align: top;
+    inline-size: var(--prg-diff-num-w);
+    padding-inline-end: var(--sp-2);
+    text-align: right;
+  }
+  .prg-diff__num::before {
+    content: attr(data-n);
+    content: attr(data-n) / "";
+  }
+  .prg-diff__marker {
+    display: inline-block;
+    vertical-align: top;
+    inline-size: var(--prg-diff-marker-w);
+    padding-inline-end: var(--sp-1);
+    text-align: center;
+    font-size: var(--prg-fs);
+    font-weight: 600;
+  }
+
+  /* Rows. The +/− glyph is the semantic channel; colour is secondary (§1.10, §8.2).
+     `+` in --diff-add; `−` (U+2212) in --diff-del-text, because --diff-del is --alarm and
+     --alarm is never a text colour (R2, brand-gaps §2 ruling 2). */
+  .prg-diff__row { color: var(--syn-plain); }
+  .prg-diff .prg-diff__row[data-kind="add"] {
+    --prg-row-tint: var(--diff-add-bg); /* 8% */
+    color: var(--diff-add-text);
+  }
+  .prg-diff .prg-diff__row[data-kind="del"] {
+    --prg-row-tint: var(--diff-del-bg); /* 9% */
+    color: var(--diff-del-text);
+  }
+  .prg-diff .prg-diff__row[data-kind="add"] .prg-diff__marker::before {
+    content: "+";
+    content: "+" / "added: ";
+    color: var(--diff-add);
+  }
+  .prg-diff .prg-diff__row[data-kind="del"] .prg-diff__marker::before {
+    content: "\2212";
+    content: "\2212" / "removed: ";
+    color: var(--diff-del-text);
+  }
+
+  /* The accused line (dashboard §4, "How a finding's lines are highlighted"). Its row fill is
+     the severity band colour at 10% and it REPLACES the diff tint: a diff tint says "this
+     line changed", a band tint says "this line is accused". The +/− glyph and the text colour
+     keep carrying the direction of edit. data-fill is the finding's band (PRGuardDiff writes
+     `fill`, defaulting to the rail tone), so a blocking finding shows an --alarm rail over its
+     own band's fill. Same specificity as the add/del rules and after them, so it wins. */
+  .prg-diff__row[data-fill="signal"] { --prg-fill-color: var(--signal); }
+  .prg-diff__row[data-fill="signal-lo"] { --prg-fill-color: var(--signal-lo); }
+  .prg-diff__row[data-fill="alarm"] { --prg-fill-color: var(--alarm); }
+  .prg-diff__row[data-fill="marker"] { --prg-fill-color: var(--marker); }
+  .prg-diff__row[data-fill="critical"] { --prg-fill-color: var(--sev-critical); }
+  .prg-diff__row[data-fill="high"] { --prg-fill-color: var(--sev-high); }
+  .prg-diff__row[data-fill="medium"] { --prg-fill-color: var(--sev-medium); }
+  .prg-diff__row[data-fill="low"] { --prg-fill-color: var(--sev-low); }
+  .prg-diff__row[data-fill="info"] { --prg-fill-color: var(--sev-info); }
+  /* Guarded: an engine without color-mix() would drop the whole row and gutter background
+     (and the rail with it) at computed-value time; there the diff tint stays instead. */
+  @supports (color: color-mix(in oklab, red 10%, transparent)) {
+    .prg-diff .prg-diff__row[data-hl] {
+      --prg-row-tint: color-mix(in oklab, var(--prg-fill-color, var(--prg-rail-color)) 10%, transparent);
+    }
+  }
+  /* Hunk header (§5.8): --ink-2 band, 11px mono --text-dim. The `@@ -a,b +c,d @@` range is
+     the instrument legend and is set as one: caps, +0.12em, 500. The section heading git
+     prints after it is source code and keeps its letter case, because case is evidence
+     (§2.5); it stays at tracking 0. */
+  .prg-diff .prg-diff__row[data-kind="hunk"] {
+    --prg-row-base: var(--ink-2);
+    color: var(--text-dim);
+    font-size: var(--fs-label);
+  }
+  .prg-diff__range {
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .prg-diff .prg-diff__row[data-kind="meta"] {
+    color: var(--text-dim);
+  }
+  .prg-diff .prg-diff__row[data-kind="empty"] {
+    --prg-row-base: var(--ink-2);
+  }
+  .prg-diff .prg-diff__row[data-kind="hunk"] .prg-diff__gutter {
+    font-size: var(--fs-data);
+  }
+
+  /* Content hung beneath a line (the inline finding card): pinned to the visible width,
+     so it never scrolls sideways with the code. Prose inside reads in Inter. */
+  .prg-diff__annotation {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    box-sizing: border-box;
+    inline-size: 100cqw;
+    padding: var(--sp-3) var(--sp-4);
+    background:
+      linear-gradient(var(--prg-rail-color), var(--prg-rail-color)) left top / 2px 100% no-repeat,
+      var(--ink-2);
+    border-block: 1px solid var(--rule-1);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+    font-size: var(--fs-small);
+    line-height: 1.5;
+    letter-spacing: -0.013em;
+    white-space: normal;
+  }
+  .prg-diff__sheet[data-view="split"] > .prg-diff__annotation {
+    grid-column: 1 / -1;
+  }
+
+  /* ------------------------------------------------------------------------
+     6. Forced colours: tints vanish, so the rails become system-colour borders.
+        The +/− glyphs are text and survive on their own (§8.6).
+     ------------------------------------------------------------------------ */
+  @media (forced-colors: active) {
+    .prg-terminal__rail {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+    :where(.prg-code__line, .prg-diff__row)[data-hl] :where(.prg-code__gutter, .prg-diff__gutter) {
+      border-inline-start: 2px solid Highlight;
+    }
+    .prg-diff__annotation {
+      border: 1px solid CanvasText;
+    }
+  }
+}
