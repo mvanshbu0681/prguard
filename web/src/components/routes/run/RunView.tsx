@@ -176,7 +176,7 @@ export function RunView({ id, expectedMs }: RunViewProps) {
           onRerun={handleRerun}
           rerunPending={rerun.isPending}
         />
-        <GateArea gate={r?.gate ?? null} error={s.error} className="shrink-0" />
+        <GateArea gate={r?.gate ?? null} error={s.error} live={isLive} className="shrink-0" />
       </div>
 
       {isResult ? <PipelineSummaryStrip stages={stageEntries} wallClockSeconds={r?.timing?.duration_seconds} /> : null}

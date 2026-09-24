@@ -13,17 +13,27 @@ export interface GateAreaProps {
   gate: GateInfo | null | undefined;
   error: RunError | null | undefined;
   className?: string;
+  /**
+   * The run is still LIVE (queued/running) rather than terminal (raised, wave 3 fix pass —
+   * props.ts has no field for this; GateArea is fully owned by this track). A `null` gate
+   * reading here means "still deciding", which `<GateBlock>` already renders as the neutral
+   * RUNNING state (design §1.8) — exactly what this component's own header comment
+   * documents as the correct reading of a missing gate. The "no gate decision for this run"
+   * note stays reserved for a genuinely TERMINAL run that never reached one at all (failed
+   * before delivery, cancelled, superseded).
+   */
+  live?: boolean;
 }
 
-export function GateArea({ gate, error, className }: GateAreaProps) {
-  if (gate) {
+export function GateArea({ gate, error, className, live = false }: GateAreaProps) {
+  if (gate || live) {
     return (
       <GateBlock
         className={className}
-        conclusion={gate.conclusion}
-        blocking={gate.blocking_finding_ids?.length}
-        delivery={gate.delivery}
-        reason={gate.reason}
+        conclusion={gate?.conclusion ?? null}
+        blocking={gate?.blocking_finding_ids?.length}
+        delivery={gate?.delivery}
+        reason={gate?.reason}
       />
     );
   }
