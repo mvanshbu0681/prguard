@@ -1,0 +1,335 @@
+/* Product cards for the hero row: 200px squares, 20px radius, a 5% hairline,
+   no shadow (otoma8's card), each one a real PRGuard artefact. */
+
+.card {
+  --ink: #131313;
+  --lime: #cbf857;
+  --blue: #1e6fd9;
+  --fail: #e5484d;
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 200px;
+  height: 200px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: var(--font-v2-sans), system-ui, sans-serif;
+  text-align: left;
+}
+
+.dark {
+  border-color: rgba(255, 255, 255, 0.06);
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.limeCard {
+  border-color: rgba(0, 0, 0, 0.04);
+  background: var(--lime);
+}
+
+/* Blue-tinted glass, like otoma8's "Data training" card: it has to read over
+   white cloud as well as open sky, so it carries its own colour. */
+.glassCard {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: linear-gradient(160deg, rgba(118, 170, 255, 0.62), rgba(46, 116, 226, 0.5));
+  color: #ffffff;
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.label {
+  color: rgba(19, 19, 19, 0.5);
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.dark .label,
+.glassCard .label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.limeCard .label {
+  color: rgba(19, 19, 19, 0.6);
+}
+
+.mono {
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+}
+
+.big {
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -1.4px;
+  line-height: 1;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.tagLime {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.tagInk {
+  background: var(--ink);
+  color: var(--lime);
+}
+
+.tagSoft {
+  background: #f2f2f4;
+  color: rgba(19, 19, 19, 0.75);
+}
+
+.tagGlass {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* proof card */
+.run {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f2;
+}
+
+.run:last-of-type {
+  border-bottom: 0;
+}
+
+.sha {
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 11px;
+  color: rgba(19, 19, 19, 0.55);
+}
+
+.result {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ok,
+.bad {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+}
+
+.ok {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.bad {
+  background: rgba(229, 72, 77, 0.12);
+  color: var(--fail);
+}
+
+.fail {
+  color: var(--fail);
+}
+
+/* severity card */
+.segments {
+  display: flex;
+  gap: 3px;
+  height: 8px;
+  margin-top: 12px;
+}
+
+.segments span {
+  border-radius: 3px;
+  background: var(--lime);
+}
+
+.segTrack {
+  flex: 1;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* glass card */
+.center {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.ring {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.glassTitle {
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.4px;
+}
+
+.glassSub {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12px;
+}
+
+/* chart card */
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: auto;
+}
+
+/* comment card */
+.author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+
+.avatar i {
+  display: block;
+  width: 12px;
+  height: 4px;
+  border-radius: 1px;
+  background: var(--lime);
+}
+
+.avatar i:first-child {
+  margin-bottom: 2px;
+  border: 1px solid var(--lime);
+  background: transparent;
+}
+
+.name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.meta {
+  color: rgba(19, 19, 19, 0.5);
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.quote {
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.quote code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: #f2f2f4;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 11.5px;
+}
+
+/* gate card */
+.arrowChip {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--lime);
+}
+
+/* chain card */
+.link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 6px 18px;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.link::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--lime);
+  transform: translateY(-50%);
+}
+
+.link:not(:last-of-type)::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: calc(50% + 4px);
+  width: 1px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.seq {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* pipeline card */
+.pipe {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: auto 0;
+}

@@ -1,0 +1,280 @@
+{
+  "review_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "infra-terraform",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 90,
+    "title": "Enable the WAF on the public load balancer",
+    "author": "tomasz-b",
+    "head_sha": "570f615702bcfc6b01626842cbc10cd1072a948a",
+    "base_sha": "1db018ae45a2556b9680708f04b8ec40567f6072",
+    "url": "https://github.com/acme/infra-terraform/pull/90"
+  },
+  "risk_tier": "trivial",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2293724668,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.6164,
+    "input_tokens": 60759,
+    "output_tokens": 21554,
+    "cache_read_tokens": 52194
+  },
+  "timing": {
+    "queued_at": "2026-09-19T16:30:42.308896Z",
+    "started_at": "2026-09-19T16:30:43.402545Z",
+    "finished_at": "2026-09-19T16:31:02.191545Z",
+    "duration_seconds": 18.789
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "4663f4df-4797-493c-a0a5-9b6cf46ece7c",
+      "review_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+      "fingerprint": "cbf659c4bf89b120b7d59860124dd336e72a6734f5f4649a5162c9bc7f75b157",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "cidr_without_prefix",
+      "title": "The blocked IP set lists addresses without a prefix length",
+      "body_markdown": "WAF rejects `203.0.113.7` without `/32` (line 29), so the apply fails after the ACL is created.",
+      "location": {
+        "file_path": "terraform/waf.tf",
+        "start_line": 29,
+        "end_line": 31,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/waf.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "medium",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 31,
+        "github_comment_id": 2307594397
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-19T16:31:00.651745Z"
+    },
+    {
+      "id": "d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4",
+      "review_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+      "fingerprint": "0e5b0b58c8d6524ba533e88ffa63b06828b76b677988aee8dfc7d91a1afeb1b2",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "waf_rules_in_count_mode",
+      "title": "The managed rule groups are attached in COUNT mode",
+      "body_markdown": "`override_action { count {} }` (line 6) records matches without blocking them, so the ACL this change attaches to the public load balancer blocks nothing.",
+      "location": {
+        "file_path": "terraform/waf.tf",
+        "start_line": 6,
+        "end_line": 9,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": "terraform/waf.tf::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.375,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.6,
+          "coverage_gap": 1.0,
+          "churn": 0.0,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "infrastructure path × untested × unproven",
+        "llm_severity_hint": "high",
+        "notes": [
+          "churn unavailable: commits API not reachable, scored 0.0"
+        ]
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 9,
+        "github_comment_id": 2482605375
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-19T16:31:00.653145Z"
+    },
+    {
+      "id": "cdc8ecdc-ee58-4ac1-b790-254ef5ba5e8f",
+      "review_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "missing_prevent_destroy",
+      "title": "Add `prevent_destroy` to `aws_wafv2_ip_set.blocked`",
+      "body_markdown": "A mistaken plan could destroy `aws_wafv2_ip_set.blocked`.",
+      "location": {
+        "file_path": "terraform/waf.tf",
+        "start_line": 27,
+        "end_line": 29,
+        "side": "RIGHT",
+        "language": "unknown",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-19T16:31:00.654545Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#90` in 18.8s · [full run ↗](https://prguard.acme.internal/runs/ca21eb18-3d66-4f48-9276-0b5958e3878c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "570f615702bcfc6b01626842cbc10cd1072a948a",
+    "comments": [
+      {
+        "path": "terraform/waf.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nWAF rejects `203.0.113.7` without `/32` (line 29), so the apply fails after the ACL is created.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/waf.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/4663f4df-4797-493c-a0a5-9b6cf46ece7c#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint cbf659c4…b157` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/4663f4df-4797-493c-a0a5-9b6cf46ece7c#suppress)",
+        "line": 31,
+        "side": "RIGHT",
+        "start_line": 29,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "terraform/waf.tf",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`override_action { count {} }` (line 6) records matches without blocking them, so the ACL this change attaches to the public load balancer blocks nothing.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/waf.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 0e5b0b58…b1b2` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4#suppress)",
+        "line": 9,
+        "side": "RIGHT",
+        "start_line": 6,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=ca21eb18-3d66-4f48-9276-0b5958e3878c"
+}

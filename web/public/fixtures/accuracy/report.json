@@ -1,0 +1,63 @@
+{
+  "window": {
+    "since": null,
+    "until": null,
+    "repository": null
+  },
+  "runs": {
+    "total": 76,
+    "succeeded": 71,
+    "failed": 3,
+    "cancelled": 2,
+    "median_duration_seconds": 28.707
+  },
+  "findings": {
+    "proposed": 246,
+    "published": 89,
+    "suppressed": 27,
+    "dropped_by_coordinator": 122,
+    "per_review_published_mean": 1.171
+  },
+  "proof": {
+    "attempted": 42,
+    "proven": 26,
+    "disproven": 5,
+    "inconclusive": 10,
+    "skipped_no_env": 1,
+    "proven_rate": 0.619,
+    "disproven_rate": 0.119
+  },
+  "precision_proxies": {
+    "execution_verified_precision": {
+      "value": 1.0,
+      "n": 25,
+      "definition": "proven / (proven + disproven) restricted to findings that were executed; 1.0 by construction for published proven findings"
+    },
+    "self_caught_false_positive_rate": {
+      "value": 0.119,
+      "n": 42,
+      "definition": "disproven / attempted — findings the system itself refuted before publishing"
+    },
+    "human_dismissal_rate": {
+      "value": 0.152,
+      "n": 105,
+      "definition": "findings with a finding_outcomes row of 'dismissed' / findings that were ever published (published now, plus those a human dismissed off that set)"
+    },
+    "addressed_rate": {
+      "value": 0.452,
+      "n": 31,
+      "definition": "findings whose fingerprint disappeared on a later run of the same PR / published findings on PRs run more than once inside the window"
+    }
+  },
+  "gate": {
+    "runs_red": 14,
+    "runs_green": 53,
+    "runs_neutral": 5,
+    "break_glass_overrides": 1
+  },
+  "caveats": [
+    "Not an external benchmark. Every number is computed from this deployment's own database.",
+    "addressed_rate requires at least two runs on a PR; single-run PRs are excluded from n.",
+    "Outcome inference is a heuristic: a published fingerprint that disappears on a later run of the same PR is counted as addressed, and an explicit suppression is counted as dismissed. Neither is a confirmation by the author."
+  ]
+}

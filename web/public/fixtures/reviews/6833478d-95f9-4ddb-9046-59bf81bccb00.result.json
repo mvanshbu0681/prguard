@@ -1,0 +1,376 @@
+{
+  "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4819,
+    "title": "Show the VAT breakdown on receipts",
+    "author": "lena-ortiz",
+    "head_sha": "1282da36443232d57246d1a60c3c263f465f4e82",
+    "base_sha": "3118894f9197c442933a9b664f46e54bfc8cec4b",
+    "url": "https://github.com/acme/checkout-service/pull/4819"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2245103196,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 5,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 3,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.1071,
+    "input_tokens": 74757,
+    "output_tokens": 45090,
+    "cache_read_tokens": 171156
+  },
+  "timing": {
+    "queued_at": "2026-09-21T10:30:21.132404Z",
+    "started_at": "2026-09-21T10:30:21.383113Z",
+    "finished_at": "2026-09-21T10:30:49.819113Z",
+    "duration_seconds": 28.436
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "f16a825f-3035-432b-85da-b522c57c3fda",
+      "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+      "fingerprint": "8849126d5074d98dec4d8574f2d21e6a0da60de5b36a5a6172a17e5a1ee33c6f",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "sum_of_rounded_lines",
+      "title": "invoice_tax_total() sums rounded line taxes, so the total drifts from the rate",
+      "body_markdown": "Rounding each line before summing (line 41) makes the invoice total differ from `rate * net` by up to one cent per line. Three lines of 333 cents at 19% give 189 where the invoice rate gives 190.",
+      "location": {
+        "file_path": "app/billing/tax.py",
+        "start_line": 41,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/tax.py::invoice_tax_total"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.535,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.2,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × proven × reachable internally × churn 0.20 × blast radius 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_dbb0ca.py",
+        "test_code": "\"\"\"Repro for a prguard finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
+        "command": "pytest tests/test_repro_dbb0ca.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.29s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_three_lines_total_at_the_invoice_rate __________________\n\n    def test_three_lines_total_at_the_invoice_rate():\n>       assert invoice_tax_total([333, 333, 333], \"DE\") == 190\nE       AssertionError: assert 189 == 190\nE        +  where 189 = invoice_tax_total([333, 333, 333], 'DE')\n\ntests/test_repro_dbb0ca.py:10: AssertionError\n1 failed in 0.30s"
+        },
+        "duration_ms": 2218,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 44,
+        "github_comment_id": 2016162417
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "0f0e3f0b-fe97-4443-a992-b1f15824bbe5",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T10:30:41.790513Z"
+    },
+    {
+      "id": "c7c3da29-b130-46d4-9bc7-fb3c2b9b1770",
+      "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+      "fingerprint": "c652e169ab2568db2fd44647dc84aa1f1c0d9e06f28ce4b56fc05c50e6c278a2",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "hardcoded_currency_symbol",
+      "title": "Take the receipt's currency symbol from the charge, not from the VAT country",
+      "body_markdown": "`rate_for_country()` now also returns the symbol printed on the receipt (line 29); a Swiss account paying in EUR gets \"CHF\" beside a euro amount.",
+      "location": {
+        "file_path": "app/billing/tax.py",
+        "start_line": 29,
+        "end_line": 31,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/tax.py::rate_for_country"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.49,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.3,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.2,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × blast radius 0.30 × churn 0.20",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 31,
+        "github_comment_id": 2001701273
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T10:30:41.791913Z"
+    },
+    {
+      "id": "4296025f-49da-412c-b1f9-f548287210f6",
+      "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_return_annotation",
+      "title": "Annotate the return type of `vat_for()`",
+      "body_markdown": "`vat_for()` is the only function in `app/billing/tax.py` without a return annotation.",
+      "location": {
+        "file_path": "app/billing/tax.py",
+        "start_line": 11,
+        "end_line": 13,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T10:30:41.793313Z"
+    },
+    {
+      "id": "0e76551a-2e77-4546-b0cd-389ef9758deb",
+      "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `round_minor()` against two callers running it at once",
+      "body_markdown": "Two workers running `round_minor()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/billing/tax.py",
+        "start_line": 56,
+        "end_line": 58,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T10:30:41.794713Z"
+    },
+    {
+      "id": "e1a3b423-83c7-4ee9-9600-edaac937187d",
+      "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "obscured_invariant",
+      "title": "Make the invariant in `invoice_tax_total()` explicit",
+      "body_markdown": "`invoice_tax_total()` relies on an ordering it never states.",
+      "location": {
+        "file_path": "app/billing/tax.py",
+        "start_line": 41,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T10:30:41.796113Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#4819` in 28.4s · [full run ↗](https://prguard.acme.internal/runs/6833478d-95f9-4ddb-9046-59bf81bccb00)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "1282da36443232d57246d1a60c3c263f465f4e82",
+    "comments": [
+      {
+        "path": "app/billing/tax.py",
+        "body": "**`proof_status: proven`** · severity **`0.535`** medium\n\nRounding each line before summing (line 41) makes the invoice total differ from `rate * net` by up to one cent per line. Three lines of 333 cents at 19% give 189 where the invoice rate gives 190.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `3118894` | `1 passed in 0.29s` |\n| head | `1282da3` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>1282da3</code></summary>\n\n    E       AssertionError: assert 189 == 190\n    E        +  where 189 = invoice_tax_total([333, 333, 333], 'DE')\n    tests/test_repro_dbb0ca.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.535`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.150` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/f16a825f-3035-432b-85da-b522c57c3fda#severity)\n\nThis finding has `proof_status: proven` and scores `0.535` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 8849126d…3c6f` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/f16a825f-3035-432b-85da-b522c57c3fda#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "line": 44,
+        "side": "RIGHT",
+        "start_line": 41,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/billing/tax.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.490`** medium\n\n`rate_for_country()` now also returns the symbol printed on the receipt (line 29); a Swiss account paying in EUR gets \"CHF\" beside a euro amount.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.490`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c7c3da29-b130-46d4-9bc7-fb3c2b9b1770#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c652e169…78a2` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c7c3da29-b130-46d4-9bc7-fb3c2b9b1770#suppress)",
+        "line": 31,
+        "side": "RIGHT",
+        "start_line": 29,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=6833478d-95f9-4ddb-9046-59bf81bccb00"
+}

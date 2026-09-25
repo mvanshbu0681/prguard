@@ -1,0 +1,21 @@
+{
+  "review_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+  "status": "succeeded",
+  "stage": "finalise",
+  "stage_index": 9,
+  "stage_total": 9,
+  "stage_label": "Recomputing counters and writing audit events",
+  "seconds_since_heartbeat": 329337,
+  "risk_tier": "trivial",
+  "head_sha": "570f615702bcfc6b01626842cbc10cd1072a948a",
+  "degradations": [],
+  "counts": {
+    "proposed": 0,
+    "published": 2,
+    "suppressed": 0,
+    "blocking": 0
+  },
+  "started_at": "2026-09-19T16:30:43.402545Z",
+  "finished_at": "2026-09-19T16:31:02.191545Z",
+  "error": null
+}

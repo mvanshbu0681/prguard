@@ -1,0 +1,2132 @@
+{
+  "items": [
+    {
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4821,
+        "title": "Resolve account currency at charge time",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 12,
+        "published": 3,
+        "suppressed": 1,
+        "dropped": 7,
+        "disproven": 1,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.4496,
+      "duration_seconds": 41.2,
+      "created_at": "2026-09-23T11:46:01.902000Z",
+      "finished_at": "2026-09-23T11:46:43.514000Z"
+    },
+    {
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "status": "cancelled",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4821,
+        "title": "Resolve account currency at charge time",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": null,
+      "counts": {
+        "proposed": 6,
+        "published": 0,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9513,
+      "duration_seconds": 25.072,
+      "created_at": "2026-09-23T11:45:36.418000Z",
+      "finished_at": "2026-09-23T11:46:01.902000Z"
+    },
+    {
+      "review_id": "006da01c-0e2d-4903-93e4-c0a3259447f3",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1135,
+        "title": "Analytics consent banner",
+        "author": "farah-n"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8945,
+      "duration_seconds": 18.783,
+      "created_at": "2026-09-22T15:40:48.146665Z",
+      "finished_at": "2026-09-22T15:41:07.193988Z"
+    },
+    {
+      "review_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 231,
+        "title": "Audit break-glass admin logins",
+        "author": "sana-q"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 2,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0321,
+      "duration_seconds": 30.977,
+      "created_at": "2026-09-22T14:05:08.640702Z",
+      "finished_at": "2026-09-22T14:05:40.805594Z"
+    },
+    {
+      "review_id": "b74cf26f-0edb-4668-868e-fa4a28cde0cc",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 94,
+        "title": "Lifecycle rules for the invoice archive",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.7267,
+      "duration_seconds": 14.631,
+      "created_at": "2026-09-22T11:40:54.400476Z",
+      "finished_at": "2026-09-22T11:41:10.359086Z"
+    },
+    {
+      "review_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1135,
+        "title": "Analytics consent banner",
+        "author": "farah-n"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.81,
+      "duration_seconds": 20.611,
+      "created_at": "2026-09-22T09:15:18.593162Z",
+      "finished_at": "2026-09-22T09:15:39.417501Z"
+    },
+    {
+      "review_id": "42507a60-eddb-485c-9f59-362c2ec61ccf",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 92,
+        "title": "Deploy role for the staging pipeline",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "neutral",
+      "counts": {
+        "proposed": 2,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0146,
+      "duration_seconds": 27.491,
+      "created_at": "2026-09-21T13:10:53.550337Z",
+      "finished_at": "2026-09-21T13:11:21.360846Z"
+    },
+    {
+      "review_id": "6833478d-95f9-4ddb-9046-59bf81bccb00",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4819,
+        "title": "Show the VAT breakdown on receipts",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.1071,
+      "duration_seconds": 28.436,
+      "created_at": "2026-09-21T10:30:21.132404Z",
+      "finished_at": "2026-09-21T10:30:49.819113Z"
+    },
+    {
+      "review_id": "526f3b0b-cd59-4154-87d0-b35a1bee024d",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 344,
+        "title": "Drop the legacy ledger_v1 tables",
+        "author": "dmitri-k"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8792,
+      "duration_seconds": 25.869,
+      "created_at": "2026-09-21T09:47:06.130382Z",
+      "finished_at": "2026-09-21T09:47:32.892659Z"
+    },
+    {
+      "review_id": "0d692033-6674-4494-aebb-08dc03b826c0",
+      "status": "succeeded",
+      "trigger": "rerun",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 72,
+        "title": "Autoescape user names in email templates",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8274,
+      "duration_seconds": 28.653,
+      "created_at": "2026-09-20T10:21:21.077814Z",
+      "finished_at": "2026-09-20T10:21:50.481824Z"
+    },
+    {
+      "review_id": "cfcf12f1-9c39-430c-8656-369a9693bb0a",
+      "status": "failed",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 72,
+        "title": "Autoescape user names in email templates",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": null,
+      "counts": {
+        "proposed": 0,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": null,
+      "duration_seconds": 641.82,
+      "created_at": "2026-09-20T10:05:29.761951Z",
+      "finished_at": "2026-09-20T10:16:12.288454Z"
+    },
+    {
+      "review_id": "492b829a-3003-4b40-b3f2-6094229c7bba",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 91,
+        "title": "Tag the reporting replica for cost allocation",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.5776,
+      "duration_seconds": 20.152,
+      "created_at": "2026-09-20T09:30:36.558928Z",
+      "finished_at": "2026-09-20T09:30:57.892948Z"
+    },
+    {
+      "review_id": "ca21eb18-3d66-4f48-9276-0b5958e3878c",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 90,
+        "title": "Enable the WAF on the public load balancer",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.6164,
+      "duration_seconds": 18.789,
+      "created_at": "2026-09-19T16:30:42.308896Z",
+      "finished_at": "2026-09-19T16:31:02.191545Z"
+    },
+    {
+      "review_id": "b6dadbe2-b678-4c5d-bc61-28b334159221",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 347,
+        "title": "Add the settlement currency column to the finance export",
+        "author": "yuki-t"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8931,
+      "duration_seconds": 28.183,
+      "created_at": "2026-09-19T13:25:01.361943Z",
+      "finished_at": "2026-09-19T13:25:29.914062Z"
+    },
+    {
+      "review_id": "4526fe04-6175-4af6-9c3b-904fa7d4eb35",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1133,
+        "title": "Zoom on product images",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8302,
+      "duration_seconds": 27.877,
+      "created_at": "2026-09-19T11:05:03.088236Z",
+      "finished_at": "2026-09-19T11:05:32.354484Z"
+    },
+    {
+      "review_id": "0f0e3f0b-fe97-4443-a992-b1f15824bbe5",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4817,
+        "title": "Round EU VAT per line instead of per invoice",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 1,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.2769,
+      "duration_seconds": 35.276,
+      "created_at": "2026-09-18T16:45:20.838875Z",
+      "finished_at": "2026-09-18T16:45:56.609256Z"
+    },
+    {
+      "review_id": "179b1e69-1f0e-400a-a3db-34a7e4ca3aad",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 71,
+        "title": "Collapse duplicate pushes within a minute",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0316,
+      "duration_seconds": 31.278,
+      "created_at": "2026-09-18T10:10:33.762159Z",
+      "finished_at": "2026-09-18T10:11:06.115545Z"
+    },
+    {
+      "review_id": "174c5478-f029-42cc-806c-ad93401ca4a9",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 229,
+        "title": "Deprovision users over SCIM",
+        "author": "sana-q"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 0.9081,
+      "duration_seconds": 28.761,
+      "created_at": "2026-09-18T09:50:40.075081Z",
+      "finished_at": "2026-09-18T09:51:10.021163Z"
+    },
+    {
+      "review_id": "cb464ca0-5743-43f7-89bb-da89949f1b57",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1131,
+        "title": "Fix the double-submit on the pay button",
+        "author": "jonas-w"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "neutral",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0039,
+      "duration_seconds": 29.318,
+      "created_at": "2026-09-17T17:20:12.034923Z",
+      "finished_at": "2026-09-17T17:20:42.483022Z"
+    },
+    {
+      "review_id": "e17badc8-8829-4592-8aae-0e4c1261e9de",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 340,
+        "title": "Handle partial refunds in reconciliation",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.0917,
+      "duration_seconds": 30.27,
+      "created_at": "2026-09-17T15:18:11.699314Z",
+      "finished_at": "2026-09-17T15:18:42.161035Z"
+    },
+    {
+      "review_id": "b5fc94ff-6142-43b3-a28d-7472b53924e6",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 70,
+        "title": "Quiet hours for push notifications",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 0,
+        "suppressed": 1,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9346,
+      "duration_seconds": 29.686,
+      "created_at": "2026-09-17T10:30:02.485978Z",
+      "finished_at": "2026-09-17T10:30:33.057965Z"
+    },
+    {
+      "review_id": "2810c110-33c2-4b47-bb05-8d78a1a4442e",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4815,
+        "title": "Cap page size on the order history export",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.017,
+      "duration_seconds": 26.573,
+      "created_at": "2026-09-16T14:10:21.421546Z",
+      "finished_at": "2026-09-16T14:10:48.889017Z"
+    },
+    {
+      "review_id": "792f5696-cc67-4d89-b289-3e9812f0b608",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 227,
+        "title": "Cache JWKS keys for an hour",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9249,
+      "duration_seconds": 29.819,
+      "created_at": "2026-09-16T10:47:32Z",
+      "finished_at": "2026-09-16T10:48:02.129914Z"
+    },
+    {
+      "review_id": "06ce038e-e287-4909-a082-c873e7bdb3a9",
+      "status": "cancelled",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 227,
+        "title": "Cache JWKS keys for an hour",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0361,
+      "duration_seconds": 20.805831,
+      "created_at": "2026-09-16T10:47:10Z",
+      "finished_at": "2026-09-16T10:47:32Z"
+    },
+    {
+      "review_id": "44ef4bba-e50f-4377-b2b3-96b02119a976",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 227,
+        "title": "Cache JWKS keys for an hour",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 0.9307,
+      "duration_seconds": 35.331,
+      "created_at": "2026-09-16T10:40:13.826668Z",
+      "finished_at": "2026-09-16T10:40:50.340810Z"
+    },
+    {
+      "review_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 69,
+        "title": "De-duplicate push notifications per device",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.305,
+      "duration_seconds": 26.719,
+      "created_at": "2026-09-15T14:40:27.020793Z",
+      "finished_at": "2026-09-15T14:40:55.013276Z"
+    },
+    {
+      "review_id": "5c6532e8-b698-4df7-abf5-fbd1e626f485",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4812,
+        "title": "Bump the Stripe SDK to 12.4",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "neutral",
+      "counts": {
+        "proposed": 4,
+        "published": 2,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.1279,
+      "duration_seconds": 30.484,
+      "created_at": "2026-09-15T11:30:59.975707Z",
+      "finished_at": "2026-09-15T11:31:31.285455Z"
+    },
+    {
+      "review_id": "567edaff-6d2c-477b-89be-faeb12af07ea",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1129,
+        "title": "Merge the guest cart on login",
+        "author": "kwame-a"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.005,
+      "duration_seconds": 18.405,
+      "created_at": "2026-09-14T13:30:21.275865Z",
+      "finished_at": "2026-09-14T13:30:40.308746Z"
+    },
+    {
+      "review_id": "6625ef03-da6d-453c-a1ac-2b5148d95966",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 336,
+        "title": "Payout batch cut-off at 16:00 CET",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.2091,
+      "duration_seconds": 31.686,
+      "created_at": "2026-09-14T11:40:22.705170Z",
+      "finished_at": "2026-09-14T11:40:55.427934Z"
+    },
+    {
+      "review_id": "01240a54-a15b-4ed0-8fdb-f6fb5a3e9cb5",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 225,
+        "title": "Log the JWKS key id on verification failures",
+        "author": "sana-q"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8297,
+      "duration_seconds": 27.364,
+      "created_at": "2026-09-14T09:40:13.222308Z",
+      "finished_at": "2026-09-14T09:40:40.858779Z"
+    },
+    {
+      "review_id": "42e119e6-d399-41ca-be7b-bea0d261251c",
+      "status": "succeeded",
+      "trigger": "rerun",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 88,
+        "title": "Rotate the KMS key for application secrets",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.4846,
+      "duration_seconds": 18.494,
+      "created_at": "2026-09-13T12:02:54.989565Z",
+      "finished_at": "2026-09-13T12:03:13.745190Z"
+    },
+    {
+      "review_id": "7220965d-ec61-4286-b28c-754eb7dde529",
+      "status": "failed",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 88,
+        "title": "Rotate the KMS key for application secrets",
+        "author": "tomasz-b"
+      },
+      "risk_tier": null,
+      "gate_conclusion": null,
+      "counts": {
+        "proposed": 0,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": null,
+      "duration_seconds": 3.827,
+      "created_at": "2026-09-13T11:45:52.982785Z",
+      "finished_at": "2026-09-13T11:45:58.116944Z"
+    },
+    {
+      "review_id": "b52df2d8-c491-4bf9-be7c-18bb0670cddf",
+      "status": "succeeded",
+      "trigger": "rerun",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 333,
+        "title": "Fetch settlement reports from all providers concurrently",
+        "author": "dmitri-k"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8476,
+      "duration_seconds": 28.142,
+      "created_at": "2026-09-12T10:52:41.571912Z",
+      "finished_at": "2026-09-12T10:53:10.769397Z"
+    },
+    {
+      "review_id": "ac5394b8-d87e-4869-b512-94b4f8881c65",
+      "status": "failed",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 333,
+        "title": "Fetch settlement reports from all providers concurrently",
+        "author": "dmitri-k"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": null,
+      "counts": {
+        "proposed": 0,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": null,
+      "duration_seconds": 6.618,
+      "created_at": "2026-09-12T10:30:51.744509Z",
+      "finished_at": "2026-09-12T10:30:58.686214Z"
+    },
+    {
+      "review_id": "9b09823a-5ec6-4b78-abd1-56f633f2d52a",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1126,
+        "title": "Currency switcher in the header",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9302,
+      "duration_seconds": 30.836,
+      "created_at": "2026-09-11T10:05:42.366713Z",
+      "finished_at": "2026-09-11T10:06:13.475491Z"
+    },
+    {
+      "review_id": "b59b56e2-1e25-401a-8858-b62de8f03d44",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 223,
+        "title": "Add PKCE to the OAuth authorize flow",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.003,
+      "duration_seconds": 31.29,
+      "created_at": "2026-09-11T09:15:18.293192Z",
+      "finished_at": "2026-09-11T09:15:50.683189Z"
+    },
+    {
+      "review_id": "f0788f41-813f-454e-b824-64d091f8a97f",
+      "status": "succeeded",
+      "trigger": "api",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4808,
+        "title": "Show saved cards on the payment step",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 0.9426,
+      "duration_seconds": 28.645,
+      "created_at": "2026-09-10T16:05:03.912939Z",
+      "finished_at": "2026-09-10T16:05:33.211245Z"
+    },
+    {
+      "review_id": "983dec55-0a00-4f65-b48e-b49d0acca117",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 223,
+        "title": "Add PKCE to the OAuth authorize flow",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 5,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 2
+      },
+      "cost_usd_estimate": 1.3309,
+      "duration_seconds": 38.761,
+      "created_at": "2026-09-10T13:50:56.533058Z",
+      "finished_at": "2026-09-10T13:51:36.081304Z"
+    },
+    {
+      "review_id": "874b3565-0f0d-407e-ad40-834e4b8d8bef",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 86,
+        "title": "Read replica for the reporting database",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9293,
+      "duration_seconds": 26.894,
+      "created_at": "2026-09-09T15:15:07.130945Z",
+      "finished_at": "2026-09-09T15:15:34.657385Z"
+    },
+    {
+      "review_id": "cfba0c6b-6c52-48c8-a255-41bc828ad35d",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 65,
+        "title": "Group digest emails by topic",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "neutral",
+      "counts": {
+        "proposed": 4,
+        "published": 3,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0762,
+      "duration_seconds": 29.237,
+      "created_at": "2026-09-09T11:10:59.513796Z",
+      "finished_at": "2026-09-09T11:11:29.034930Z"
+    },
+    {
+      "review_id": "ba25e8d9-3337-4e3e-8756-43abf2efdffc",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 329,
+        "title": "Export ledger entries to CSV for finance",
+        "author": "yuki-t"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.1449,
+      "duration_seconds": 29.752,
+      "created_at": "2026-09-08T11:22:37.972179Z",
+      "finished_at": "2026-09-08T11:23:08.266227Z"
+    },
+    {
+      "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4790,
+        "title": "Store checkout sessions per account",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 0,
+        "suppressed": 1,
+        "dropped": 3,
+        "disproven": 1,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0421,
+      "duration_seconds": 33.343,
+      "created_at": "2026-09-07T13:18:48.811957Z",
+      "finished_at": "2026-09-07T13:19:22.972570Z"
+    },
+    {
+      "review_id": "a959fc95-d58d-4616-95a3-4a3fd20d947a",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 63,
+        "title": "Bump jinja2 to 3.1.6",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 0,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.6908,
+      "duration_seconds": 20.486,
+      "created_at": "2026-09-07T09:05:51.231449Z",
+      "finished_at": "2026-09-07T09:06:12.055048Z"
+    },
+    {
+      "review_id": "811dc092-abaa-4aa8-ad63-913922de7cae",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 84,
+        "title": "Cache pip wheels in CI",
+        "author": "kwame-a"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.7797,
+      "duration_seconds": 19.817,
+      "created_at": "2026-09-06T09:20:02.063388Z",
+      "finished_at": "2026-09-06T09:20:22.899963Z"
+    },
+    {
+      "review_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1120,
+        "title": "Upgrade to React Router 7",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "neutral",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0368,
+      "duration_seconds": 28.894,
+      "created_at": "2026-09-05T12:00:02.948380Z",
+      "finished_at": "2026-09-05T12:00:33.184962Z"
+    },
+    {
+      "review_id": "3b4dc1b1-748d-4ab6-a871-8186e06ed097",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 61,
+        "title": "Unsubscribe links in digest emails",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.046,
+      "duration_seconds": 26.587,
+      "created_at": "2026-09-04T15:22:24.517544Z",
+      "finished_at": "2026-09-04T15:22:52.167923Z"
+    },
+    {
+      "review_id": "6563ff71-034e-4c85-95ed-d2b85554cce8",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 219,
+        "title": "Rate-limit password reset emails",
+        "author": "sana-q"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.3072,
+      "duration_seconds": 36.578,
+      "created_at": "2026-09-04T10:25:01.149459Z",
+      "finished_at": "2026-09-04T10:25:38.025519Z"
+    },
+    {
+      "review_id": "76bf49dd-b3be-41b3-8866-8e06833abd6b",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4806,
+        "title": "Download order history as CSV",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.1633,
+      "duration_seconds": 33.761,
+      "created_at": "2026-09-04T10:10:32.833850Z",
+      "finished_at": "2026-09-04T10:11:07.195127Z"
+    },
+    {
+      "review_id": "f7a5e58d-b99e-4220-b417-2c2ed40c6c81",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1117,
+        "title": "Update the footer links",
+        "author": "farah-n"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 0,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 0,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.6254,
+      "duration_seconds": 16.157,
+      "created_at": "2026-09-03T16:40:21.481767Z",
+      "finished_at": "2026-09-03T16:40:37.843516Z"
+    },
+    {
+      "review_id": "81e192de-4a0a-41e2-ba02-f7692f45f6c5",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 326,
+        "title": "Tolerate one-cent rounding in reconciliation",
+        "author": "dmitri-k"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0357,
+      "duration_seconds": 30.32,
+      "created_at": "2026-09-03T14:05:06.383416Z",
+      "finished_at": "2026-09-03T14:05:37.876539Z"
+    },
+    {
+      "review_id": "0958952c-0c40-4f85-a832-18d586bceaf5",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4801,
+        "title": "Paginate the order history endpoint",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 0,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.002,
+      "duration_seconds": 30.328,
+      "created_at": "2026-09-03T09:05:50.272187Z",
+      "finished_at": "2026-09-03T09:06:21.072230Z"
+    },
+    {
+      "review_id": "27c3e6a9-49b0-460b-b0d9-c2681b7d8829",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4801,
+        "title": "Paginate the order history endpoint",
+        "author": "mhollis"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 5,
+        "published": 3,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.0904,
+      "duration_seconds": 32.079,
+      "created_at": "2026-09-02T14:20:50.117641Z",
+      "finished_at": "2026-09-02T14:21:22.633715Z"
+    },
+    {
+      "review_id": "dc36b608-f566-44ed-866f-80154d997fd6",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 83,
+        "title": "Bump the AWS provider to 5.62",
+        "author": "kwame-a"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.7649,
+      "duration_seconds": 19.0,
+      "created_at": "2026-09-02T12:10:37.541588Z",
+      "finished_at": "2026-09-02T12:10:56.787775Z"
+    },
+    {
+      "review_id": "77b5ab85-4082-4cd4-b467-9d9d3c1265aa",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 322,
+        "title": "Per-tenant invoice number sequences",
+        "author": "dmitri-k"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 2,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.3069,
+      "duration_seconds": 129.672,
+      "created_at": "2026-08-31T17:05:05.301689Z",
+      "finished_at": "2026-08-31T17:07:15.345529Z"
+    },
+    {
+      "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4796,
+        "title": "Log gateway decline codes on failed charges",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9982,
+      "duration_seconds": 28.63,
+      "created_at": "2026-08-31T10:05:31.047102Z",
+      "finished_at": "2026-08-31T10:05:59.952859Z"
+    },
+    {
+      "review_id": "1a53b035-8408-4e66-aa8a-3966b1a59454",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1113,
+        "title": "Persist the cart to localStorage",
+        "author": "jonas-w"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.701,
+      "duration_seconds": 23.536,
+      "created_at": "2026-08-30T15:35:14.171408Z",
+      "finished_at": "2026-08-30T15:35:38.577379Z"
+    },
+    {
+      "review_id": "61429ad6-74a1-4a78-8384-c568a6683217",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 58,
+        "title": "Retry failed webhooks with exponential backoff",
+        "author": "kwame-a"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.6644,
+      "duration_seconds": 22.576,
+      "created_at": "2026-08-30T09:40:43.515242Z",
+      "finished_at": "2026-08-30T09:41:06.273901Z"
+    },
+    {
+      "review_id": "9b7c3184-c45f-4ac6-a41b-9f70d6a70564",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 81,
+        "title": "Add a read replica for the ledger database",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9389,
+      "duration_seconds": 28.219,
+      "created_at": "2026-08-29T14:55:28.632817Z",
+      "finished_at": "2026-08-29T14:55:58.064056Z"
+    },
+    {
+      "review_id": "c54cb93c-ca9d-4862-b24a-a417399b3d64",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 58,
+        "title": "Retry failed webhooks with exponential backoff",
+        "author": "kwame-a"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 3,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 0.9493,
+      "duration_seconds": 27.911,
+      "created_at": "2026-08-29T13:05:05.439364Z",
+      "finished_at": "2026-08-29T13:05:33.876957Z"
+    },
+    {
+      "review_id": "df990531-747a-4564-9cb8-3641b260d312",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 214,
+        "title": "Allow clock skew on SAML assertions",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 1,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8638,
+      "duration_seconds": 27.931,
+      "created_at": "2026-08-28T16:40:46.802362Z",
+      "finished_at": "2026-08-28T16:41:15.516192Z"
+    },
+    {
+      "review_id": "f263bc08-4544-4504-a2f7-78d46f97e985",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 214,
+        "title": "Allow clock skew on SAML assertions",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 4,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.1429,
+      "duration_seconds": 29.857,
+      "created_at": "2026-08-28T14:12:41.251681Z",
+      "finished_at": "2026-08-28T14:13:12.426116Z"
+    },
+    {
+      "review_id": "8b4fcbfe-67fd-4387-b098-8d4ae7f669b9",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1110,
+        "title": "Lazy-load product images below the fold",
+        "author": "jonas-w"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.7502,
+      "duration_seconds": 23.097,
+      "created_at": "2026-08-27T13:15:56.091504Z",
+      "finished_at": "2026-08-27T13:16:19.447233Z"
+    },
+    {
+      "review_id": "24f23cfb-6f40-4f53-a814-7b93cb407aac",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4783,
+        "title": "Add refund reason codes",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 3,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0809,
+      "duration_seconds": 32.401,
+      "created_at": "2026-08-27T09:41:00.321967Z",
+      "finished_at": "2026-08-27T09:41:33.498488Z"
+    },
+    {
+      "review_id": "4f78fe1c-d0a2-4373-954f-8c371bc2dd9a",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 56,
+        "title": "Handle SMS delivery receipts",
+        "author": "kwame-a"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.984,
+      "duration_seconds": 31.264,
+      "created_at": "2026-08-26T11:30:30.649453Z",
+      "finished_at": "2026-08-26T11:31:02.242528Z"
+    },
+    {
+      "review_id": "36e8ee85-0a9d-4b49-a6b8-b5005f99a901",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 318,
+        "title": "Batch payouts by currency",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 0,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.2342,
+      "duration_seconds": 29.949,
+      "created_at": "2026-08-26T10:02:27.564695Z",
+      "finished_at": "2026-08-26T10:02:57.920320Z"
+    },
+    {
+      "review_id": "e68e08fc-9bc5-42ee-958b-32eadfdf955c",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 211,
+        "title": "Remember-me sessions for 30 days",
+        "author": "farah-n"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 1,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.2355,
+      "duration_seconds": 34.103,
+      "created_at": "2026-08-25T15:20:46.038425Z",
+      "finished_at": "2026-08-25T15:21:21.404444Z"
+    },
+    {
+      "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 318,
+        "title": "Batch payouts by currency",
+        "author": "yuki-t"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 5,
+        "published": 2,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.3383,
+      "duration_seconds": 37.852,
+      "created_at": "2026-08-25T13:40:49.039724Z",
+      "finished_at": "2026-08-25T13:41:27.416045Z"
+    },
+    {
+      "review_id": "1d7e4713-4d18-41e1-a551-e1dfcd347609",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1107,
+        "title": "Lazy-load product images",
+        "author": "lena-ortiz"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 3,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9789,
+      "duration_seconds": 29.798,
+      "created_at": "2026-08-24T11:10:21.027854Z",
+      "finished_at": "2026-08-24T11:10:51.936619Z"
+    },
+    {
+      "review_id": "3ba68b52-2a9c-43c9-97fc-1cdb08fa4dd0",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "notifications"
+      },
+      "pull_request": {
+        "number": 54,
+        "title": "Batch SMS sends through Twilio",
+        "author": "yuki-t"
+      },
+      "risk_tier": "standard",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 2,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8198,
+      "duration_seconds": 23.587,
+      "created_at": "2026-08-23T10:15:12.084526Z",
+      "finished_at": "2026-08-23T10:15:36.697395Z"
+    },
+    {
+      "review_id": "8ab00e20-04e8-4174-8d62-b3c363a6d565",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "infra-terraform"
+      },
+      "pull_request": {
+        "number": 77,
+        "title": "Tighten the invoices bucket policy",
+        "author": "tomasz-b"
+      },
+      "risk_tier": "trivial",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.763,
+      "duration_seconds": 18.284,
+      "created_at": "2026-08-22T10:40:27.900128Z",
+      "finished_at": "2026-08-22T10:40:46.688067Z"
+    },
+    {
+      "review_id": "bbef7bf0-7ead-42f6-8abd-eab155c6f4e4",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 208,
+        "title": "Rotate refresh tokens on every use",
+        "author": "sana-q"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 0,
+        "suppressed": 0,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.8999,
+      "duration_seconds": 31.228,
+      "created_at": "2026-08-22T09:30:05.508817Z",
+      "finished_at": "2026-08-22T09:30:36.952219Z"
+    },
+    {
+      "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "identity-gateway"
+      },
+      "pull_request": {
+        "number": 208,
+        "title": "Rotate refresh tokens on every use",
+        "author": "sana-q"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 5,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 1,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.1943,
+      "duration_seconds": 38.514,
+      "created_at": "2026-08-21T11:05:26.326552Z",
+      "finished_at": "2026-08-21T11:06:05.400344Z"
+    },
+    {
+      "review_id": "d7afa3f4-2cbd-4cf8-a846-c46b44620b76",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4776,
+        "title": "Retry idempotent charge creation on gateway timeouts",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 2,
+        "published": 1,
+        "suppressed": 0,
+        "dropped": 1,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 0.9218,
+      "duration_seconds": 30.582,
+      "created_at": "2026-08-20T15:02:30.002075Z",
+      "finished_at": "2026-08-20T15:03:01.847096Z"
+    },
+    {
+      "review_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "checkout-service"
+      },
+      "pull_request": {
+        "number": 4776,
+        "title": "Retry idempotent charge creation on gateway timeouts",
+        "author": "kwame-a"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "failure",
+      "counts": {
+        "proposed": 6,
+        "published": 3,
+        "suppressed": 0,
+        "dropped": 3,
+        "disproven": 0,
+        "blocking": 1
+      },
+      "cost_usd_estimate": 1.0335,
+      "duration_seconds": 32.235,
+      "created_at": "2026-08-20T10:14:02.241643Z",
+      "finished_at": "2026-08-20T10:14:34.986998Z"
+    },
+    {
+      "review_id": "d9a4379f-e571-4016-8c7a-d4468bc7c895",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "web-storefront"
+      },
+      "pull_request": {
+        "number": 1102,
+        "title": "Validate postcodes in the checkout address form",
+        "author": "jonas-w"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 5,
+        "published": 2,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.0467,
+      "duration_seconds": 27.417,
+      "created_at": "2026-08-19T16:20:17.948810Z",
+      "finished_at": "2026-08-19T16:20:46.753066Z"
+    },
+    {
+      "review_id": "807108b3-552d-4125-8427-765a494d3ae5",
+      "status": "succeeded",
+      "trigger": "webhook",
+      "repository": {
+        "owner": "acme",
+        "name": "ledger"
+      },
+      "pull_request": {
+        "number": 311,
+        "title": "Nightly reconciliation job for Adyen settlements",
+        "author": "dmitri-k"
+      },
+      "risk_tier": "full",
+      "gate_conclusion": "success",
+      "counts": {
+        "proposed": 4,
+        "published": 1,
+        "suppressed": 1,
+        "dropped": 2,
+        "disproven": 0,
+        "blocking": 0
+      },
+      "cost_usd_estimate": 1.1492,
+      "duration_seconds": 37.195,
+      "created_at": "2026-08-19T09:12:06.125766Z",
+      "finished_at": "2026-08-19T09:12:44.271201Z"
+    }
+  ]
+}

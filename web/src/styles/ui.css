@@ -1,0 +1,2011 @@
+/* ==========================================================================
+   src/styles/ui.css — PRGuard UI primitives and the hover language.
+
+   OWNER: T1b (wave 1). Imported by app/globals.css after the token files.
+   Sources: docs/design/02-design-system.md §3, §5, §8.3 · docs/design/05-motion-spec.md
+   §2, §4.1–§4.3, §5, §7 · docs/design/04-dashboard-blueprint.md §0.2 ·
+   docs/design/06-brand-gaps-and-corrections.md §2 rulings 5, 6, 9.
+
+   House rules for this file (tests/unit/ui/ui-css.test.ts enforces them):
+   - Tokens by short name (var(--ink-2)). Every duration is a --dur-* tier and
+     every curve an --ease-* token: no ms literals, no cubic-bezier() literals.
+   - No drop shadow. Elevation = one ink rung + 1px hairline + the inset top
+     highlight `inset 0 1px 0 var(--inset-hi)`. The only other box-shadow is a
+     blur-free inset rail.
+   - No `outline: none`, no `transition: all`, no `will-change`, nothing at
+     `visibility: hidden`. backdrop-filter lives on .ui-palette and nowhere else.
+   - Every :hover rule sits inside @media (hover: hover). Keyframes move only
+     transform and opacity. Nothing lifts, scales, glows or gains a shadow on hover.
+
+   Map
+     1. Context variables    :root   hover rungs, motion variables
+     2. Hover language       @utility hover-row · hover-surface · hover-frame ·
+                             hover-ghost · hover-quiet · hover-primary · hover-atom ·
+                             link-draw · link-prose · press
+     3. Keyframes            ui-* enter / exit
+     4. Components           @layer components  .ui-* (Tailwind utilities override them)
+     5. Toaster              unlayered: sonner injects its own unlayered stylesheet
+     6. Reduced motion       the designed second state (motion spec §5)
+     7. Forced colours       design §8.6
+
+   Forcing a state (the /lab/t1b specimens, screenshots): data-force="hover",
+   "active" or "focus" (space-separated) applies exactly the declarations of
+   the real pseudo-class. Nothing in the product sets it.
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. CONTEXT VARIABLES
+   ========================================================================== */
+:root {
+  /* Hover rungs. "Surfaces step exactly one rung, never two" (design §3.6), so
+     a hover fill depends on what the element sits on. Defaults are the design
+     values; every container this file styles re-declares them for its children:
+     ink-2 containers (table, toast) → ink-3, ink-3 popovers → ink-4. A panel
+     that paints ink-2 should set --ui-hover-ghost: var(--ink-3). */
+  --ui-hover-row: var(--ink-3);   /* rows and list items: they sit on an ink-2 surface */
+  --ui-hover-ghost: var(--ink-2); /* ghost and quiet controls on the page or an ink-1 panel */
+  --ui-skeleton: var(--ink-2);    /* skeleton fill on the page or an ink-1 panel */
+  --ui-atom-wash: oklch(1 0 0 / 0.04); /* Class E data-atom hover wash (motion spec §7) */
+
+  /* Motion variables. Section 6 redefines these, once, for reduced motion. */
+  --ui-press-y: 0.5px;                 /* :active travel — never a scale */
+  --ui-pop-from: scaleY(0.98);         /* dropdown / popover / select, from the trigger edge */
+  --ui-dialog-from: scale(0.98);       /* dialog panel */
+  --ui-palette-from: scale(0.985);     /* ⌘K palette */
+  --ui-sheet-from: translateX(100%);   /* sheet slides in from the right edge … */
+  --ui-sheet-fade: 1;                  /* … at full opacity */
+  --ui-tip-shift: 2px;                 /* tooltip travel */
+  --ui-toast-shift: 6px;               /* toast enter travel */
+  --ui-toast-exit: 4px;                /* toast exit travel */
+  --ui-overlay-dur: var(--dur-2);      /* 180ms — ruling 6; under the 220ms dashboard ceiling */
+  --ui-reveal-dur: var(--dur-3);       /* 240ms opacity reveal (a field's error message) */
+  --ui-slide-dur: var(--dur-2);        /* tabs indicator */
+  --ui-draw-dur: var(--dur-3);         /* 240ms underline draw */
+  --ui-list-dur: var(--dur-2);         /* ⌘K list height */
+}
+
+
+/* ==========================================================================
+   2. THE HOVER LANGUAGE — motion spec §7. One system, one duration (120ms,
+      --ease-snap), symmetric exit. Every later track uses these classes.
+
+      A  evidence frames    hover-frame  (+ registration marks, owned by <Exhibit>)
+      B  surfaces, rows     hover-surface, hover-row
+      C  controls           hover-ghost, hover-quiet, hover-primary (all include press)
+      D  text links         link-draw (single line), link-prose (inside sentences)
+      E  data atoms         hover-atom
+      F  inert              nothing
+   ========================================================================== */
+
+/* B — rows, list items, ledger rows, stage stations: the fill steps exactly one
+   rung (ink-2 → ink-3 by default). A selected row keeps its selected fill. */
+@utility hover-row {
+  transition-property: background-color;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], [data-state="selected"], [aria-selected="true"]) {
+      background-color: var(--ui-hover-row);
+    }
+  }
+  &[data-force~="hover"] {
+    background-color: var(--ui-hover-row);
+  }
+}
+
+/* B — cards and panels: ink-2 → ink-3 fill, rule-1 → rule-2 hairline. */
+@utility hover-surface {
+  transition-property: background-color, border-color;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover {
+      background-color: var(--ink-3);
+      border-color: var(--rule-2);
+    }
+  }
+  &[data-force~="hover"] {
+    background-color: var(--ink-3);
+    border-color: var(--rule-2);
+  }
+}
+
+/* A — evidence frames: the hairline steps rule-1 → rule-2 and the fill does not
+   change. <Exhibit> (t1a) adds the registration marks; nothing else may. */
+@utility hover-frame {
+  transition-property: border-color;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover {
+      border-color: var(--rule-2);
+    }
+  }
+  &[data-force~="hover"] {
+    border-color: var(--rule-2);
+  }
+}
+
+/* C — ghost controls: fill one rung, border rule-2 → rule-3, :active travels
+   0.5px in 90ms and releases in 180ms. aria-expanded holds the hover state
+   while the control's menu is open. */
+@utility hover-ghost {
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-2);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], [data-state="on"], [aria-pressed="true"]) {
+      background-color: var(--ui-hover-ghost);
+      border-color: var(--rule-3);
+    }
+  }
+  &[data-force~="hover"],
+  &[aria-expanded="true"] {
+    background-color: var(--ui-hover-ghost);
+    border-color: var(--rule-3);
+  }
+  &:active:not(:disabled, [aria-disabled="true"], [data-disabled]),
+  &[data-force~="active"] {
+    transform: translateY(var(--ui-press-y));
+    transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-active);
+  }
+}
+
+/* C — quiet controls: no border; fill one rung and the label text-dim → text-body. */
+@utility hover-quiet {
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-2);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled="true"], [data-disabled], [data-state="on"], [aria-pressed="true"]) {
+      background-color: var(--ui-hover-ghost);
+      color: var(--text-body);
+    }
+  }
+  &[data-force~="hover"],
+  &[aria-expanded="true"] {
+    background-color: var(--ui-hover-ghost);
+    color: var(--text-body);
+  }
+  &:active:not(:disabled, [aria-disabled="true"], [data-disabled]),
+  &[data-force~="active"] {
+    transform: translateY(var(--ui-press-y));
+    transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-active);
+  }
+}
+
+/* C — primary: one lightness step, --signal → --signal-hi. */
+@utility hover-primary {
+  transition-property: background-color, border-color, color, transform;
+  transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-2);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled="true"], [data-disabled]) {
+      background-color: var(--signal-hi);
+    }
+  }
+  &[data-force~="hover"] {
+    background-color: var(--signal-hi);
+  }
+  &:active:not(:disabled, [aria-disabled="true"], [data-disabled]),
+  &[data-force~="active"] {
+    transform: translateY(var(--ui-press-y));
+    transition-duration: var(--dur-1), var(--dur-1), var(--dur-1), var(--dur-active);
+  }
+}
+
+/* C, without a hover fill — the press alone, for a control that already has
+   its own hover. Do not combine with hover-ghost / -quiet / -primary (they
+   include it). */
+@utility press {
+  transition-property: transform;
+  transition-duration: var(--dur-2);
+  transition-timing-function: var(--ease-snap);
+  &:active:not(:disabled, [aria-disabled="true"], [data-disabled]),
+  &[data-force~="active"] {
+    transform: translateY(var(--ui-press-y));
+    transition-duration: var(--dur-active);
+  }
+}
+
+/* D — single-line links (nav anchors, breadcrumb segments, file:line refs, CTA
+   links): colour --text-dim → --text-primary in 120ms and a 1px rule drawn
+   left-to-right in 240ms, retracting to the right on exit. Colours are
+   variables so a caller can keep a tone: [--link-fg:var(--signal-text)]. */
+@utility link-draw {
+  position: relative;
+  color: var(--link-fg, var(--text-dim));
+  text-decoration: none;
+  transition-property: color;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-snap);
+  &::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 1px;
+    background-color: currentColor;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform var(--ui-draw-dur) var(--ease-instrument);
+    pointer-events: none;
+  }
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled="true"]) {
+      color: var(--link-fg-hover, var(--text-primary));
+    }
+    &:hover:not(:disabled, [aria-disabled="true"])::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+  }
+  &:focus-visible::after,
+  &[data-force~="hover"]::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+  &[data-force~="hover"] {
+    color: var(--link-fg-hover, var(--text-primary));
+  }
+}
+
+/* D — links inside sentences. They can wrap, so the rule is a text-decoration
+   that is ALWAYS present (WCAG 1.4.1: a link in prose must not be colour-only)
+   and only its colour changes, --rule-3 → currentColor, in 120ms. */
+@utility link-prose {
+  color: var(--link-fg, inherit);
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: var(--rule-3);
+  transition-property: color, text-decoration-color;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover {
+      color: var(--link-fg-hover, var(--text-primary));
+      text-decoration-color: currentColor;
+    }
+  }
+  &[data-force~="hover"] {
+    color: var(--link-fg-hover, var(--text-primary));
+    text-decoration-color: currentColor;
+  }
+}
+
+/* E — data atoms (hashes, SHAs, fingerprints, file:line, seq numbers): a 4%
+   wash and a copy cursor. No border change, no fill step. Navigable atoms
+   add cursor-pointer. */
+@utility hover-atom {
+  cursor: copy;
+  border-radius: var(--radius-data);
+  transition-property: background-color;
+  transition-duration: var(--dur-1);
+  transition-timing-function: var(--ease-snap);
+  @media (hover: hover) {
+    &:hover {
+      background-color: var(--ui-atom-wash);
+    }
+  }
+  &[data-force~="hover"] {
+    background-color: var(--ui-atom-wash);
+  }
+}
+
+/* The forced focus ring: the same declaration as the global :focus-visible
+   rule in app/globals.css. Components that inset their ring re-declare the
+   offset for both. */
+@layer base {
+  [data-force~="focus"] {
+    outline: 2px solid var(--signal-hi);
+    outline-offset: 2px;
+  }
+}
+
+
+/* ==========================================================================
+   3. KEYFRAMES — transform and opacity only. The from-frames below apply
+      while an overlay that JS just mounted is entering; no element ever
+      RESTS at them (R8: nothing is hidden by the stylesheet).
+   ========================================================================== */
+@keyframes ui-fade-in {
+  from { opacity: 0; }
+}
+@keyframes ui-fade-out {
+  to { opacity: 0; }
+}
+@keyframes ui-pop-in {
+  from { opacity: 0; transform: var(--ui-pop-from); }
+}
+@keyframes ui-dialog-in {
+  from { opacity: 0; transform: var(--ui-dialog-from); }
+}
+@keyframes ui-palette-in {
+  from { opacity: 0; transform: var(--ui-palette-from); }
+}
+@keyframes ui-sheet-in {
+  from { opacity: var(--ui-sheet-fade); transform: var(--ui-sheet-from); }
+}
+@keyframes ui-sheet-out {
+  to { opacity: var(--ui-sheet-fade); transform: var(--ui-sheet-from); }
+}
+@keyframes ui-tooltip-in {
+  from { opacity: 0; transform: translate(var(--ui-tip-x, 0px), var(--ui-tip-y, 0px)); }
+}
+
+
+/* ==========================================================================
+   4. COMPONENTS
+   ========================================================================== */
+@layer components {
+
+  /* ---------- Button — design §5.1, motion §4.1.1–4.1.2 -------------------- */
+  .ui-btn {
+    --ui-btn-fg: var(--text-body);
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    height: 32px;
+    padding: 0 var(--sp-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-data);
+    background-color: transparent;
+    color: var(--ui-btn-fg);
+    @apply type-label;
+    line-height: 1;
+    white-space: nowrap;
+    text-decoration: none;
+    user-select: none;
+    cursor: pointer;
+  }
+  .ui-btn svg {
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+  .ui-btn svg:not([class*="size-"]) {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ui-btn--primary {
+    --ui-btn-fg: var(--ink-0); /* Lc 67.7 on --signal: valid for an 11px caps label (§1.5) */
+    background-color: var(--signal);
+  }
+  .ui-btn--ghost {
+    border-color: var(--rule-2);
+  }
+  .ui-btn--quiet {
+    --ui-btn-fg: var(--text-dim);
+  }
+  /* A destructive action is a ghost with --alarm-text. Never a red fill (R2). */
+  .ui-btn--destructive {
+    --ui-btn-fg: var(--alarm-text);
+    border-color: var(--rule-2);
+  }
+  .ui-btn--link {
+    --ui-btn-fg: var(--signal-text);
+    --link-fg: var(--signal-text);
+    --link-fg-hover: var(--signal-text);
+    height: auto;
+    padding: 0;
+    border-width: 0;
+    line-height: 1.4;
+  }
+  /* link-draw owns a link's colour (utilities layer), so a loading or disabled
+     link changes the variables it reads rather than `color`. */
+  .ui-btn--link[data-loading] {
+    --link-fg: transparent;
+    --link-fg-hover: transparent;
+  }
+  .ui-btn--link:is(:disabled, [aria-disabled="true"]):not([data-loading]) {
+    --link-fg: var(--text-disabled);
+    --link-fg-hover: var(--text-disabled);
+  }
+
+  .ui-btn--sm {
+    height: 26px;
+    padding: 0 var(--sp-3);
+    gap: var(--sp-1);
+  }
+  .ui-btn--sm svg:not([class*="size-"]),
+  .ui-btn--icon-sm svg:not([class*="size-"]) {
+    width: 14px;
+    height: 14px;
+  }
+  .ui-btn--lg {
+    height: 40px;
+    padding: 0 var(--sp-5);
+  }
+  .ui-btn--icon-sm {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+  }
+  .ui-btn--icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .ui-btn--link.ui-btn--sm,
+  .ui-btn--link.ui-btn--lg {
+    height: auto;
+    padding: 0;
+  }
+
+  .ui-btn:is(:disabled, [aria-disabled="true"]):not([data-loading]) {
+    --ui-btn-fg: var(--text-disabled);
+    cursor: not-allowed;
+  }
+  .ui-btn--primary:is(:disabled, [aria-disabled="true"]):not([data-loading]) {
+    background-color: var(--ink-5);
+  }
+  .ui-btn--ghost:is(:disabled, [aria-disabled="true"]):not([data-loading]),
+  .ui-btn--destructive:is(:disabled, [aria-disabled="true"]):not([data-loading]) {
+    border-color: var(--rule-hair);
+  }
+
+  /* Loading: the label keeps its box (so nothing reflows) and turns
+     transparent; a static ellipsis sits over it. No spinner, anywhere. */
+  .ui-btn[data-loading] {
+    color: transparent;
+    cursor: default;
+  }
+  /* A native inert button drops its click handler and its submit type (button.tsx);
+     an inert link (asChild) cannot drop its href, so it stops taking the pointer. */
+  a.ui-btn:is([data-loading], [aria-disabled="true"]) {
+    pointer-events: none;
+  }
+  .ui-btn__ellipsis {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-btn-fg);
+    pointer-events: none;
+  }
+
+  /* The loading glyph: three 2px squares (4px apart), a static "…". It never
+     loops: the heartbeat dot is the only loop in the product and it is driven
+     by the wire (motion §4.9.2), so this glyph is drawn at its end state for
+     every motion preference. Used by the button and the loading toast. */
+  .ui-ellipsis {
+    display: inline-flex;
+    align-items: center;
+  }
+  .ui-ellipsis svg,
+  .ui-btn .ui-ellipsis svg { /* two classes deep: outranks `.ui-btn svg:not([class*="size-"])` */
+    width: 14px;
+    height: 2px;
+  }
+
+  /* ---------- Input · textarea · select trigger — design §5.2, motion §4.1.6 */
+  .ui-input {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    padding: 0 var(--sp-3);
+    border: 1px solid var(--ink-7); /* meaning-bearing: 3.03:1 (SC 1.4.11) */
+    border-radius: var(--radius-data);
+    background-color: var(--ink-1);
+    color: var(--text-body);
+    @apply type-small;
+    text-overflow: ellipsis; /* a long placeholder or value ends in … at rest, never mid-glyph */
+    transition-property: border-color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  .ui-input::placeholder {
+    color: var(--text-disabled);
+    opacity: 1;
+  }
+  /* Hover moves the border one rung UP the ladder, --ink-7 -> --ink-8. Motion
+     §4.1.6 writes "--ink-6", but --ink-6 sits BELOW the --ink-7 rest border
+     (it would dim on hover) and under the 3.03:1 meaning-bearing floor (design
+     §5.2, SC 1.4.11; core.css marks --ink-6 "not meaning-bearing"). Raised as
+     a spec question; --ink-8 follows the hover language (motion §7: one rung). */
+  @media (hover: hover) {
+    .ui-input:hover:not(:disabled, :focus, [aria-invalid="true"], [data-disabled]) {
+      border-color: var(--ink-8);
+    }
+  }
+  .ui-input[data-force~="hover"] {
+    border-color: var(--ink-8);
+  }
+  /* Invalid flips in 0ms; the message carries a glyph and text (never colour alone). */
+  .ui-input[aria-invalid="true"] {
+    border-color: var(--alarm);
+    transition-duration: var(--dur-0);
+  }
+  .ui-input:is(:disabled, [data-disabled]) {
+    border-color: var(--rule-hair);
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+  /* Inputs inside terminal / diff / hash contexts: mono, tabular, tracking 0. */
+  .ui-input[data-mono] {
+    @apply type-data;
+  }
+  .ui-textarea {
+    display: block;
+    height: auto;
+    min-height: 64px;
+    padding: var(--sp-2) var(--sp-3);
+    resize: vertical;
+    field-sizing: content;
+  }
+  /* A tap on a <16px field zooms iOS Safari. */
+  @media (pointer: coarse) {
+    .ui-input {
+      font-size: 16px;
+    }
+  }
+
+  /* ---------- Field: label, control, hint, error — design §5.2 ----------- */
+  .ui-field {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .ui-field__label {
+    @apply type-label;
+    margin-bottom: 6px;
+    color: var(--text-dim);
+  }
+  .ui-field__hint,
+  .ui-field__error {
+    @apply type-micro;
+    margin-top: var(--sp-1);
+  }
+  /* A hint is content, so it needs Lc 60: --text-body (78), never --text-dim
+     (43.6, eyebrows and column heads only — design §8.1). */
+  .ui-field__hint {
+    color: var(--text-body);
+  }
+  .ui-field__error {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-1);
+    color: var(--alarm-text);
+    animation: ui-fade-in var(--ui-reveal-dur) var(--ease-instrument);
+  }
+  .ui-field__error svg {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    margin-top: 1px;
+  }
+
+  /* ---------- Select — trigger is an input; content is a popover --------- */
+  .ui-select-trigger {
+    justify-content: space-between;
+    gap: var(--sp-2);
+    width: fit-content;
+    min-width: 128px;
+    white-space: nowrap;
+    text-align: left;
+    cursor: pointer;
+  }
+  .ui-select-trigger[data-size="sm"] {
+    height: 26px;
+    padding: 0 var(--sp-2);
+  }
+  .ui-select-trigger[data-placeholder] {
+    color: var(--text-disabled);
+  }
+  .ui-select-trigger > [data-slot="select-value"] {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ui-select-trigger svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--text-dim);
+  }
+  .ui-select-trigger[data-state="open"] {
+    border-color: var(--ink-8);
+  }
+
+  /* ---------- Popover surfaces: popover, dropdown, select — design §3.6
+     level 3, motion §4.3 (no slide, no blur) -------------------------------- */
+  .ui-pop {
+    --ui-hover-row: var(--ink-4);
+    --ui-hover-ghost: var(--ink-4);
+    --ui-skeleton: var(--ink-4);
+    z-index: 50;
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-panel);
+    background-color: var(--ink-3);
+    box-shadow: inset 0 1px 0 var(--inset-hi);
+    color: var(--text-body);
+    transform-origin: var(--radix-popper-transform-origin);
+  }
+  .ui-pop[data-state="open"] {
+    animation: ui-pop-in var(--ui-overlay-dur) var(--ease-snap);
+  }
+  .ui-pop[data-state="closed"] {
+    animation: ui-fade-out var(--dur-exit) var(--ease-exit) forwards;
+  }
+  .ui-popover {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    width: 288px;
+    max-width: calc(100vw - 2 * var(--sp-4));
+    padding: var(--sp-3);
+    @apply type-small;
+  }
+  .ui-popover__title {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .ui-popover__description {
+    color: var(--text-body);
+  }
+  .ui-menu {
+    min-width: 128px;
+    max-height: var(--radix-dropdown-menu-content-available-height, var(--radix-select-content-available-height, 384px));
+    padding: var(--sp-1);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .ui-menu--select {
+    min-width: max(128px, var(--radix-select-trigger-width, 0px));
+  }
+
+  /* Menu and listbox items: 32px, 13px Inter. data-highlighted (pointer or
+     keyboard) steps one rung inside the ink-3 popover. */
+  .ui-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: 32px;
+    padding: 0 var(--sp-3);
+    border-radius: var(--radius-data);
+    color: var(--text-body);
+    @apply type-small;
+    cursor: default;
+    user-select: none;
+    transition-property: background-color, color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  .ui-item:is([data-highlighted], [data-force~="hover"]) {
+    background-color: var(--ui-hover-row);
+    color: var(--text-primary);
+  }
+  .ui-item:is(:focus-visible, [data-force~="focus"]) {
+    outline-offset: -2px; /* inset: a 2px outset ring would clip against the menu edge */
+  }
+  .ui-item[data-disabled] {
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+  .ui-item[data-variant="destructive"] {
+    color: var(--alarm-text);
+  }
+  .ui-item[data-inset],
+  .ui-item--indicator {
+    padding-left: 32px;
+  }
+  .ui-item svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--text-dim);
+  }
+  .ui-item[data-variant="destructive"] svg {
+    color: currentColor;
+  }
+  .ui-item__trail {
+    margin-left: auto;
+  }
+  /* Selection marks are squares, never checkmarks: a checkbox is a box that
+     fills; a radio or the selected listbox option is a filled square. */
+  .ui-item__box,
+  .ui-item__mark {
+    position: absolute;
+    left: var(--sp-3);
+    top: 50%;
+    translate: 0 -50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+  }
+  .ui-item__box {
+    border: 1px solid var(--ink-7);
+    border-radius: var(--radius-data);
+  }
+  .ui-item__fill {
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: var(--signal);
+  }
+  .ui-item--option {
+    padding-right: 32px;
+  }
+  .ui-item--option .ui-item__mark {
+    right: var(--sp-3);
+    left: auto;
+  }
+  .ui-item[data-state="checked"] {
+    color: var(--text-primary);
+  }
+  .ui-menu-label {
+    padding: var(--sp-2) var(--sp-3) var(--sp-1);
+    @apply type-label;
+    color: var(--text-dim);
+  }
+  .ui-menu-label[data-inset] {
+    padding-left: 32px;
+  }
+  .ui-menu-separator {
+    height: var(--border-hairline);
+    margin: var(--sp-1) calc(-1 * var(--sp-1));
+    background-color: var(--rule-hair);
+  }
+  .ui-shortcut {
+    margin-left: auto;
+    padding-left: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0;
+    color: var(--text-dim);
+    font-variant-ligatures: none;
+  }
+  .ui-select-scroll {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    color: var(--text-dim);
+    cursor: default;
+  }
+  .ui-select-scroll svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ---------- Tooltip — design §5.9 + brief: ink-2 on rule-2, 13px Inter -- */
+  .ui-tooltip {
+    z-index: 50;
+    max-width: 260px;
+    padding: 6px var(--sp-2);
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-data);
+    background-color: var(--ink-2);
+    color: var(--text-body);
+    @apply type-small;
+    overflow-wrap: break-word;
+  }
+  .ui-tooltip--value {
+    @apply type-data;
+  }
+  .ui-tooltip .ui-kbd {
+    margin-left: var(--sp-1);
+    vertical-align: 1px;
+  }
+  .ui-tooltip[data-side="top"] { --ui-tip-y: var(--ui-tip-shift); }
+  .ui-tooltip[data-side="bottom"] { --ui-tip-y: calc(-1 * var(--ui-tip-shift)); }
+  .ui-tooltip[data-side="left"] { --ui-tip-x: var(--ui-tip-shift); }
+  .ui-tooltip[data-side="right"] { --ui-tip-x: calc(-1 * var(--ui-tip-shift)); }
+  .ui-tooltip:is([data-state="delayed-open"], [data-state="instant-open"]) {
+    animation: ui-tooltip-in var(--ui-overlay-dur) var(--ease-snap);
+  }
+  .ui-tooltip[data-state="closed"] {
+    animation: ui-fade-out var(--dur-exit) var(--ease-exit) forwards;
+  }
+
+  /* ---------- Scrim, dialog, sheet — design §5.10/§5.11, ruling 6 -------- */
+  .ui-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background-color: var(--scrim);
+  }
+  .ui-scrim[data-state="open"] {
+    animation: ui-fade-in var(--ui-overlay-dur) var(--ease-snap);
+  }
+  .ui-scrim[data-state="closed"] {
+    animation: ui-fade-out var(--dur-exit) var(--ease-exit) forwards;
+  }
+  .ui-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 50;
+    display: grid;
+    gap: var(--sp-4);
+    width: calc(100% - 2 * var(--sp-4));
+    max-width: 560px;
+    max-height: calc(100dvh - 2 * var(--sp-4));
+    padding: var(--sp-6);
+    overflow-y: auto;
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-panel);
+    background-color: var(--ink-1);
+    box-shadow: inset 0 1px 0 var(--inset-hi);
+    color: var(--text-body);
+    translate: -50% -50%;
+  }
+  .ui-dialog[data-state="open"] {
+    animation: ui-dialog-in var(--ui-overlay-dur) var(--ease-snap);
+  }
+  .ui-dialog[data-state="closed"] {
+    animation: ui-fade-out var(--dur-exit) var(--ease-exit) forwards;
+  }
+  .ui-dialog__close {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-4);
+  }
+  .ui-dialog__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding-right: var(--sp-8); /* clear of the close button */
+  }
+  .ui-dialog__title {
+    @apply type-display-h4;
+    color: var(--text-primary);
+  }
+  .ui-dialog__description {
+    @apply type-body;
+    color: var(--text-body);
+  }
+  /* Primary last, in the DOM and on screen: stacked full width on a phone (so
+     the focus order reads top to bottom), a right-aligned row from 640px. */
+  .ui-dialog__footer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  @media (min-width: 640px) {
+    .ui-dialog__footer {
+      flex-direction: row;
+      justify-content: flex-end; /* primary action last, rightmost */
+    }
+  }
+
+  .ui-sheet {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    width: min(420px, 100%);
+    border-left: 1px solid var(--rule-2);
+    background-color: var(--ink-1);
+    color: var(--text-body);
+  }
+  .ui-sheet[data-state="open"] {
+    animation: ui-sheet-in var(--ui-overlay-dur) var(--ease-instrument);
+  }
+  .ui-sheet[data-state="closed"] {
+    animation: ui-sheet-out var(--dur-exit) var(--ease-exit) forwards;
+  }
+  .ui-sheet__close {
+    position: absolute;
+    top: var(--sp-4);
+    right: var(--sp-4);
+  }
+  .ui-sheet__header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    padding: var(--sp-5) calc(var(--sp-5) + var(--sp-8)) var(--sp-4) var(--sp-5);
+    border-bottom: var(--border-hairline) solid var(--rule-hair);
+  }
+  .ui-sheet__body {
+    flex: 1;
+    min-height: 0;
+    padding: var(--sp-5);
+    overflow-y: auto;
+  }
+  .ui-sheet__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-2);
+    margin-top: auto;
+    padding: var(--sp-4) var(--sp-5);
+    border-top: var(--border-hairline) solid var(--rule-hair);
+  }
+
+  /* ---------- Tabs — design §5.12, motion §4.2.3 --------------------------- */
+  .ui-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    min-width: 0; /* as a flex item it may shrink below its tabs; the list then scrolls */
+  }
+  .ui-tabs[data-orientation="vertical"] {
+    flex-direction: row;
+  }
+  /* A list wider than its container scrolls sideways (a phone, a narrow panel)
+     instead of pushing the page wider. The 1px rule is a background, not a
+     border, so it lies inside the scroll box: the 2px bar sits on it and the
+     inset focus ring is never clipped. */
+  .ui-tabs__list {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    background: linear-gradient(var(--rule-hair), var(--rule-hair)) left bottom / 100% var(--border-hairline) no-repeat;
+  }
+  .ui-tabs__list::-webkit-scrollbar {
+    display: none;
+  }
+  .ui-tabs__list[data-orientation="vertical"] {
+    flex-direction: column;
+    overflow: visible;
+    background-position: right top;
+    background-size: var(--border-hairline) 100%;
+  }
+  .ui-tabs__trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    height: 32px;
+    padding: 0 var(--sp-3);
+    border: 0;
+    background-color: transparent;
+    color: var(--text-dim);
+    @apply type-label;
+    white-space: nowrap;
+    cursor: pointer;
+    transition-property: color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  .ui-tabs__list[data-orientation="vertical"] .ui-tabs__trigger {
+    justify-content: flex-start;
+  }
+  @media (hover: hover) {
+    .ui-tabs__trigger:hover:not(:disabled, [data-disabled], [data-state="active"]) {
+      color: var(--text-body);
+    }
+  }
+  .ui-tabs__trigger[data-force~="hover"] {
+    color: var(--text-body);
+  }
+  /* Selected: --text-primary + a 2px --signal bar — meaning-bearing, so a solid
+     token, never an alpha hairline. Colour flips; the bar carries shape. */
+  .ui-tabs__trigger[data-state="active"] {
+    color: var(--text-primary);
+  }
+  .ui-tabs__trigger:is(:disabled, [data-disabled]) {
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+  /* Inset ring: an outset one would be clipped by the scrolling list and would
+     cross the neighbouring tab's bar. */
+  .ui-tabs__trigger:is(:focus-visible, [data-force~="focus"]) {
+    outline-offset: -2px;
+  }
+  .ui-tabs__trigger svg {
+    width: 14px;
+    height: 14px;
+  }
+  /* The per-trigger bar is the first paint and the no-JS state; once TabsList
+     has measured, one indicator slides between triggers (transform only). */
+  .ui-tabs__trigger::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    background-color: transparent;
+    pointer-events: none;
+  }
+  .ui-tabs__list[data-orientation="vertical"] .ui-tabs__trigger::after {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: auto;
+    width: 2px;
+    height: auto;
+  }
+  .ui-tabs__trigger[data-state="active"]::after {
+    background-color: var(--signal);
+  }
+  .ui-tabs__list[data-indicator="ready"] .ui-tabs__trigger::after {
+    background-color: transparent;
+  }
+  .ui-tabs__indicator {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    display: none;
+    width: 1px;
+    height: 2px;
+    background-color: var(--signal);
+    transform-origin: left;
+    pointer-events: none;
+  }
+  .ui-tabs__list[data-indicator="ready"] > .ui-tabs__indicator {
+    display: block;
+    transition: transform var(--ui-slide-dur) var(--ease-snap);
+  }
+  .ui-tabs__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ---------- Toggle and toggle group — motion §4.1.4 --------------------- */
+  .ui-toggle {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    height: 32px;
+    min-width: 32px;
+    padding: 0 var(--sp-3);
+    border: 1px solid transparent;
+    border-radius: var(--radius-data);
+    background-color: transparent;
+    color: var(--text-dim);
+    @apply type-label;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    cursor: pointer;
+  }
+  .ui-toggle--outline {
+    border-color: var(--rule-2);
+  }
+  @media (hover: hover) {
+    .ui-toggle--outline:hover:not(:disabled, [data-disabled], [data-state="on"]) {
+      border-color: var(--rule-3);
+    }
+  }
+  .ui-toggle--outline[data-force~="hover"] {
+    border-color: var(--rule-3);
+  }
+  .ui-toggle--sm {
+    height: 26px;
+    min-width: 26px;
+    padding: 0 var(--sp-2);
+  }
+  .ui-toggle--lg {
+    height: 40px;
+    min-width: 40px;
+    padding: 0 var(--sp-4);
+  }
+  .ui-toggle svg:not([class*="size-"]) {
+    width: 14px;
+    height: 14px;
+  }
+  /* On = level 4 (ink-4 fill, ink-7 border) + the same 2px --signal bar the
+     selected tab carries: a shape, so the state is not colour alone. */
+  .ui-toggle[data-state="on"] {
+    border-color: var(--ink-7);
+    background-color: var(--ink-4);
+    color: var(--text-primary);
+  }
+  .ui-toggle[data-state="on"]::after {
+    content: "";
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    left: -1px;
+    height: 2px;
+    background-color: var(--signal);
+    pointer-events: none;
+  }
+  .ui-toggle:is(:disabled, [data-disabled]) {
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+  .ui-toggle--outline:is(:disabled, [data-disabled]) {
+    border-color: var(--rule-hair);
+  }
+  .ui-toggle-group {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    gap: calc(var(--ui-gap, 0) * var(--sp-1));
+  }
+  .ui-toggle-group[data-orientation="vertical"] {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* Joined (spacing 0): shared 1px borders, square inner corners. */
+  .ui-toggle-group[data-spacing="0"] > .ui-toggle {
+    border-radius: 0;
+  }
+  .ui-toggle-group[data-spacing="0"][data-orientation="horizontal"] > .ui-toggle:not(:first-child) {
+    margin-left: -1px;
+  }
+  .ui-toggle-group[data-spacing="0"][data-orientation="vertical"] > .ui-toggle:not(:first-child) {
+    margin-top: -1px;
+  }
+  /* The raised item's border must win the shared 1px edge. */
+  .ui-toggle-group[data-spacing="0"] > .ui-toggle:is(:focus-visible, [data-state="on"], [data-force]) {
+    z-index: 1;
+  }
+  @media (hover: hover) {
+    .ui-toggle-group[data-spacing="0"] > .ui-toggle:hover {
+      z-index: 1;
+    }
+  }
+  .ui-toggle-group[data-spacing="0"][data-orientation="horizontal"] > .ui-toggle:first-child {
+    border-radius: var(--radius-data) 0 0 var(--radius-data);
+  }
+  .ui-toggle-group[data-spacing="0"][data-orientation="horizontal"] > .ui-toggle:last-child {
+    border-radius: 0 var(--radius-data) var(--radius-data) 0;
+  }
+  .ui-toggle-group[data-spacing="0"][data-orientation="vertical"] > .ui-toggle:first-child {
+    border-radius: var(--radius-data) var(--radius-data) 0 0;
+  }
+  .ui-toggle-group[data-spacing="0"][data-orientation="vertical"] > .ui-toggle:last-child {
+    border-radius: 0 0 var(--radius-data) var(--radius-data);
+  }
+  .ui-toggle-group[data-spacing="0"] > .ui-toggle:only-child {
+    border-radius: var(--radius-data);
+  }
+
+  /* ---------- Badge — a neutral rectangular chip, design §5.4 base ------- */
+  .ui-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--sp-1);
+    width: fit-content;
+    height: 20px;
+    padding: 0 6px;
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-data);
+    background-color: var(--ink-2);
+    color: var(--text-body); /* Lc 78: a chip label needs Lc 60; --text-dim is 45 */
+    @apply type-badge;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .ui-badge--outline {
+    background-color: transparent;
+  }
+  .ui-badge--value {
+    @apply type-chip;
+    line-height: 1;
+    text-transform: none; /* a SHA or a slug keeps its case */
+  }
+  .ui-badge svg {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+  }
+  :is(a, button).ui-badge {
+    transition-property: background-color, border-color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+    cursor: pointer;
+  }
+  @media (hover: hover) {
+    :is(a, button).ui-badge:hover {
+      border-color: var(--rule-3);
+      background-color: var(--ink-3);
+    }
+    :is(a, button).ui-badge--outline:hover {
+      background-color: var(--ui-hover-ghost);
+    }
+  }
+  .ui-badge[data-force~="hover"] {
+    border-color: var(--rule-3);
+    background-color: var(--ink-3);
+  }
+
+  /* ---------- Kbd — 1px rule-2, 11px mono -------------------------------- */
+  .ui-kbd {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 var(--sp-1);
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-data);
+    background-color: transparent;
+    color: var(--text-body);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0;
+    font-variant-ligatures: none;
+    font-variant-numeric: tabular-nums slashed-zero;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .ui-kbd svg {
+    width: 12px;
+    height: 12px;
+  }
+  .ui-kbd-group {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+  }
+
+  /* ---------- Separator — --rule-hair, decorative ------------------------ */
+  .ui-separator {
+    flex-shrink: 0;
+    background-color: var(--rule-hair);
+  }
+  .ui-separator[data-orientation="horizontal"] {
+    width: 100%;
+    height: var(--border-hairline);
+  }
+  .ui-separator[data-orientation="vertical"] {
+    width: var(--border-hairline);
+    align-self: stretch;
+  }
+
+  /* ---------- Skeleton — a static block. No shimmer, no pulse (ruling 5) - */
+  .ui-skeleton {
+    border-radius: var(--radius-data);
+    background-color: var(--ui-skeleton);
+  }
+
+  /* ---------- Scroll area — a thin ink-6 thumb --------------------------- */
+  .ui-scroll {
+    position: relative;
+  }
+  .ui-scroll__viewport {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+  }
+  .ui-scroll__viewport:is(:focus-visible, [data-force~="focus"]) {
+    outline-offset: -2px;
+  }
+  .ui-scrollbar {
+    display: flex;
+    padding: 1px;
+    touch-action: none;
+    user-select: none;
+  }
+  .ui-scrollbar[data-orientation="vertical"] {
+    width: 8px;
+    height: 100%;
+  }
+  .ui-scrollbar[data-orientation="horizontal"] {
+    flex-direction: column;
+    width: 100%;
+    height: 8px;
+  }
+  .ui-scrollbar__thumb {
+    position: relative;
+    flex: 1;
+    border-radius: var(--radius-data);
+    background-color: var(--ink-6);
+    transition-property: background-color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  @media (hover: hover) {
+    .ui-scrollbar__thumb:hover {
+      background-color: var(--ink-7);
+    }
+  }
+  .ui-scrollbar__thumb[data-force~="hover"] {
+    background-color: var(--ink-7);
+  }
+
+  /* ---------- Table — design §5.5, dashboard §0.2 -------------------------
+     32px rows, 26px compact (data-density="compact" on <table>). Hairline
+     separators, never zebra. Solid ink-2 sticky header (no blur: the sticky
+     APP header is one of the two backdrop-filter surfaces, this is not).
+     The container paints ink-2 so a row's hover is exactly one rung. */
+  .ui-table-wrap {
+    --ui-hover-row: var(--ink-3);
+    --ui-hover-ghost: var(--ink-3);
+    --ui-skeleton: var(--ink-3);
+    position: relative;
+    width: 100%;
+    overflow: auto;
+    background-color: var(--ink-2);
+  }
+  .ui-table {
+    --ui-row-h: 32px;
+    --ui-cell-px: var(--sp-3);
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    caption-side: bottom;
+    color: var(--text-body);
+  }
+  .ui-table[data-density="compact"] {
+    --ui-row-h: 26px;
+    --ui-cell-px: var(--sp-2);
+  }
+  .ui-table tr {
+    height: var(--ui-row-h);
+  }
+  .ui-table :is(th, td) {
+    padding: 0 var(--ui-cell-px);
+    border-bottom: var(--border-hairline) solid var(--rule-hair);
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .ui-table thead th {
+    position: sticky;
+    top: var(--ui-sticky-top, 0px);
+    z-index: 1;
+    border-bottom-color: var(--rule-1);
+    background-color: var(--ink-2);
+    color: var(--text-dim);
+    @apply type-label;
+    line-height: 1;
+  }
+  .ui-table tbody tr:last-child > td {
+    border-bottom-width: 0;
+  }
+  .ui-table td {
+    @apply type-data;
+  }
+  .ui-table td[data-kind="prose"] {
+    @apply type-small;
+    font-feature-settings: var(--font-settings), "tnum" 1, "zero" 1;
+    font-variant-numeric: lining-nums tabular-nums slashed-zero;
+  }
+  .ui-table tbody tr {
+    scroll-margin-top: calc(var(--ui-row-h) + var(--ui-sticky-top, 0px)); /* SC 2.4.11 */
+    transition-property: background-color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  @media (hover: hover) {
+    .ui-table tbody tr:not([data-slot="table-skeleton-row"], [data-state="selected"], [aria-selected="true"]):hover {
+      background-color: var(--ui-hover-row);
+    }
+  }
+  .ui-table tbody tr[data-force~="hover"] {
+    background-color: var(--ui-hover-row);
+  }
+  .ui-table tbody tr:is([data-state="selected"], [aria-selected="true"]) {
+    background-color: var(--ink-4);
+  }
+  .ui-table tbody tr:is([data-state="selected"], [aria-selected="true"]) > :first-child {
+    box-shadow: inset 2px 0 0 var(--signal-lo); /* the 2px rail; no blur, no layout shift */
+  }
+  .ui-table tbody tr:is(:focus-visible, [data-force~="focus"]) {
+    outline-offset: -2px; /* inset, so it never clips against the sticky header */
+  }
+  .ui-table tfoot :is(th, td) {
+    border-top: 1px solid var(--rule-1);
+    border-bottom-width: 0;
+    color: var(--text-body);
+  }
+  .ui-table caption {
+    padding: var(--sp-2) var(--ui-cell-px);
+    border-top: var(--border-hairline) solid var(--rule-hair);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    line-height: 1.4;
+    letter-spacing: 0;
+    text-align: left;
+  }
+  .ui-table__skeleton-bar {
+    display: block;
+    height: 8px;
+  }
+
+  /* ---------- Command palette (⌘K) — design §5.13, motion §4.3 ----------
+     The ONLY backdrop-filter in this file (R7: the other is the sticky app
+     header, owned by the chrome track). */
+  .ui-palette {
+    --ui-hover-row: var(--ink-3);
+    position: fixed;
+    top: 18vh;
+    left: 50%;
+    z-index: 50;
+    width: min(560px, calc(100% - 2 * var(--sp-4)));
+    overflow: hidden;
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-container);
+    background-color: color-mix(in oklab, var(--ink-1) 92%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+    box-shadow: inset 0 1px 0 var(--inset-hi);
+    color: var(--text-body);
+    translate: -50% 0;
+  }
+  .ui-palette[data-inline] {
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: auto;
+    width: 100%;
+    translate: none;
+  }
+  .ui-palette[data-state="open"] {
+    animation: ui-palette-in var(--ui-overlay-dur) var(--ease-snap);
+  }
+  .ui-palette[data-state="closed"] {
+    animation: ui-fade-out var(--dur-exit) var(--ease-exit) forwards;
+  }
+  .ui-command {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    color: var(--text-body);
+  }
+  .ui-command__input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    height: 48px;
+    padding: 0 var(--sp-4);
+    border-bottom: 1px solid var(--rule-1);
+  }
+  .ui-command__input-row > svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: var(--text-dim);
+  }
+  .ui-command__input-row:has(> .ui-command__input:focus-visible) {
+    outline: 2px solid var(--signal-hi);
+    outline-offset: -2px;
+  }
+  .ui-command__input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background-color: transparent;
+    color: var(--text-primary);
+    @apply type-body;
+    text-overflow: ellipsis;
+    outline: 2px solid transparent; /* the ring is drawn by the row above; a transparent
+                                       outline still shows in forced-colors mode */
+  }
+  .ui-command__input::placeholder {
+    color: var(--text-disabled);
+    opacity: 1;
+  }
+  .ui-command__list {
+    height: var(--cmdk-list-height);
+    max-height: 296px; /* 8 visible 36px rows + padding: the animated box stays small */
+    padding: var(--sp-1);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: var(--sp-1);
+    transition: height var(--ui-list-dur) var(--ease-snap);
+  }
+  .ui-command__empty {
+    padding: var(--sp-4);
+    color: var(--text-dim);
+    @apply type-small;
+  }
+  .ui-command__group [cmdk-group-heading] {
+    padding: var(--sp-2) var(--sp-3) var(--sp-1);
+    @apply type-label;
+    color: var(--text-dim);
+  }
+  .ui-command__item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    height: 36px;
+    padding: 0 var(--sp-3);
+    border-radius: var(--radius-data);
+    color: var(--text-body);
+    @apply type-small;
+    cursor: default;
+    user-select: none;
+    transition-property: background-color, color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  .ui-command__item > svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    color: var(--text-dim);
+  }
+  .ui-command__item:is([data-selected="true"], [data-force~="hover"]) {
+    background-color: var(--ui-hover-row);
+    color: var(--text-primary);
+  }
+  .ui-command__item:is([data-selected="true"], [data-force~="hover"])::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 2px;
+    background-color: var(--signal);
+    pointer-events: none;
+  }
+  .ui-command__item[data-disabled="true"] {
+    color: var(--text-disabled);
+  }
+  .ui-command__item-mark {
+    margin-left: auto;
+    width: 6px;
+    height: 6px;
+    background-color: var(--signal);
+  }
+  .ui-command__separator {
+    height: var(--border-hairline);
+    margin: var(--sp-1) calc(-1 * var(--sp-1));
+    background-color: var(--rule-hair);
+  }
+
+  /* ---------- Toast card — design §5.14 + brief: ink-2, rule-2, mono caps
+     title, the body carries the endpoint and status code ----------------- */
+  /* The tone is a 2px left bar (never green) plus the title text. The bar is the
+     left border, not a pseudo-element: sonner draws its swipe area and its exit
+     effect on the toast's ::before (inset 0, scaleY 2), which would stretch a
+     ::before bar across the whole card as it leaves. */
+  .ui-toast {
+    --ui-hover-ghost: var(--ink-3);
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    width: var(--width, 360px);
+    max-width: 100%;
+    padding: var(--sp-3);
+    border: 1px solid var(--rule-2);
+    border-left: 2px solid var(--ui-toast-bar, var(--ink-7));
+    border-radius: var(--radius-data);
+    background-color: var(--ink-2);
+    box-shadow: inset 0 1px 0 var(--inset-hi);
+    color: var(--text-body);
+    font-family: var(--font-sans);
+  }
+  .ui-toast--success { --ui-toast-bar: var(--signal-lo); }
+  .ui-toast--caution { --ui-toast-bar: var(--marker); }
+  .ui-toast--error { --ui-toast-bar: var(--alarm); }
+  .ui-toast__content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--sp-1);
+    min-width: 0;
+  }
+  .ui-toast__title {
+    @apply type-label;
+    color: var(--text-primary);
+  }
+  .ui-toast__body {
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--fs-micro);
+    line-height: 1.4;
+    letter-spacing: 0;
+    font-variant-ligatures: none;
+    font-variant-numeric: tabular-nums slashed-zero;
+    overflow-wrap: anywhere;
+  }
+  /* position: relative contains sonner's absolutely-centred .sonner-loader, which
+     holds the loading ellipsis. */
+  .ui-toast__icon {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 15px;
+    color: var(--text-dim);
+  }
+  .ui-toast__close {
+    order: 1; /* sonner renders the close button first; it belongs on the right */
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    margin: -6px -6px -6px 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-data);
+    background-color: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition-property: background-color, color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  .ui-toast__close svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* ---------- Chart container — design §7 (charts sit on the graticule) -- */
+  .ui-chart {
+    animation: ui-fade-in var(--ui-overlay-dur) var(--ease-snap);
+  }
+  /* recharts 3 renders tick text as text.recharts-cartesian-axis-tick-value
+     (inside g.recharts-cartesian-axis-tick-label); it measures that element's
+     computed font-size to space the ticks, so the size must be set here. */
+  .ui-chart .recharts-cartesian-axis-tick-value,
+  .ui-chart .recharts-label {
+    fill: var(--chart-axis);
+    font-family: var(--font-mono);
+    font-size: var(--fs-label);
+    letter-spacing: 0; /* ticks are data: tracking 0 keeps tabular columns aligned */
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums slashed-zero;
+  }
+  .ui-chart .recharts-cartesian-grid line {
+    stroke: var(--chart-grid);
+  }
+  .ui-chart .recharts-reference-line line {
+    stroke: var(--chart-reference);
+  }
+  .ui-chart .recharts-curve.recharts-tooltip-cursor {
+    stroke: var(--rule-3);
+  }
+  .ui-chart .recharts-rectangle.recharts-tooltip-cursor {
+    fill: var(--ui-atom-wash);
+  }
+  .ui-chart-tooltip {
+    display: grid;
+    gap: var(--sp-1);
+    min-width: 128px;
+    padding: 6px var(--sp-2);
+    border: 1px solid var(--rule-2);
+    border-radius: var(--radius-data);
+    background-color: var(--ink-2);
+    color: var(--text-body);
+    @apply type-data;
+  }
+  .ui-chart-tooltip__label {
+    @apply type-label;
+    color: var(--text-dim);
+  }
+  .ui-chart-tooltip__row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+  .ui-chart-tooltip__swatch {
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    background-color: var(--ui-swatch);
+  }
+  .ui-chart-tooltip__swatch[data-indicator="line"] {
+    width: 2px;
+    height: 12px;
+  }
+  .ui-chart-tooltip__swatch[data-indicator="dashed"] {
+    width: 0;
+    height: 12px;
+    border-left: 1.5px dashed var(--ui-swatch);
+    background-color: transparent;
+  }
+  .ui-chart-tooltip__value {
+    margin-left: auto;
+    padding-left: var(--sp-4);
+    color: var(--text-primary);
+  }
+  .ui-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2) var(--sp-4);
+    @apply type-label;
+    color: var(--text-dim);
+  }
+  .ui-chart-legend__item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  /* ---------- Input group — an input with inline addons ------------------ */
+  .ui-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+    height: 32px;
+    border: 1px solid var(--ink-7);
+    border-radius: var(--radius-data);
+    background-color: var(--ink-1);
+    transition-property: border-color;
+    transition-duration: var(--dur-1);
+    transition-timing-function: var(--ease-snap);
+  }
+  /* Hover: --ink-7 -> --ink-8, one rung up; see the .ui-input note. */
+  @media (hover: hover) {
+    .ui-input-group:hover:not(:has([aria-invalid="true"], :disabled, :focus)) {
+      border-color: var(--ink-8);
+    }
+  }
+  .ui-input-group[data-force~="hover"] {
+    border-color: var(--ink-8);
+  }
+  .ui-input-group:has(> textarea),
+  .ui-input-group:has(> [data-align^="block"]) {
+    flex-direction: column;
+    height: auto;
+  }
+  /* The ring moves to the group: the control inside is borderless. */
+  .ui-input-group:has([data-slot="input-group-control"]:focus-visible) {
+    outline: 2px solid var(--signal-hi);
+    outline-offset: 2px;
+  }
+  .ui-input-group:has([data-slot="input-group-control"][aria-invalid="true"]) {
+    border-color: var(--alarm);
+  }
+  .ui-input-group:has(:disabled) {
+    border-color: var(--rule-hair);
+  }
+  .ui-input-group > [data-slot="input-group-control"] {
+    flex: 1;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+    outline: 2px solid transparent; /* see .ui-command__input */
+  }
+  .ui-input-group__addon {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    height: 100%;
+    color: var(--text-dim);
+    @apply type-small;
+    cursor: text;
+    user-select: none;
+  }
+  .ui-input-group__addon[data-align="inline-start"] {
+    order: -1;
+    padding-left: var(--sp-3);
+  }
+  .ui-input-group__addon[data-align="inline-end"] {
+    order: 1;
+    padding-right: var(--sp-2);
+  }
+  .ui-input-group__addon[data-align="block-start"] {
+    order: -1;
+    justify-content: flex-start;
+    width: 100%;
+    padding: var(--sp-2) var(--sp-3) 0;
+  }
+  .ui-input-group__addon[data-align="block-end"] {
+    order: 1;
+    justify-content: flex-start;
+    width: 100%;
+    padding: 0 var(--sp-3) var(--sp-2);
+  }
+  .ui-input-group__addon svg {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+  }
+  .ui-input-group__addon[data-align="inline-start"] + [data-slot="input-group-control"],
+  .ui-input-group__addon[data-align="inline-start"] ~ [data-slot="input-group-control"] {
+    padding-left: var(--sp-2);
+  }
+  .ui-input-group__text {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--fs-data);
+    letter-spacing: 0;
+  }
+}
+
+
+/* ==========================================================================
+   5. TOASTER — sonner appends its stylesheet (unlayered) to the end of <head>
+      at runtime, so it beats anything layered, and wins ties on order. Even
+      with `unstyled: true` some of its rules still reach our cards: the
+      dark-theme close button and description colours, a drop shadow on focus,
+      off-grid exit and swipe timings, a lift, and its absolutely-centred
+      loader. Each override below is unlayered and strictly more specific than
+      the sonner rule it answers (noted as sonner's specificity → ours).
+      Positioning and stacking stay sonner's.
+   ========================================================================== */
+.ui-toaster[data-sonner-toaster] {
+  font-family: var(--font-sans);
+}
+.ui-toaster[data-sonner-toaster]:focus-visible {
+  outline: 2px solid var(--signal-hi);
+  outline-offset: 2px;
+}
+/* A lift is banned (motion §7); sonner lifts the stack only when expand is off. (0,2,0 → 0,3,0) */
+.ui-toaster[data-sonner-toaster][data-lifted="true"] {
+  transform: none;
+}
+/* Enter: opacity + translateY(6px → 0) in 180ms --ease-snap (motion §4.3); no height tween. (0,1,0 → 0,2,0) */
+.ui-toaster [data-sonner-toast] {
+  transition: transform var(--ui-overlay-dur) var(--ease-snap), opacity var(--ui-overlay-dur) var(--ease-snap);
+}
+.ui-toaster [data-sonner-toast] > * {
+  transition: opacity var(--ui-overlay-dur) var(--ease-snap);
+}
+/* sonner's focus ring is a drop shadow. (0,2,0 → 0,3,0) */
+.ui-toaster [data-sonner-toast]:focus-visible {
+  box-shadow: inset 0 1px 0 var(--inset-hi);
+  outline: 2px solid var(--signal-hi);
+  outline-offset: 2px;
+}
+.ui-toaster [data-sonner-toast][data-y-position="bottom"]:not([data-mounted="true"]) {
+  --y: translateY(var(--ui-toast-shift));
+}
+.ui-toaster [data-sonner-toast][data-y-position="top"]:not([data-mounted="true"]) {
+  --y: translateY(calc(-1 * var(--ui-toast-shift)));
+}
+/* Exit: opacity + translateY(4px) in 160ms --ease-exit. */
+.ui-toaster [data-sonner-toast][data-removed="true"] {
+  transition-duration: var(--dur-exit);
+  transition-timing-function: var(--ease-exit);
+}
+.ui-toaster [data-sonner-toast][data-removed="true"][data-front="true"][data-swipe-out="false"] {
+  --y: translateY(var(--ui-toast-exit));
+}
+.ui-toaster [data-sonner-toast][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="true"] {
+  --y: translateY(calc(var(--lift) * var(--offset) + var(--ui-toast-exit)));
+}
+/* sonner: transform 500ms, opacity 200ms, when a collapsed stack loses a toast. (0,5,0 → 0,6,0) */
+.ui-toaster [data-sonner-toast][data-removed="true"][data-front="false"][data-swipe-out="false"][data-expanded="false"] {
+  transition: transform var(--dur-exit) var(--ease-exit), opacity var(--dur-exit) var(--ease-exit);
+}
+/* sonner: 200ms ease-out for a swipe dismissal. (0,3,0 → 0,4,0) */
+.ui-toaster [data-sonner-toast][data-swipe-out="true"][data-y-position] {
+  animation-duration: var(--dur-exit);
+  animation-timing-function: var(--ease-exit);
+}
+/* The body is a provenance line in --text-dim; sonner's dark theme repaints it #E8E8E8. (0,3,0 → 0,4,0) */
+.ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__body {
+  color: var(--text-dim);
+}
+/* sonner's dark theme paints the close button black with a grey border. (0,4,0 → 0,5,0) */
+.ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__close[data-close-button] {
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--text-dim);
+}
+/* The loader slot: centred in our 14px icon box, no scale on hide, our exit timing. (0,1,0 → 0,3,0) */
+.ui-toaster .ui-toast__icon .sonner-loader {
+  transition-duration: var(--dur-exit);
+  transition-timing-function: var(--ease-exit);
+}
+.ui-toaster .ui-toast__icon .sonner-loader[data-visible="false"] {
+  transform: translate(-50%, -50%);
+}
+@media (hover: hover) {
+  /* (0,5,0 → 0,6,0) */
+  .ui-toaster[data-sonner-toaster] [data-sonner-toast] .ui-toast__close[data-close-button]:hover,
+  .ui-toast__close:hover {
+    border-color: transparent;
+    background-color: var(--ui-hover-ghost);
+    color: var(--text-body);
+  }
+}
+.ui-toast__close[data-force~="hover"] {
+  background-color: var(--ui-hover-ghost);
+  color: var(--text-body);
+}
+
+
+/* ==========================================================================
+   6. REDUCED MOTION — a designed second state, not an off switch (motion §5).
+      One declaration list serves the OS preference and the footer toggle
+      (data-motion="reduced" on <html>). Colour stays at 120ms; every
+      transform is dropped; overlays become opacity-only at 120ms. Nothing
+      disappears.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-press-y: 0px;
+    --ui-pop-from: none;
+    --ui-dialog-from: none;
+    --ui-palette-from: none;
+    --ui-sheet-from: none;
+    --ui-sheet-fade: 0;
+    --ui-tip-shift: 0px;
+    --ui-toast-shift: 0px;
+    --ui-toast-exit: 0px;
+    --ui-overlay-dur: var(--dur-1);
+    --ui-reveal-dur: var(--dur-1);
+    --ui-slide-dur: var(--dur-0);
+    --ui-draw-dur: var(--dur-0);
+    --ui-list-dur: var(--dur-0);
+  }
+}
+:root[data-motion="reduced"] {
+  --ui-press-y: 0px;
+  --ui-pop-from: none;
+  --ui-dialog-from: none;
+  --ui-palette-from: none;
+  --ui-sheet-from: none;
+  --ui-sheet-fade: 0;
+  --ui-tip-shift: 0px;
+  --ui-toast-shift: 0px;
+  --ui-toast-exit: 0px;
+  --ui-overlay-dur: var(--dur-1);
+  --ui-reveal-dur: var(--dur-1);
+  --ui-slide-dur: var(--dur-0);
+  --ui-draw-dur: var(--dur-0);
+  --ui-list-dur: var(--dur-0);
+}
+
+
+/* ==========================================================================
+   7. FORCED COLOURS — design §8.6. Backgrounds and box-shadows are replaced
+      by system colours here, so every bar and rail that carries state is
+      redrawn as a border or an adjusted fill, and the loading ellipsis moves
+      beside the (now visible) label.
+   ========================================================================== */
+@media (forced-colors: active) {
+  .ui-tabs__trigger[data-state="active"]::after,
+  .ui-tabs__indicator,
+  .ui-toggle[data-state="on"]::after,
+  .ui-command__item[data-selected="true"]::before,
+  .ui-item__fill,
+  .ui-command__item-mark {
+    forced-color-adjust: none;
+    background-color: Highlight;
+  }
+  .ui-table tbody tr:is([data-state="selected"], [aria-selected="true"]) > :first-child {
+    border-left: 2px solid Highlight;
+  }
+  /* Forced colours drop background gradients, which is how the tab rule is drawn. */
+  .ui-tabs__list {
+    border-bottom: 1px solid GrayText;
+  }
+  .ui-tabs__list[data-orientation="vertical"] {
+    border-bottom: 0;
+    border-right: 1px solid GrayText;
+  }
+  .ui-skeleton {
+    border: 1px dashed CanvasText;
+  }
+  .ui-scrollbar__thumb {
+    forced-color-adjust: none;
+    background-color: CanvasText;
+  }
+  .ui-btn[data-loading] .ui-btn__ellipsis {
+    position: static;
+  }
+}

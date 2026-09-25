@@ -1,0 +1,1073 @@
+/* Section 7 on the otoma8.com "TESTIMONIALS" composition (measured on the live
+   site): 52px top padding, a left-aligned 48/500 heading with a 16/26 slate
+   sub, 44px grey prev/next buttons, then a full-bleed carousel of 422x480
+   video cards: white 14/600 label top-left, a bottom-up black gradient
+   (0.8 -> 0.2 -> 0), 17px white quote, the name bottom-right, and a 56px white
+   play button in the centre. Here each video is a looping stage UI. */
+
+.section {
+  --ink: #131313;
+  --lime: #cbf857;
+  --slate: #94a3b8;
+  --gutter: max(64px, calc((100% - 1312px) / 2));
+  --loop: 8s;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  background: #ffffff;
+  color: var(--ink);
+  padding: 52px 0 88px;
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+}
+
+.inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1312px;
+  margin: 0 auto;
+  padding: 0 64px;
+  box-sizing: content-box;
+}
+
+@media (min-width: 1441px) {
+  .inner {
+    padding: 0;
+  }
+}
+
+.eyebrow {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1.68px;
+  text-transform: uppercase;
+}
+
+.h2 {
+  margin: 18px 0 0;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: -1.2px;
+}
+
+.sub {
+  max-width: 560px;
+  margin: 12px 0 0;
+  color: var(--slate);
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.nav {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+.navBtn {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #f2f2f2;
+  color: var(--ink);
+  cursor: pointer;
+  transition:
+    background-color 200ms ease,
+    opacity 200ms ease;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: #e4e4e7;
+}
+
+.navBtn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.navBtn:focus-visible,
+.card:focus-visible,
+.trackRow:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* ---------- the track ---------- */
+
+.trackRow {
+  display: flex;
+  gap: 16px;
+  margin-top: 40px;
+  padding: 0 var(--gutter) 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: var(--gutter);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.trackRow::-webkit-scrollbar {
+  display: none;
+}
+
+.card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  flex: none;
+  width: 422px;
+  height: 480px;
+  border-radius: 20px;
+  color: #ffffff;
+  text-decoration: none;
+  scroll-snap-align: start;
+}
+
+.sky {
+  background: #0b3b7a;
+}
+
+.ink {
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(203, 248, 87, 0.13), transparent 55%),
+    #131313;
+}
+
+.navy {
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(56, 189, 248, 0.18), transparent 55%),
+    #111827;
+}
+
+.photo {
+  z-index: -1;
+  object-fit: cover;
+  transform: scale(1.5);
+  transition: transform 900ms var(--ease);
+}
+
+.card:hover .photo {
+  transform: scale(1.57);
+}
+
+/* A fixed stage for the scene, scaled as a whole on small screens. */
+.scene {
+  position: absolute;
+  top: 54px;
+  left: 20px;
+  display: grid;
+  place-items: center;
+  width: 382px;
+  height: 226px;
+  transform: scale(var(--scene-scale, 1));
+  transform-origin: top left;
+}
+
+.shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0) 100%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0) 22%);
+  pointer-events: none;
+}
+
+.stageLabel {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.35px;
+}
+
+.play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.85);
+  transition:
+    opacity 300ms ease,
+    transform 400ms var(--ease);
+}
+
+.card:hover .play,
+.card:focus-visible .play {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.caption {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  left: 20px;
+}
+
+.capIcon {
+  opacity: 0.92;
+}
+
+.quote {
+  min-height: 83px;
+  margin: 12px 0 0;
+  font-size: 17px;
+  line-height: 1.625;
+}
+
+.who {
+  margin: 14px 0 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  line-height: 24px;
+  text-align: right;
+}
+
+/* ---------- scene UI ---------- */
+
+.ui,
+.term {
+  box-sizing: border-box;
+  border-radius: 14px;
+  box-shadow:
+    0 30px 60px -24px rgba(0, 0, 0, 0.55),
+    0 2px 8px rgba(0, 0, 0, 0.12);
+  text-align: left;
+}
+
+.ui {
+  padding: 14px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.term {
+  padding: 12px 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #0b0d10;
+  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.uiHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.glyph {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: #111827;
+  color: var(--lime);
+}
+
+.monoStrong {
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meta {
+  margin-left: auto;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+  color: rgba(19, 19, 19, 0.5);
+}
+
+.kvs {
+  display: grid;
+  gap: 4px;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #f6f6f8;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+}
+
+.kv span {
+  color: rgba(19, 19, 19, 0.5);
+}
+
+.kv b {
+  font-weight: 500;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.chipLime {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.chipEnd {
+  margin: 0 0 0 auto;
+}
+
+.files {
+  display: grid;
+  gap: 3px;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 7px;
+  background: #f6f6f8;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.file > svg {
+  flex: none;
+  color: rgba(19, 19, 19, 0.45);
+}
+
+.filePath {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fileOut {
+  color: rgba(19, 19, 19, 0.4);
+}
+
+.fileOut .filePath {
+  text-decoration: line-through;
+}
+
+.okDot,
+.xDot {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  color: #ffffff;
+}
+
+.okDot {
+  background: #111827;
+}
+
+.xDot {
+  width: 18px;
+  height: 18px;
+  background: #e5484d;
+}
+
+.tag {
+  flex: none;
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #eceef1;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9px;
+  color: rgba(19, 19, 19, 0.6);
+}
+
+.lanes {
+  display: grid;
+  gap: 9px;
+}
+
+.lane {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: #ffffff;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 8.5px;
+}
+
+.laneName {
+  width: 56px;
+  font-size: 11px;
+}
+
+.track {
+  overflow: hidden;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #eef0f3;
+}
+
+.fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ink);
+  transform-origin: left center;
+}
+
+.count {
+  min-width: 22px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--lime);
+  box-sizing: border-box;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+  text-align: center;
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.fchip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 0;
+  border-radius: 8px;
+  background: #f6f6f8;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+}
+
+.fchip i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+/* At rest, a dropped finding is the faded, struck chip. */
+.out {
+  opacity: 0.25;
+  text-decoration: line-through;
+}
+
+.legend {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+  color: rgba(19, 19, 19, 0.55);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.legendKept {
+  background: var(--ink);
+}
+
+.legendDropped {
+  background: #d9dbe0;
+}
+
+.band {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--lime);
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.uiHead .band {
+  margin-left: auto;
+}
+
+.bigScore {
+  display: block;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -1.2px;
+}
+
+.bar {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  margin-top: 12px;
+  border-radius: 4px;
+  background: rgba(19, 19, 19, 0.07);
+}
+
+.seg {
+  border-radius: 3px;
+  transform-origin: left center;
+}
+
+.inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 12px;
+  margin-top: 12px;
+}
+
+.inputs span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9px;
+  color: rgba(19, 19, 19, 0.6);
+  white-space: nowrap;
+}
+
+.inputs i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+}
+
+.inputs b {
+  margin-left: auto;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.hash {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.hash span {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #f6f6f8;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-align: center;
+}
+
+.ledger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 8px;
+  border: 1px dashed rgba(19, 19, 19, 0.16);
+  border-radius: 8px;
+}
+
+.ledgerTitle {
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: rgba(19, 19, 19, 0.5);
+  text-decoration: line-through;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.termBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.termBar i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.termBar span {
+  margin-left: 6px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.termBody {
+  line-height: 1.75;
+  white-space: pre;
+}
+
+.dim {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.pass {
+  color: var(--lime);
+}
+
+.failTxt {
+  color: #ff8a8d;
+}
+
+.clip {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tally {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tally span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9.5px;
+}
+
+.tProven {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.tRefuted {
+  background: rgba(255, 138, 141, 0.16);
+  color: #ff8a8d;
+}
+
+.tOpen {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bot {
+  display: grid;
+  flex: none;
+  gap: 2px;
+  place-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: #111827;
+}
+
+.bot i {
+  display: block;
+  box-sizing: border-box;
+  width: 11px;
+  height: 4px;
+  border-radius: 1.5px;
+}
+
+.bot i:first-child {
+  border: 1.2px solid var(--lime);
+}
+
+.bot i:last-child {
+  background: var(--lime);
+}
+
+.comment {
+  overflow: hidden;
+  font-size: 11px;
+  color: rgba(19, 19, 19, 0.6);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comment b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.commentBody {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row .chip {
+  margin-top: 0;
+}
+
+.ladder {
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.rung {
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #f6f6f8;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.rung b {
+  margin-left: 3px;
+  font-weight: 600;
+}
+
+.rungEmpty {
+  color: rgba(19, 19, 19, 0.4);
+}
+
+.failPill {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #fde7e7;
+  color: #c62d32;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.reason {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: rgba(19, 19, 19, 0.65);
+}
+
+.chain {
+  display: flex;
+  align-items: center;
+}
+
+.chainItem {
+  display: contents;
+}
+
+.block {
+  display: grid;
+  gap: 2px;
+  width: 90px;
+  padding: 7px 6px;
+  border: 1px solid rgba(19, 19, 19, 0.1);
+  border-radius: 9px;
+  box-sizing: border-box;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 9.5px;
+}
+
+.blockNew {
+  border-color: var(--ink);
+  background: #f7fde6;
+}
+
+.blockType {
+  overflow: hidden;
+  font-size: 8px;
+  color: rgba(19, 19, 19, 0.55);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dim2 {
+  color: rgba(19, 19, 19, 0.45);
+}
+
+.link {
+  flex: none;
+  width: 6px;
+  height: 2px;
+  background: rgba(19, 19, 19, 0.25);
+}
+
+/* ---------- the loop ----------
+   Every animated element shares the card's 8s loop, offset by the card's
+   --phase so the strip never moves in lockstep. `in` + kN appears at step N;
+   fN fills a specialist lane; oN drops a coordinator chip; gN grows a severity
+   segment; hN computes a fingerprint group. */
+
+.in,
+.fill,
+.out,
+.seg,
+.hash span {
+  animation-duration: var(--loop);
+  animation-timing-function: var(--ease);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  animation-delay: calc(var(--phase, 0s) * -1);
+}
+
+.k0 { animation-name: in0; }
+@keyframes in0 { 0%, 4% { opacity: 0; transform: translateY(6px); } 9%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k1 { animation-name: in1; }
+@keyframes in1 { 0%, 9% { opacity: 0; transform: translateY(6px); } 14%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k2 { animation-name: in2; }
+@keyframes in2 { 0%, 14% { opacity: 0; transform: translateY(6px); } 19%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k3 { animation-name: in3; }
+@keyframes in3 { 0%, 19% { opacity: 0; transform: translateY(6px); } 24%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k4 { animation-name: in4; }
+@keyframes in4 { 0%, 24% { opacity: 0; transform: translateY(6px); } 29%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k5 { animation-name: in5; }
+@keyframes in5 { 0%, 29% { opacity: 0; transform: translateY(6px); } 34%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k6 { animation-name: in6; }
+@keyframes in6 { 0%, 34% { opacity: 0; transform: translateY(6px); } 39%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k7 { animation-name: in7; }
+@keyframes in7 { 0%, 39% { opacity: 0; transform: translateY(6px); } 44%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k8 { animation-name: in8; }
+@keyframes in8 { 0%, 44% { opacity: 0; transform: translateY(6px); } 49%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.k9 { animation-name: in9; }
+@keyframes in9 { 0%, 49% { opacity: 0; transform: translateY(6px); } 54%, 90% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: none; } }
+
+.f0 { animation-name: fill0; }
+@keyframes fill0 { 0%, 12% { transform: scaleX(0); } 31%, 100% { transform: scaleX(1); } }
+
+.f1 { animation-name: fill1; }
+@keyframes fill1 { 0%, 12% { transform: scaleX(0); } 36%, 100% { transform: scaleX(1); } }
+
+.f2 { animation-name: fill2; }
+@keyframes fill2 { 0%, 12% { transform: scaleX(0); } 41%, 100% { transform: scaleX(1); } }
+
+.f3 { animation-name: fill3; }
+@keyframes fill3 { 0%, 12% { transform: scaleX(0); } 46%, 100% { transform: scaleX(1); } }
+
+.o1 { animation-name: out1; }
+@keyframes out1 { 0%, 20% { opacity: 1; text-decoration-color: transparent; } 24%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.o2 { animation-name: out2; }
+@keyframes out2 { 0%, 24% { opacity: 1; text-decoration-color: transparent; } 28%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.o3 { animation-name: out3; }
+@keyframes out3 { 0%, 28% { opacity: 1; text-decoration-color: transparent; } 32%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.o4 { animation-name: out4; }
+@keyframes out4 { 0%, 32% { opacity: 1; text-decoration-color: transparent; } 36%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.o5 { animation-name: out5; }
+@keyframes out5 { 0%, 36% { opacity: 1; text-decoration-color: transparent; } 40%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.o6 { animation-name: out6; }
+@keyframes out6 { 0%, 40% { opacity: 1; text-decoration-color: transparent; } 44%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.o7 { animation-name: out7; }
+@keyframes out7 { 0%, 44% { opacity: 1; text-decoration-color: transparent; } 48%, 92% { opacity: 0.25; text-decoration-color: currentColor; } 97%, 100% { opacity: 1; text-decoration-color: transparent; } }
+
+.g0 { animation-name: grow0; }
+@keyframes grow0 { 0%, 10% { transform: scaleX(0); } 16%, 100% { transform: scaleX(1); } }
+
+.g1 { animation-name: grow1; }
+@keyframes grow1 { 0%, 15% { transform: scaleX(0); } 21%, 100% { transform: scaleX(1); } }
+
+.g2 { animation-name: grow2; }
+@keyframes grow2 { 0%, 20% { transform: scaleX(0); } 26%, 100% { transform: scaleX(1); } }
+
+.g3 { animation-name: grow3; }
+@keyframes grow3 { 0%, 25% { transform: scaleX(0); } 31%, 100% { transform: scaleX(1); } }
+
+.g4 { animation-name: grow4; }
+@keyframes grow4 { 0%, 30% { transform: scaleX(0); } 36%, 100% { transform: scaleX(1); } }
+
+.g5 { animation-name: grow5; }
+@keyframes grow5 { 0%, 35% { transform: scaleX(0); } 41%, 100% { transform: scaleX(1); } }
+
+.hs0 { animation-name: hash0; }
+@keyframes hash0 { 0%, 8% { opacity: 0.2; } 11% { opacity: 1; background: #e9f9c4; } 18%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+
+.hs1 { animation-name: hash1; }
+@keyframes hash1 { 0%, 15% { opacity: 0.2; } 18% { opacity: 1; background: #e9f9c4; } 25%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+
+.hs2 { animation-name: hash2; }
+@keyframes hash2 { 0%, 22% { opacity: 0.2; } 25% { opacity: 1; background: #e9f9c4; } 32%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+
+.hs3 { animation-name: hash3; }
+@keyframes hash3 { 0%, 29% { opacity: 0.2; } 32% { opacity: 1; background: #e9f9c4; } 39%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .in,
+  .fill,
+  .out,
+  .seg,
+  .hash span {
+    animation: none;
+  }
+  .photo,
+  .play {
+    transition: none;
+  }
+}
+
+/* ---------- reveal ---------- */
+
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+
+/* After the reveal rule, so it wins: reduced motion shows the head at rest. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 1024px) {
+  .section {
+    --gutter: 24px;
+    padding: 56px 0 72px;
+  }
+  .inner {
+    padding: 0 24px;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    --gutter: 16px;
+    padding: 56px 0 64px;
+  }
+  .inner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 16px;
+  }
+  .nav {
+    align-self: flex-end;
+  }
+  .h2 {
+    font-size: 32px;
+    letter-spacing: -0.8px;
+    text-wrap: balance;
+  }
+  .sub {
+    text-wrap: pretty;
+  }
+  .trackRow {
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .card {
+    width: 300px;
+    height: 430px;
+  }
+  .scene {
+    --scene-scale: 0.72;
+    top: 46px;
+    left: 12px;
+  }
+  .stageLabel {
+    top: 16px;
+    left: 16px;
+    font-size: 13px;
+  }
+  .caption {
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+  }
+  .quote {
+    min-height: 0;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .who {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+}

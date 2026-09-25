@@ -1,0 +1,69 @@
+/* OWNER: T0 (wave 0). FROZEN once T0 merges (plan §8).
+   The single Tailwind v4 entry point. Order matters:
+     1. tailwindcss       theme defaults, preflight, utilities
+     2. tw-animate-css    enter/exit utilities used by the vendored shadcn primitives
+     3. shadcn.css        vendored data-state variants (T0)
+     4. tokens            core.css then marketing.css (they wipe and replace Tailwind's scales)
+     5. track stylesheets chrome (T1a) · ui + code (T1b) · motion (T3)
+   Nothing else is imported globally. Do not run `shadcn add` / `shadcn init`
+   here again: the CLI rewrites this file and re-adds light/dark palettes. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../src/styles/shadcn.css";
+@import "./tokens/core.css";
+@import "./tokens/marketing.css";
+@import "../src/styles/chrome.css";
+@import "../src/styles/ui.css";
+@import "../src/styles/code.css";
+@import "../src/styles/motion.css";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    background: var(--ink-0);
+  }
+
+  body {
+    background: var(--ink-0);
+    color: var(--text-body); /* never #FFFFFF text */
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    letter-spacing: -0.011em;
+    font-feature-settings: var(--font-settings);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Dashboard body drops to 13px; 15px is reserved for primary content (design §2.3). */
+  [data-surface="app"] {
+    font-size: var(--fs-small);
+    line-height: 1.5;
+    letter-spacing: -0.013em;
+  }
+
+  /* Monospace data is never tracked (design §2.5). */
+  code, kbd, samp, pre {
+    letter-spacing: 0;
+  }
+
+  /* Tailwind v4 changed the default border colour to currentColor; every bare
+     `border` would otherwise draw in the text colour. */
+  *, ::before, ::after {
+    border-color: var(--border);
+  }
+
+  /* Tailwind v4 defaults buttons to cursor:default; every CTA would feel dead. */
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  /* Focus ring — design §8.3: 2px --signal-hi, offset 2px. Never outline: none. */
+  :focus-visible {
+    outline: 2px solid var(--signal-hi);
+    outline-offset: 2px;
+  }
+}

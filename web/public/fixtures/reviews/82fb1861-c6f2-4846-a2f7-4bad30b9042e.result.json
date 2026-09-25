@@ -1,0 +1,280 @@
+{
+  "review_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "web-storefront",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 1120,
+    "title": "Upgrade to React Router 7",
+    "author": "lena-ortiz",
+    "head_sha": "871cd94a3da3d9d24f5fe4c6eb1f7fcb46982edf",
+    "base_sha": "60ec4466a32ded940ffeba4a28ce08d04a5b2eca",
+    "url": "https://github.com/acme/web-storefront/pull/1120"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 1,
+    "files_excluded": 1,
+    "excluded_reasons": {
+      "src/i18n/messages.json": "budget"
+    },
+    "truncated": true
+  },
+  "gate": {
+    "conclusion": "neutral",
+    "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
+    "delivery": "check_run",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2265537524,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0368,
+    "input_tokens": 75872,
+    "output_tokens": 41894,
+    "cache_read_tokens": 189882
+  },
+  "timing": {
+    "queued_at": "2026-09-05T12:00:02.948380Z",
+    "started_at": "2026-09-05T12:00:04.290962Z",
+    "finished_at": "2026-09-05T12:00:33.184962Z",
+    "duration_seconds": 28.894
+  },
+  "degradations": [
+    "context_truncated"
+  ],
+  "findings": [
+    {
+      "id": "f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba",
+      "review_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+      "fingerprint": "4485b777cb57a7d2df762ff48be5ef02ff9b3313867f537bab9e92a979c6fcd6",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "not_found_with_200",
+      "title": "The NotFound route renders with HTTP 200",
+      "body_markdown": "React Router 7 needs `throw new Response(null, { status: 404 })` for a 404 (line 37); crawlers index the page.",
+      "location": {
+        "file_path": "src/routes/index.tsx",
+        "start_line": 37,
+        "end_line": 39,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/routes/index.tsx::#0"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.27,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.45,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "untested × unproven × churn 0.45",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 39,
+        "github_comment_id": 2546882641
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-05T12:00:30.739762Z"
+    },
+    {
+      "id": "ae0db7d0-1a9f-4665-9798-7a5019341648",
+      "review_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+      "fingerprint": "8580b30996630cdc5b31fc97e599f269ff9ba829084bf7ac811ba6aabadf306d",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "loader_error_unhandled",
+      "title": "productLoader() turns a 404 from the catalogue API into a blank page",
+      "body_markdown": "React Router 7 loaders must throw a `Response` for the error boundary to render; `productLoader()` returns `null` on 404 (line 48), and the product page renders nothing.",
+      "location": {
+        "file_path": "src/routes/index.tsx",
+        "start_line": 48,
+        "end_line": 51,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/routes/index.tsx::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.485,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.45,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × untested × unproven × churn 0.45 × blast radius 0.10",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 51,
+        "github_comment_id": 1946911714
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-05T12:00:30.741162Z"
+    },
+    {
+      "id": "79e0cc02-466e-4bd7-a113-25e118ff140b",
+      "review_id": "82fb1861-c6f2-4846-a2f7-4bad30b9042e",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "explicit_any",
+      "title": "Replace `any` in `lazyRoute` with the generated API type",
+      "body_markdown": "`lazyRoute` types its argument as `any`.",
+      "location": {
+        "file_path": "src/routes/index.tsx",
+        "start_line": 24,
+        "end_line": 26,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-05T12:00:30.742562Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#1120` in 28.9s · [full run ↗](https://prguard.acme.internal/runs/82fb1861-c6f2-4846-a2f7-4bad30b9042e)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "871cd94a3da3d9d24f5fe4c6eb1f7fcb46982edf",
+    "comments": [
+      {
+        "path": "src/routes/index.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.270`** low\n\nReact Router 7 needs `throw new Response(null, { status: 404 })` for a 404 (line 37); crawlers index the page.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/routes/index.tsx` is not Python.\n\n**Severity `0.270`** — path_sensitivity `0.000` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.045`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4485b777…fcd6` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba#suppress)",
+        "line": 39,
+        "side": "RIGHT",
+        "start_line": 37,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "src/routes/index.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.485`** medium\n\nReact Router 7 loaders must throw a `Response` for the error boundary to render; `productLoader()` returns `null` on 404 (line 48), and the product page renders nothing.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/routes/index.tsx` is not Python.\n\n**Severity `0.485`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.045`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/ae0db7d0-1a9f-4665-9798-7a5019341648#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 8580b309…306d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/ae0db7d0-1a9f-4665-9798-7a5019341648#suppress)",
+        "line": 51,
+        "side": "RIGHT",
+        "start_line": 48,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=82fb1861-c6f2-4846-a2f7-4bad30b9042e"
+}

@@ -1,0 +1,24 @@
+{
+  "review_id": "cfcf12f1-9c39-430c-8656-369a9693bb0a",
+  "status": "failed",
+  "stage": "specialists",
+  "stage_index": 3,
+  "stage_total": 9,
+  "stage_label": "Running 3 specialist passes",
+  "seconds_since_heartbeat": 266065,
+  "risk_tier": "standard",
+  "head_sha": "eee188f4c1305b73b46d3cdca1a488a2a881fcc4",
+  "degradations": [],
+  "counts": {
+    "proposed": 0,
+    "published": 0,
+    "suppressed": 0,
+    "blocking": 0
+  },
+  "started_at": "2026-09-20T10:05:30.468454Z",
+  "finished_at": "2026-09-20T10:16:12.288454Z",
+  "error": {
+    "code": "STALE_RUN",
+    "message": "No heartbeat for more than 600s; the worker executing this run did not survive."
+  }
+}

@@ -1,0 +1,428 @@
+{
+  "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+  "status": "cancelled",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4821,
+    "title": "Resolve account currency at charge time",
+    "author": "mhollis",
+    "head_sha": "9c2d4b1f6a8e3c5d7b9f1a2e4c6d8b0f3a5c7e92",
+    "base_sha": "7c41a09e3b5d2f8a1c6e4b9d7f0a2c5e8b3d6f19",
+    "url": "https://github.com/acme/checkout-service/pull/4821"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 5,
+    "files_reviewed": 5,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": null,
+  "delivery": null,
+  "counts": {
+    "proposed": 6,
+    "published": 0,
+    "suppressed": 1,
+    "dropped": 2,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.9513,
+    "input_tokens": 57704,
+    "output_tokens": 42231,
+    "cache_read_tokens": 130020
+  },
+  "timing": {
+    "queued_at": "2026-09-23T11:45:36.418000Z",
+    "started_at": "2026-09-23T11:45:36.830000Z",
+    "finished_at": "2026-09-23T11:46:01.902000Z",
+    "duration_seconds": 25.072
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "f801e19c-ec56-4756-82d0-3779714f7921",
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "fingerprint": "70f2459184df78fcdcbae1df66c153908fbaa353d9d8658c11b4b31d5d67333d",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "unguarded_none_attribute",
+      "title": "charge() dereferences a None currency when the account has no default",
+      "body_markdown": "`charge()` now takes the settlement currency from `account.default_currency` (line 39), which is `None` for every account created before the account-settings page. On that path lines 40-42 return `None` from a function annotated `-> Charge`, and `create_order()` in `app/api/checkout.py` reads `result.id` on the next line. At base the currency came from `account.currency`, which signup always sets.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 39,
+        "end_line": 42,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/charge.py::charge"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.735,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.7,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × blast radius 0.70 × file tested, symbol not × unproven × churn 0.30",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "proposed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:01.876000Z"
+    },
+    {
+      "id": "4adafa37-0bfe-4860-82d7-4fae242d01d9",
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "fingerprint": "b538ea7812d7debe84ea9b4707c683081c345da5d8ce37ffd2c5333970e7b1fd",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "currency_exponent_inverted",
+      "title": "Scale zero-decimal currencies up, not down, in _to_settlement()",
+      "body_markdown": "`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` returns `0`, where 1200 JPY is 808 US cents at the table's rate. This change sends every account's `default_currency` through that line, including the Japanese accounts the account-settings page now lets pick `jpy`.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 32,
+        "end_line": 33,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/charge.py::_to_settlement"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.485,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × blast radius 0.20 × churn 0.30",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "proposed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:01.877400Z"
+    },
+    {
+      "id": "7543d3ca-16b1-4591-8824-94fa988f6ccd",
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "fingerprint": "a291b2d72ed2afc2c64cc27b4b76bf406ff2277a49146f32ead34ef417c9c909",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "float_money_formatting",
+      "title": "Format money in `_line()` from integer cents, not float division",
+      "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
+      "location": {
+        "file_path": "app/api/checkout.py",
+        "start_line": 64,
+        "end_line": 64,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/api/checkout.py::_line"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.3,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × blast radius 0.30 × churn 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 3,
+        "first_seen_run_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "7e960d13-654b-46d3-bb0d-8d44e62bc62a",
+        "scope": "file",
+        "reason": "Display-only: the summary string is never parsed back, and totals are computed in integer cents upstream. Revisit if the summary ever feeds an invoice.",
+        "created_by": "priya-raman",
+        "expires_at": null
+      },
+      "created_at": "2026-09-23T11:46:01.878800Z"
+    },
+    {
+      "id": "522270c3-2bcc-4111-8095-cf5f0c64fa2f",
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "fingerprint": "64115d66858bda8280bd8e5ff1de0edc2778cce2e8404a71b9882de4fceac6bc",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "hardcoded_currency",
+      "title": "Render the order summary in the charge's currency, not a literal \"usd\"",
+      "body_markdown": "`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line 70). With this change a charge settles in the account's `default_currency`, so for a EUR account the response's `currency` field says `eur` while the summary beside it says `usd`. The two copies of the currency now have to change together, and nothing ties them.",
+      "location": {
+        "file_path": "app/api/checkout.py",
+        "start_line": 70,
+        "end_line": 70,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/api/checkout.py::render_summary"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.69,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.15,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × untested × unproven × churn 0.15",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "proposed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:01.880200Z"
+    },
+    {
+      "id": "d5790c87-2828-47ac-8afb-b3e22d4d2148",
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_regression_test",
+      "title": "Pin `charge()` for an account that has no default currency",
+      "body_markdown": "`tests/billing/test_charge.py` adds `default_currency` to its only fixture row, so no test exercises the legacy row this change stops handling.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 39,
+        "end_line": 42,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:01.881600Z"
+    },
+    {
+      "id": "2f60c94f-186f-4149-a15b-06e18157110c",
+      "review_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unclear_helper_name",
+      "title": "Name `_to_settlement()` after the unit it returns",
+      "body_markdown": "`_to_settlement()` returns US cents; the name does not say so.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 30,
+        "end_line": 32,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:01.883000Z"
+    }
+  ],
+  "review_payload": null,
+  "audit_url": "/v1/audit?review_id=9beb6766-763b-46f5-b429-6858bc628aca"
+}

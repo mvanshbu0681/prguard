@@ -1,0 +1,293 @@
+{
+  "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4796,
+    "title": "Log gateway decline codes on failed charges",
+    "author": "farah-n",
+    "head_sha": "7b5e21b69e35d187a6206be49acc7b9581be8ef9",
+    "base_sha": "f664cb46bf9bf0d13237468efa4730e093b8f17c",
+    "url": "https://github.com/acme/checkout-service/pull/4796"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "prguard/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2534102350,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 1,
+    "suppressed": 0,
+    "dropped": 3,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.9982,
+    "input_tokens": 64992,
+    "output_tokens": 42621,
+    "cache_read_tokens": 158313
+  },
+  "timing": {
+    "queued_at": "2026-08-31T10:05:31.047102Z",
+    "started_at": "2026-08-31T10:05:31.322859Z",
+    "finished_at": "2026-08-31T10:05:59.952859Z",
+    "duration_seconds": 28.63
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "d07fa508-3fb0-4816-9f19-eda82efa1d27",
+      "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
+      "fingerprint": "b99e3b9de8a2e078f083fc2c67842e3395ab5e5c4f20dcd319d8cfb54eb5ff7d",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unnamed_constant",
+      "title": "Name the retry limit in create_charge_with_retry() instead of the literal 3",
+      "body_markdown": "The loop bound `3` (line 13) is the same limit `_is_retryable()` reads from config.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 13,
+        "end_line": 14,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/retry.py::create_charge_with_retry"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.6,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.4,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.4,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × file tested, symbol not × unproven × blast radius 0.40 × churn 0.40",
+        "llm_severity_hint": "info",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 14,
+        "github_comment_id": 2132791320
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "172dadd9-c0c5-4bba-9919-a0af7023b7d1",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-31T10:05:56.779459Z"
+    },
+    {
+      "id": "fda9cb4b-75f1-4676-adf0-7343680331bb",
+      "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "printf_style_logging",
+      "title": "Use structured logging arguments in `record_attempt()`",
+      "body_markdown": "`record_attempt()` logs with `%s` placeholders; structured fields are easier to query.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 52,
+        "end_line": 54,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-31T10:05:56.780859Z"
+    },
+    {
+      "id": "aa3e5e28-9858-4034-8543-8aa95dea5690",
+      "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_docstring",
+      "title": "Document what `_is_retryable()` returns when nothing matches",
+      "body_markdown": "`_is_retryable()` has no docstring and two different empty results.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 41,
+        "end_line": 43,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-31T10:05:56.782259Z"
+    },
+    {
+      "id": "2bf3677f-e163-4135-809d-f34d3931301e",
+      "review_id": "c8cb8adc-3acb-4465-9509-446e3dbb9612",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `create_charge_with_retry()` against two callers running it at once",
+      "body_markdown": "Two workers running `create_charge_with_retry()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/billing/retry.py",
+        "start_line": 11,
+        "end_line": 13,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-31T10:05:56.783659Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**PRGuard** reviewed `#4796` in 28.6s · [full run ↗](https://prguard.acme.internal/runs/c8cb8adc-3acb-4465-9509-446e3dbb9612)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "commit_id": "7b5e21b69e35d187a6206be49acc7b9581be8ef9",
+    "comments": [
+      {
+        "path": "app/billing/retry.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.600`** high\n\nThe loop bound `3` (line 13) is the same limit `_is_retryable()` reads from config.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.600`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.040`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d07fa508-3fb0-4816-9f19-eda82efa1d27#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint b99e3b9d…ff7d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d07fa508-3fb0-4816-9f19-eda82efa1d27#suppress)",
+        "line": 14,
+        "side": "RIGHT",
+        "start_line": 13,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=c8cb8adc-3acb-4465-9509-446e3dbb9612"
+}
