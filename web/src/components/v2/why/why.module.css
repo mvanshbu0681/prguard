@@ -1,0 +1,406 @@
+/* Section 2 on the otoma8.com system ("ABOUT US" there): a centred mission
+   headline with inline icon badges and a greyed last line, then a three-column
+   bento of stat cards: a photographic card with an inset white card, a grey card
+   with an avatar stack, and a lime card stacked over an ink card. */
+
+.section {
+  --ink: #131313;
+  --lime: #cbf857;
+  --sky: #38bdf8;
+  --slate: #94a3b8;
+  --grey: #efeff1;
+  --navy: #111827;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 64px 64px 72px;
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+}
+
+.inner {
+  max-width: 1312px;
+  margin: 0 auto;
+}
+
+.eyebrow {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 1.68px;
+  text-transform: uppercase;
+}
+
+.h2 {
+  max-width: 820px;
+  margin: 18px auto 0;
+  font-size: 48px;
+  font-weight: 500;
+  line-height: 1.14;
+  letter-spacing: -1.2px;
+  text-align: center;
+}
+
+.h2 > span {
+  display: block;
+}
+
+.grey {
+  color: var(--slate);
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0 6px;
+  border-radius: 999px;
+  vertical-align: middle;
+  transform: translateY(-3px);
+}
+
+.badgeSky {
+  background: var(--sky);
+  color: #ffffff;
+}
+
+.badgeLime {
+  background: var(--lime);
+  color: var(--ink);
+}
+
+/* ---------- bento ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+}
+
+.tall {
+  min-height: 352px;
+}
+
+.stack {
+  display: grid;
+  grid-template-rows: 216px 1fr;
+  gap: 16px;
+}
+
+/* photo card */
+.photoCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  color: #ffffff;
+}
+
+.photoCard img {
+  z-index: 0;
+  object-fit: cover;
+  object-position: 50% 78%;
+  transition: transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.photoCard:hover img {
+  transform: scale(1.04);
+}
+
+.photoTop {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
+  text-transform: uppercase;
+}
+
+.chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.photoCard:hover .chip {
+  transform: rotate(-12deg);
+}
+
+.inset {
+  position: relative;
+  z-index: 1;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.num {
+  display: block;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -1px;
+  line-height: 1.05;
+}
+
+.bigNum {
+  display: block;
+  margin-top: 4px;
+  font-size: 48px;
+  font-weight: 500;
+  letter-spacing: -1.4px;
+  line-height: 1;
+}
+
+.body {
+  margin: 8px 0 0;
+  color: var(--slate);
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+/* grey card */
+.greyCard {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: var(--grey);
+}
+
+.label {
+  margin: 0;
+  font-size: 17px;
+}
+
+.people {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.avatars {
+  display: flex;
+}
+
+.avatars span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -6px;
+  border: 2px solid var(--grey);
+  border-radius: 999px;
+  color: #ffffff;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+}
+
+.avatars span:first-child {
+  margin-left: 0;
+}
+
+.peopleNote {
+  color: rgba(19, 19, 19, 0.6);
+  font-size: 14px;
+  text-wrap: balance;
+}
+
+.funnel {
+  margin-top: auto;
+}
+
+.funnelBar {
+  display: flex;
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(19, 19, 19, 0.08);
+}
+
+.funnelBar i {
+  display: block;
+  height: 100%;
+}
+
+.funnelKey {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: rgba(19, 19, 19, 0.7);
+}
+
+.funnelKey span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.funnelKey b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* lime + navy */
+.limeCard {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background: var(--lime);
+}
+
+.limeCard .body {
+  color: rgba(19, 19, 19, 0.72);
+}
+
+.nMark {
+  margin-top: auto;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(19, 19, 19, 0.6);
+}
+
+.navyCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: var(--navy);
+  color: #ffffff;
+}
+
+.navyCard .label {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.navyNum {
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: -1px;
+}
+
+.unit {
+  margin-left: 2px;
+  font-size: 22px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- reveal: scroll-driven where supported, static everywhere else ---------- */
+
+/* Ranges are measured in the element's own ENTRY phase, so every card is fully
+   revealed the moment it is fully on screen, wherever it sits in the viewport.
+   (A cover-based range left the lowest card half-faded while in view.) */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 70%;
+  }
+  .reveal2 {
+    animation-range: entry 10% entry 80%;
+  }
+  .reveal3 {
+    animation-range: entry 20% entry 90%;
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+  .photoCard img,
+  .chip {
+    transition: none;
+  }
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 1024px) {
+  .section {
+    padding: 56px 24px 64px;
+  }
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stack {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 48px 16px 56px;
+  }
+  /* Three forced lines orphan "mistakes." at this width; let the phrases flow
+     inline and balance instead. */
+  .h2 {
+    font-size: 30px;
+    letter-spacing: -0.7px;
+    text-wrap: balance;
+  }
+  .h2 > span {
+    display: inline;
+  }
+  .h2 > span:not(:last-child)::after {
+    content: " ";
+  }
+  .badge {
+    width: 30px;
+    height: 30px;
+    margin: 0 4px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .stack {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+  }
+  .limeCard {
+    min-height: 200px;
+  }
+  .navyCard {
+    min-height: 104px;
+  }
+}

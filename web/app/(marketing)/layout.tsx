@@ -17,15 +17,16 @@
 // so the rule lives here instead of on each one.
 import type { ReactNode } from "react";
 import { GsapRuntime } from "@/motion/GsapRuntime";
-import { Footer, Nav, SkipLink } from "@/components/marketing-shell";
+import { v2FontVariables } from "@/components/v2/fonts";
+import { SkipLink } from "@/components/marketing-shell";
+import { Footer } from "@/components/v2/footer/Footer";
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return (
-    <div data-surface="marketing" className="min-h-dvh">
+    <div data-surface="marketing" className={`min-h-dvh ${v2FontVariables}`}>
       <GsapRuntime />
       <style>{"#main > section[id] { scroll-margin-top: 56px; }"}</style>
       <SkipLink />
-      <Nav />
       <main id="main">{children}</main>
       <Footer />
     </div>
