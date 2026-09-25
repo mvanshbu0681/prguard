@@ -54,6 +54,25 @@ background noise that engineers learn to click past:
 - **Cryptography preferences** where the existing choice is not broken for this use.
 - **Findings about test files, fixtures and sample data** with obviously fake credentials.
 
+## How to write it
+
+Your `title` names the control to put back or the property to hold, in the imperative (§3):
+*Compare the session token in constant time.*, *Restore the tenant filter on the settings query.* —
+never *`tokens_match` is vulnerable to a timing attack*. The attack is the evidence; the control is
+the instruction. Do not put a CVE-style label or a severity word in the title.
+
+Your `remediation` names the specific control, not the category:
+
+- The function to call instead — `hmac.compare_digest`, a parameterised query, `secrets.token_hex`,
+  the framework's own escaper — using the identifier the repository already imports where you can
+  see one.
+- Where it goes: the line the check was removed from, or the branch of the new `if` that lost it.
+- If the safe fix depends on whether an input is really attacker-reachable, say which reading makes
+  the finding moot rather than prescribing hardening for both.
+
+Never recommend "validate input", "sanitise", "add rate limiting" or "review this area" as the
+remediation. Those are the shape of advice a reader learns to skip.
+
 ## Calibration
 
 Most pull requests contain no security finding, and that is the expected output. One exploitable

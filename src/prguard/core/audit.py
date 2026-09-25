@@ -164,6 +164,14 @@ async def append(
         # §6.0: the request id is echoed in every audit event raised during that request.
         body["request_id"] = request_id
 
+    # Write the caller's staged rows first. The docstring's contract is that a caller
+    # stages exactly the rows the event describes and they land together -- but nothing
+    # declares an ORM relationship from audit_events to review_runs, so SQLAlchemy's unit
+    # of work does not know the dependency and is free to emit the event INSERT first.
+    # On Postgres that is a ForeignKeyViolationError; SQLite never noticed because it does
+    # not enforce foreign keys unless PRAGMA foreign_keys is on.
+    await session.flush()
+
     async with _tenant_lock(tenant_id):
         previous = await _last_event(session, tenant_id)
         seq = 1 if previous is None else previous.seq + 1

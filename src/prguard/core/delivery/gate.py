@@ -159,6 +159,20 @@ def decide(
     )
 
 
+def absolute_or_none(url: str | None) -> str | None:
+    """A `target_url` GitHub will accept, or nothing at all.
+
+    The Statuses and Check Runs APIs both reject a relative URL with a 422
+    ("Target url must use http(s) scheme"). That 422 is indistinguishable from any other
+    delivery failure at the call site, so the ladder fell past commit status to dry_run and
+    the verdict never reached the pull request. Dropping the link is strictly better than
+    dropping the verdict.
+    """
+    if url and (url.startswith("https://") or url.startswith("http://")):
+        return url
+    return None
+
+
 async def deliver_gate(
     *,
     client: GitHubClient | None,
@@ -223,8 +237,9 @@ def _check_run_payload(
         "conclusion": decision.conclusion,
         "output": {"title": _title(decision), "summary": decision.reason},
     }
-    if result_url:
-        payload["details_url"] = result_url
+    link = absolute_or_none(result_url)
+    if link:
+        payload["details_url"] = link
     return payload
 
 
@@ -234,8 +249,9 @@ def _commit_status_payload(decision: GateDecision, result_url: str | None) -> di
         "context": decision.context_name,
         "description": _truncate(decision.reason),
     }
-    if result_url:
-        payload["target_url"] = result_url
+    link = absolute_or_none(result_url)
+    if link:
+        payload["target_url"] = link
     return payload
 
 

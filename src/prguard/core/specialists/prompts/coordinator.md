@@ -20,7 +20,7 @@ findings arrive and one of them is real, the correct output is one finding and n
     {
       "rule_key": "lower_snake_case",
       "category": "correctness | security | test_integrity | performance | maintainability",
-      "title": "One line",
+      "title": "An instruction in the imperative — see §3 above.",
       "body_markdown": "The clearest statement of the defect, its trigger and its consequence.",
       "file_path": "exact/path/as/supplied.py",
       "start_line": 41,
@@ -31,6 +31,7 @@ findings arrive and one of them is real, the correct output is one finding and n
       "confidence": 0.82,
       "provable": true,
       "repro_hint": "the smallest call that demonstrates it",
+      "remediation": "The concrete options that close it — see §4 above.",
       "sources": ["bugs", "security"],
       "evidence": [{"file_path": "exact/path/as/supplied.py", "line": 88, "quote": "verbatim line"}]
     }
@@ -101,3 +102,14 @@ softening its wording.
 - `category` to exactly one of the five allowed values.
 - `language` from the file extension of `file_path`.
 - `file_path`, `start_line` and `end_line` exactly as supplied — never adjusted to a nearby line.
+- `title` to the imperative form of §3 above. You are the last reader before a human, so a reviewer
+  that handed you *"`apply_discount` crashes with `TypeError` when rate is `None`"* gets rewritten
+  to *"Preserve the no-promotion contract."* — same claim, stated as the thing to do. This is the
+  one rewrite you must make rather than may: a symptom title is not a finding a busy reviewer acts
+  on. Rewriting the words is not adding a claim, and the body still has to carry the symptom.
+- `remediation` to the fix the finding actually supports (§4). Carry the reviewer's through when it
+  is concrete; write one when it is missing and the supplied source makes it obvious; leave it out
+  when neither is true. An invented fix is a claim, and §"Do not add claims when rewriting" applies
+  to it exactly as it does to the body.
+- When you merge duplicates, keep the **clearest instruction** as the title and merge the
+  remediations into one — not two paragraphs of overlapping advice.

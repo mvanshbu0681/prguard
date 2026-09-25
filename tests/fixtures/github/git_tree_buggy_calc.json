@@ -1,0 +1,121 @@
+{
+  "name": "git_tree_buggy_calc",
+  "request": {
+    "method": "GET",
+    "path": "/repos/octocat/hello-world/git/trees/9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+    "query": {
+      "recursive": "1"
+    },
+    "headers": {
+      "accept": "application/vnd.github+json"
+    }
+  },
+  "status": 200,
+  "headers": {
+    "content-type": "application/json; charset=utf-8"
+  },
+  "repo_fixture": "buggy_calc",
+  "ref": "head",
+  "body": {
+    "sha": "9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+    "url": "https://api.github.com/repos/octocat/hello-world/git/trees/9a1e3c7f0b2d4e6a8c1f3b5d7e9a0c2e4f6a8b1d",
+    "tree": [
+      {
+        "path": "README.md",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "8f70d6ca786a148952091b2bded52e4d78ff332e",
+        "size": 371,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/8f70d6ca786a148952091b2bded52e4d78ff332e"
+      },
+      {
+        "path": "app",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "be13f3444bcc227102be67b16f22c1ba5fe59fdd",
+        "url": "https://api.github.com/repos/octocat/hello-world/git/trees/be13f3444bcc227102be67b16f22c1ba5fe59fdd"
+      },
+      {
+        "path": "app/__init__.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "7351728d916d8a9496b80b49ebf673246185ed31",
+        "size": 127,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/7351728d916d8a9496b80b49ebf673246185ed31"
+      },
+      {
+        "path": "app/billing.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "e8ec3b59bb2a3902545226f1ca92ff5c22d70395",
+        "size": 1301,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/e8ec3b59bb2a3902545226f1ca92ff5c22d70395"
+      },
+      {
+        "path": "app/checkout.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "466bc3b0f47677ab8b90656798f3a87eb058441c",
+        "size": 4943,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/466bc3b0f47677ab8b90656798f3a87eb058441c"
+      },
+      {
+        "path": "app/orders.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "11243ce9b0ab84a8debb64c92106d7d1f90170e9",
+        "size": 1313,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/11243ce9b0ab84a8debb64c92106d7d1f90170e9"
+      },
+      {
+        "path": "app/receipts.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "d0d7addd075ee8b133813bb2ec86159e9672ca9b",
+        "size": 594,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/d0d7addd075ee8b133813bb2ec86159e9672ca9b"
+      },
+      {
+        "path": "pyproject.toml",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "54e9c0f1dff6faa5d82b0b564a3aa7693fe0471d",
+        "size": 308,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/54e9c0f1dff6faa5d82b0b564a3aa7693fe0471d"
+      },
+      {
+        "path": "tests",
+        "mode": "040000",
+        "type": "tree",
+        "sha": "470b2ae04be9a2c63da73e4ab81739bb98c9800d",
+        "url": "https://api.github.com/repos/octocat/hello-world/git/trees/470b2ae04be9a2c63da73e4ab81739bb98c9800d"
+      },
+      {
+        "path": "tests/__init__.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "f1e87cabaa6d236342acfb6acf7278e9b174f2ff",
+        "size": 52,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/f1e87cabaa6d236342acfb6acf7278e9b174f2ff"
+      },
+      {
+        "path": "tests/test_billing.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "006b3597b4ece7ea0fde9712710e18c9f0430abc",
+        "size": 1162,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/006b3597b4ece7ea0fde9712710e18c9f0430abc"
+      },
+      {
+        "path": "tests/test_checkout.py",
+        "mode": "100644",
+        "type": "blob",
+        "sha": "284d7f02ce4b6a53455a322b0f217eeb8d4b1374",
+        "size": 1328,
+        "url": "https://api.github.com/repos/octocat/hello-world/git/blobs/284d7f02ce4b6a53455a322b0f217eeb8d4b1374"
+      }
+    ],
+    "truncated": false
+  },
+  "notes": "The recursive tree of repos/buggy_calc/head at the PR-42 head SHA. Drives S2's cross-file caller discovery: app/orders.py is in this listing and not in the diff, which is the only way the callers of apply_discount are ever found. Blob and tree SHAs are the real git object ids of the committed files, so verify_corpus.py can prove the listing still describes the tree it claims to."
+}

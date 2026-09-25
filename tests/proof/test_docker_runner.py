@@ -45,7 +45,7 @@ def test_the_command_carries_every_isolation_flag_the_spec_names(tmp_path: Path)
     assert flag_value(command, "--cpus") == "1"
     assert flag_value(command, "--pids-limit") == "256"
     assert DEFAULT_IMAGE in command
-    assert DEFAULT_IMAGE == "python:3.12-slim"
+    assert DEFAULT_IMAGE == "prguard-sandbox:py312"
 
 
 def test_the_workspace_is_mounted_and_is_the_working_directory(tmp_path: Path) -> None:
@@ -97,7 +97,13 @@ async def test_a_missing_docker_binary_is_a_run_result_not_an_exception(tmp_path
     )
 
     assert result.exit_code == SPAWN_FAILURE_EXIT_CODE
-    assert "could not start the container" in result.stderr
+    # The sandbox can fail at either step -- preparing the image or starting the container --
+    # and a missing binary now fails at the first. What must hold either way is that it comes
+    # back as a RunResult the classifier reads as `error`, never as an exception and never as
+    # a failing test.
+    assert "sandbox image" in result.stderr or "start the container" in result.stderr
+    assert "prguard-no-such-docker-binary" in result.stderr
+    assert result.timed_out is False
 
 
 def test_docker_is_recorded_as_isolated_and_says_which_image_was_used(tmp_path: Path) -> None:

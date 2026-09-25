@@ -25,6 +25,18 @@ rungs *mid-flight* after a 422:
 
 Rungs 1 and 2 are answered by ``LineMap.contains`` / ``LineMap.nearest`` (T2, spec §4.7), which
 resolve ties to the lower line. This module never re-derives what is in a hunk.
+
+**Where rung 1 puts the comment.** A specialist reports the *span* the finding is about —
+``app/orders.py:6-15``, usually opening at the symbol's ``def`` line. The ``def`` line is
+frequently untouched context that sits outside the hunk, while the lines the change actually
+edited sit a few rows below it. Anchoring on ``start_line`` alone therefore either relocated a
+perfectly anchorable comment onto rung 2 (with the apologetic "nearest reviewable line" banner)
+or, worse, pushed it onto a line *before* the finding via :meth:`LineMap.nearest`. So rung 1
+searches the finding's own span for a line the diff touched and anchors there —
+:func:`_anchor_in_span`. GitHub only accepts RIGHT-side anchors (§4.7), so a comment about
+deleted code lands on the line the deletion collapsed onto, which is exactly the in-hunk line
+inside the span. The ≤10-line rule is untouched: it is rung 2's, and rung 2 is only reached
+when the span contains no commentable line at all.
 """
 
 from __future__ import annotations
@@ -88,8 +100,21 @@ class RungAssignment:
 
     @property
     def is_relocated(self) -> bool:
-        """True when the comment sits on a different line than the issue (rung 2)."""
+        """True when the comment sits outside the issue's own span (rung 2).
+
+        Rung 1 may anchor on a line other than ``line`` — the first line of the span the diff
+        touched — but that anchor is still *inside* the finding, so it is placement, not
+        relocation, and it gets no "nearest reviewable line" banner.
+        """
         return self.mode == "inline_nearest"
+
+    @property
+    def anchors_whole_span(self) -> bool:
+        """True when the comment covers exactly the lines the finding reported."""
+        if self.anchor_line is None:
+            return False
+        start = self.anchor_start_line if self.anchor_start_line is not None else self.anchor_line
+        return start == self.line and self.anchor_line == self.end_line
 
     @property
     def delivery_mode(self) -> DeliveryMode:
@@ -237,18 +262,46 @@ def _assign_one(
     if line_map is None:
         # The file is not in the diff at all — GitHub will not take any comment on it (E1).
         return base
-    if line_map.contains(finding.start_line):
-        spans_hunk = finding.end_line > finding.start_line and line_map.contains(finding.end_line)
+    anchor = _anchor_in_span(line_map, finding.start_line, finding.end_line)
+    if anchor is not None:
+        anchor_start, anchor_line = anchor
         return replace(
             base,
             mode="inline_exact",
-            anchor_line=finding.end_line if spans_hunk else finding.start_line,
-            anchor_start_line=finding.start_line if spans_hunk else None,
+            anchor_line=anchor_line,
+            anchor_start_line=anchor_start if anchor_start != anchor_line else None,
         )
     nearest = line_map.nearest(finding.start_line, max_distance)
     if nearest is not None:
         return replace(base, mode="inline_nearest", anchor_line=nearest)
     return replace(base, mode="file_level")
+
+
+def _anchor_in_span(line_map: LineMap, start_line: int, end_line: int) -> tuple[int, int] | None:
+    """``(start, line)`` for the comment, drawn from the lines the diff touched in this span.
+
+    ``None`` means the finding's own span contains nothing GitHub will anchor on, which is the
+    only case that falls through to rung 2.
+
+    Two answers, in this order:
+
+    * **The whole span is in the diff** — a multi-line comment covering it exactly, which is
+      what a reader of ``Lines 6-15`` expects to see highlighted. Unchanged behaviour.
+    * **Part of the span is in the diff** — a single-line comment on the *first* touched line.
+      That is the top of the edit the finding is about, rather than the symbol's signature a
+      few rows above it; the full span is still reported in the comment body. Deterministic
+      (lowest line wins), so two runs over one diff place the comment identically.
+    """
+    covered = sorted(
+        line for line in line_map.commentable_lines if start_line <= line <= end_line
+    )
+    if not covered:
+        return None
+    if covered[0] == start_line and covered[-1] == end_line and len(covered) == (
+        end_line - start_line + 1
+    ):
+        return (start_line, end_line)
+    return (covered[0], covered[0])
 
 
 def _to_file_level(assignment: RungAssignment) -> RungAssignment:

@@ -136,6 +136,9 @@ class CoordinatedFinding:
     confidence: Annotated[float, Field(ge=0.0, le=1.0)] = 0.5
     provable: bool = False
     repro_hint: str | None = None
+    #: §6.12's optional remediation. Optional here for the same reason it is optional on the
+    #: specialist contract: a coordinator that omits it must cost us a "Fix:" line, not a run.
+    remediation: str | None = None
     sources: tuple[str, ...] = ()
     evidence: tuple[Evidence, ...] = ()
 
@@ -539,6 +542,7 @@ def _canonical_from_coordinated(
         confidence=kept.confidence,
         provable=kept.provable,
         repro_hint=kept.repro_hint,
+        remediation=kept.remediation,
         evidence=[item for item in kept.evidence if item.file_path in supplied],
     )
 
@@ -569,6 +573,7 @@ def _canonical_from_specialist(
         confidence=finding.confidence,
         provable=finding.provable,
         repro_hint=finding.repro_hint,
+        remediation=finding.remediation,
         evidence=list(finding.evidence),
     )
 
@@ -651,6 +656,7 @@ def _describe(specialist: str, finding: SpecialistFinding) -> str:
         f"  provable: {str(finding.provable).lower()}",
         f"  title: {finding.title}",
         f"  body: {finding.body_markdown}",
+        f"  remediation: {finding.remediation or '-'}",
     ]
     lines.extend(
         f"  evidence: {item.file_path}:{item.line}: {item.quote}" for item in finding.evidence

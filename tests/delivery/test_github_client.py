@@ -249,6 +249,61 @@ async def test_check_run_403_is_typed_so_the_gate_can_fall_through(
             await client.create_check_run(OWNER, REPO, {"name": "prguard/merge-gate"})
 
 
+async def test_list_tree_returns_only_the_blob_paths(github_mock: respx.Router) -> None:
+    """S2 discovers callers from this listing; a `tree` entry is a directory, not a caller."""
+    route = github_mock.get(f"/repos/{OWNER}/{REPO}/git/trees/{HEAD_SHA}").mock(
+        return_value=recorded("git_tree_buggy_calc")
+    )
+
+    async with make_client() as client:
+        paths = await client.list_tree(OWNER, REPO, ref=HEAD_SHA)
+
+    assert route.call_count == 1
+    assert route.calls[0].request.url.params["recursive"] == "1"
+    assert "app/orders.py" in paths, "the caller outside the diff must be discoverable"
+    assert "app" not in paths and "tests" not in paths, "directories are not files"
+
+
+async def test_list_tree_is_retried_because_a_read_has_no_side_effect(
+    github_mock: respx.Router,
+) -> None:
+    """Unlike `create_review`, a 502 here proves nothing happened — asking again is free."""
+    sleep = SleepRecorder()
+    route = github_mock.get(f"/repos/{OWNER}/{REPO}/git/trees/{HEAD_SHA}").mock(
+        side_effect=[
+            httpx.Response(502, json={"message": "Server Error"}),
+            recorded("git_tree_buggy_calc"),
+        ]
+    )
+
+    async with make_client(sleep) as client:
+        paths = await client.list_tree(OWNER, REPO, ref=HEAD_SHA)
+
+    assert route.call_count == 2
+    assert len(sleep.waits) == 1
+    assert "app/billing.py" in paths
+
+
+async def test_list_tree_404_is_typed_so_discovery_can_degrade(github_mock: respx.Router) -> None:
+    github_mock.get(f"/repos/{OWNER}/{REPO}/git/trees/{HEAD_SHA}").mock(
+        return_value=recorded("pr_404_not_found")
+    )
+
+    async with make_client() as client:
+        with pytest.raises(GitHubNotFoundError):
+            await client.list_tree(OWNER, REPO, ref=HEAD_SHA)
+
+
+async def test_list_tree_survives_a_body_without_a_tree(github_mock: respx.Router) -> None:
+    """A shape we did not expect is an empty search, never an exception inside S2 (§8.1)."""
+    github_mock.get(f"/repos/{OWNER}/{REPO}/git/trees/{HEAD_SHA}").mock(
+        return_value=httpx.Response(200, json={"sha": HEAD_SHA, "truncated": True})
+    )
+
+    async with make_client() as client:
+        assert await client.list_tree(OWNER, REPO, ref=HEAD_SHA) == ()
+
+
 async def test_an_unauthenticated_client_sends_no_authorization_header(
     github_mock: respx.Router,
 ) -> None:

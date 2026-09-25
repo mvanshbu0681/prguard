@@ -67,7 +67,8 @@ class Settings(BaseSettings):
 
     # --- LLM ---
     ANTHROPIC_API_KEY: str | None = None
-    LLM_PROVIDER: Literal["anthropic", "fake"] = "anthropic"
+    GEMINI_API_KEY: str | None = None
+    LLM_PROVIDER: Literal["anthropic", "gemini", "fake"] = "anthropic"
     MODEL_SPECIALIST: str = "claude-sonnet-5"
     MODEL_COORDINATOR: str = "claude-opus-5"
     MODEL_PROOF_GENERATOR: str = "claude-opus-5"
@@ -102,6 +103,11 @@ class Settings(BaseSettings):
     # --- context (§4.1 S2, E5/E6) ---
     MAX_FILES: int = 300
     MAX_DIFF_BYTES: int = 2_000_000
+    #: How many files *outside* the diff S2 may fetch to find the callers of a changed symbol
+    #: (§4.4 `blast_radius`/`reachability`). One tree listing plus at most this many bodies, so
+    #: a monorepo cannot fan a single review out into thousands of requests. 0 turns the search
+    #: off; the review then measures callers over the diff alone and says so.
+    RELATED_FILES_MAX: int = 40
 
     # --- GitHub (§4.7, §6.10) ---
     GITHUB_TOKEN: str | None = None
@@ -111,9 +117,28 @@ class Settings(BaseSettings):
     ALLOW_UNSIGNED_WEBHOOKS: bool = False
     GITHUB_DELIVERY_MODE: DeliveryModeSetting = "auto"
     GITHUB_API_BASE: str = "https://api.github.com"
+    #: Public origin of this deployment, used to build an absolute link back to a run.
+    #: GitHub rejects a relative `target_url` with 422 ("must use http(s) scheme"), which
+    #: knocked the gate off the commit-status rung all the way to dry_run. Unset means the
+    #: verdict still publishes -- it just carries no link.
+    PUBLIC_BASE_URL: str | None = None
     REVIEW_DRAFT_PRS: bool = False
     NEAREST_LINE_MAX_DISTANCE: int = 10
     GATE_CONTEXT_NAME: str = "prguard/merge-gate"
+
+    @property
+    def llm_api_key(self) -> str | None:
+        """The credential for whichever provider ``LLM_PROVIDER`` names.
+
+        One place decides this. Passing ``ANTHROPIC_API_KEY`` to a Gemini client is the kind
+        of mismatch that surfaces as an unauthenticated 401 halfway through a review rather
+        than at startup, so the mapping lives next to the keys themselves.
+        """
+        if self.LLM_PROVIDER == "gemini":
+            return self.GEMINI_API_KEY
+        if self.LLM_PROVIDER == "anthropic":
+            return self.ANTHROPIC_API_KEY
+        return None
 
     @field_validator("MODEL_FAILBACK_CHAIN", mode="before")
     @classmethod

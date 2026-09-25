@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 import base64
+import hashlib
 import json
 import os
 import shutil
@@ -233,6 +234,11 @@ def read_lines(path: Path) -> list[str]:
     return path.read_text(encoding="utf-8").splitlines()
 
 
+def git_blob_sha(data: bytes) -> str:
+    """The git object id of ``data`` — the same string `git hash-object` prints."""
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
 # --------------------------------------------------------------------------------------
 # checks
 # --------------------------------------------------------------------------------------
@@ -269,6 +275,7 @@ REQUIRED_GITHUB = [
     "file_contents_billing.json",
     "file_contents_checkout.json",
     "file_contents_404.json",
+    "git_tree_buggy_calc.json",
     "review_created.json",
     "review_422_out_of_hunk.json",
     "review_403_forbidden.json",
@@ -514,6 +521,61 @@ def check_file_contents_match_tree(report: Report) -> None:
                 f"{rel(path)}: recorded size {body.get('size')} != actual {len(expected)}"
             )
     report.require(checked >= 1, "no recorded file-contents response is tied to a committed file")
+
+
+@check
+def check_recorded_trees_match_repo_trees(report: Report) -> None:
+    """A recorded ``git/trees`` listing must be the committed tree, file for file and byte for byte.
+
+    S2's cross-file caller discovery reads nothing but this listing to decide which files
+    outside the diff are worth fetching, so a listing that has drifted from the tree is a
+    silently narrower review. The blob SHAs are real git object ids, which makes the check
+    exact rather than a name comparison.
+    """
+    checked = 0
+    for path in iter_json(GITHUB):
+        payload = load_json(path, report)
+        if payload is None or not isinstance(payload.get("body"), dict):
+            continue
+        entries = payload["body"].get("tree")
+        if not isinstance(entries, list):
+            continue
+        repo, ref = payload.get("repo_fixture"), payload.get("ref")
+        if not report.require(
+            bool(repo) and bool(ref),
+            f"{rel(path)}: a recorded tree listing must declare repo_fixture and ref",
+        ):
+            continue
+        checked += 1
+        root = REPOS / str(repo) / str(ref)
+        recorded_blobs = {
+            str(entry["path"]): str(entry.get("sha", ""))
+            for entry in entries
+            if isinstance(entry, dict) and entry.get("type") == "blob"
+        }
+        committed = {
+            str(item.relative_to(root)): git_blob_sha(item.read_bytes())
+            for item in sorted(root.rglob("*"))
+            if item.is_file() and "__pycache__" not in item.parts
+        }
+        for missing in sorted(set(committed) - set(recorded_blobs)):
+            report.fail(
+                f"{rel(path)}: {repo}/{ref}/{missing} is committed but not in the recorded "
+                "tree — discovery can never reach a file the listing does not name"
+            )
+        for extra in sorted(set(recorded_blobs) - set(committed)):
+            report.fail(f"{rel(path)}: lists {extra}, which is not in {repo}/{ref}")
+        for name in sorted(set(recorded_blobs) & set(committed)):
+            if recorded_blobs[name] != committed[name]:
+                report.fail(
+                    f"{rel(path)}: blob sha for {name} is {recorded_blobs[name]} but the "
+                    f"committed {repo}/{ref}/{name} hashes to {committed[name]}"
+                )
+    report.require(
+        checked >= 1,
+        "no recorded git/trees listing is tied to a committed tree — S2 cannot discover the "
+        "callers outside a diff without one",
+    )
 
 
 @check

@@ -221,6 +221,31 @@ class GitHubClient:
         raw = base64.b64decode(str(body.get("content") or ""))
         return raw.decode("utf-8", errors="replace")
 
+    async def list_tree(self, owner: str, repo: str, *, ref: str) -> tuple[str, ...]:
+        """``GET /repos/{o}/{r}/git/trees/{ref}?recursive=1`` — every blob path at ``ref``.
+
+        S2 needs this to find the files *outside* the diff that call a changed symbol: without
+        them ``blast_radius`` and ``reachability`` are measured over the diff alone and score
+        zero (§4.4). A read, so unlike :meth:`create_review` it keeps the retry policy — a 502
+        on a listing means nothing was learned, and asking again is free of side effects.
+
+        Only ``blob`` entries are returned, in the order GitHub listed them; trees and
+        submodules are not files anything can reference. A very large repository comes back
+        with ``truncated: true`` and a partial list, which narrows the search rather than
+        breaking it — the caller ranks and caps the candidates anyway.
+        """
+        body = await self._json(
+            "GET", f"/repos/{owner}/{repo}/git/trees/{ref}", params={"recursive": "1"}
+        )
+        entries = body.get("tree")
+        if not isinstance(entries, list):
+            return ()
+        return tuple(
+            str(entry["path"])
+            for entry in entries
+            if isinstance(entry, dict) and entry.get("type") == "blob" and entry.get("path")
+        )
+
     async def list_review_comments(
         self, owner: str, repo: str, number: int
     ) -> list[dict[str, Any]]:

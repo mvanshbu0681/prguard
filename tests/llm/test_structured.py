@@ -39,6 +39,25 @@ VALID = json.dumps(
     }
 )
 EMPTY_BUT_VALID = json.dumps({"specialist": "bugs", "model": "claude-sonnet-5", "findings": []})
+
+#: §6.12's `remediation`: what `SHARED.md` §4 asks every reviewer for.
+REMEDIATION = (
+    "Restore the `if rate is None: return price` early return, or normalise both callers to a "
+    "numeric rate and update their contracts and tests."
+)
+
+
+def _with_finding(**overrides: object) -> str:
+    """`VALID` with one field of its single finding changed — the §6.12 payload, edited."""
+    payload = json.loads(VALID)
+    payload["findings"][0].update(overrides)
+    return json.dumps(payload)
+
+
+WITH_REMEDIATION = _with_finding(
+    title="Preserve the no-promotion contract.", remediation=REMEDIATION
+)
+BAD_REMEDIATION = _with_finding(remediation=["restore the guard", "or normalise the callers"])
 MALFORMED = '{"specialist": "bugs", "model": "claude-sonnet-5", "findings": ['
 PROSE = "I reviewed the diff and honestly it all looks fine to me. Ship it!"
 SCHEMA_VIOLATION = json.dumps(
@@ -174,6 +193,42 @@ async def test_repair_is_attempted_at_most_once() -> None:
         await run(client)
 
     assert len(client.calls) == 2, "a second repair would be an unbounded retry loop"
+
+
+# ---------------------------------------------------------------------------
+# §6.12's `remediation` — required by the prompt, optional in the schema
+# ---------------------------------------------------------------------------
+
+
+async def test_a_remediation_survives_validation() -> None:
+    """The fix is the half of a finding that makes it actionable; it has to arrive intact."""
+    client = FakeLLMClient(script=[WITH_REMEDIATION])
+    result = await run(client)
+
+    assert result.findings[0].remediation == REMEDIATION
+
+
+async def test_a_finding_without_a_remediation_still_validates() -> None:
+    """Deliberately optional: a missing fix costs a line on the comment, never the finding.
+
+    `VALID` is the pre-remediation §6.12 payload verbatim, so this is also the regression test
+    for every recorded fixture and every caller written before the field existed.
+    """
+    client = FakeLLMClient(script=[VALID])
+    result = await run(client)
+
+    assert result.findings[0].remediation is None
+    assert len(client.calls) == 1
+
+
+async def test_a_malformed_remediation_takes_the_ordinary_repair_path() -> None:
+    """Optional does not mean unvalidated: the wrong type is a schema violation like any other."""
+    client = FakeLLMClient(script=[BAD_REMEDIATION, WITH_REMEDIATION])
+    result = await run(client)
+
+    assert result.findings[0].remediation == REMEDIATION
+    assert len(client.calls) == 2
+    assert "remediation" in client.calls[1].prompt
 
 
 # ---------------------------------------------------------------------------

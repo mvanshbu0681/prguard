@@ -42,6 +42,21 @@ an added O(n²) loop over a collection the diff shows is unbounded), never for a
 - A behaviour change that is obviously the *point* of the pull request. Read the title and
   description first; implementing the stated change is not a bug.
 
+## How to write it
+
+Your `title` is an imperative naming the contract to keep, not the exception that is raised (§3):
+*Preserve the no-promotion contract.*, not *`apply_discount` crashes with `TypeError` when rate is
+`None`*. The `TypeError` is the evidence and belongs in the body.
+
+Your `remediation` is usually one of three shapes, and saying which is most of the work:
+
+- **Restore what the change removed** — name the guard, default or early return, verbatim if it is
+  one line. Quote the base revision's version when the diff shows it.
+- **Update the callers instead** — when the new contract is the intended one, name every call site
+  in the supplied context that still uses the old one, and say their contracts and tests move too.
+- **Both are defensible** — then give both, one clause each, and let the author pick. That is not
+  indecision; the diff genuinely does not say which behaviour was wanted.
+
 ## Calibration
 
 Most correct pull requests produce zero findings from you. One finding that names the exact value
