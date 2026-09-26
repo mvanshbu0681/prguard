@@ -4,7 +4,7 @@
     {
       "name": "prguard-web",
       "runtimeExecutable": "/Users/vanshmehta/.hermes/node/bin/node",
-      "runtimeArgs": ["web/node_modules/next/dist/bin/next", "dev", "web", "-p", "3401"],
+      "runtimeArgs": ["apps/web/node_modules/next/dist/bin/next", "dev", "apps/web", "-p", "3401"],
       "port": 3401
     }
   ]

@@ -1,7 +1,7 @@
 // OWNER: t2a (wave 1).
 //
 // `npm run api:gen` regenerates the typed client in src/api from the COMMITTED
-// OpenAPI document (web/openapi/openapi.json, extracted from the backend at
+// OpenAPI document (apps/web/openapi/openapi.json, extracted from the backend at
 // eeb1be8, plan A2). Never a live URL: builds are offline. The output is
 // committed; `npm run api:check` regenerates into a temp directory with this same
 // config and fails on any difference.
