@@ -1,0 +1,25 @@
+{
+  "name": "specialist_bugs_empty",
+  "kind": "specialist_output",
+  "valid": true,
+  "model": "claude-sonnet-5",
+  "prompt_key": "specialist:bugs:pr_42_clean",
+  "notes": "An empty findings list is a valid and *good* answer (\u00a76.12, \u00a73 Tier 3). E24 depends on this: the run posts a short body, the gate is success, and no nitpick is manufactured to look busy.",
+  "response_text": "{\n  \"specialist\": \"bugs\",\n  \"model\": \"claude-sonnet-5\",\n  \"findings\": [],\n  \"skipped_files\": [\n    {\n      \"path\": \"package-lock.json\",\n      \"reason\": \"lockfile\"\n    }\n  ],\n  \"notes\": \"Nothing worth saying about this diff.\"\n}",
+  "parsed": {
+    "specialist": "bugs",
+    "model": "claude-sonnet-5",
+    "findings": [],
+    "skipped_files": [
+      {
+        "path": "package-lock.json",
+        "reason": "lockfile"
+      }
+    ],
+    "notes": "Nothing worth saying about this diff."
+  },
+  "context": {
+    "repo_fixture": "buggy_calc",
+    "ref": "head"
+  }
+}

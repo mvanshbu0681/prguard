@@ -1,0 +1,798 @@
+{
+  "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4821,
+    "title": "Resolve account currency at charge time",
+    "author": "mhollis",
+    "head_sha": "9c2d4b1f6a8e3c5d7b9f1a2e4c6d8b0f3a5c7e92",
+    "base_sha": "7c41a09e3b5d2f8a1c6e4b9d7f0a2c5e8b3d6f19",
+    "url": "https://github.com/acme/checkout-service/pull/4821"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 7,
+    "files_reviewed": 6,
+    "files_excluded": 1,
+    "excluded_reasons": {
+      "uv.lock": "lockfile"
+    },
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "commit_status",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": [
+      "a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2442026114,
+    "event": "COMMENT",
+    "comments_posted": 3,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 1,
+      "file_level": 1,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 12,
+    "published": 3,
+    "suppressed": 1,
+    "dropped": 7,
+    "disproven": 1,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 1.4496,
+    "input_tokens": 97763,
+    "output_tokens": 52484,
+    "cache_read_tokens": 201759
+  },
+  "timing": {
+    "queued_at": "2026-09-23T11:46:01.902000Z",
+    "started_at": "2026-09-23T11:46:02.314000Z",
+    "finished_at": "2026-09-23T11:46:43.514000Z",
+    "duration_seconds": 41.2
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": "70f2459184df78fcdcbae1df66c153908fbaa353d9d8658c11b4b31d5d67333d",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "unguarded_none_attribute",
+      "title": "charge() dereferences a None currency when the account has no default",
+      "body_markdown": "`charge()` now takes the settlement currency from `account.default_currency` (line 41), which is `None` for every account created before the account-settings page. On that path lines 42-44 return `None` from a function annotated `-> Charge`, and `create_order()` in `app/api/checkout.py` reads `result.id` on the next line. At base the currency came from `account.currency`, which signup always sets.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 41,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/charge.py::charge"
+      },
+      "severity": {
+        "band": "critical",
+        "score": 0.81,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.7,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.3,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × proven × blast radius 0.70 × file tested, symbol not × churn 0.30",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_7e3f1a.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/charge.py::charge.\n\nClaim: charge() dereferences a None currency when the account has no default.\nPasses at base, where the legacy account is charged in \"usd\". Fails at head.\n\"\"\"\n\nimport pytest\n\nfrom app.billing import accounts, gateway\nfrom app.billing.accounts import resolve_account\nfrom app.billing.charge import charge\n\n#: A row exactly as the v1 ledger import wrote it: a currency, no default_currency.\nLEGACY_ROW = {\n    \"id\": \"acct_7f31\",\n    \"currency\": \"usd\",\n    \"country\": \"US\",\n    \"billing_email\": \"ap@northwind.test\",\n}\n\n\nclass RecordingGateway:\n    \"\"\"Stands in for the processor, so the repro never leaves the sandbox.\"\"\"\n\n    def __init__(self):\n        self.sent = []\n\n    def create_charge(self, account_id, amount_minor, currency):\n        self.sent.append((account_id, amount_minor, currency))\n        return \"ch_repro_%04d\" % len(self.sent)\n\n\n@pytest.fixture(autouse=True)\ndef isolated_billing(monkeypatch):\n    monkeypatch.setattr(accounts, \"_ROWS\", {LEGACY_ROW[\"id\"]: dict(LEGACY_ROW)})\n    monkeypatch.setattr(gateway, \"client\", RecordingGateway())\n\n\ndef test_charge_uses_account_currency():\n    acct = resolve_account(\"acct_7f31\")\n    assert charge(acct, 1200).currency == \"usd\"\n",
+        "command": "pytest tests/test_repro_7e3f1a.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.42s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n______________________ test_charge_uses_account_currency _______________________\n\n    def test_charge_uses_account_currency():\n        acct = resolve_account(\"acct_7f31\")\n>       assert charge(acct, 1200).currency == \"usd\"\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AttributeError: 'NoneType' object has no attribute 'currency'\n\ntests/test_repro_7e3f1a.py:41: AttributeError\n1 failed in 0.39s"
+        },
+        "duration_ms": 1304,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 44,
+        "github_comment_id": 2080522574
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.228000Z"
+    },
+    {
+      "id": "5d20b7f4-9c1a-4e8b-a6d3-1f7e9b2c4a60",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": "efa42746ed51bac1a34c367ed71a276d6df51dc60d0b088736c4cf9d8bff303b",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "optional_return_unhandled",
+      "title": "get_rate() may return None for an unsupported currency",
+      "body_markdown": "`get_rate()` looks the code up in `_RATES`, which carries four currencies. For any other code the lookup yields `None`, and `_to_settlement()` in `app/billing/charge.py` multiplies `amount_minor * rate` with it, so a charge in an unsupported currency raises `TypeError` deep inside `charge()` instead of failing with a clear error.",
+      "location": {
+        "file_path": "app/billing/rates.py",
+        "start_line": 19,
+        "end_line": 23,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/rates.py::get_rate"
+      },
+      "severity": {
+        "band": "info",
+        "score": 0.655,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.3,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.1,
+          "proof_confidence": 0.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × untested × blast radius 0.30 × churn 0.10",
+        "llm_severity_hint": "medium",
+        "notes": [
+          "clamped to info: repro passed at head"
+        ]
+      },
+      "proof": {
+        "status": "disproven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_b04d19.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/rates.py::get_rate.\n\nClaim: get_rate() may return None for an unsupported currency.\nFails if get_rate() hands back None for a code the rate table does not carry.\n\"\"\"\n\nfrom app.billing.rates import get_rate\n\n\ndef test_get_rate_never_returns_none_for_an_unsupported_code():\n    try:\n        rate = get_rate(\"xts\")\n    except ValueError:\n        return\n    assert rate is not None\n",
+        "command": "pytest tests/test_repro_b04d19.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.58s"
+        },
+        "head": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.61s"
+        },
+        "duration_ms": 1709,
+        "deps_install_ok": true
+      },
+      "status": "disproven",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.229400Z"
+    },
+    {
+      "id": "c83e61a9-2d4f-4b7a-9e05-6a1d3f8c2b97",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": "b538ea7812d7debe84ea9b4707c683081c345da5d8ce37ffd2c5333970e7b1fd",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "currency_exponent_inverted",
+      "title": "Scale zero-decimal currencies up, not down, in _to_settlement()",
+      "body_markdown": "`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` returns `0`, where 1200 JPY is 808 US cents at the table's rate. This change sends every account's `default_currency` through that line, including the Japanese accounts the account-settings page now lets pick `jpy`.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 34,
+        "end_line": 35,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/billing/charge.py::_to_settlement"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.485,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.3,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × blast radius 0.20 × churn 0.30",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "inconclusive",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_2c9e40.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/charge.py::_to_settlement.\n\nClaim: zero-decimal currencies are scaled down instead of up.\n1200 JPY at 0.006734 USD per JPY is 8.08 USD, which is 808 US cents.\n\"\"\"\n\nfrom app.billing.charge import _to_settlement\n\n\ndef test_zero_decimal_currency_settles_in_cents():\n    assert _to_settlement(1200, \"jpy\") == 808\n",
+        "command": "pytest tests/test_repro_2c9e40.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_________________ test_zero_decimal_currency_settles_in_cents __________________\n\n    def test_zero_decimal_currency_settles_in_cents():\n>       assert _to_settlement(1200, \"jpy\") == 808\nE       AssertionError: assert 0 == 808\nE        +  where 0 = _to_settlement(1200, 'jpy')\n\ntests/test_repro_2c9e40.py:11: AssertionError\n1 failed in 0.47s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_________________ test_zero_decimal_currency_settles_in_cents __________________\n\n    def test_zero_decimal_currency_settles_in_cents():\n>       assert _to_settlement(1200, \"jpy\") == 808\nE       AssertionError: assert 0 == 808\nE        +  where 0 = _to_settlement(1200, 'jpy')\n\ntests/test_repro_2c9e40.py:11: AssertionError\n1 failed in 0.45s"
+        },
+        "duration_ms": 1816,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_nearest",
+        "delivered_line": 38,
+        "github_comment_id": 2685271671
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.230800Z"
+    },
+    {
+      "id": "250cbd2b-e445-4822-84ae-d78e8f182a93",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": "a291b2d72ed2afc2c64cc27b4b76bf406ff2277a49146f32ead34ef417c9c909",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "float_money_formatting",
+      "title": "Format money in `_line()` from integer cents, not float division",
+      "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
+      "location": {
+        "file_path": "app/api/checkout.py",
+        "start_line": 64,
+        "end_line": 64,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/api/checkout.py::_line"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.3,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × blast radius 0.30 × churn 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 3,
+        "first_seen_run_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "7e960d13-654b-46d3-bb0d-8d44e62bc62a",
+        "scope": "file",
+        "reason": "Display-only: the summary string is never parsed back, and totals are computed in integer cents upstream. Revisit if the summary ever feeds an invoice.",
+        "created_by": "priya-raman",
+        "expires_at": null
+      },
+      "created_at": "2026-09-23T11:46:28.232200Z"
+    },
+    {
+      "id": "12798920-4157-4232-8c30-cb17694d25fb",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": "64115d66858bda8280bd8e5ff1de0edc2778cce2e8404a71b9882de4fceac6bc",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "hardcoded_currency",
+      "title": "Render the order summary in the charge's currency, not a literal \"usd\"",
+      "body_markdown": "`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line 70). With this change a charge settles in the account's `default_currency`, so for a EUR account the response's `currency` field says `eur` while the summary beside it says `usd`. The two copies of the currency now have to change together, and nothing ties them.",
+      "location": {
+        "file_path": "app/api/checkout.py",
+        "start_line": 70,
+        "end_line": 70,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/api/checkout.py::render_summary"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.69,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.15,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × untested × unproven × churn 0.15",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "file_level",
+        "delivered_line": 70,
+        "github_comment_id": 2556236437
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "9beb6766-763b-46f5-b429-6858bc628aca",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.233600Z"
+    },
+    {
+      "id": "2fcd98b5-f93d-4147-b7ba-08d601e11211",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "stale_import_path",
+      "title": "Import `MINOR_UNITS` from `app.billing.currency`, where this change moved it",
+      "body_markdown": "`charge.py` defines `MINOR_UNITS` locally while `app/billing/currency.py` exports the same table, so the two copies will drift.",
+      "location": {
+        "file_path": "app/billing/currency.py",
+        "start_line": 1,
+        "end_line": 12,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.235000Z"
+    },
+    {
+      "id": "c2add9f3-4f28-458c-bfac-369150d3bd77",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "weak_rounding_assertion",
+      "title": "Pin `test_refund_rounding` to an amount that actually rounds",
+      "body_markdown": "`test_refund_rounding` asserts `_to_settlement(333, \"usd\") == 333`, an input the conversion never has to round, so a rounding regression would pass.",
+      "location": {
+        "file_path": "tests/billing/test_charge.py",
+        "start_line": 41,
+        "end_line": 42,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.236400Z"
+    },
+    {
+      "id": "f720620c-586c-4dda-92e8-6ba4d1504ff8",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unclear_helper_name",
+      "title": "Name `_to_settlement()` after the unit it returns",
+      "body_markdown": "`_to_settlement()` returns US cents; the name does not say so.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 32,
+        "end_line": 34,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.237800Z"
+    },
+    {
+      "id": "0c38ca2b-a54a-4739-8db6-5e3c52bb75aa",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "mutable_rate_table",
+      "title": "Make `_RATES` read-only so request code cannot change a rate",
+      "body_markdown": "`_RATES` is a module-level dict, so any code path could assign into it and move every later charge onto a different rate.",
+      "location": {
+        "file_path": "app/billing/rates.py",
+        "start_line": 18,
+        "end_line": 20,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.239200Z"
+    },
+    {
+      "id": "d7f01857-11cb-45cd-8ff0-ef2d706c602f",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_regression_test",
+      "title": "Pin `charge()` for an account that has no default currency",
+      "body_markdown": "`tests/billing/test_charge.py` adds `default_currency` to its only fixture row, so no test exercises the legacy row this change stops handling.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 41,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.240600Z"
+    },
+    {
+      "id": "1895fcee-4772-4f88-872d-f36b071ec759",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "optional_result_unannotated",
+      "title": "Keep `charge()` returning a `Charge` or raising, never `None`",
+      "body_markdown": "`charge()` is annotated `-> Charge` and now returns `None` on one path, which every caller has to discover by reading the body.",
+      "location": {
+        "file_path": "app/billing/charge.py",
+        "start_line": 41,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.242000Z"
+    },
+    {
+      "id": "8da01a14-7617-4471-9ade-695a5beca4f6",
+      "review_id": "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "optional_return_unhandled",
+      "title": "Reject unsupported currency codes before `get_rate()` is called",
+      "body_markdown": "An unsupported code in `default_currency` reaches `get_rate()`, which the specialist read as returning `None`, and the charge then fails with a `TypeError`.",
+      "location": {
+        "file_path": "app/billing/rates.py",
+        "start_line": 19,
+        "end_line": 23,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-23T11:46:28.243400Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#4821` in 41.2s · [full run ↗](https://witness.acme.internal/runs/4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 12 |\n| dropped at the coordinator | 4 |\n| deduplicated | 3 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 1 inline at the exact line, 1 at the nearest line in a diff hunk, 1 at file level. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "9c2d4b1f6a8e3c5d7b9f1a2e4c6d8b0f3a5c7e92",
+    "comments": [
+      {
+        "path": "app/billing/charge.py",
+        "body": "**`proof_status: proven`** · severity **`0.810`** critical\n\n`charge()` now takes the settlement currency from `account.default_currency` (line 41), which is `None` for every account created before the account-settings page. On that path lines 42-44 return `None` from a function annotated `-> Charge`, and `create_order()` in `app/api/checkout.py` reads `result.id` on the next line. At base the currency came from `account.currency`, which signup always sets.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `7c41a09` | `1 passed in 0.42s` |\n| head | `9c2d4b1` | `1 failed in 0.39s` |\n\n<details><summary>terminal output at head <code>9c2d4b1</code></summary>\n\n    E       AttributeError: 'NoneType' object has no attribute 'currency'\n    tests/test_repro_7e3f1a.py:41: AttributeError\n    1 failed in 0.39s\n\n</details>\n\n**Severity `0.810`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.105` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. Two other findings in this review are advisory and do not block.\n\n`fingerprint 70f24591…333d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/a91f3c2e-4b7d-4e19-8c35-0d6f2a9b8b4d#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
+        "line": 44,
+        "side": "RIGHT",
+        "start_line": 41,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/billing/charge.py",
+        "body": "> Nearest reviewable line. The issue is at `app/billing/charge.py:34`.\n\n**`proof_status: inconclusive`** · severity **`0.485`** medium\n\n`_to_settlement()` multiplies by `MINOR_UNITS.get(currency, 100) / 100`, so for JPY, whose exponent is 0, it divides the amount by 100: `_to_settlement(1200, \"jpy\")` returns `0`, where 1200 JPY is 808 US cents at the table's rate. This change sends every account's `default_currency` through that line, including the Japanese accounts the account-settings page now lets pick `jpy`.\n\n**Proof** — a repro test was executed at both SHAs and failed at both, so the failure predates this pull request:\n\n| | SHA | result |\n|---|---|---|\n| base | `7c41a09` | `1 failed in 0.47s` |\n| head | `9c2d4b1` | `1 failed in 0.45s` |\n\n**Severity `0.485`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c83e61a9-2d4f-4b7a-9e05-6a1d3f8c2b97#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint b538ea78…b1fd` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c83e61a9-2d4f-4b7a-9e05-6a1d3f8c2b97#suppress)",
+        "line": 38,
+        "side": "RIGHT"
+      },
+      {
+        "path": "app/api/checkout.py",
+        "body": "> File-level comment. The issue is at `app/api/checkout.py:70`.\n\n**`proof_status: not_attempted`** · severity **`0.690`** high\n\n`render_summary()` still sets `lines[\"currency\"] = \"usd\"` (line 70). With this change a charge settles in the account's `default_currency`, so for a EUR account the response's `currency` field says `eur` while the summary beside it says `usd`. The two copies of the currency now have to change together, and nothing ties them.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.690`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/12798920-4157-4232-8c30-cb17694d25fb#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 64115d66…c6bc` · [dismiss with a reason ↗](https://witness.acme.internal/findings/12798920-4157-4232-8c30-cb17694d25fb#suppress)",
+        "subject_type": "file"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41"
+}

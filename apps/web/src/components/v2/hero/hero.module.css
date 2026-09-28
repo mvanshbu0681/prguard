@@ -1,0 +1,438 @@
+/* Witness v2 hero, on the otoma8.com system (values measured from the live site):
+   a 12px white inset around a 28px-radius photographic frame, Plus Jakarta Sans
+   60/600/-1.5px, Geist Mono 14px +1.68px pills, 20px cards with a 5% hairline
+   and no shadow, and a row of product cards drifting under the headline. */
+
+.wrap {
+  --ink: #131313;
+  --lime: #cbf857;
+  --blue: #1e6fd9;
+  --hair: rgba(0, 0, 0, 0.05);
+  --fail: #e5484d;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.frame {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100svh - 24px);
+  border-radius: 28px;
+  color: #ffffff;
+  font-family: var(--font-v2-sans), system-ui, sans-serif;
+}
+
+.photoBox {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -2;
+  height: 146%;
+}
+
+.photo {
+  object-fit: cover;
+  object-position: center top;
+}
+
+/* A little depth at the top for the headline, a little haze at the bottom so
+   the white cards separate from the white cloud. */
+.shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(6, 34, 92, 0.34) 0%, rgba(6, 34, 92, 0.1) 34%, rgba(6, 34, 92, 0) 56%),
+    linear-gradient(0deg, rgba(210, 228, 248, 0.34) 0%, rgba(210, 228, 248, 0) 38%);
+}
+
+/* ---------- nav ---------- */
+
+.nav {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  text-decoration: none;
+}
+
+.logoMark {
+  flex: none;
+  color: var(--lime);
+}
+
+.links {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  gap: 36px;
+  transform: translateX(-50%);
+}
+
+.link {
+  color: rgba(255, 255, 255, 0.85);
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 14px;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 200ms ease;
+}
+
+.link:hover {
+  color: #ffffff;
+}
+
+/* ---------- buttons ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 1.68px;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    -webkit-backdrop-filter 220ms ease,
+    backdrop-filter 220ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pill:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
+.navCta {
+  height: 40px;
+  padding: 10px 20px;
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.navCta:hover {
+  background: #d6fb77;
+}
+
+/* The hero sits on a photograph, and this pill lands on the brightest part of it --
+   a white cloud. A white-tinted glass with white text disappears there: blurring white
+   gives you white. So the backdrop filter darkens and desaturates what is behind the
+   pill as well as blurring it, which manufactures contrast wherever it happens to sit
+   rather than relying on the photo to supply it. */
+.glass {
+  position: relative;
+  height: 48px;
+  padding: 14px 28px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  color: #ffffff;
+  font-weight: 500;
+  /* the 0.62 brightness is the whole fix: it pulls the cloud down far enough for white
+     type to read, while blur + saturate keep it looking like glass over sky */
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) brightness(0.62);
+  backdrop-filter: blur(18px) saturate(1.4) brightness(0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 10px 28px rgba(6, 26, 62, 0.3);
+  /* a last line of defence for the glyphs themselves, independent of the backdrop */
+  text-shadow: 0 1px 3px rgba(5, 20, 48, 0.55);
+}
+
+.glass:hover {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.16));
+  border-color: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5) brightness(0.55);
+  backdrop-filter: blur(18px) saturate(1.5) brightness(0.55);
+}
+
+/* Safari before 18 and Firefox with backdrop-filter disabled get no darkening at all,
+   which is exactly the invisible-button bug. Give them an opaque tinted fill instead. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: linear-gradient(160deg, rgba(9, 32, 72, 0.72), rgba(9, 32, 72, 0.58));
+  }
+
+  .glass:hover {
+    background: linear-gradient(160deg, rgba(9, 32, 72, 0.82), rgba(9, 32, 72, 0.68));
+  }
+}
+
+.glass:focus-visible {
+  outline-color: #ffffff;
+}
+
+.lime {
+  gap: 16px;
+  height: 48px;
+  padding: 4px 4px 4px 28px;
+  background: var(--lime);
+  color: var(--ink);
+}
+
+.lime:hover {
+  background: #d6fb77;
+}
+
+.chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: #0a0a0a;
+  color: #ffffff;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lime:hover .chip {
+  transform: rotate(45deg);
+}
+
+/* ---------- headline block ---------- */
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 76px 24px 0;
+  text-align: center;
+}
+
+.h1 {
+  margin: 0;
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+  font-size: 60px;
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -1.5px;
+}
+
+.soft {
+  display: block;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.sub {
+  max-width: 640px;
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+/* ---------- the drifting card row ---------- */
+
+.row {
+  margin-top: 64px;
+  /* Fixed-pixel stops (not percentages) so the fade band stays a constant width
+     regardless of viewport: at 1440px an 11% stop ate ~79% of the first card's
+     200px width, washing its label out; a constant ~64px keeps every card's
+     text legible past the very edge at every width. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+  overflow: hidden;
+}
+
+.track {
+  display: flex;
+  gap: 16px;
+  width: max-content;
+  padding: 4px 0;
+  animation: drift 64s linear infinite;
+}
+
+.row:hover .track {
+  animation-play-state: paused;
+}
+
+@keyframes drift {
+  to {
+    transform: translateX(calc(-50% - 8px));
+  }
+}
+
+.proofWrap {
+  display: flex;
+  justify-content: center;
+  margin: 28px 16px 32px;
+}
+
+.proofLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(18, 40, 53, 0.28);
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+  font-size: 14px;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.proofLine b {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--lime);
+}
+
+/* ---------- entrance ---------- */
+
+.rise {
+  animation: rise 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+  .track {
+    animation: none;
+  }
+  .chip,
+  .pill {
+    transition: none;
+  }
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 1024px) {
+  .links {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 8px;
+  }
+  .frame {
+    border-radius: 22px;
+  }
+  .nav {
+    padding: 16px 16px 0;
+  }
+  .content {
+    padding-top: 56px;
+  }
+  .content {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  /* 32px keeps "AI code review that" on one line at 390px, so the headline breaks
+     exactly where the desktop one does instead of orphaning "that". */
+  .h1 {
+    font-size: 32px;
+    letter-spacing: -0.7px;
+  }
+  .proofLine {
+    font-size: 13px;
+  }
+  .sub {
+    font-size: 15px;
+    line-height: 24px;
+  }
+  .row {
+    margin-top: 44px;
+  }
+  /* Nav: on phones "Open dashboard" at full length left only ~16px next to the
+     logo at 360px wide. Grow both tap targets to 44px and drop to the shorter
+     label so the pill has real breathing room instead of hugging the logo. */
+  .logo {
+    padding: 6px 0;
+    margin: -6px 0;
+  }
+  .navCta {
+    height: 44px;
+    padding: 10px 16px;
+  }
+  .navCtaFull {
+    display: none;
+  }
+}
+
+@media (min-width: 641px) {
+  .navCtaShort {
+    display: none;
+  }
+}
+
+/* Landscape phones (e.g. 844x390) keep the desktop-size headline and spacing
+   at widths above the 640px portrait tier, so the headline + CTAs get pushed
+   past the first ~390px of viewport height. Compact the nav/headline/subtitle/
+   CTA spacing so headline, subtitle and both CTAs sit inside the fold; the
+   drifting card row may start below it. Portrait and desktop are untouched —
+   this only fires on short, wide (landscape) viewports. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .nav {
+    padding: 10px 20px 0;
+  }
+  .content {
+    padding: 14px 24px 0;
+  }
+  .h1 {
+    font-size: 32px;
+    letter-spacing: -0.7px;
+    line-height: 1.1;
+  }
+  .sub {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .actions {
+    margin-top: 14px;
+  }
+  .row {
+    margin-top: 20px;
+  }
+  .proofWrap {
+    margin: 12px 16px 16px;
+  }
+}

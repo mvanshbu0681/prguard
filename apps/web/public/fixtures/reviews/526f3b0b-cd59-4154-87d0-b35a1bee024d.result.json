@@ -1,0 +1,199 @@
+{
+  "review_id": "526f3b0b-cd59-4154-87d0-b35a1bee024d",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "ledger",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 344,
+    "title": "Drop the legacy ledger_v1 tables",
+    "author": "dmitri-k",
+    "head_sha": "c1cbdbe4730f4b3222ae0314fd209c2b11393971",
+    "base_sha": "326a9079bc7b3c8f99c53588f4329530a0a53970",
+    "url": "https://github.com/acme/ledger/pull/344"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2651275892,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 2,
+    "published": 1,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.8792,
+    "input_tokens": 68017,
+    "output_tokens": 35353,
+    "cache_read_tokens": 169449
+  },
+  "timing": {
+    "queued_at": "2026-09-21T09:47:06.130382Z",
+    "started_at": "2026-09-21T09:47:07.023659Z",
+    "finished_at": "2026-09-21T09:47:32.892659Z",
+    "duration_seconds": 25.869
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "d6fdb98e-509c-47c8-9853-d1a898ccb952",
+      "review_id": "526f3b0b-cd59-4154-87d0-b35a1bee024d",
+      "fingerprint": "41e90164394b5d814ed7e7e84ce32f744d3053e3a9f6783beca40db4e3e55ee0",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "irreversible_downgrade",
+      "title": "downgrade() recreates the ledger_v1 tables empty; say so in the migration",
+      "body_markdown": "`downgrade()` recreates `ledger_v1_entries` without its rows (line 25). That is the only possible downgrade, and a comment or a raised `NotImplementedError` would stop anyone expecting the data back.",
+      "location": {
+        "file_path": "migrations/versions/0091_drop_ledger_v1.py",
+        "start_line": 25,
+        "end_line": 27,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "migrations/versions/0091_drop_ledger_v1.py::downgrade"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 0.0,
+          "blast_radius": 0.0,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 1.0,
+          "churn": 0.05,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × untested × unproven × churn 0.05",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 27,
+        "github_comment_id": 2020802983
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "526f3b0b-cd59-4154-87d0-b35a1bee024d",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T09:47:29.945659Z"
+    },
+    {
+      "id": "c76c0738-4a36-4d8f-be85-48b6fd4328c8",
+      "review_id": "526f3b0b-cd59-4154-87d0-b35a1bee024d",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_return_annotation",
+      "title": "Annotate the return type of `upgrade()`",
+      "body_markdown": "`upgrade()` is the only function in `migrations/versions/0091_drop_ledger_v1.py` without a return annotation.",
+      "location": {
+        "file_path": "migrations/versions/0091_drop_ledger_v1.py",
+        "start_line": 11,
+        "end_line": 13,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-21T09:47:29.947059Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#344` in 25.9s · [full run ↗](https://witness.acme.internal/runs/526f3b0b-cd59-4154-87d0-b35a1bee024d)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "c1cbdbe4730f4b3222ae0314fd209c2b11393971",
+    "comments": [
+      {
+        "path": "migrations/versions/0091_drop_ledger_v1.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`downgrade()` recreates `ledger_v1_entries` without its rows (line 25). That is the only possible downgrade, and a comment or a raised `NotImplementedError` would stop anyone expecting the data back.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/d6fdb98e-509c-47c8-9853-d1a898ccb952#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 41e90164…5ee0` · [dismiss with a reason ↗](https://witness.acme.internal/findings/d6fdb98e-509c-47c8-9853-d1a898ccb952#suppress)",
+        "line": 27,
+        "side": "RIGHT",
+        "start_line": 25,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=526f3b0b-cd59-4154-87d0-b35a1bee024d"
+}

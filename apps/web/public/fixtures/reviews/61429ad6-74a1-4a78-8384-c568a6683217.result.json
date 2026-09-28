@@ -1,0 +1,121 @@
+{
+  "review_id": "61429ad6-74a1-4a78-8384-c568a6683217",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 58,
+    "title": "Retry failed webhooks with exponential backoff",
+    "author": "kwame-a",
+    "head_sha": "55cb1a5d8c120e3359d2804d061e34a22709d5f9",
+    "base_sha": "ad12b5b26c169dec9b8be9ee26d0517eb53e064a",
+    "url": "https://github.com/acme/notifications/pull/58"
+  },
+  "risk_tier": "standard",
+  "context": {
+    "files_changed": 3,
+    "files_reviewed": 3,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2749410547,
+    "event": "COMMENT",
+    "comments_posted": 0,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 1,
+    "published": 0,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.6644,
+    "input_tokens": 48089,
+    "output_tokens": 27705,
+    "cache_read_tokens": 76872
+  },
+  "timing": {
+    "queued_at": "2026-08-30T09:40:43.515242Z",
+    "started_at": "2026-08-30T09:40:43.697901Z",
+    "finished_at": "2026-08-30T09:41:06.273901Z",
+    "duration_seconds": 22.576
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "126c007f-1f10-4599-8cff-adb33a6bac4c",
+      "review_id": "61429ad6-74a1-4a78-8384-c568a6683217",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_edge_case_test",
+      "title": "Cover the empty-input branch of `_sign()`",
+      "body_markdown": "`_sign()` has no test for an empty input.",
+      "location": {
+        "file_path": "app/workers/webhooks.py",
+        "start_line": 42,
+        "end_line": 44,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-30T09:41:03.572901Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#58` in 22.6s · [full run ↗](https://witness.acme.internal/runs/61429ad6-74a1-4a78-8384-c568a6683217)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 1 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: nothing to deliver, no finding was published. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "55cb1a5d8c120e3359d2804d061e34a22709d5f9",
+    "comments": []
+  },
+  "audit_url": "/v1/audit?review_id=61429ad6-74a1-4a78-8384-c568a6683217"
+}

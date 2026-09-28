@@ -1,0 +1,79 @@
+{
+  "source": "spec §4.7 'Delivery ladder' and §7 E1 — inline_exact → inline_nearest → file_level → summary_only, and nothing is ever dropped.",
+  "files_fixture": "github/pr_42_files.json",
+  "nearest_line_max_distance": 10,
+  "in_hunk_right_side_lines": {
+    "app/billing.py": [36, 37, 38, 39, 40, 41, 42, 43],
+    "app/checkout.py": [85, 86, 87, 88, 89, 90, 91]
+  },
+  "notes": "Recomputed from the recorded diff by verify_corpus.py, so these rungs cannot drift from the patch. Two of the cases sit either side of the ≤10 boundary on purpose: line 101 is exactly 10 lines from the nearest in-hunk line and stays inline, line 102 is 11 and must demote.",
+  "findings": [
+    {
+      "id": "f-exact",
+      "file_path": "app/billing.py",
+      "line": 41,
+      "expected_rung": "inline_exact",
+      "anchor_line": 41,
+      "why": "The changed line itself: on the RIGHT side, inside a hunk. Rung 1."
+    },
+    {
+      "id": "f-nearest",
+      "file_path": "app/checkout.py",
+      "line": 97,
+      "expected_rung": "inline_nearest",
+      "anchor_line": 91,
+      "why": "Six lines past the end of the hunk. Comment goes on line 91 with the body prefixed '> Nearest reviewable line. The issue is at `app/checkout.py:97`.'"
+    },
+    {
+      "id": "f-nearest-boundary",
+      "file_path": "app/checkout.py",
+      "line": 101,
+      "expected_rung": "inline_nearest",
+      "anchor_line": 91,
+      "why": "Exactly NEAREST_LINE_MAX_DISTANCE away. The bound is inclusive, so this still goes inline."
+    },
+    {
+      "id": "f-file-boundary",
+      "file_path": "app/checkout.py",
+      "line": 102,
+      "expected_rung": "file_level",
+      "anchor_line": null,
+      "why": "One line further than f-nearest-boundary: 11 > 10, so it demotes to a file-level comment with subject_type 'file'."
+    },
+    {
+      "id": "f-file-far",
+      "file_path": "app/checkout.py",
+      "line": 140,
+      "expected_rung": "file_level",
+      "anchor_line": null,
+      "why": "In a changed file but far from every hunk. Rung 3."
+    },
+    {
+      "id": "f-summary",
+      "file_path": "app/receipts.py",
+      "line": 13,
+      "expected_rung": "summary_only",
+      "anchor_line": null,
+      "why": "The file is not in the diff at all, so GitHub will not take a comment on it. Rung 4: a row in the review body's 'Findings not attachable to the diff' table — still delivered, never dropped."
+    }
+  ],
+  "expected_ladder_breakdown": {
+    "inline_exact": 1,
+    "inline_nearest": 2,
+    "file_level": 2,
+    "summary_only": 1
+  },
+  "conservation": "len(published) == inline_exact + inline_nearest + file_level + summary_only == 6. AC-17 requires this assertion to live in production code, not only in a test.",
+  "after_422_retry": {
+    "rejected_by_github": ["f-nearest-boundary"],
+    "source_fixture": "github/review_422_out_of_hunk.json",
+    "expected_ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 1,
+      "file_level": 3,
+      "summary_only": 1
+    },
+    "degradations": ["review_422_demoted"],
+    "why": "GitHub rejects the comment posted at app/checkout.py:91 — the anchor line chosen for f-nearest-boundary — as not part of the diff. That finding demotes exactly one rung, from inline_nearest to file_level; the whole review is retried once; and the conservation invariant is re-asserted after the retry. Still 6 published, still one review call retried exactly once."
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "review_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "identity-gateway",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 231,
+    "title": "Audit break-glass admin logins",
+    "author": "sana-q",
+    "head_sha": "522d974bfa18b8d736cb4bd7a0fcb6748ac6941c",
+    "base_sha": "580bc3231283ffd717b0bd66a44235a4bf7204a7",
+    "url": "https://github.com/acme/identity-gateway/pull/231"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2913179266,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 4,
+    "published": 2,
+    "suppressed": 1,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0321,
+    "input_tokens": 88900,
+    "output_tokens": 35526,
+    "cache_read_tokens": 216747
+  },
+  "timing": {
+    "queued_at": "2026-09-22T14:05:08.640702Z",
+    "started_at": "2026-09-22T14:05:09.828594Z",
+    "finished_at": "2026-09-22T14:05:40.805594Z",
+    "duration_seconds": 30.977
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "d89dccf1-bd37-4cd1-9ee7-943065426255",
+      "review_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+      "fingerprint": "1453257afb038e961bce7b62b88ac67cb696fe1c9ad005cbe284932e94a2ceae",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "audit_missing_source",
+      "title": "Record the source IP in audit_break_glass()",
+      "body_markdown": "The audit record has the user and the reason (line 31) but not where the login came from.",
+      "location": {
+        "file_path": "app/admin/break_glass.py",
+        "start_line": 31,
+        "end_line": 33,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/admin/break_glass.py::audit_break_glass"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.275,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × blast radius 0.10 × churn 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 33,
+        "github_comment_id": 2277993461
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T14:05:33.811594Z"
+    },
+    {
+      "id": "7ba4a207-96d0-42f3-b7c6-a4870e734015",
+      "review_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+      "fingerprint": "211740bd35277cc61f8d22ba9a862ef3851c2235a0d4f95ef3ccbd71f9182670",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "non_constant_time_compare",
+      "title": "verify_reset_token() compares token hashes with ==",
+      "body_markdown": "`verify_reset_token()` checks `hashlib.sha256(token).hexdigest() == stored_hash` (line 31). `hmac.compare_digest` is the constant-time comparison for secrets.",
+      "location": {
+        "file_path": "app/auth/reset.py",
+        "start_line": 31,
+        "end_line": 33,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/auth/reset.py::verify_reset_token"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.645,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.15,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × file tested, symbol not × unproven × blast radius 0.20 × churn 0.15",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "6563ff71-034e-4c85-95ed-d2b85554cce8",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "d1cb3f72-6ea1-4e81-ba1f-ebebe21e0309",
+        "scope": "line",
+        "reason": "Both sides are SHA-256 hex digests of the same length, and the stored side is never attacker-chosen; a timing difference reveals nothing. Discussed in #sec-review on 2026-09-04.",
+        "created_by": "sana-q",
+        "expires_at": null
+      },
+      "created_at": "2026-09-22T14:05:33.812994Z"
+    },
+    {
+      "id": "bd8f5783-2095-4333-b27f-e01f556df615",
+      "review_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+      "fingerprint": "08302888e235c3da3bdd8b0b7c9bcdf79069d154b4a3a662101c6a89e166b298",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "empty_reason_accepted",
+      "title": "break_glass_login() accepts an empty reason",
+      "body_markdown": "The audit record is the point of break-glass access, and `break_glass_login()` only checks that `reason` is not `None` (line 12); an empty string passes.",
+      "location": {
+        "file_path": "app/admin/break_glass.py",
+        "start_line": 12,
+        "end_line": 14,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/admin/break_glass.py::break_glass_login"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.45,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.1,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × proven × file tested, symbol not × blast radius 0.10 × churn 0.10",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_721709.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/admin/break_glass.py::break_glass_login.\n\nClaim: an empty reason is accepted.\n\"\"\"\n\nimport pytest\n\nfrom app.admin.break_glass import require_reason\n\n\ndef test_empty_reason_is_rejected():\n    with pytest.raises(ValueError):\n        require_reason(\"\")\n",
+        "command": "pytest tests/test_repro_721709.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.30s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n________________________ test_empty_reason_is_rejected _________________________\n\n    def test_empty_reason_is_rejected():\n>       with pytest.raises(ValueError):\n             ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       Failed: DID NOT RAISE ValueError\n\ntests/test_repro_721709.py:12: Failed\n=========================== short test summary info ============================\nFAILED tests/test_repro_721709.py::test_empty_reason_is_rejected - Failed: DI...\n1 failed in 0.29s"
+        },
+        "duration_ms": 2365,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 14,
+        "github_comment_id": 2422506806
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T14:05:33.814394Z"
+    },
+    {
+      "id": "efa87260-7393-4b7c-81db-a2ca88827a6d",
+      "review_id": "f11e785e-328a-491e-b229-99d2d629ddeb",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "printf_style_logging",
+      "title": "Use structured logging arguments in `audit_break_glass()`",
+      "body_markdown": "`audit_break_glass()` logs with `%s` placeholders; structured fields are easier to query.",
+      "location": {
+        "file_path": "app/admin/break_glass.py",
+        "start_line": 29,
+        "end_line": 31,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T14:05:33.815794Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#231` in 31.0s · [full run ↗](https://witness.acme.internal/runs/f11e785e-328a-491e-b229-99d2d629ddeb)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "522d974bfa18b8d736cb4bd7a0fcb6748ac6941c",
+    "comments": [
+      {
+        "path": "app/admin/break_glass.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.275`** low\n\nThe audit record has the user and the reason (line 31) but not where the login came from.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.275`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.010`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/d89dccf1-bd37-4cd1-9ee7-943065426255#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1453257a…ceae` · [dismiss with a reason ↗](https://witness.acme.internal/findings/d89dccf1-bd37-4cd1-9ee7-943065426255#suppress)",
+        "line": 33,
+        "side": "RIGHT",
+        "start_line": 31,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/admin/break_glass.py",
+        "body": "**`proof_status: proven`** · severity **`0.450`** medium\n\nThe audit record is the point of break-glass access, and `break_glass_login()` only checks that `reason` is not `None` (line 12); an empty string passes.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `580bc32` | `1 passed in 0.30s` |\n| head | `522d974` | `1 failed in 0.29s` |\n\n<details><summary>terminal output at head <code>522d974</code></summary>\n\n    E       Failed: DID NOT RAISE ValueError\n    tests/test_repro_721709.py:12: Failed\n    1 failed in 0.29s\n\n</details>\n\n**Severity `0.450`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/bd8f5783-2095-4333-b27f-e01f556df615#severity)\n\nThis finding has `proof_status: proven` and scores `0.450` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 08302888…b298` · [dismiss with a reason ↗](https://witness.acme.internal/findings/bd8f5783-2095-4333-b27f-e01f556df615#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
+        "line": 14,
+        "side": "RIGHT",
+        "start_line": 12,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=f11e785e-328a-491e-b229-99d2d629ddeb"
+}

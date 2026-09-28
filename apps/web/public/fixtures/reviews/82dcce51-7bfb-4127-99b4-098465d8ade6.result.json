@@ -1,0 +1,384 @@
+{
+  "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "ledger",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 318,
+    "title": "Batch payouts by currency",
+    "author": "yuki-t",
+    "head_sha": "8d420315dddd30664f6b91e2a0fc7ad4aa51e9ad",
+    "base_sha": "e597c2cd1eb2625d66fe8d5c43392400242bf5de",
+    "url": "https://github.com/acme/ledger/pull/318"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": [
+      "f0b8eaec-0169-48ee-b324-11c781fa19ad"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2791633030,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 5,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 3,
+    "disproven": 0,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 1.3383,
+    "input_tokens": 114592,
+    "output_tokens": 44170,
+    "cache_read_tokens": 274089
+  },
+  "timing": {
+    "queued_at": "2026-08-25T13:40:49.039724Z",
+    "started_at": "2026-08-25T13:40:49.564045Z",
+    "finished_at": "2026-08-25T13:41:27.416045Z",
+    "duration_seconds": 37.852
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "f0b8eaec-0169-48ee-b324-11c781fa19ad",
+      "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+      "fingerprint": "1fe13987e313cd99c9c6013bfc0a4d4d23e07d2079519f82ddf279bc04c56d8d",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "float_money_sum",
+      "title": "batch_total() sums payout amounts as floats and loses a cent on large batches",
+      "body_markdown": "`batch_total()` converts each amount to major units before summing (line 43), so the total of 10 000 payouts of 0.10 is 999.9999999999 and the batch file reports 999.99.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 43,
+        "end_line": 45,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/payouts/batch.py::batch_total"
+      },
+      "severity": {
+        "band": "critical",
+        "score": 0.8,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.6,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.35,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × proven × blast radius 0.60 × file tested, symbol not × churn 0.35",
+        "llm_severity_hint": "critical",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_901de9.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::batch_total.\n\nClaim: large batches lose a cent to float summation.\n\"\"\"\n\nfrom app.payouts.batch import batch_total_minor\n\n\ndef test_ten_thousand_dimes_total_one_thousand():\n    assert batch_total_minor(10, 10000) == 100000\n",
+        "command": "pytest tests/test_repro_901de9.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.52s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_ten_thousand_dimes_total_one_thousand __________________\n\n    def test_ten_thousand_dimes_total_one_thousand():\n>       assert batch_total_minor(10, 10000) == 100000\nE       assert 99999 == 100000\nE        +  where 99999 = batch_total_minor(10, 10000)\n\ntests/test_repro_901de9.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_901de9.py::test_ten_thousand_dimes_total_one_thousand\n1 failed in 0.49s"
+        },
+        "duration_ms": 2082,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 45,
+        "github_comment_id": 2099358703
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-25T13:41:15.660045Z"
+    },
+    {
+      "id": "78cdb890-350c-4ca2-870b-aceadadbb704",
+      "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+      "fingerprint": "dab532ad062766da1c2486ed89551dd802f1c71c7462e26bac29cc854ff4f7e5",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "empty_batch_index_error",
+      "title": "build_payout_batch() emits a zero-amount entry for a currency with no payouts",
+      "body_markdown": "`build_payout_batch()` seeds every currency's batch with a placeholder entry (line 13) and never removes it, so a currency with no payouts produces a zero-amount instruction that the bank rejects for the whole file.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 13,
+        "end_line": 15,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/payouts/batch.py::build_payout_batch"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.565,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.35,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × file tested, symbol not × unproven × churn 0.35 × blast radius 0.20",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "inconclusive",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_9ca851.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
+        "command": "pytest tests/test_repro_9ca851.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_empty_currency_builds_an_empty_batch ___________________\n\n    def test_empty_currency_builds_an_empty_batch():\n>       assert len(build_payout_batch([], \"sek\")) == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = len([{'amount_minor': 0, 'currency': 'sek'}])\nE        +    where [{'amount_minor': 0, 'currency': 'sek'}] = build_payout_batch([], 'sek')\n\ntests/test_repro_9ca851.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_9ca851.py::test_empty_currency_builds_an_empty_batch\n1 failed in 0.33s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________ test_empty_currency_builds_an_empty_batch ___________________\n\n    def test_empty_currency_builds_an_empty_batch():\n>       assert len(build_payout_batch([], \"sek\")) == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = len([{'amount_minor': 0, 'currency': 'sek'}])\nE        +    where [{'amount_minor': 0, 'currency': 'sek'}] = build_payout_batch([], 'sek')\n\ntests/test_repro_9ca851.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_9ca851.py::test_empty_currency_builds_an_empty_batch\n1 failed in 0.34s"
+        },
+        "duration_ms": 1517,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 15,
+        "github_comment_id": 2607916095
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": null,
+      "created_at": "2026-08-25T13:41:15.661445Z"
+    },
+    {
+      "id": "67ecef45-a00c-4e7b-a3df-cf045ca10c6a",
+      "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `schedule_batch()` against two callers running it at once",
+      "body_markdown": "Two workers running `schedule_batch()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 53,
+        "end_line": 55,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-25T13:41:15.662845Z"
+    },
+    {
+      "id": "7f86046e-92c4-4b85-94a6-378ae83c5cdc",
+      "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "abusable_behaviour",
+      "title": "A caller can abuse the behaviour of `batch_total()`",
+      "body_markdown": "The defect in `batch_total()` is reachable from a request.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 43,
+        "end_line": 45,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-25T13:41:15.664245Z"
+    },
+    {
+      "id": "7072830c-f1ee-408d-a4ba-0b5487ea4b7d",
+      "review_id": "82dcce51-7bfb-4127-99b4-098465d8ade6",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_docstring",
+      "title": "Document what `group_by_currency()` returns when nothing matches",
+      "body_markdown": "`group_by_currency()` has no docstring and two different empty results.",
+      "location": {
+        "file_path": "app/payouts/batch.py",
+        "start_line": 29,
+        "end_line": 31,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-25T13:41:15.665645Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#318` in 37.9s · [full run ↗](https://witness.acme.internal/runs/82dcce51-7bfb-4127-99b4-098465d8ade6)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "daa0d52db8535831c10fb4039ac5c241ea9676a2",
+    "comments": [
+      {
+        "path": "app/payouts/batch.py",
+        "body": "**`proof_status: proven`** · severity **`0.800`** critical\n\n`batch_total()` converts each amount to major units before summing (line 43), so the total of 10 000 payouts of 0.10 is 999.9999999999 and the batch file reports 999.99.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `e597c2c` | `1 passed in 0.52s` |\n| head | `daa0d52` | `1 failed in 0.49s` |\n\n<details><summary>terminal output at head <code>daa0d52</code></summary>\n\n    E       assert 99999 == 100000\n    E        +  where 99999 = batch_total_minor(10, 10000)\n    tests/test_repro_901de9.py:10: AssertionError\n    1 failed in 0.49s\n\n</details>\n\n**Severity `0.800`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.035`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/f0b8eaec-0169-48ee-b324-11c781fa19ad#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 1fe13987…6d8d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/f0b8eaec-0169-48ee-b324-11c781fa19ad#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
+        "line": 45,
+        "side": "RIGHT",
+        "start_line": 43,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/payouts/batch.py",
+        "body": "**`proof_status: inconclusive`** · severity **`0.565`** high\n\n`build_payout_batch()` seeds every currency's batch with a placeholder entry (line 13) and never removes it, so a currency with no payouts produces a zero-amount instruction that the bank rejects for the whole file.\n\n**Proof** — a repro test was executed at both SHAs and failed at both, so the failure predates this pull request:\n\n| | SHA | result |\n|---|---|---|\n| base | `e597c2c` | `1 failed in 0.33s` |\n| head | `daa0d52` | `1 failed in 0.34s` |\n\n**Severity `0.565`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.035`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/78cdb890-350c-4ca2-870b-aceadadbb704#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint dab532ad…f7e5` · [dismiss with a reason ↗](https://witness.acme.internal/findings/78cdb890-350c-4ca2-870b-aceadadbb704#suppress)",
+        "line": 15,
+        "side": "RIGHT",
+        "start_line": 13,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=82dcce51-7bfb-4127-99b4-098465d8ade6"
+}

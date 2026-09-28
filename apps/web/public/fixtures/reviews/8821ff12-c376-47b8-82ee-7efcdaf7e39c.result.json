@@ -1,0 +1,378 @@
+{
+  "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "identity-gateway",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 208,
+    "title": "Rotate refresh tokens on every use",
+    "author": "sana-q",
+    "head_sha": "db09a4f8fc905e13b60bb1bdf8655157482cd667",
+    "base_sha": "72b5f89196925a8de9e9e826db86eb0fcb0a1132",
+    "url": "https://github.com/acme/identity-gateway/pull/208"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": [
+      "e1e42302-e5f6-495a-b34c-0cf66b441f92"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2617092315,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 5,
+    "published": 1,
+    "suppressed": 0,
+    "dropped": 3,
+    "disproven": 1,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 1.1943,
+    "input_tokens": 69291,
+    "output_tokens": 48482,
+    "cache_read_tokens": 139254
+  },
+  "timing": {
+    "queued_at": "2026-08-21T11:05:26.326552Z",
+    "started_at": "2026-08-21T11:05:26.886344Z",
+    "finished_at": "2026-08-21T11:06:05.400344Z",
+    "duration_seconds": 38.514
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "ac534faf-33b5-43ba-a32d-214944dc79c0",
+      "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+      "fingerprint": "98401b14857df64fd87c6288858e8589d0b9c9805637dce2f60bc03276dba322",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "non_atomic_token_swap",
+      "title": "session.refresh() can be entered concurrently; the token swap is not atomic",
+      "body_markdown": "`refresh_session()` reads the refresh token, issues a new pair and deletes the old token in three statements (line 13). Two concurrent refreshes with one token could both succeed and leave two live sessions.",
+      "location": {
+        "file_path": "app/auth/session.py",
+        "start_line": 13,
+        "end_line": 16,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/auth/session.py::refresh_session"
+      },
+      "severity": {
+        "band": "info",
+        "score": 0.61,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.4,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.25,
+          "proof_confidence": 0.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × file tested, symbol not × blast radius 0.40 × churn 0.25",
+        "llm_severity_hint": "high",
+        "notes": [
+          "clamped to info: repro passed at head"
+        ]
+      },
+      "proof": {
+        "status": "disproven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_3f3726.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::refresh_session.\n\nClaim: two concurrent refreshes with one token both succeed.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.auth.session import refresh_session_outcome\n\n\ndef test_one_refresh_token_refreshes_once():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        results = list(pool.map(refresh_session_outcome, [\"rt_9f2c\", \"rt_9f2c\"]))\n    assert sorted(results) == [\"ok\", \"reused\"]\n",
+        "command": "pytest tests/test_repro_3f3726.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 1.84s"
+        },
+        "head": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 1.91s"
+        },
+        "duration_ms": 2184,
+        "deps_install_ok": true
+      },
+      "status": "disproven",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-21T11:05:53.637744Z"
+    },
+    {
+      "id": "e1e42302-e5f6-495a-b34c-0cf66b441f92",
+      "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+      "fingerprint": "15d84297858a4c479f7d69d7d6e61f0cbca0ea80ca105019bf9e10f28c9d1851",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "revocation_not_enforced",
+      "title": "revoke_session() deletes the access token but leaves its refresh token live",
+      "body_markdown": "With rotation on, `revoke_session()` removes the session's current access token (line 44) and not the refresh token issued with it, so a revoked session is back after one refresh.",
+      "location": {
+        "file_path": "app/auth/session.py",
+        "start_line": 44,
+        "end_line": 47,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/auth/session.py::revoke_session"
+      },
+      "severity": {
+        "band": "critical",
+        "score": 0.79,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.6,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.25,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable from a public entrypoint × proven × blast radius 0.60 × file tested, symbol not × churn 0.25",
+        "llm_severity_hint": "critical",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_b695e3.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::revoke_session.\n\nClaim: a revoked session can still be refreshed.\n\"\"\"\n\nfrom app.auth.session import refresh_after_revoke\n\n\ndef test_revoked_session_cannot_refresh():\n    assert refresh_after_revoke(\"ses_77ab\") is None\n",
+        "command": "pytest tests/test_repro_b695e3.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.46s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_____________________ test_revoked_session_cannot_refresh ______________________\n\n    def test_revoked_session_cannot_refresh():\n>       assert refresh_after_revoke(\"ses_77ab\") is None\nE       AssertionError: assert 'ses_91d0' is None\nE        +  where 'ses_91d0' = refresh_after_revoke('ses_77ab')\n\ntests/test_repro_b695e3.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_b695e3.py::test_revoked_session_cannot_refresh - Asse...\n1 failed in 0.44s"
+        },
+        "duration_ms": 2330,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 47,
+        "github_comment_id": 2313549136
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+        "previously_addressed": 1,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-21T11:05:53.639144Z"
+    },
+    {
+      "id": "04f61370-bcab-4012-a216-dc0e86cd018e",
+      "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_regression_test",
+      "title": "Add a regression test for `revoke_session()`",
+      "body_markdown": "No test exercises the path in `revoke_session()` that this change breaks.",
+      "location": {
+        "file_path": "app/auth/session.py",
+        "start_line": 44,
+        "end_line": 47,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-21T11:05:53.640544Z"
+    },
+    {
+      "id": "04967e46-e85d-4063-bcb0-a4a80491377c",
+      "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_docstring",
+      "title": "Document what `issue_session()` returns when nothing matches",
+      "body_markdown": "`issue_session()` has no docstring and two different empty results.",
+      "location": {
+        "file_path": "app/auth/session.py",
+        "start_line": 57,
+        "end_line": 59,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-21T11:05:53.641944Z"
+    },
+    {
+      "id": "bfd1ed9b-6f4a-4c39-894e-1219a1cd848a",
+      "review_id": "8821ff12-c376-47b8-82ee-7efcdaf7e39c",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unvalidated_input",
+      "title": "Validate the argument to `_swap_tokens()` before it is used",
+      "body_markdown": "`_swap_tokens()` passes its argument on without checking its shape.",
+      "location": {
+        "file_path": "app/auth/session.py",
+        "start_line": 29,
+        "end_line": 31,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-21T11:05:53.643344Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#208` in 38.5s · [full run ↗](https://witness.acme.internal/runs/8821ff12-c376-47b8-82ee-7efcdaf7e39c)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "5fad0b02f87cbd93cbfedab381238943fba5f268",
+    "comments": [
+      {
+        "path": "app/auth/session.py",
+        "body": "**`proof_status: proven`** · severity **`0.790`** critical\n\nWith rotation on, `revoke_session()` removes the session's current access token (line 44) and not the refresh token issued with it, so a revoked session is back after one refresh.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `72b5f89` | `1 passed in 0.46s` |\n| head | `5fad0b0` | `1 failed in 0.44s` |\n\n<details><summary>terminal output at head <code>5fad0b0</code></summary>\n\n    E       AssertionError: assert 'ses_91d0' is None\n    E        +  where 'ses_91d0' = refresh_after_revoke('ses_77ab')\n    tests/test_repro_b695e3.py:10: AssertionError\n    1 failed in 0.44s\n\n</details>\n\n**Severity `0.790`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.025`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/e1e42302-e5f6-495a-b34c-0cf66b441f92#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint 15d84297…1851` · [dismiss with a reason ↗](https://witness.acme.internal/findings/e1e42302-e5f6-495a-b34c-0cf66b441f92#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
+        "line": 47,
+        "side": "RIGHT",
+        "start_line": 44,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=8821ff12-c376-47b8-82ee-7efcdaf7e39c"
+}

@@ -1,0 +1,288 @@
+{
+  "review_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "notifications",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 69,
+    "title": "De-duplicate push notifications per device",
+    "author": "kwame-a",
+    "head_sha": "d644c1d258be0d599664c127e15757ec60a9b98c",
+    "base_sha": "50442955f4207df54e3c4dd7987649b5f327c2f8",
+    "url": "https://github.com/acme/notifications/pull/69"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2915856620,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 1,
+    "suppressed": 1,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.305,
+    "input_tokens": 110716,
+    "output_tokens": 46108,
+    "cache_read_tokens": 272784
+  },
+  "timing": {
+    "queued_at": "2026-09-15T14:40:27.020793Z",
+    "started_at": "2026-09-15T14:40:28.294276Z",
+    "finished_at": "2026-09-15T14:40:55.013276Z",
+    "duration_seconds": 26.719
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "a4e0283b-6b65-4566-9ef3-87c26cf90cae",
+      "review_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+      "fingerprint": "33b4e3349b6ba96712c47009d5dc5fc9de2c7f4b232fa239bbb90418e4a0aa2f",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "check_then_set_race",
+      "title": "should_send() checks and records a notification in two round trips",
+      "body_markdown": "`GET` then `SET` (line 12) lets two workers both see the key missing and both send; `SET NX` does both in one.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 12,
+        "end_line": 15,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/push/dedupe.py::should_send"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.395,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.2,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.15,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × file tested, symbol not × unproven × blast radius 0.20 × churn 0.15",
+        "llm_severity_hint": "medium",
+        "notes": []
+      },
+      "proof": {
+        "status": "inconclusive",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_b559fa.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/push/dedupe.py::should_send.\n\nClaim: two workers can both send one notification.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_two_workers\n\n\ndef test_two_workers_send_once():\n    assert sends_for_two_workers() == 1\n",
+        "command": "pytest tests/test_repro_b559fa.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.21s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n__________________________ test_two_workers_send_once __________________________\n\n    def test_two_workers_send_once():\n>       assert sends_for_two_workers() == 1\nE       assert 2 == 1\nE        +  where 2 = sends_for_two_workers()\n\ntests/test_repro_b559fa.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_b559fa.py::test_two_workers_send_once - assert 2 == 1\n1 failed in 0.22s"
+        },
+        "duration_ms": 1749,
+        "deps_install_ok": false
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 15,
+        "github_comment_id": 1923255879
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-15T14:40:48.311876Z"
+    },
+    {
+      "id": "c0c0556f-970b-47a6-bf4c-3ae5aebbbe3f",
+      "review_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+      "fingerprint": "c87e4daeb764461a307c42a4317b893dd86faec5066ddd31e15c042f6547a087",
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "unbounded_delete",
+      "title": "prune_seen() deletes every expired key in one SCAN loop",
+      "body_markdown": "The loop has no batch limit (line 38); on a large keyspace it blocks the worker.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 38,
+        "end_line": 40,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/push/dedupe.py::prune_seen"
+      },
+      "severity": {
+        "band": "low",
+        "score": 0.28,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 0.5,
+          "churn": 0.15,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable internally × file tested, symbol not × unproven × blast radius 0.10 × churn 0.15",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 40,
+        "github_comment_id": 2307901438
+      },
+      "history": {
+        "occurrence_count": 3,
+        "first_seen_run_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "3e91cf97-2c69-4561-bc70-1808b653f1e7",
+        "scope": "tenant",
+        "reason": "The shared dedupe store is truncated nightly by the retention job, so a prune never sees more than a day of keys. Applies to every service on the shared helper.",
+        "created_by": "priya-raman",
+        "expires_at": null
+      },
+      "created_at": "2026-09-15T14:40:48.313276Z"
+    },
+    {
+      "id": "54bad487-b9aa-48ea-b8e1-52fcd146c6bb",
+      "review_id": "f1ecfd24-f183-4f50-b38d-977112f39d5e",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "performance",
+      "rule_key": "repeated_computation",
+      "title": "Cache the result of `_dedupe_key()`",
+      "body_markdown": "`_dedupe_key()` recomputes the same value on every call.",
+      "location": {
+        "file_path": "app/push/dedupe.py",
+        "start_line": 27,
+        "end_line": 29,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-15T14:40:48.314676Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#69` in 26.7s · [full run ↗](https://witness.acme.internal/runs/f1ecfd24-f183-4f50-b38d-977112f39d5e)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "d644c1d258be0d599664c127e15757ec60a9b98c",
+    "comments": [
+      {
+        "path": "app/push/dedupe.py",
+        "body": "**`proof_status: inconclusive`** · severity **`0.395`** medium\n\n`GET` then `SET` (line 12) lets two workers both see the key missing and both send; `SET NX` does both in one.\n\n**Proof** — a dependency the repro test needed did not install, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `5044295` | `1 passed in 0.21s` |\n| head | `d644c1d` | `1 failed in 0.22s` |\n\n**Severity `0.395`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/a4e0283b-6b65-4566-9ef3-87c26cf90cae#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 33b4e334…aa2f` · [dismiss with a reason ↗](https://witness.acme.internal/findings/a4e0283b-6b65-4566-9ef3-87c26cf90cae#suppress)",
+        "line": 15,
+        "side": "RIGHT",
+        "start_line": 12,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "app/push/dedupe.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.280`** low\n\nThe loop has no batch limit (line 38); on a large keyspace it blocks the worker.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.280`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c0c0556f-970b-47a6-bf4c-3ae5aebbbe3f#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c87e4dae…a087` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c0c0556f-970b-47a6-bf4c-3ae5aebbbe3f#suppress)",
+        "line": 40,
+        "side": "RIGHT",
+        "start_line": 38,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=f1ecfd24-f183-4f50-b38d-977112f39d5e"
+}

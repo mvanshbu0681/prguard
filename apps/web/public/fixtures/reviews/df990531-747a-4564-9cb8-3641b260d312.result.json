@@ -1,0 +1,121 @@
+{
+  "review_id": "df990531-747a-4564-9cb8-3641b260d312",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "identity-gateway",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 214,
+    "title": "Allow clock skew on SAML assertions",
+    "author": "farah-n",
+    "head_sha": "904af6a9d4b116575fc715d0333a661479cbb90b",
+    "base_sha": "8fad7a767501377aae2bbd8d56c12e5c5c0e7959",
+    "url": "https://github.com/acme/identity-gateway/pull/214"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 1,
+    "files_reviewed": 1,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2469546547,
+    "event": "COMMENT",
+    "comments_posted": 0,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 1,
+    "published": 0,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.8638,
+    "input_tokens": 52223,
+    "output_tokens": 38863,
+    "cache_read_tokens": 125154
+  },
+  "timing": {
+    "queued_at": "2026-08-28T16:40:46.802362Z",
+    "started_at": "2026-08-28T16:40:47.585192Z",
+    "finished_at": "2026-08-28T16:41:15.516192Z",
+    "duration_seconds": 27.931
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "49edd61e-cf3d-4fc1-ad4f-85048ac13ed1",
+      "review_id": "df990531-747a-4564-9cb8-3641b260d312",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "missing_docstring",
+      "title": "Document what `validate_assertion()` returns when nothing matches",
+      "body_markdown": "`validate_assertion()` has no docstring and two different empty results.",
+      "location": {
+        "file_path": "app/sso/saml.py",
+        "start_line": 11,
+        "end_line": 13,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-08-28T16:41:13.189792Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#214` in 27.9s · [full run ↗](https://witness.acme.internal/runs/df990531-747a-4564-9cb8-3641b260d312)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 1 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: nothing to deliver, no finding was published. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "904af6a9d4b116575fc715d0333a661479cbb90b",
+    "comments": []
+  },
+  "audit_url": "/v1/audit?review_id=df990531-747a-4564-9cb8-3641b260d312"
+}

@@ -1,0 +1,276 @@
+{
+  "review_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "web-storefront",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 1135,
+    "title": "Analytics consent banner",
+    "author": "farah-n",
+    "head_sha": "88b513d07f01fed0d4fbffb29e9a22a85bd36de5",
+    "base_sha": "95b80d34def3abc9314421464d67c63d50991f15",
+    "url": "https://github.com/acme/web-storefront/pull/1135"
+  },
+  "risk_tier": "standard",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2742638457,
+    "event": "COMMENT",
+    "comments_posted": 2,
+    "ladder_breakdown": {
+      "inline_exact": 2,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 2,
+    "suppressed": 0,
+    "dropped": 1,
+    "disproven": 0,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 0.81,
+    "input_tokens": 76310,
+    "output_tokens": 28250,
+    "cache_read_tokens": 132350
+  },
+  "timing": {
+    "queued_at": "2026-09-22T09:15:18.593162Z",
+    "started_at": "2026-09-22T09:15:18.806501Z",
+    "finished_at": "2026-09-22T09:15:39.417501Z",
+    "duration_seconds": 20.611
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "7d8c2294-1966-442f-ba77-4862f47ed5f9",
+      "review_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+      "fingerprint": "52fc92cb5f55769c04198088da8608af05a52c4ba213a9437b33fc5642bbabea",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "month_as_thirty_days",
+      "title": "consentExpired() counts 13 months as 390 days",
+      "body_markdown": "The limit is `13 * 30` days (line 47); regulators mean calendar months.",
+      "location": {
+        "file_path": "src/consent/Banner.tsx",
+        "start_line": 47,
+        "end_line": 49,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/consent/Banner.tsx::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.35,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.1,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "untested × reachable internally × unproven × blast radius 0.10 × churn 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 49,
+        "github_comment_id": 2612667496
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T09:15:37.604501Z"
+    },
+    {
+      "id": "1922d3d1-014d-4218-a571-1ecf1d9249d6",
+      "review_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+      "fingerprint": "986c85547b30e0d60430ee30bf8f5bf1a326924578834835f99bfe7ac1a8006e",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "consent_default_granted",
+      "title": "readConsent() treats a missing choice as granted",
+      "body_markdown": "When nothing is stored `readConsent()` returns `{ analytics: true }` (line 24), so the analytics tags load before the banner is answered.",
+      "location": {
+        "file_path": "src/consent/Banner.tsx",
+        "start_line": 24,
+        "end_line": 26,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": "src/consent/Banner.tsx::#0"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.3,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × untested × unproven × blast radius 0.30 × churn 0.10",
+        "llm_severity_hint": "high",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_applicable",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "published",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 26,
+        "github_comment_id": 2591685219
+      },
+      "history": {
+        "occurrence_count": 2,
+        "first_seen_run_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T09:15:37.605901Z"
+    },
+    {
+      "id": "e94d879b-b9d0-467c-a933-675279c2ec70",
+      "review_id": "55d94ad0-cc2f-4823-9e14-f70768eec779",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_edge_case_test",
+      "title": "Cover the empty-input branch of `consentExpired()`",
+      "body_markdown": "`consentExpired()` has no test for an empty input.",
+      "location": {
+        "file_path": "src/consent/Banner.tsx",
+        "start_line": 46,
+        "end_line": 48,
+        "side": "RIGHT",
+        "language": "typescript",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-22T09:15:37.607301Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#1135` in 20.6s · [full run ↗](https://witness.acme.internal/runs/55d94ad0-cc2f-4823-9e14-f70768eec779)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "9addb48e1743f81f02c64fda9b10ef31a5eba01b",
+    "comments": [
+      {
+        "path": "src/consent/Banner.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.350`** medium\n\nThe limit is `13 * 30` days (line 47); regulators mean calendar months.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/consent/Banner.tsx` is not Python.\n\n**Severity `0.350`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/7d8c2294-1966-442f-ba77-4862f47ed5f9#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 52fc92cb…abea` · [dismiss with a reason ↗](https://witness.acme.internal/findings/7d8c2294-1966-442f-ba77-4862f47ed5f9#suppress)",
+        "line": 49,
+        "side": "RIGHT",
+        "start_line": 47,
+        "start_side": "RIGHT"
+      },
+      {
+        "path": "src/consent/Banner.tsx",
+        "body": "**`proof_status: not_applicable`** · severity **`0.480`** medium\n\nWhen nothing is stored `readConsent()` returns `{ analytics: true }` (line 24), so the analytics tags load before the banner is answered.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/consent/Banner.tsx` is not Python.\n\n**Severity `0.480`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/1922d3d1-014d-4218-a571-1ecf1d9249d6#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 986c8554…006e` · [dismiss with a reason ↗](https://witness.acme.internal/findings/1922d3d1-014d-4218-a571-1ecf1d9249d6#suppress)",
+        "line": 26,
+        "side": "RIGHT",
+        "start_line": 24,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=55d94ad0-cc2f-4823-9e14-f70768eec779"
+}

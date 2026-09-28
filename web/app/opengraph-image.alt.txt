@@ -1,1 +1,0 @@
-PRGuard. We don't guess. We run the test. A small terminal shows the repro test passing at the base SHA and failing at the head SHA, stamped PROVEN, above the rail: passes at base, fails at head, proven, blocks merge.

@@ -1,0 +1,254 @@
+{
+  "review_id": "174c5478-f029-42cc-806c-ad93401ca4a9",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "identity-gateway",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 229,
+    "title": "Deprovision users over SCIM",
+    "author": "sana-q",
+    "head_sha": "1e982b1bbfda09e6482095a008e9df1cad64a36f",
+    "base_sha": "6745d01117488de30afa7d3efe55c2fe1caf7354",
+    "url": "https://github.com/acme/identity-gateway/pull/229"
+  },
+  "risk_tier": "standard",
+  "context": {
+    "files_changed": 2,
+    "files_reviewed": 2,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "failure",
+    "reason": "1 finding carries a repro test that passes at base and fails at head.",
+    "delivery": "check_run",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": [
+      "9d68c62e-0722-4fec-94b2-63bdab3d1371"
+    ]
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2371570775,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 1,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 3,
+    "published": 1,
+    "suppressed": 0,
+    "dropped": 2,
+    "disproven": 0,
+    "blocking": 1
+  },
+  "cost": {
+    "usd_estimate": 0.9081,
+    "input_tokens": 71022,
+    "output_tokens": 34118,
+    "cache_read_tokens": 110746
+  },
+  "timing": {
+    "queued_at": "2026-09-18T09:50:40.075081Z",
+    "started_at": "2026-09-18T09:50:41.260163Z",
+    "finished_at": "2026-09-18T09:51:10.021163Z",
+    "duration_seconds": 28.761
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "9d68c62e-0722-4fec-94b2-63bdab3d1371",
+      "review_id": "174c5478-f029-42cc-806c-ad93401ca4a9",
+      "fingerprint": "ff74106363c89a491486f36899a427db7ba11a59a095a18cbfeff5e71fe4e99b",
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "deprovision_leaves_sessions",
+      "title": "deprovision_user() deactivates the account but leaves its sessions live",
+      "body_markdown": "SCIM `DELETE` sets `active = False` (line 14) and never calls `revoke_session()`, so a deprovisioned employee keeps working until their access token expires, up to 24 hours later.",
+      "location": {
+        "file_path": "app/scim/users.py",
+        "start_line": 14,
+        "end_line": 17,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/scim/users.py::deprovision_user"
+      },
+      "severity": {
+        "band": "high",
+        "score": 0.555,
+        "inputs": {
+          "reachability": 1.0,
+          "blast_radius": 0.3,
+          "path_sensitivity": 0.0,
+          "coverage_gap": 1.0,
+          "churn": 0.1,
+          "proof_confidence": 1.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "reachable from a public entrypoint × untested × proven × blast radius 0.30 × churn 0.10",
+        "llm_severity_hint": "critical",
+        "notes": []
+      },
+      "proof": {
+        "status": "proven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_f8ac5f.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/scim/users.py::deprovision_user.\n\nClaim: sessions survive deprovisioning.\n\"\"\"\n\nfrom app.scim.users import live_sessions_after_deprovision\n\n\ndef test_deprovisioned_user_has_no_live_sessions():\n    assert live_sessions_after_deprovision(\"usr_58\") == 0\n",
+        "command": "pytest tests/test_repro_f8ac5f.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.52s"
+        },
+        "head": {
+          "exit_code": 1,
+          "excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_________________ test_deprovisioned_user_has_no_live_sessions _________________\n\n    def test_deprovisioned_user_has_no_live_sessions():\n>       assert live_sessions_after_deprovision(\"usr_58\") == 0\nE       AssertionError: assert 2 == 0\nE        +  where 2 = live_sessions_after_deprovision('usr_58')\n\ntests/test_repro_f8ac5f.py:10: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_repro_f8ac5f.py::test_deprovisioned_user_has_no_live_sessions\n1 failed in 0.50s"
+        },
+        "duration_ms": 1821,
+        "deps_install_ok": true
+      },
+      "status": "published",
+      "blocking": true,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 17,
+        "github_comment_id": 1955059884
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "174c5478-f029-42cc-806c-ad93401ca4a9",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-18T09:51:02.108963Z"
+    },
+    {
+      "id": "4aac61c1-795b-4b01-950d-7e87985272f7",
+      "review_id": "174c5478-f029-42cc-806c-ad93401ca4a9",
+      "fingerprint": null,
+      "specialist": "security",
+      "category": "security",
+      "rule_key": "unvalidated_input",
+      "title": "Validate the argument to `provision_user()` before it is used",
+      "body_markdown": "`provision_user()` passes its argument on without checking its shape.",
+      "location": {
+        "file_path": "app/scim/users.py",
+        "start_line": 30,
+        "end_line": 32,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-18T09:51:02.110363Z"
+    },
+    {
+      "id": "c17309be-084f-4ee8-b38c-53075a54e09b",
+      "review_id": "174c5478-f029-42cc-806c-ad93401ca4a9",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_edge_case_test",
+      "title": "Cover the empty-input branch of `_active_flag()`",
+      "body_markdown": "`_active_flag()` has no test for an empty input.",
+      "location": {
+        "file_path": "app/scim/users.py",
+        "start_line": 47,
+        "end_line": 49,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-18T09:51:02.111763Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#229` in 28.8s · [full run ↗](https://witness.acme.internal/runs/174c5478-f029-42cc-806c-ad93401ca4a9)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "1e982b1bbfda09e6482095a008e9df1cad64a36f",
+    "comments": [
+      {
+        "path": "app/scim/users.py",
+        "body": "**`proof_status: proven`** · severity **`0.555`** high\n\nSCIM `DELETE` sets `active = False` (line 14) and never calls `revoke_session()`, so a deprovisioned employee keeps working until their access token expires, up to 24 hours later.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `6745d01` | `1 passed in 0.52s` |\n| head | `1e982b1` | `1 failed in 0.50s` |\n\n<details><summary>terminal output at head <code>1e982b1</code></summary>\n\n    E       AssertionError: assert 2 == 0\n    E        +  where 2 = live_sessions_after_deprovision('usr_58')\n    tests/test_repro_f8ac5f.py:10: AssertionError\n    1 failed in 0.50s\n\n</details>\n\n**Severity `0.555`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.010`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/9d68c62e-0722-4fec-94b2-63bdab3d1371#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint ff741063…e99b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/9d68c62e-0722-4fec-94b2-63bdab3d1371#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
+        "line": 17,
+        "side": "RIGHT",
+        "start_line": 14,
+        "start_side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=174c5478-f029-42cc-806c-ad93401ca4a9"
+}

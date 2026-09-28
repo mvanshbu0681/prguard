@@ -1,0 +1,290 @@
+/* The footer on the otoma8.com footer (measured on the live site): a 1416px
+   #0a0a0a card inset 12px, radius 28, padding 64/56; a 28px logo, a 15/24.4
+   blurb at 70% white (448px); two link columns at 15px, 90% white, 36px row
+   pitch; a white/10 hairline with 48px above the lower row; a 15/500 label, a
+   56px white/10 pill (560 wide here, 512 there, to fit the PR line) holding a
+   44px lime button with a 36px black chip; and
+   a 14px copyright at 45% white. */
+
+.footer {
+  --lime: #cbf857;
+  padding: 24px 12px 12px;
+  background: #ffffff;
+  font-family: var(--font-v2-display), system-ui, sans-serif;
+}
+
+.card {
+  box-sizing: border-box;
+  padding: 64px 56px;
+  border-radius: 28px;
+  background: #0a0a0a;
+  color: #ffffff;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  gap: 48px;
+}
+
+.logo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  line-height: 28px;
+  text-decoration: none;
+}
+
+/* An absolutely-positioned hit-area pad, out of flow so it cannot shift the
+   blurb below or collapse margins: brings the logo link's tap target closer
+   to 44px tall on phones without changing its visible size. */
+.logo::before {
+  content: "";
+  position: absolute;
+  inset: -6px -8px;
+}
+
+.logoMark {
+  flex: none;
+  color: var(--lime);
+}
+
+.blurb {
+  max-width: 448px;
+  margin: 26px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+.columns {
+  display: flex;
+  gap: 96px;
+}
+
+.column {
+  display: grid;
+  gap: 17px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  position: relative;
+  display: inline-block;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 15px;
+  line-height: 19px;
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+/* Same out-of-flow hit-area pad as the logo: the 17px row gap only allows 8px
+   of padding on each side before neighbouring links' tap targets would touch,
+   so this doesn't reach the full 44px, but it is a meaningful, free
+   improvement that leaves the 36px row pitch (measured off the reference
+   design) untouched. */
+.link::before {
+  content: "";
+  position: absolute;
+  inset: -8px -6px;
+}
+
+.link:hover {
+  color: var(--lime);
+}
+
+.bottom {
+  margin-top: 64px;
+  padding-top: 48px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.label {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 22.5px;
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 560px;
+  max-width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  margin-top: 16px;
+  padding: 6px 6px 6px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  text-decoration: none;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease;
+}
+
+.pill:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pillText {
+  overflow: hidden;
+  min-width: 0;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pillMeta {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.pillBtn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 4px 0 20px;
+  border-radius: 999px;
+  background: var(--lime);
+  color: #131313;
+  font-family: var(--font-v2-mono), ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 1.68px;
+  text-transform: uppercase;
+}
+
+.pillChip {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #0a0a0a;
+  color: #ffffff;
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pill:hover .pillChip {
+  transform: rotate(45deg);
+}
+
+.legal {
+  margin: 32px 0 0;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.logo:focus-visible,
+.link:focus-visible,
+.pill:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillChip {
+    transition: none;
+  }
+}
+
+/* ---------- small screens ---------- */
+
+@media (max-width: 820px) {
+  .top {
+    flex-direction: column;
+    gap: 40px;
+  }
+  .columns {
+    gap: 64px;
+  }
+}
+
+@media (max-width: 640px) {
+  .footer {
+    padding: 16px 8px 8px;
+  }
+  .card {
+    padding: 40px 16px;
+    border-radius: 22px;
+  }
+  .blurb {
+    margin-top: 20px;
+  }
+  .columns {
+    gap: 48px;
+  }
+  .bottom {
+    margin-top: 40px;
+    padding-top: 32px;
+  }
+  .pill {
+    padding-left: 18px;
+  }
+  .pillText {
+    font-size: 12px;
+  }
+  .pillOwner,
+  .pillMeta {
+    display: none;
+  }
+  .pillBtn {
+    gap: 10px;
+    padding-left: 16px;
+  }
+  .legal {
+    margin-top: 24px;
+    font-size: 13px;
+  }
+}
+
+/* Below ~400px the pill has no slack left for the PR line (owner and meta are
+   already hidden above): free a little more room so it never has to
+   ellipsis-cut the repo name or PR number mid-string. */
+@media (max-width: 400px) {
+  .pill {
+    gap: 8px;
+  }
+  .pillText {
+    font-size: 11px;
+  }
+  .pillBtn {
+    gap: 8px;
+    padding-left: 14px;
+  }
+}
+
+@media (max-width: 340px) {
+  /* At 320px "Replay" and the repo#PR can't share the pill without cutting the
+     PR number, so the button keeps only its arrow chip; the word stays for
+     screen readers. */
+  .pillBtn {
+    gap: 0;
+    padding: 0 4px;
+  }
+  .pillLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

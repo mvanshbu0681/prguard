@@ -7,6 +7,7 @@ venv/
 !.env.example
 *.db
 *.sqlite3
+.prguard_proof/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

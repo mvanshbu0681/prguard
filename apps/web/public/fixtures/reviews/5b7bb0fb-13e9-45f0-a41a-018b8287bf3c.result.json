@@ -1,0 +1,374 @@
+{
+  "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+  "status": "succeeded",
+  "repository": {
+    "owner": "acme",
+    "name": "checkout-service",
+    "default_branch": "main"
+  },
+  "pull_request": {
+    "number": 4790,
+    "title": "Store checkout sessions per account",
+    "author": "mhollis",
+    "head_sha": "720b20b85c7ed2c1dda30a976ad2ef7c3083f7f0",
+    "base_sha": "a1990d891795ea2ba5621a257aac0ff286dcbb65",
+    "url": "https://github.com/acme/checkout-service/pull/4790"
+  },
+  "risk_tier": "full",
+  "context": {
+    "files_changed": 3,
+    "files_reviewed": 3,
+    "files_excluded": 0,
+    "excluded_reasons": {},
+    "truncated": false
+  },
+  "gate": {
+    "conclusion": "success",
+    "reason": "No finding was both proven by execution and severe enough to block.",
+    "delivery": "commit_status",
+    "context_name": "witness/merge-gate",
+    "blocking_finding_ids": []
+  },
+  "delivery": {
+    "status": "posted",
+    "github_review_id": 2700871888,
+    "event": "COMMENT",
+    "comments_posted": 1,
+    "ladder_breakdown": {
+      "inline_exact": 0,
+      "inline_nearest": 0,
+      "file_level": 0,
+      "summary_only": 0
+    }
+  },
+  "counts": {
+    "proposed": 5,
+    "published": 0,
+    "suppressed": 1,
+    "dropped": 3,
+    "disproven": 1,
+    "blocking": 0
+  },
+  "cost": {
+    "usd_estimate": 1.0421,
+    "input_tokens": 68296,
+    "output_tokens": 42913,
+    "cache_read_tokens": 153477
+  },
+  "timing": {
+    "queued_at": "2026-09-07T13:18:48.811957Z",
+    "started_at": "2026-09-07T13:18:49.629570Z",
+    "finished_at": "2026-09-07T13:19:22.972570Z",
+    "duration_seconds": 33.343
+  },
+  "degradations": [],
+  "findings": [
+    {
+      "id": "c291d5e3-5167-46e0-b59f-267b88c1a254",
+      "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+      "fingerprint": "a291b2d72ed2afc2c64cc27b4b76bf406ff2277a49146f32ead34ef417c9c909",
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "float_money_formatting",
+      "title": "Format money in `_line()` from integer cents, not float division",
+      "body_markdown": "`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.",
+      "location": {
+        "file_path": "app/api/checkout.py",
+        "start_line": 59,
+        "end_line": 59,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/api/checkout.py::_line"
+      },
+      "severity": {
+        "band": "medium",
+        "score": 0.48,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.3,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.0,
+          "churn": 0.1,
+          "proof_confidence": 0.5
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × unproven × blast radius 0.30 × churn 0.10",
+        "llm_severity_hint": "low",
+        "notes": []
+      },
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "suppressed",
+      "blocking": false,
+      "delivery": {
+        "mode": "inline_exact",
+        "delivered_line": 59,
+        "github_comment_id": 1992022342
+      },
+      "history": {
+        "occurrence_count": 3,
+        "first_seen_run_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+        "previously_addressed": 0,
+        "previously_dismissed": 1
+      },
+      "suppression": {
+        "suppression_id": "7e960d13-654b-46d3-bb0d-8d44e62bc62a",
+        "scope": "file",
+        "reason": "Display-only: the summary string is never parsed back, and totals are computed in integer cents upstream. Revisit if the summary ever feeds an invoice.",
+        "created_by": "priya-raman",
+        "expires_at": null
+      },
+      "created_at": "2026-09-07T13:19:15.926570Z"
+    },
+    {
+      "id": "7f86783b-25fe-4f8d-a902-228de651c6e4",
+      "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+      "fingerprint": "9c1c9ebdb7e9ee84967d672056c822d6da5db27e533fdde35898f517a8db1b01",
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "session_key_collision",
+      "title": "Two carts for one account share a single checkout session",
+      "body_markdown": "`create_checkout_session()` derives the session key from `account_id` (line 13), so an account with two open carts gets the first cart's session back for the second, and the second checkout charges the first cart.",
+      "location": {
+        "file_path": "app/checkout/session.py",
+        "start_line": 13,
+        "end_line": 16,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": "app/checkout/session.py::create_checkout_session"
+      },
+      "severity": {
+        "band": "info",
+        "score": 0.47,
+        "inputs": {
+          "reachability": 0.5,
+          "blast_radius": 0.2,
+          "path_sensitivity": 1.0,
+          "coverage_gap": 0.5,
+          "churn": 0.15,
+          "proof_confidence": 0.0
+        },
+        "weights": {
+          "reachability": 0.2,
+          "blast_radius": 0.15,
+          "path_sensitivity": 0.25,
+          "coverage_gap": 0.15,
+          "churn": 0.1,
+          "proof_confidence": 0.15
+        },
+        "explanation": "sensitive path × reachable internally × file tested, symbol not × blast radius 0.20 × churn 0.15",
+        "llm_severity_hint": "high",
+        "notes": [
+          "clamped to info: repro passed at head"
+        ]
+      },
+      "proof": {
+        "status": "disproven",
+        "runner": "docker",
+        "isolation": "isolated",
+        "baseline_mode": "compared",
+        "test_file_path": "tests/test_repro_4993cc.py",
+        "test_code": "\"\"\"Repro for a Witness finding in app/checkout/session.py::create_checkout_session.\n\nClaim: two carts for one account share a single checkout session.\n\"\"\"\n\nfrom app.checkout.session import create_checkout_session\n\n\ndef test_second_cart_gets_its_own_session():\n    first = create_checkout_session(\"acct_31c\", cart_id=\"cart_a\")\n    second = create_checkout_session(\"acct_31c\", cart_id=\"cart_b\")\n    assert first.id != second.id\n",
+        "command": "pytest tests/test_repro_4993cc.py -q -p no:cacheprovider",
+        "base": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.36s"
+        },
+        "head": {
+          "exit_code": 0,
+          "excerpt": ".                                                                        [100%]\n1 passed in 0.34s"
+        },
+        "duration_ms": 1786,
+        "deps_install_ok": true
+      },
+      "status": "disproven",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-07T13:19:15.927970Z"
+    },
+    {
+      "id": "452b0086-c833-4aa7-bf00-794ed650151f",
+      "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+      "fingerprint": null,
+      "specialist": "quality",
+      "category": "maintainability",
+      "rule_key": "unclear_function_name",
+      "title": "Rename `create_checkout_session()` so the name says it has a side effect",
+      "body_markdown": "`create_checkout_session()` writes as well as reads; the name reads like a pure lookup.",
+      "location": {
+        "file_path": "app/checkout/session.py",
+        "start_line": 11,
+        "end_line": 13,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-07T13:19:15.929370Z"
+    },
+    {
+      "id": "93758832-a2a3-4b13-ade2-e2a6b6391005",
+      "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+      "fingerprint": null,
+      "specialist": "bugs",
+      "category": "correctness",
+      "rule_key": "concurrent_invocation",
+      "title": "Guard `expire_sessions()` against two callers running it at once",
+      "body_markdown": "Two workers running `expire_sessions()` together could each overwrite the other's result.",
+      "location": {
+        "file_path": "app/checkout/session.py",
+        "start_line": 39,
+        "end_line": 41,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-07T13:19:15.930770Z"
+    },
+    {
+      "id": "93b10f2c-e7f9-452c-971a-e3fd0c690052",
+      "review_id": "5b7bb0fb-13e9-45f0-a41a-018b8287bf3c",
+      "fingerprint": null,
+      "specialist": "tests",
+      "category": "test_integrity",
+      "rule_key": "missing_edge_case_test",
+      "title": "Cover the empty-input branch of `get_order()`",
+      "body_markdown": "`get_order()` has no test for an empty input.",
+      "location": {
+        "file_path": "app/api/checkout.py",
+        "start_line": 45,
+        "end_line": 47,
+        "side": "RIGHT",
+        "language": "python",
+        "symbol_path": null
+      },
+      "severity": null,
+      "proof": {
+        "status": "not_attempted",
+        "runner": null,
+        "isolation": null,
+        "baseline_mode": null,
+        "test_file_path": null,
+        "test_code": null,
+        "command": null,
+        "base": null,
+        "head": null,
+        "duration_ms": null,
+        "deps_install_ok": null
+      },
+      "status": "dropped",
+      "blocking": false,
+      "delivery": {
+        "mode": "not_delivered",
+        "delivered_line": null,
+        "github_comment_id": null
+      },
+      "history": {
+        "occurrence_count": 1,
+        "first_seen_run_id": null,
+        "previously_addressed": 0,
+        "previously_dismissed": 0
+      },
+      "suppression": null,
+      "created_at": "2026-09-07T13:19:15.932170Z"
+    }
+  ],
+  "review_payload": {
+    "event": "COMMENT",
+    "body": "**Witness** reviewed `#4790` in 33.3s · [full run ↗](https://witness.acme.internal/runs/5b7bb0fb-13e9-45f0-a41a-018b8287bf3c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
+    "commit_id": "720b20b85c7ed2c1dda30a976ad2ef7c3083f7f0",
+    "comments": [
+      {
+        "path": "app/api/checkout.py",
+        "body": "**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c291d5e3-5167-46e0-b59f-267b88c1a254#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a291b2d7…c909` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c291d5e3-5167-46e0-b59f-267b88c1a254#suppress)",
+        "line": 59,
+        "side": "RIGHT"
+      }
+    ]
+  },
+  "audit_url": "/v1/audit?review_id=5b7bb0fb-13e9-45f0-a41a-018b8287bf3c"
+}
