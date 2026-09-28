@@ -28,6 +28,7 @@
 }
 
 .logo {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -39,25 +40,18 @@
   text-decoration: none;
 }
 
+/* An absolutely-positioned hit-area pad, out of flow so it cannot shift the
+   blurb below or collapse margins: brings the logo link's tap target closer
+   to 44px tall on phones without changing its visible size. */
+.logo::before {
+  content: "";
+  position: absolute;
+  inset: -6px -8px;
+}
+
 .logoMark {
-  display: grid;
-  gap: 3px;
-  width: 24px;
-}
-
-.logoMark i {
-  display: block;
-  box-sizing: border-box;
-  height: 8px;
-  border-radius: 2px;
-}
-
-.logoMark i:first-child {
-  border: 1.75px solid var(--lime);
-}
-
-.logoMark i:last-child {
-  background: var(--lime);
+  flex: none;
+  color: var(--lime);
 }
 
 .blurb {
@@ -82,11 +76,24 @@
 }
 
 .link {
+  position: relative;
+  display: inline-block;
   color: rgba(255, 255, 255, 0.9);
   font-size: 15px;
   line-height: 19px;
   text-decoration: none;
   transition: color 180ms ease;
+}
+
+/* Same out-of-flow hit-area pad as the logo: the 17px row gap only allows 8px
+   of padding on each side before neighbouring links' tap targets would touch,
+   so this doesn't reach the full 44px, but it is a meaningful, free
+   improvement that leaves the 36px row pitch (measured off the reference
+   design) untouched. */
+.link::before {
+  content: "";
+  position: absolute;
+  inset: -8px -6px;
 }
 
 .link:hover {
@@ -215,7 +222,7 @@
     padding: 16px 8px 8px;
   }
   .card {
-    padding: 40px 24px;
+    padding: 40px 16px;
     border-radius: 22px;
   }
   .blurb {
@@ -245,5 +252,39 @@
   .legal {
     margin-top: 24px;
     font-size: 13px;
+  }
+}
+
+/* Below ~400px the pill has no slack left for the PR line (owner and meta are
+   already hidden above): free a little more room so it never has to
+   ellipsis-cut the repo name or PR number mid-string. */
+@media (max-width: 400px) {
+  .pill {
+    gap: 8px;
+  }
+  .pillText {
+    font-size: 11px;
+  }
+  .pillBtn {
+    gap: 8px;
+    padding-left: 14px;
+  }
+}
+
+@media (max-width: 340px) {
+  /* At 320px "Replay" and the repo#PR can't share the pill without cutting the
+     PR number, so the button keeps only its arrow chip; the word stays for
+     screen readers. */
+  .pillBtn {
+    gap: 0;
+    padding: 0 4px;
+  }
+  .pillLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

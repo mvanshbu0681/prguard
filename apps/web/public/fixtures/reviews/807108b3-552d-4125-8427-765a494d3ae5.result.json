@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_4499ac.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reconcile/adyen.py::_parse_report_row.\n\nClaim: report rows parse to naive datetimes.\n\"\"\"\n\nfrom datetime import UTC, datetime\n\nfrom app.reconcile.adyen import parse_booked_at\n\n\ndef test_report_timestamps_compare_with_booked_payouts():\n    assert parse_booked_at(\"2026-08-18 23:14:09\") < datetime(2026, 8, 19, tzinfo=UTC)\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reconcile/adyen.py::_parse_report_row.\n\nClaim: report rows parse to naive datetimes.\n\"\"\"\n\nfrom datetime import UTC, datetime\n\nfrom app.reconcile.adyen import parse_booked_at\n\n\ndef test_report_timestamps_compare_with_booked_payouts():\n    assert parse_booked_at(\"2026-08-18 23:14:09\") < datetime(2026, 8, 19, tzinfo=UTC)\n",
         "command": "pytest tests/test_repro_4499ac.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -310,12 +310,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#311` in 37.2s · [full run ↗](https://prguard.acme.internal/runs/807108b3-552d-4125-8427-765a494d3ae5)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#311` in 37.2s · [full run ↗](https://witness.acme.internal/runs/807108b3-552d-4125-8427-765a494d3ae5)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "a25ade5a9b4d314a6a16f377af0ea7f0bbcb3fe2",
     "comments": [
       {
         "path": "app/reconcile/adyen.py",
-        "body": "**`proof_status: proven`** · severity **`0.475`** medium\n\nAdyen's report timestamps carry no offset and `_parse_report_row()` parses them with `datetime.strptime` (line 34); `match_payouts()` compares them with the aware `payout.booked_at`, which raises `TypeError` on the first row.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `c0f2626` | `1 passed in 0.31s` |\n| head | `a25ade5` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>a25ade5</code></summary>\n\n    E       TypeError: can't compare offset-naive and offset-aware datetimes\n    tests/test_repro_4499ac.py:12: TypeError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.475`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/5651ac3b-5dd5-4ba0-8062-ca2036a03e20#severity)\n\nThis finding has `proof_status: proven` and scores `0.475` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 6e6f1661…1e8e` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/5651ac3b-5dd5-4ba0-8062-ca2036a03e20#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.475`** medium\n\nAdyen's report timestamps carry no offset and `_parse_report_row()` parses them with `datetime.strptime` (line 34); `match_payouts()` compares them with the aware `payout.booked_at`, which raises `TypeError` on the first row.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `c0f2626` | `1 passed in 0.31s` |\n| head | `a25ade5` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>a25ade5</code></summary>\n\n    E       TypeError: can't compare offset-naive and offset-aware datetimes\n    tests/test_repro_4499ac.py:12: TypeError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.475`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/5651ac3b-5dd5-4ba0-8062-ca2036a03e20#severity)\n\nThis finding has `proof_status: proven` and scores `0.475` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 6e6f1661…1e8e` · [dismiss with a reason ↗](https://witness.acme.internal/findings/5651ac3b-5dd5-4ba0-8062-ca2036a03e20#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 36,
         "side": "RIGHT",
         "start_line": 34,
@@ -323,7 +323,7 @@
       },
       {
         "path": "app/reconcile/adyen.py",
-        "body": "> Nearest reviewable line. The issue is at `app/reconcile/adyen.py:67`.\n\n**`proof_status: not_attempted`** · severity **`0.205`** low\n\n`_within_tolerance()` compares `abs(expected - actual) < 0.01` on floats (line 67); integer cents avoid a tolerance that is itself a binary fraction.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.205`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.015`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/17607406-cf2d-40c6-a75b-3564edb802e1#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 18de1773…d05f` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/17607406-cf2d-40c6-a75b-3564edb802e1#suppress)",
+        "body": "> Nearest reviewable line. The issue is at `app/reconcile/adyen.py:67`.\n\n**`proof_status: not_attempted`** · severity **`0.205`** low\n\n`_within_tolerance()` compares `abs(expected - actual) < 0.01` on floats (line 67); integer cents avoid a tolerance that is itself a binary fraction.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.205`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.015`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/17607406-cf2d-40c6-a75b-3564edb802e1#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 18de1773…d05f` · [dismiss with a reason ↗](https://witness.acme.internal/findings/17607406-cf2d-40c6-a75b-3564edb802e1#suppress)",
         "line": 61,
         "side": "RIGHT"
       }

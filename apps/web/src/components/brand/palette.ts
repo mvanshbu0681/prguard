@@ -25,6 +25,18 @@ export const BRAND_HEX = {
   alarmTintLo: '#241719',
 } as const;
 
+/**
+ * The Witness identity colours, for the marks drawn outside the DOM (favicon,
+ * touch icon, GitHub App avatar, live favicon): the landing's lime on its ink.
+ * Each equals the landing token (--lime / --ink in the v2 hero module);
+ * tests/unit/chrome/palette.test.ts fails the build if one drifts.
+ */
+export const WITNESS_HEX = {
+  lime: '#CBF857',
+  ink: '#131313',
+  alarm: BRAND_HEX.alarm,
+} as const;
+
 /** White at `alpha` composited over `base` (sRGB, what the browser does for oklch(1 0 0 / a) on an opaque surface). */
 export function flattenWhite(alpha: number, base: string): string {
   const channels = base

@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -184,7 +184,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_dea2d1.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reconcile/adyen.py::match_payouts.\n\nClaim: two equal rows claim one payout.\n\"\"\"\n\nfrom app.reconcile.adyen import matches_for_amount\n\n\ndef test_each_payout_is_matched_once():\n    assert matches_for_amount(1250, 2) == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reconcile/adyen.py::match_payouts.\n\nClaim: two equal rows claim one payout.\n\"\"\"\n\nfrom app.reconcile.adyen import matches_for_amount\n\n\ndef test_each_payout_is_matched_once():\n    assert matches_for_amount(1250, 2) == 1\n",
         "command": "pytest tests/test_repro_dea2d1.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -310,12 +310,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#326` in 30.3s · [full run ↗](https://prguard.acme.internal/runs/81e192de-4a0a-41e2-ba02-f7692f45f6c5)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#326` in 30.3s · [full run ↗](https://witness.acme.internal/runs/81e192de-4a0a-41e2-ba02-f7692f45f6c5)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "1173f73cee589a83dd8ce5da7b84766e1a1875de",
     "comments": [
       {
         "path": "app/reconcile/adyen.py",
-        "body": "**`proof_status: proven`** · severity **`0.490`** medium\n\nMatching on `(amount, currency)` without removing a matched payout from the pool (line 50) lets two 12.50 EUR rows both claim the same payout; the second real payout is then reported missing.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `34c5264` | `1 passed in 0.40s` |\n| head | `1173f73` | `1 failed in 0.41s` |\n\n<details><summary>terminal output at head <code>1173f73</code></summary>\n\n    E       assert 2 == 1\n    E        +  where 2 = matches_for_amount(1250, 2)\n    tests/test_repro_dea2d1.py:10: AssertionError\n    1 failed in 0.41s\n\n</details>\n\n**Severity `0.490`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/72d2dcd9-c880-4142-b9a6-bd709af34936#severity)\n\nThis finding has `proof_status: proven` and scores `0.490` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 1f70bc0d…bc4c` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/72d2dcd9-c880-4142-b9a6-bd709af34936#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.490`** medium\n\nMatching on `(amount, currency)` without removing a matched payout from the pool (line 50) lets two 12.50 EUR rows both claim the same payout; the second real payout is then reported missing.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `34c5264` | `1 passed in 0.40s` |\n| head | `1173f73` | `1 failed in 0.41s` |\n\n<details><summary>terminal output at head <code>1173f73</code></summary>\n\n    E       assert 2 == 1\n    E        +  where 2 = matches_for_amount(1250, 2)\n    tests/test_repro_dea2d1.py:10: AssertionError\n    1 failed in 0.41s\n\n</details>\n\n**Severity `0.490`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/72d2dcd9-c880-4142-b9a6-bd709af34936#severity)\n\nThis finding has `proof_status: proven` and scores `0.490` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 1f70bc0d…bc4c` · [dismiss with a reason ↗](https://witness.acme.internal/findings/72d2dcd9-c880-4142-b9a6-bd709af34936#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 53,
         "side": "RIGHT",
         "start_line": 50,

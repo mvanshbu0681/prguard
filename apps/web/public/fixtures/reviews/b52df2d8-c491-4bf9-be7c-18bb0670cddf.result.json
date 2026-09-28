@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -178,7 +178,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_22eb54.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/settlement/fetch.py::fetch_settlements.\n\nClaim: one hung provider stalls the whole fetch.\n\"\"\"\n\nimport pytest\n\nfrom app.settlement.fetch import fetch_with_deadline\n\n\ndef test_hung_provider_is_cut_off():\n    assert fetch_with_deadline(0.05) == []\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/settlement/fetch.py::fetch_settlements.\n\nClaim: one hung provider stalls the whole fetch.\n\"\"\"\n\nimport pytest\n\nfrom app.settlement.fetch import fetch_with_deadline\n\n\ndef test_hung_provider_is_cut_off():\n    assert fetch_with_deadline(0.05) == []\n",
         "command": "pytest tests/test_repro_22eb54.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -304,12 +304,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#333` in 28.1s · [full run ↗](https://prguard.acme.internal/runs/b52df2d8-c491-4bf9-be7c-18bb0670cddf)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#333` in 28.1s · [full run ↗](https://witness.acme.internal/runs/b52df2d8-c491-4bf9-be7c-18bb0670cddf)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "6417fb1e6faf9f355adeb387d9a98b310861af4d",
     "comments": [
       {
         "path": "app/settlement/fetch.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.310`** low\n\nA client per call (line 32) repeats the TLS handshake eleven times a night; one shared client is enough.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.310`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.045`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/de471e37-8542-4dc4-8312-674aba102189#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a89d50a5…76dc` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/de471e37-8542-4dc4-8312-674aba102189#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.310`** low\n\nA client per call (line 32) repeats the TLS handshake eleven times a night; one shared client is enough.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.310`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.045`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/de471e37-8542-4dc4-8312-674aba102189#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a89d50a5…76dc` · [dismiss with a reason ↗](https://witness.acme.internal/findings/de471e37-8542-4dc4-8312-674aba102189#suppress)",
         "line": 34,
         "side": "RIGHT",
         "start_line": 32,
@@ -317,7 +317,7 @@
       },
       {
         "path": "app/settlement/fetch.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.410`** medium\n\n`asyncio.gather()` over every provider has no timeout (line 14), so one hung provider stalls the nightly job past its window and no settlement is booked.\n\n**Proof** — a dependency the repro test needed did not install, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `8f535c6` | `1 passed in 0.40s` |\n| head | `6417fb1` | `1 failed in 0.38s` |\n\n**Severity `0.410`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.045`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/570bb03e-26f1-424c-a43f-eb063c1c66b6#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint e3ef8c79…fc09` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/570bb03e-26f1-424c-a43f-eb063c1c66b6#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.410`** medium\n\n`asyncio.gather()` over every provider has no timeout (line 14), so one hung provider stalls the nightly job past its window and no settlement is booked.\n\n**Proof** — a dependency the repro test needed did not install, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `8f535c6` | `1 passed in 0.40s` |\n| head | `6417fb1` | `1 failed in 0.38s` |\n\n**Severity `0.410`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.045`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/570bb03e-26f1-424c-a43f-eb063c1c66b6#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint e3ef8c79…fc09` · [dismiss with a reason ↗](https://witness.acme.internal/findings/570bb03e-26f1-424c-a43f-eb063c1c66b6#suppress)",
         "line": 17,
         "side": "RIGHT",
         "start_line": 14,

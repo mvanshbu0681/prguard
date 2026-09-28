@@ -284,7 +284,7 @@ export const LANGUAGE_SPECIMENS: { lang?: string; filePath: string; code: string
     code: [`#!/usr/bin/env bash`, `set -euo pipefail`, `git checkout "${BASE}" && pytest -q "${REPRO}"  # expect exit 0`, `echo "exit $?"`].join("\n"),
   },
   {
-    filePath: ".prguard.yml",
+    filePath: ".witness.yml",
     code: ["gate:", "  block_on: proven   # a finding blocks only with proof_status: proven", "  min_severity: high", "sandbox:", "  image: python:3.12-slim", "  timeout_s: 120"].join("\n"),
   },
   {

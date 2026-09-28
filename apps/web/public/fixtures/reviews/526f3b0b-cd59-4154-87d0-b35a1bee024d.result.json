@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -182,12 +182,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#344` in 25.9s · [full run ↗](https://prguard.acme.internal/runs/526f3b0b-cd59-4154-87d0-b35a1bee024d)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#344` in 25.9s · [full run ↗](https://witness.acme.internal/runs/526f3b0b-cd59-4154-87d0-b35a1bee024d)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "c1cbdbe4730f4b3222ae0314fd209c2b11393971",
     "comments": [
       {
         "path": "migrations/versions/0091_drop_ledger_v1.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`downgrade()` recreates `ledger_v1_entries` without its rows (line 25). That is the only possible downgrade, and a comment or a raised `NotImplementedError` would stop anyone expecting the data back.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d6fdb98e-509c-47c8-9853-d1a898ccb952#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 41e90164…5ee0` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d6fdb98e-509c-47c8-9853-d1a898ccb952#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`downgrade()` recreates `ledger_v1_entries` without its rows (line 25). That is the only possible downgrade, and a comment or a raised `NotImplementedError` would stop anyone expecting the data back.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/d6fdb98e-509c-47c8-9853-d1a898ccb952#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 41e90164…5ee0` · [dismiss with a reason ↗](https://witness.acme.internal/findings/d6fdb98e-509c-47c8-9853-d1a898ccb952#suppress)",
         "line": 27,
         "side": "RIGHT",
         "start_line": 25,

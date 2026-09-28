@@ -599,7 +599,7 @@ def test_refund_rounding():
 #: the traceback: ``tests/test_repro_7e3f1a.py:41: AttributeError``.
 REPRO_PROVEN_PATH = "tests/test_repro_7e3f1a.py"
 REPRO_PROVEN = '''\
-"""Repro for a prguard finding in app/billing/charge.py::charge.
+"""Repro for a Witness finding in app/billing/charge.py::charge.
 
 Claim: charge() dereferences a None currency when the account has no default.
 Passes at base, where the legacy account is charged in "usd". Fails at head.
@@ -645,7 +645,7 @@ def test_charge_uses_account_currency():
 #: The disproven finding's repro: it passes at both SHAs, which refutes the claim.
 REPRO_DISPROVEN_PATH = "tests/test_repro_b04d19.py"
 REPRO_DISPROVEN = '''\
-"""Repro for a prguard finding in app/billing/rates.py::get_rate.
+"""Repro for a Witness finding in app/billing/rates.py::get_rate.
 
 Claim: get_rate() may return None for an unsupported currency.
 Fails if get_rate() hands back None for a code the rate table does not carry.
@@ -666,7 +666,7 @@ def test_get_rate_never_returns_none_for_an_unsupported_code():
 #: predates this pull request (``pre_existing_failure``).
 REPRO_INCONCLUSIVE_PATH = "tests/test_repro_2c9e40.py"
 REPRO_INCONCLUSIVE = '''\
-"""Repro for a prguard finding in app/billing/charge.py::_to_settlement.
+"""Repro for a Witness finding in app/billing/charge.py::_to_settlement.
 
 Claim: zero-decimal currencies are scaled down instead of up.
 1200 JPY at 0.006734 USD per JPY is 8.08 USD, which is 808 US cents.

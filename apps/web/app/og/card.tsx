@@ -4,7 +4,7 @@
 // next/og (Satori + resvg) for app/opengraph-image.tsx and app/twitter-image.tsx.
 //
 //   ┌──────────────────────────────────────────────────────────────┐
-//   │  ▣ │ PRGUARD                        graph paper, 64px grid   │  Lockup B
+//   │  ◉ │ WITNESS                        graph paper, 64px grid   │  Lockup B
 //   │  We don't guess.              ┌ base 7c41a09 ─────────────┐   │
 //   │  We run the test.             │ 1 passed in 0.42s         │   │  the mini bench
 //   │  ├────────────────            ├──── HEAD 9c2d4b1 ─────────┤   │
@@ -23,12 +23,11 @@
 // variable axis). Every div with more than one child is display:flex.
 //
 // No registration marks on the bench: they are drawn only by <Exhibit> (plan §2
-// hard rule 1), and the card cannot render <Exhibit>. The corner ticks inside
-// the mark are part of the mark (brand-gaps §A), not registration marks.
+// hard rule 1), and the card cannot render <Exhibit>.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { CSSProperties, ReactNode } from 'react';
-import { markGeometry, markParts } from '@/components/brand/geometry';
+import { markGeometry, markParts, markViewBox } from '@/components/brand/geometry';
 import { GSC_CAP_HEIGHT, WORDMARK_INK, WORDMARK_TRACKING } from '@/components/brand/metrics';
 import { BRAND_HEX, FLAT_HEX, flattenWhite } from '@/components/brand/palette';
 import type { OgStory } from './data';
@@ -78,12 +77,16 @@ function GraphPaper() {
 
 function MarkSvg({ size }: { size: number }) {
   const g = markGeometry(size);
-  const fill = { bar: BRAND_HEX.signal, tick: FLAT_HEX.rule2OnInk0, alarm: BRAND_HEX.alarm };
+  const color = { bar: BRAND_HEX.signal, alarm: BRAND_HEX.alarm };
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      {markParts(g).map((p, i) => (
-        <path key={i} d={p.d} fill={fill[p.paint]} fillRule={p.fillRule} />
-      ))}
+    <svg width={size} height={size} viewBox={markViewBox(g)}>
+      {markParts(g).map((p) =>
+        p.stroke ? (
+          <path key={p.part} d={p.d} fill="none" stroke={color[p.paint]} strokeWidth={p.stroke} strokeLinecap="round" strokeLinejoin="round" />
+        ) : (
+          <path key={p.part} d={p.d} fill={color[p.paint]} />
+        ),
+      )}
     </svg>
   );
 }
@@ -107,7 +110,7 @@ function LockupB() {
             color: BRAND_HEX.textPrimary,
           }}
         >
-          PRGUARD
+          WITNESS
         </div>
         <div
           style={{

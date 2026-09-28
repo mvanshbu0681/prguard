@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_6028c7.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
         "command": "pytest tests/test_repro_6028c7.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 1,
@@ -194,7 +194,7 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#318` in 29.9s · [full run ↗](https://prguard.acme.internal/runs/36e8ee85-0a9d-4b49-a6b8-b5005f99a901)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#318` in 29.9s · [full run ↗](https://witness.acme.internal/runs/36e8ee85-0a9d-4b49-a6b8-b5005f99a901)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "8d420315dddd30664f6b91e2a0fc7ad4aa51e9ad",
     "comments": []
   },

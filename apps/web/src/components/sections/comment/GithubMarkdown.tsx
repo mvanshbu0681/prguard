@@ -1,7 +1,7 @@
 // OWNER: m3 (wave 3). Section 04 — "What lands in your PR" (brand-gaps §E).
 //
 // Renders one comment body from the demo run's real review_payload, in
-// GitHub's own light PR chrome — never PRGuard's dark instrument-panel
+// GitHub's own light PR chrome — never Witness's dark instrument-panel
 // styling (that is the whole point of this section, THE IDEA in the brief).
 // The payload's markdown is used verbatim; nothing here retypes a word of it.
 //

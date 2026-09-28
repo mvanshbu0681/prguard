@@ -50,7 +50,7 @@ describe("WhatLandsInYourPR (section 04)", () => {
 
   it("renders the fixed subhead copy verbatim (brand-gaps §E — not paraphrased)", () => {
     expect(text).toContain(
-      "PRGuard posts exactly one review per run, with event: COMMENT. It has never posted APPROVE, and the code path to do so does not exist — there is a test that asserts it on every build.",
+      "Witness posts exactly one review per run, with event: COMMENT. It has never posted APPROVE, and the code path to do so does not exist — there is a test that asserts it on every build.",
     );
   });
 
@@ -61,7 +61,7 @@ describe("WhatLandsInYourPR (section 04)", () => {
     expect(text).toContain("app/billing/charge.py");
     expect(text).toContain(result.pull_request.head_sha!.slice(0, 7));
     expect(text).toContain(result.pull_request.base_sha!.slice(0, 7));
-    expect(text).toContain("PRGuard reviewed");
+    expect(text).toContain("Witness reviewed");
     expect(text).toContain(`${result.timing?.duration_seconds}s`);
     expect(text).toContain("raised");
     expect(text).toContain("dropped at the coordinator");

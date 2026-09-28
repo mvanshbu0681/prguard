@@ -1,4 +1,4 @@
-// OWNER: t1d (wave 1). The diff's rows, gutter and annotation slot, shared by <PRGuardDiff>
+// OWNER: t1d (wave 1). The diff's rows, gutter and annotation slot, shared by <WitnessDiff>
 // (every row in the DOM) and <DiffWindow> (only the rows near the view). No hooks.
 import type { ReactNode, Ref } from "react";
 import { inHighlight, type LineHighlight, type RailTone } from "../shared/types";

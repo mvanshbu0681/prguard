@@ -38,7 +38,7 @@ const media = vi.hoisted(() => {
   };
 });
 
-const g = globalThis as { __prguardGsap?: string };
+const g = globalThis as { __witnessGsap?: string };
 const html = document.documentElement;
 const frame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 
@@ -50,7 +50,7 @@ afterEach(() => {
 
 describe("ensureGsap", () => {
   it("registered on import, with the token curves as named eases and grid defaults", () => {
-    expect(g.__prguardGsap).toBe("ok");
+    expect(g.__witnessGsap).toBe("ok");
     for (const token of Object.values(EASE)) {
       const registered = gsap.parseEase(token.gsap);
       const expected = easeFn(token.points);
@@ -64,7 +64,7 @@ describe("ensureGsap", () => {
   });
 
   it("registers useGSAP + ScrollTrigger and ignoreMobileResize exactly once", () => {
-    delete g.__prguardGsap;
+    delete g.__witnessGsap;
     const register = vi.spyOn(gsap, "registerPlugin");
     const config = vi.spyOn(ScrollTrigger, "config");
     expect(ensureGsap()).toBe(true);
@@ -86,19 +86,19 @@ describe("ensureGsap", () => {
   it("if registration fails, leaves the handshake armed so content force-reveals", async () => {
     html.classList.remove(ANIM_READY_CLASS);
     html.removeAttribute(ANIM_RUNTIME_ATTR);
-    delete g.__prguardGsap;
+    delete g.__witnessGsap;
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(gsap, "registerPlugin").mockImplementation(() => {
       throw new Error("blocked");
     });
     expect(ensureGsap()).toBe(false);
-    expect(g.__prguardGsap).toBe("failed");
+    expect(g.__witnessGsap).toBe("failed");
     disarmHandshakeOnNextFrame(); // a mounted runtime asks, but there is no runtime
     await frame();
     await frame();
     expect(html.classList.contains(ANIM_READY_CLASS)).toBe(false);
     expect(html.hasAttribute(ANIM_RUNTIME_ATTR)).toBe(false);
-    g.__prguardGsap = "ok";
+    g.__witnessGsap = "ok";
   });
 
   it("disarms the handshake on the first GSAP frame after it is asked (from an effect), not before", async () => {

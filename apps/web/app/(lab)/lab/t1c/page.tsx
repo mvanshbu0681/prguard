@@ -96,7 +96,7 @@ export default function T1cLab() {
           <p className="type-label text-text-dim">/ lab — t1c · semantic badges and icons</p>
           <h1 className="mt-3 type-display-h2 text-text-primary">Badges and icons</h1>
           <p className="mt-3 max-w-(--measure-body) type-body text-text-body">
-            Every icon PRGuard draws, at every size on the 12 · 14 · 16 · 20 · 24 scale, and every semantic chip in every state. Each
+            Every icon Witness draws, at every size on the 12 · 14 · 16 · 20 · 24 scale, and every semantic chip in every state. Each
             state is carried by a glyph, a fill count or a border style as well as its colour; section 07 removes the colour to check.
           </p>
         </header>

@@ -1,4 +1,4 @@
-// OWNER: t1d (wave 1). <PRGuardDiff>: THE diff component (design §5.8, dashboard §4).
+// OWNER: t1d (wave 1). <WitnessDiff>: THE diff component (design §5.8, dashboard §4).
 //
 // ── THE ONE-FILE DECISION ─────────────────────────────────────────────────────────────
 // This wrapper was meant to sit over @git-diff-view/react@0.1.7. It does not: it is a
@@ -57,7 +57,7 @@ import { Annotation, annotationsAfter, highlightOf, lineOn, Row, type DiffAnnota
 
 export { lineOn, type DiffAnnotation, type DiffHighlight, type DiffSide };
 
-export interface PRGuardDiffProps {
+export interface WitnessDiffProps {
   /** One file's unified diff: `git diff` output or GitHub's `patch` field. */
   diff: string;
   /** Header path. Defaults to the +++ (else ---) path in the diff. */
@@ -157,7 +157,7 @@ function fullUnified(rows: readonly DiffRow[], highlight: readonly DiffHighlight
   );
 }
 
-export function PRGuardDiff({
+export function WitnessDiff({
   diff,
   filePath,
   label,
@@ -169,7 +169,7 @@ export function PRGuardDiff({
   maxHeight,
   id,
   className,
-}: PRGuardDiffProps) {
+}: WitnessDiffProps) {
   const parsed = useMemo(() => parseUnifiedDiff(diff), [diff]);
   const pairs = useMemo(() => (view === "split" ? pairRows(parsed.rows) : null), [parsed, view]);
   const descriptionId = useId();

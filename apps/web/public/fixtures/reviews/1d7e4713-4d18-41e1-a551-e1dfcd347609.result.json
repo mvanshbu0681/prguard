@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -257,12 +257,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1107` in 29.8s · [full run ↗](https://prguard.acme.internal/runs/1d7e4713-4d18-41e1-a551-e1dfcd347609)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#1107` in 29.8s · [full run ↗](https://witness.acme.internal/runs/1d7e4713-4d18-41e1-a551-e1dfcd347609)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "84becb02be550948aa066375e0aac4df49b187be",
     "comments": [
       {
         "path": "src/components/ProductGrid.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`Math.floor(width / 320)` (line 50) is 0 on a 300px viewport.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/ProductGrid.tsx` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/4e495015-c0f5-495e-9227-50aef1fb3b66#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint f93ab859…c98f` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/4e495015-c0f5-495e-9227-50aef1fb3b66#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`Math.floor(width / 320)` (line 50) is 0 on a 300px viewport.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/ProductGrid.tsx` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/4e495015-c0f5-495e-9227-50aef1fb3b66#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint f93ab859…c98f` · [dismiss with a reason ↗](https://witness.acme.internal/findings/4e495015-c0f5-495e-9227-50aef1fb3b66#suppress)",
         "line": 52,
         "side": "RIGHT",
         "start_line": 50,
@@ -270,7 +270,7 @@
       },
       {
         "path": "src/components/ProductGrid.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.390`** medium\n\nThe effect creates an observer per render (line 27) and returns no cleanup, so scrolling a 200-product grid leaves 200 observers attached.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/ProductGrid.tsx` is not Python.\n\n**Severity `0.390`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/5181d053-48c8-488b-ad42-743c07f18aa7#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 01295d38…ffcb` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/5181d053-48c8-488b-ad42-743c07f18aa7#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.390`** medium\n\nThe effect creates an observer per render (line 27) and returns no cleanup, so scrolling a 200-product grid leaves 200 observers attached.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/ProductGrid.tsx` is not Python.\n\n**Severity `0.390`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/5181d053-48c8-488b-ad42-743c07f18aa7#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 01295d38…ffcb` · [dismiss with a reason ↗](https://witness.acme.internal/findings/5181d053-48c8-488b-ad42-743c07f18aa7#suppress)",
         "line": 30,
         "side": "RIGHT",
         "start_line": 27,

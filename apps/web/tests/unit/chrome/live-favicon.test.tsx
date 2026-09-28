@@ -1,33 +1,62 @@
-// OWNER: t1a (wave 1). useLiveFavicon (brand-gaps §C): swaps link[rel=icon]
-// to a runtime-drawn 32×32 frame, ticks while running, holds still under
-// reduced motion, and restores the original icons.
+// useLiveFavicon (brand-gaps §C): swaps link[rel=icon] to a runtime-drawn
+// 32×32 frame of the Witness eye, ticks the pupil while running, holds still
+// under reduced motion, and restores the original icons.
 //
 // jsdom has no 2D canvas, so getContext returns a recording fake and
 // toDataURL returns a data URL that names the last frame painted. That is
 // enough to prove what was drawn, and when.
 import { cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BRAND_HEX, createLiveFavicon, paintLiveFavicon, useLiveFavicon, type LiveFaviconState } from '@/components/brand';
+import { WITNESS_HEX, createLiveFavicon, paintLiveFavicon, useLiveFavicon, type LiveFaviconState } from '@/components/brand';
 
-type Op = { kind: 'fillRect'; x: number; y: number; w: number; h: number; fill: string; alpha: number };
+type Shape = 'tile' | 'lid' | 'pupil';
+type Op = { kind: 'fill' | 'stroke'; shape: Shape; style: string; alpha: number };
 
-function fakeContext() {
+/** Records each fill/stroke with the shape of the path it paints (tile = roundRect, lid = the curve, pupil = the arc). */
+function fakeContext(onClear?: () => void) {
   const ops: Op[] = [];
+  let shape: Shape | null = null;
   const ctx = {
     fillStyle: '#000000',
+    strokeStyle: '#000000',
     globalAlpha: 1,
-    fillRect(x: number, y: number, w: number, h: number) {
-      ops.push({ kind: 'fillRect', x, y, w, h, fill: String(ctx.fillStyle), alpha: ctx.globalAlpha });
+    lineWidth: 1,
+    lineCap: 'butt',
+    lineJoin: 'miter',
+    setTransform() {},
+    clearRect() {
+      onClear?.();
+    },
+    beginPath() {
+      shape = null;
+    },
+    roundRect() {
+      shape = 'tile';
+    },
+    moveTo() {},
+    quadraticCurveTo() {
+      shape = 'lid';
+    },
+    lineTo() {},
+    arc() {
+      shape = 'pupil';
+    },
+    fill() {
+      ops.push({ kind: 'fill', shape: shape!, style: String(ctx.fillStyle), alpha: ctx.globalAlpha });
+    },
+    stroke() {
+      ops.push({ kind: 'stroke', shape: shape!, style: String(ctx.strokeStyle), alpha: ctx.globalAlpha });
     },
   };
   return { ctx: ctx as unknown as CanvasRenderingContext2D, ops };
 }
 
-/** A frame's identity from its ops: which colour the head bar is, and whether it is hollow or dimmed. */
+/** A frame's identity from its ops: the pupil's state. */
 function describeFrame(ops: Op[]): string {
-  const head = ops.slice(5); // background + the base bar's four rects come first
-  if (head.length === 4) return head[0].alpha < 1 ? 'running:rest' : 'running:on';
-  return head[0].fill === BRAND_HEX.alarm ? 'blocked' : 'clear';
+  const pupil = ops.find((op) => op.shape === 'pupil');
+  if (!pupil) return 'empty';
+  if (pupil.kind === 'stroke') return pupil.alpha < 1 ? 'running:rest' : 'running:on';
+  return pupil.style === WITNESS_HEX.alarm ? 'blocked' : 'clear';
 }
 
 let painted: Op[] = [];
@@ -35,13 +64,9 @@ let painted: Op[] = [];
 beforeEach(() => {
   painted = [];
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function (this: HTMLCanvasElement) {
-    const { ctx, ops } = fakeContext();
+    // A new frame starts by clearing the canvas.
+    const { ctx, ops } = fakeContext(() => (ops.length = 0));
     painted = ops;
-    const original = ctx.fillRect.bind(ctx);
-    ctx.fillRect = (x: number, y: number, w: number, h: number) => {
-      if (x === 0 && y === 0 && w === 32 && h === 32) ops.length = 0; // a new frame starts with the tile
-      original(x, y, w, h);
-    };
     return ctx as never;
   });
   vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockImplementation(() => `data:image/png;base64,${btoa(describeFrame(painted))}`);
@@ -175,25 +200,25 @@ describe('paintLiveFavicon', () => {
     return ops;
   };
 
-  it('fills a solid --ink-0 tile first (never transparent), then the bars in --signal', () => {
+  it('fills the ink tile first (never transparent), then strokes the lid and fills the pupil in lime', () => {
     const ops = paint('clear');
-    expect(ops[0]).toMatchObject({ x: 0, y: 0, w: 32, h: 32, fill: BRAND_HEX.ink0 });
-    expect(ops.slice(1).every((op) => op.fill === BRAND_HEX.signal)).toBe(true);
-    expect(ops).toHaveLength(1 + 4 + 1); // tile, the hollow base bar, the solid head bar
+    expect(ops.map((op) => `${op.kind}:${op.shape}`)).toEqual(['fill:tile', 'stroke:lid', 'fill:pupil']);
+    expect(ops[0].style).toBe(WITNESS_HEX.ink);
+    expect(ops[1].style).toBe(WITNESS_HEX.lime);
+    expect(ops[2].style).toBe(WITNESS_HEX.lime);
   });
 
-  it('turns only the head bar --alarm when blocked', () => {
+  it('turns only the pupil --alarm when blocked', () => {
     const ops = paint('blocked');
-    expect(ops.slice(1, 5).every((op) => op.fill === BRAND_HEX.signal)).toBe(true);
-    expect(ops[5].fill).toBe(BRAND_HEX.alarm);
+    expect(ops[1]).toMatchObject({ shape: 'lid', style: WITNESS_HEX.lime });
+    expect(ops[2]).toMatchObject({ kind: 'fill', shape: 'pupil', style: WITNESS_HEX.alarm });
   });
 
-  it('draws the running head bar hollow, dimmed to 0.35 on the dip', () => {
+  it('draws the running pupil as a ring, dimmed to 0.35 on the dip, and never dims the lid', () => {
     const on = paint('running', 'on');
     const rest = paint('running', 'rest');
-    expect(on).toHaveLength(1 + 4 + 4);
-    expect(on.slice(5).every((op) => op.alpha === 1)).toBe(true);
-    expect(rest.slice(5).every((op) => op.alpha === 0.35)).toBe(true);
-    expect(rest.slice(1, 5).every((op) => op.alpha === 1)).toBe(true);
+    expect(on[2]).toMatchObject({ kind: 'stroke', shape: 'pupil', alpha: 1 });
+    expect(rest[2]).toMatchObject({ kind: 'stroke', shape: 'pupil', alpha: 0.35 });
+    expect(rest[1]).toMatchObject({ shape: 'lid', alpha: 1 });
   });
 });

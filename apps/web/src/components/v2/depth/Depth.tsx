@@ -1,5 +1,5 @@
 // Section 6, rebuilt on the otoma8.com "PRICING" composition: a centred head
-// and three plan cards in a grey tray. PRGuard has no plans to sell, so the
+// and three plan cards in a grey tray. Witness has no plans to sell, so the
 // three cards are its three review depths (risk tiers), and the price slot is
 // the real median cost of a review at that depth from the demo corpus.
 import Link from "next/link";
@@ -73,7 +73,7 @@ export function Depth() {
             <span>the review it needs</span>
           </h2>
           <p className={s.sub}>
-            PRGuard sizes each review to the change. Small diffs get a fast pass; anything touching auth, payments, crypto,
+            Witness sizes each review to the change. Small diffs get a fast pass; anything touching auth, payments, crypto,
             migrations or PII gets all four specialists.
           </p>
           <Link href="/settings/policy" className={s.cta}>

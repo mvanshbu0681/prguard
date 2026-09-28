@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "926cd9d2-5c7a-4d93-b127-24feef857b48"
     ]
@@ -111,7 +111,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_944228.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/refunds/reconcile.py::apply_partial_refund.\n\nClaim: a partial refund credits the full fee.\n\"\"\"\n\nfrom app.refunds.reconcile import fee_credit_minor\n\n\ndef test_ten_percent_refund_credits_ten_percent_of_the_fee():\n    assert fee_credit_minor(90, 300, 3000) == 9\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/refunds/reconcile.py::apply_partial_refund.\n\nClaim: a partial refund credits the full fee.\n\"\"\"\n\nfrom app.refunds.reconcile import fee_credit_minor\n\n\ndef test_ten_percent_refund_credits_ten_percent_of_the_fee():\n    assert fee_credit_minor(90, 300, 3000) == 9\n",
         "command": "pytest tests/test_repro_944228.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -284,12 +284,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#340` in 30.3s · [full run ↗](https://prguard.acme.internal/runs/e17badc8-8829-4592-8aae-0e4c1261e9de)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#340` in 30.3s · [full run ↗](https://witness.acme.internal/runs/e17badc8-8829-4592-8aae-0e4c1261e9de)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "6d9c03688677b49e0ada9fd373aa45751f227704",
     "comments": [
       {
         "path": "app/refunds/reconcile.py",
-        "body": "**`proof_status: proven`** · severity **`0.780`** critical\n\n`apply_partial_refund()` credits `entry.fee_minor` in full (line 13) instead of the refunded share, so a 10% refund of a 3000-cent charge books a 90-cent fee credit where 9 cents are due.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `791a5d6` | `1 passed in 0.35s` |\n| head | `6d9c036` | `1 failed in 0.33s` |\n\n<details><summary>terminal output at head <code>6d9c036</code></summary>\n\n    E       assert 90 == 9\n    E        +  where 90 = fee_credit_minor(90, 300, 3000)\n    tests/test_repro_944228.py:10: AssertionError\n    1 failed in 0.33s\n\n</details>\n\n**Severity `0.780`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.075` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/926cd9d2-5c7a-4d93-b127-24feef857b48#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint 43a62dda…4518` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/926cd9d2-5c7a-4d93-b127-24feef857b48#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.780`** critical\n\n`apply_partial_refund()` credits `entry.fee_minor` in full (line 13) instead of the refunded share, so a 10% refund of a 3000-cent charge books a 90-cent fee credit where 9 cents are due.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `791a5d6` | `1 passed in 0.35s` |\n| head | `6d9c036` | `1 failed in 0.33s` |\n\n<details><summary>terminal output at head <code>6d9c036</code></summary>\n\n    E       assert 90 == 9\n    E        +  where 90 = fee_credit_minor(90, 300, 3000)\n    tests/test_repro_944228.py:10: AssertionError\n    1 failed in 0.33s\n\n</details>\n\n**Severity `0.780`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.075` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/926cd9d2-5c7a-4d93-b127-24feef857b48#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint 43a62dda…4518` · [dismiss with a reason ↗](https://witness.acme.internal/findings/926cd9d2-5c7a-4d93-b127-24feef857b48#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 16,
         "side": "RIGHT",
         "start_line": 13,

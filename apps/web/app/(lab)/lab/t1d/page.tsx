@@ -11,7 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   CodeBlock,
   CodeBlockClient,
-  PRGuardDiff,
+  WitnessDiff,
   PYTEST_TONES,
   RAIL_TONES,
   TerminalBlock,
@@ -115,7 +115,7 @@ export default function CodeSurfacesLab() {
           <p className="type-label text-text-dim">/ lab — t1d · code, terminal, diff</p>
           <h1 className="mt-3 type-display-h3 text-text-primary">Evidence surfaces</h1>
           <p className="mt-3 max-w-(--measure-body) type-body text-text-body">
-            TerminalBlock, CodeBlock and PRGuardDiff render captured artifacts as real, selectable text. Lines scroll sideways and never
+            TerminalBlock, CodeBlock and WitnessDiff render captured artifacts as real, selectable text. Lines scroll sideways and never
             wrap, because wrapping destroys traceback alignment.
           </p>
         </header>
@@ -190,7 +190,7 @@ export default function CodeSurfacesLab() {
           title="Source · code block"
           note={
             <>
-              Shiki on the server with the prguard-cold theme. The start offset numbers the excerpt as the file does; a highlighted line
+              Shiki on the server with the witness-cold theme. The start offset numbers the excerpt as the file does; a highlighted line
               takes a 2px rail in the caller&apos;s tone on an <Token>--ink-3</Token> row.
             </>
           }
@@ -223,13 +223,13 @@ export default function CodeSurfacesLab() {
           title="Location · unified diff"
           note={
             <>
-              PRGuardDiff, unified by default. The +/− gutter glyph is the semantic channel and colour is secondary. The accused line
+              WitnessDiff, unified by default. The +/− gutter glyph is the semantic channel and colour is secondary. The accused line
               trades its diff tint for the finding&apos;s band at 10% (<Token>--sev-critical</Token>) under the blocking rail
               (<Token>--alarm</Token>), and the annotation slot hangs beneath it.
             </>
           }
         >
-          <PRGuardDiff
+          <WitnessDiff
             diff={CHARGE_DIFF}
             highlight={[{ side: "new", start: 41, tone: "alarm", fill: "critical", label: `finding ${FINDING}` }]}
             annotations={[
@@ -282,7 +282,7 @@ export default function CodeSurfacesLab() {
         </Section>
 
         <Section index="07" title="Split diff" note="The same diff side by side. Removed lines sit beside the lines that replaced them; the shorter side is padded.">
-          <PRGuardDiff
+          <WitnessDiff
             diff={CHARGE_DIFF}
             view="split"
             highlight={[{ side: "new", start: 41, tone: "alarm", fill: "critical", label: `finding ${FINDING}` }]}
@@ -328,9 +328,9 @@ export default function CodeSurfacesLab() {
             title="RailTone"
             highlight={RAIL_TONES.map((tone, i) => ({ start: i + 1, tone }))}
           />
-          <PRGuardDiff diff={BAND_DIFF} filePath="specimen/bands.py" highlight={BAND_HIGHLIGHTS} />
+          <WitnessDiff diff={BAND_DIFF} filePath="specimen/bands.py" highlight={BAND_HIGHLIGHTS} />
           <Props>
-            PRGuardDiff highlight: fill is the band at 10% in place of the diff tint, tone is the rail. New line 10 and old line 12
+            WitnessDiff highlight: fill is the band at 10% in place of the diff tint, tone is the rail. New line 10 and old line 12
             carry no highlight, for reference.
           </Props>
         </Section>
@@ -361,7 +361,7 @@ export default function CodeSurfacesLab() {
             highlight={[{ start: 1205, tone: "high", label: "rounding at 3 decimals" }]}
           />
           <Props>CodeBlock · 1240 lines · maxHeight=330 · highlight=[&#123; start: 1205, tone: &quot;high&quot; &#125;]</Props>
-          <PRGuardDiff
+          <WitnessDiff
             diff={LONG_DIFF}
             height={330}
             highlight={[{ side: "new", start: LONG_DIFF_LINE, tone: "alarm", fill: "critical", label: `finding ${FINDING}` }]}
@@ -375,7 +375,7 @@ export default function CodeSurfacesLab() {
               },
             ]}
           />
-          <Props>PRGuardDiff · 601 rows · height=330 · the accused line is new {LONG_DIFF_LINE}, 403 lines down</Props>
+          <Props>WitnessDiff · 601 rows · height=330 · the accused line is new {LONG_DIFF_LINE}, 403 lines down</Props>
         </Section>
       </div>
     </div>

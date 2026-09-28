@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -184,12 +184,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#77` in 18.3s · [full run ↗](https://prguard.acme.internal/runs/8ab00e20-04e8-4174-8d62-b3c363a6d565)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#77` in 18.3s · [full run ↗](https://witness.acme.internal/runs/8ab00e20-04e8-4174-8d62-b3c363a6d565)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "44ccae6bc65d7f990ba0d98da6192e5f806473ff",
     "comments": [
       {
         "path": "terraform/s3_invoices.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe new statement allows `Principal = \"*\"` with only an `aws:SourceVpce` condition (line 17); the condition key is misspelled `aws:sourceVpce`, and IAM matches condition keys case-insensitively but this module's policy validator does not.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/s3_invoices.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/cdce9917-dff7-4cd4-8ff6-0f51b6871577#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 585594da…219c` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/cdce9917-dff7-4cd4-8ff6-0f51b6871577#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe new statement allows `Principal = \"*\"` with only an `aws:SourceVpce` condition (line 17); the condition key is misspelled `aws:sourceVpce`, and IAM matches condition keys case-insensitively but this module's policy validator does not.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/s3_invoices.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/cdce9917-dff7-4cd4-8ff6-0f51b6871577#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 585594da…219c` · [dismiss with a reason ↗](https://witness.acme.internal/findings/cdce9917-dff7-4cd4-8ff6-0f51b6871577#suppress)",
         "line": 20,
         "side": "RIGHT",
         "start_line": 17,

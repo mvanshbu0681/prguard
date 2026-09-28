@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "bfae553c-b4ad-4faf-9ad3-b61f1cc56a16"
     ]
@@ -180,7 +180,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_c60e37.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/workers/webhooks.py::deliver_webhook.\n\nClaim: a 410 endpoint is retried without end.\n\"\"\"\n\nfrom app.workers.webhooks import attempts_for_status\n\n\ndef test_gone_endpoint_is_not_retried():\n    assert attempts_for_status(410) == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/workers/webhooks.py::deliver_webhook.\n\nClaim: a 410 endpoint is retried without end.\n\"\"\"\n\nfrom app.workers.webhooks import attempts_for_status\n\n\ndef test_gone_endpoint_is_not_retried():\n    assert attempts_for_status(410) == 1\n",
         "command": "pytest tests/test_repro_c60e37.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -259,12 +259,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#58` in 27.9s · [full run ↗](https://prguard.acme.internal/runs/c54cb93c-ca9d-4862-b24a-a417399b3d64)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#58` in 27.9s · [full run ↗](https://witness.acme.internal/runs/c54cb93c-ca9d-4862-b24a-a417399b3d64)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "6381fd5bde87499407d2a7b052951e7086ad3c1f",
     "comments": [
       {
         "path": "app/workers/webhooks.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.295`** low\n\n`json.dumps(payload)` (line 43) can differ from the transmitted body in key order, and receivers verifying the raw body reject it.\n\n**Proof** — not attempted: severity `0.295` is below the `0.350` proof threshold.\n\n**Severity `0.295`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/cd7f92ed-1f9d-460d-98bb-c4317aa8d105#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 9542d25a…4700` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/cd7f92ed-1f9d-460d-98bb-c4317aa8d105#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.295`** low\n\n`json.dumps(payload)` (line 43) can differ from the transmitted body in key order, and receivers verifying the raw body reject it.\n\n**Proof** — not attempted: severity `0.295` is below the `0.350` proof threshold.\n\n**Severity `0.295`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/cd7f92ed-1f9d-460d-98bb-c4317aa8d105#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 9542d25a…4700` · [dismiss with a reason ↗](https://witness.acme.internal/findings/cd7f92ed-1f9d-460d-98bb-c4317aa8d105#suppress)",
         "line": 45,
         "side": "RIGHT",
         "start_line": 43,
@@ -272,7 +272,7 @@
       },
       {
         "path": "app/workers/webhooks.py",
-        "body": "**`proof_status: proven`** · severity **`0.590`** high\n\nThe retry loop only stops on 2xx (line 14); an endpoint that returns 410 is retried with backoff indefinitely and the queue for that tenant never drains.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `ad12b5b` | `1 passed in 0.41s` |\n| head | `6381fd5` | `1 failed in 0.43s` |\n\n<details><summary>terminal output at head <code>6381fd5</code></summary>\n\n    E       assert 25 == 1\n    E        +  where 25 = attempts_for_status(410)\n    tests/test_repro_c60e37.py:10: AssertionError\n    1 failed in 0.43s\n\n</details>\n\n**Severity `0.590`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bfae553c-b4ad-4faf-9ad3-b61f1cc56a16#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint c5fb907b…a3fe` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bfae553c-b4ad-4faf-9ad3-b61f1cc56a16#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.590`** high\n\nThe retry loop only stops on 2xx (line 14); an endpoint that returns 410 is retried with backoff indefinitely and the queue for that tenant never drains.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `ad12b5b` | `1 passed in 0.41s` |\n| head | `6381fd5` | `1 failed in 0.43s` |\n\n<details><summary>terminal output at head <code>6381fd5</code></summary>\n\n    E       assert 25 == 1\n    E        +  where 25 = attempts_for_status(410)\n    tests/test_repro_c60e37.py:10: AssertionError\n    1 failed in 0.43s\n\n</details>\n\n**Severity `0.590`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/bfae553c-b4ad-4faf-9ad3-b61f1cc56a16#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint c5fb907b…a3fe` · [dismiss with a reason ↗](https://witness.acme.internal/findings/bfae553c-b4ad-4faf-9ad3-b61f1cc56a16#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 17,
         "side": "RIGHT",
         "start_line": 14,

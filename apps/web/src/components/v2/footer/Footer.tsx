@@ -1,10 +1,11 @@
 // Section 9, the footer, rebuilt on the otoma8.com footer: a #0a0a0a card inset
 // 12px (radius 28) with the logo and a short line on the left, two link
 // columns on the right, a hairline, then a pill with a lime button and the
-// copyright. otoma8's pill is a newsletter form; PRGuard has no newsletter, so
+// copyright. otoma8's pill is a newsletter form; Witness has no newsletter, so
 // the same pill opens the demo review's replay instead.
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { TrackingMark } from "@/components/brand/TrackingMark";
 import { getAccuracy, getDemoResult } from "@/lib/fixtures";
 import s from "./footer.module.css";
 
@@ -13,7 +14,7 @@ const COLUMNS: { label: string; links: { href: string; label: string }[] }[] = [
     label: "On this page",
     links: [
       { href: "#proof", label: "Product" },
-      { href: "#why", label: "Why PRGuard" },
+      { href: "#why", label: "Why Witness" },
       { href: "#pipeline", label: "How it works" },
       { href: "#caught", label: "Proven findings" },
     ],
@@ -41,12 +42,9 @@ export function Footer() {
       <div className={s.card}>
         <div className={s.top}>
           <div className={s.brand}>
-            <Link href="/" className={s.logo} aria-label="PRGuard home">
-              <span className={s.logoMark} aria-hidden>
-                <i />
-                <i />
-              </span>
-              PRGuard
+            <Link href="/" className={s.logo} aria-label="Witness home">
+              <TrackingMark size={34} className={s.logoMark} />
+              Witness
             </Link>
             <p className={s.blurb}>
               AI code review that proves every claim. A repro test runs at your base and head commit, and only a proven bug
@@ -81,14 +79,14 @@ export function Footer() {
               </span>
             </span>
             <span className={s.pillBtn}>
-              Replay
+              <span className={s.pillLabel}>Replay</span>
               <span className={s.pillChip} aria-hidden>
                 <ArrowUpRight size={14} strokeWidth={2.2} />
               </span>
             </span>
           </Link>
           <p className={s.legal}>
-            © 2026 PRGuard. Every number on this page is read from the demo corpus of{" "}
+            © 2026 Witness. Every number on this page is read from the demo corpus of{" "}
             {accuracy.runs.total ?? 0} reviews.
           </p>
         </div>

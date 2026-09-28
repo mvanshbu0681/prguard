@@ -143,8 +143,10 @@
 }
 
 .field:focus-within {
-  border-color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.26);
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 .input {
@@ -309,7 +311,7 @@
   .band {
     align-items: flex-start;
     min-height: 0;
-    padding: 44px 20px 36px;
+    padding: 44px 16px 36px;
     border-radius: 22px;
   }
   .photo {
@@ -324,7 +326,7 @@
   .avatars span {
     width: 30px;
     height: 30px;
-    font-size: 9px;
+    font-size: 12px;
   }
   .trustText {
     font-size: 14px;
@@ -371,5 +373,10 @@
   }
   .error {
     margin-left: 4px;
+  }
+  /* The chips are real tap targets on phones (208×31 was under the 44px
+     minimum) — a touch taller, still the same quiet pill. */
+  .try {
+    padding: 12px 14px;
   }
 }

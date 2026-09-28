@@ -140,7 +140,7 @@ export function result(reviewId: string, findings: Finding[]): ReviewResult {
     pull_request: { number: DEMO_IDS.pr_number, title: "Charge in the account currency", author: "octo", head_sha: DEMO_IDS.head_sha, base_sha: DEMO_IDS.base_sha, url: null },
     risk_tier: "full",
     context: { files_changed: 7, files_reviewed: 5, files_excluded: 2, excluded_reasons: {}, truncated: false },
-    gate: { conclusion: "failure", reason: "1 blocking finding", delivery: "commit_status", context_name: "prguard/merge-gate", blocking_finding_ids: [DEMO_IDS.proven_finding_id] },
+    gate: { conclusion: "failure", reason: "1 blocking finding", delivery: "commit_status", context_name: "witness/merge-gate", blocking_finding_ids: [DEMO_IDS.proven_finding_id] },
     delivery: { status: "posted", github_review_id: 1, event: "COMMENT", comments_posted: 2, ladder_breakdown: { inline_exact: 1, inline_nearest: 1, file_level: 0, summary_only: 0 } },
     counts,
     cost: { usd_estimate: 0.0412, input_tokens: 41022, output_tokens: 3881, cache_read_tokens: 28440 },

@@ -1,4 +1,4 @@
-// OWNER: t1c (wave 1). Every icon PRGuard draws, against docs/design/02-design-system.md §6:
+// OWNER: t1c (wave 1). Every icon Witness draws, against docs/design/02-design-system.md §6:
 // one stroke language (1.25px on 16, 1.5px on 24, the 1px hinted 12), butt caps, miter joins,
 // fill none + currentColor, integer coordinates with strokes on the half pixel, aria-hidden
 // by default — and §6.5's banned icons refused, both at runtime and anywhere in the repo.
@@ -243,7 +243,7 @@ describe("text glyphs — the characters Google Sans Code does not have", () => 
   });
 });
 
-describe("Icon — lucide-react at PRGuard's weight", () => {
+describe("Icon — lucide-react at Witness's weight", () => {
   it("renders stroke 1.5 at a size from the 12/14/16/20/24 scale", () => {
     const { container } = render(<Icon icon={Search} size="sm" />);
     const svg = container.querySelector("svg")!;
@@ -310,7 +310,7 @@ describe("Icon — lucide-react at PRGuard's weight", () => {
   // spinner). T1b owns that file and rewrites it in wave 1 (agent/fe-t1b drops both). The two
   // names are tolerated ONLY while the file is still the untouched T0 stub; the moment it is
   // edited, the scan applies to it in full. Raised to the integrator.
-  const T0_STUB = { file: "src/components/ui/sonner.tsx", marker: "T0 reconciliation: PRGuard is dark-only", names: ["CircleCheckIcon", "Loader2Icon"] };
+  const T0_STUB = { file: "src/components/ui/sonner.tsx", marker: "T0 reconciliation: Witness is dark-only", names: ["CircleCheckIcon", "Loader2Icon"] };
 
   it("is never reached around: no file in app/ or src/ imports a banned lucide icon", () => {
     const files: string[] = [];

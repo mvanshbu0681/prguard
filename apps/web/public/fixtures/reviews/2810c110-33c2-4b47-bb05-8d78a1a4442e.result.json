@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -257,12 +257,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4815` in 26.6s · [full run ↗](https://prguard.acme.internal/runs/2810c110-33c2-4b47-bb05-8d78a1a4442e)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4815` in 26.6s · [full run ↗](https://witness.acme.internal/runs/2810c110-33c2-4b47-bb05-8d78a1a4442e)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "37942aa5ac994f0acaaced7540ccf33f8e85a682",
     "comments": [
       {
         "path": "app/api/orders.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.510`** medium\n\n`per_page` is passed straight to the query (line 19); the mobile client sends 200.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.510`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/4bad9259-f9a4-4110-9bb7-9d4d7a8d5efc#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1e20aa0d…f24d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/4bad9259-f9a4-4110-9bb7-9d4d7a8d5efc#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.510`** medium\n\n`per_page` is passed straight to the query (line 19); the mobile client sends 200.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.510`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/4bad9259-f9a4-4110-9bb7-9d4d7a8d5efc#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1e20aa0d…f24d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/4bad9259-f9a4-4110-9bb7-9d4d7a8d5efc#suppress)",
         "line": 21,
         "side": "RIGHT",
         "start_line": 19,

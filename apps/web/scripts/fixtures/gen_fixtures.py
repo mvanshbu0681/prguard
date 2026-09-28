@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate ``web/public/fixtures`` with the PRGuard backend's own functions (track t2b).
+"""Generate ``web/public/fixtures`` with the Witness backend's own functions (track t2b).
 
 Run from ``web/``::
 

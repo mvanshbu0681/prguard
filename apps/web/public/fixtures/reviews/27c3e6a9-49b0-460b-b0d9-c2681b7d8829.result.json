@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "f1a347e7-8507-4c68-a592-bfa26a8e34a5"
     ]
@@ -180,7 +180,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_d483c9.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/api/orders.py::list_orders.\n\nClaim: page 2 skips the 21st order.\n\"\"\"\n\nfrom app.api.orders import page_offset\n\n\ndef test_page_two_starts_at_the_twenty_first_order():\n    assert page_offset(2, 20) == 20\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/api/orders.py::list_orders.\n\nClaim: page 2 skips the 21st order.\n\"\"\"\n\nfrom app.api.orders import page_offset\n\n\ndef test_page_two_starts_at_the_twenty_first_order():\n    assert page_offset(2, 20) == 20\n",
         "command": "pytest tests/test_repro_d483c9.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -375,12 +375,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4801` in 32.1s · [full run ↗](https://prguard.acme.internal/runs/27c3e6a9-49b0-460b-b0d9-c2681b7d8829)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4801` in 32.1s · [full run ↗](https://witness.acme.internal/runs/27c3e6a9-49b0-460b-b0d9-c2681b7d8829)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "00dd3ad2ccb5f71bd66990b89e343e2906b877f3",
     "comments": [
       {
         "path": "app/api/orders.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.510`** medium\n\n`per_page` is passed straight to the query (line 19); the mobile client sends 200.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.510`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/15622f9c-0a63-4810-ad5d-dfe1d1bb05ef#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1e20aa0d…f24d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/15622f9c-0a63-4810-ad5d-dfe1d1bb05ef#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.510`** medium\n\n`per_page` is passed straight to the query (line 19); the mobile client sends 200.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.510`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/15622f9c-0a63-4810-ad5d-dfe1d1bb05ef#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1e20aa0d…f24d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/15622f9c-0a63-4810-ad5d-dfe1d1bb05ef#suppress)",
         "line": 21,
         "side": "RIGHT",
         "start_line": 19,
@@ -388,7 +388,7 @@
       },
       {
         "path": "app/api/orders.py",
-        "body": "**`proof_status: proven`** · severity **`0.585`** high\n\n`list_orders()` computes `offset = (page - 1) * per_page + 1` (line 15). Pages are 1-based and the offset is 0-based, so page 2 starts at the 22nd order and the 21st is never listed.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `0782a18` | `1 passed in 0.28s` |\n| head | `00dd3ad` | `1 failed in 0.27s` |\n\n<details><summary>terminal output at head <code>00dd3ad</code></summary>\n\n    E       assert 21 == 20\n    E        +  where 21 = page_offset(2, 20)\n    tests/test_repro_d483c9.py:10: AssertionError\n    1 failed in 0.27s\n\n</details>\n\n**Severity `0.585`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/f1a347e7-8507-4c68-a592-bfa26a8e34a5#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. Two other findings in this review are advisory and do not block.\n\n`fingerprint cc18da69…b710` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/f1a347e7-8507-4c68-a592-bfa26a8e34a5#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.585`** high\n\n`list_orders()` computes `offset = (page - 1) * per_page + 1` (line 15). Pages are 1-based and the offset is 0-based, so page 2 starts at the 22nd order and the 21st is never listed.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `0782a18` | `1 passed in 0.28s` |\n| head | `00dd3ad` | `1 failed in 0.27s` |\n\n<details><summary>terminal output at head <code>00dd3ad</code></summary>\n\n    E       assert 21 == 20\n    E        +  where 21 = page_offset(2, 20)\n    tests/test_repro_d483c9.py:10: AssertionError\n    1 failed in 0.27s\n\n</details>\n\n**Severity `0.585`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/f1a347e7-8507-4c68-a592-bfa26a8e34a5#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. Two other findings in this review are advisory and do not block.\n\n`fingerprint cc18da69…b710` · [dismiss with a reason ↗](https://witness.acme.internal/findings/f1a347e7-8507-4c68-a592-bfa26a8e34a5#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 17,
         "side": "RIGHT",
         "start_line": 15,
@@ -396,7 +396,7 @@
       },
       {
         "path": "app/api/orders.py",
-        "body": "> Nearest reviewable line. The issue is at `app/api/orders.py:33`.\n\n**`proof_status: not_attempted`** · severity **`0.380`** medium\n\n`serialize_order()` reads `order.line_items` (line 33), a lazy relationship, once per order on the page. A 20-order page issues 21 queries.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.380`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/e9f2905d-7884-46d8-a519-27952fe2c639#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c8186a97…57c1` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/e9f2905d-7884-46d8-a519-27952fe2c639#suppress)",
+        "body": "> Nearest reviewable line. The issue is at `app/api/orders.py:33`.\n\n**`proof_status: not_attempted`** · severity **`0.380`** medium\n\n`serialize_order()` reads `order.line_items` (line 33), a lazy relationship, once per order on the page. A 20-order page issues 21 queries.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.380`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/e9f2905d-7884-46d8-a519-27952fe2c639#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c8186a97…57c1` · [dismiss with a reason ↗](https://witness.acme.internal/findings/e9f2905d-7884-46d8-a519-27952fe2c639#suppress)",
         "line": 28,
         "side": "RIGHT"
       }

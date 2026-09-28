@@ -11,7 +11,7 @@
 import type { ReviewResult } from "@/lib/api-types";
 
 /** One entry of review_payload.comments — an inline, nearest-line, or file-level PR comment. */
-export interface PRGuardReviewComment {
+export interface WitnessReviewComment {
   path: string;
   body: string;
   line?: number;
@@ -21,22 +21,22 @@ export interface PRGuardReviewComment {
   subject_type?: "line" | "file";
 }
 
-/** The exact body PRGuard posts to `POST /repos/{owner}/{repo}/pulls/{n}/reviews` (brand-gaps §E). */
-export interface PRGuardReviewPayload {
+/** The exact body Witness posts to `POST /repos/{owner}/{repo}/pulls/{n}/reviews` (brand-gaps §E). */
+export interface WitnessReviewPayload {
   event: string;
   body: string;
   commit_id: string;
-  comments: PRGuardReviewComment[];
+  comments: WitnessReviewComment[];
 }
 
 export class ReviewPayloadShapeError extends Error {
   constructor(detail: string) {
-    super(`ReviewResult.review_payload does not match the expected PRGuard review body: ${detail}`);
+    super(`ReviewResult.review_payload does not match the expected Witness review body: ${detail}`);
     this.name = "ReviewPayloadShapeError";
   }
 }
 
-function isComment(value: unknown): value is PRGuardReviewComment {
+function isComment(value: unknown): value is WitnessReviewComment {
   return typeof value === "object" && value !== null && typeof (value as { path?: unknown }).path === "string" && typeof (value as { body?: unknown }).body === "string";
 }
 
@@ -47,7 +47,7 @@ function isComment(value: unknown): value is PRGuardReviewComment {
  * corpus is real — plan A14/t2b — so this should never fire outside a broken
  * fixture rebuild).
  */
-export function asReviewPayload(value: ReviewResult["review_payload"]): PRGuardReviewPayload {
+export function asReviewPayload(value: ReviewResult["review_payload"]): WitnessReviewPayload {
   if (typeof value !== "object" || value === null) throw new ReviewPayloadShapeError("not an object");
   const record = value as Record<string, unknown>;
   if (typeof record.event !== "string") throw new ReviewPayloadShapeError('"event" is not a string');
@@ -58,14 +58,14 @@ export function asReviewPayload(value: ReviewResult["review_payload"]): PRGuardR
 }
 
 /** The one comment whose body carries `proof_status: proven` — the section's inline example (brand-gaps §E). */
-export function findProvenComment(payload: PRGuardReviewPayload): PRGuardReviewComment {
+export function findProvenComment(payload: WitnessReviewPayload): WitnessReviewComment {
   const comment = payload.comments.find((c) => c.body.includes("proof_status: proven"));
   if (!comment) throw new ReviewPayloadShapeError("no comment carries proof_status: proven");
   return comment;
 }
 
 /** GitHub's own "L41-L44" / "L44" anchor grammar for a review comment's location. */
-export function commentAnchor(comment: PRGuardReviewComment): string {
+export function commentAnchor(comment: WitnessReviewComment): string {
   if (comment.subject_type === "file" || comment.line === undefined) return comment.path;
   const hasRange = comment.start_line !== undefined && comment.start_line !== comment.line;
   return hasRange ? `${comment.path} · L${comment.start_line}-L${comment.line}` : `${comment.path} · L${comment.line}`;

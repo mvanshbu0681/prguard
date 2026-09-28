@@ -45,7 +45,7 @@ export interface OccurrenceRunContext {
 
 /** One sentence of what the run did, derived from its own recorded fields rather than
  *  assumed from position in the list — so a regenerated corpus with a different story
- *  still reads correctly (plan A7: never hardcode what a fixture provides). PRGuard is
+ *  still reads correctly (plan A7: never hardcode what a fixture provides). Witness is
  *  the subject for system behaviour (brand-gaps §D rule 4). */
 export function occurrenceCaption({ runStatus, gateConclusion, blocking }: OccurrenceRunContext): string {
   if (runStatus !== "succeeded") {

@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -186,7 +186,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_4993cc.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/checkout/session.py::create_checkout_session.\n\nClaim: two carts for one account share a single checkout session.\n\"\"\"\n\nfrom app.checkout.session import create_checkout_session\n\n\ndef test_second_cart_gets_its_own_session():\n    first = create_checkout_session(\"acct_31c\", cart_id=\"cart_a\")\n    second = create_checkout_session(\"acct_31c\", cart_id=\"cart_b\")\n    assert first.id != second.id\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/checkout/session.py::create_checkout_session.\n\nClaim: two carts for one account share a single checkout session.\n\"\"\"\n\nfrom app.checkout.session import create_checkout_session\n\n\ndef test_second_cart_gets_its_own_session():\n    first = create_checkout_session(\"acct_31c\", cart_id=\"cart_a\")\n    second = create_checkout_session(\"acct_31c\", cart_id=\"cart_b\")\n    assert first.id != second.id\n",
         "command": "pytest tests/test_repro_4993cc.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -359,12 +359,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4790` in 33.3s · [full run ↗](https://prguard.acme.internal/runs/5b7bb0fb-13e9-45f0-a41a-018b8287bf3c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4790` in 33.3s · [full run ↗](https://witness.acme.internal/runs/5b7bb0fb-13e9-45f0-a41a-018b8287bf3c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "720b20b85c7ed2c1dda30a976ad2ef7c3083f7f0",
     "comments": [
       {
         "path": "app/api/checkout.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c291d5e3-5167-46e0-b59f-267b88c1a254#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a291b2d7…c909` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c291d5e3-5167-46e0-b59f-267b88c1a254#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`_line()` formats `amount_minor / 100` with `%.2f`, so every amount goes through binary floating point before it is rounded for display. Every order summary line passes through it, and a later change that feeds the summary into an invoice or a CSV will inherit amounts that differ from the integer totals by a cent.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c291d5e3-5167-46e0-b59f-267b88c1a254#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a291b2d7…c909` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c291d5e3-5167-46e0-b59f-267b88c1a254#suppress)",
         "line": 59,
         "side": "RIGHT"
       }

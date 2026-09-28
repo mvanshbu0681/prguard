@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -304,12 +304,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1113` in 23.5s · [full run ↗](https://prguard.acme.internal/runs/1a53b035-8408-4e66-aa8a-3966b1a59454)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#1113` in 23.5s · [full run ↗](https://witness.acme.internal/runs/1a53b035-8408-4e66-aa8a-3966b1a59454)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "2d58d0a6b252688ad55386a1ad53c8d446500b7b",
     "comments": [
       {
         "path": "src/cart/storage.ts",
-        "body": "**`proof_status: not_applicable`** · severity **`0.425`** medium\n\n`localStorage.setItem()` throws when storage is full or disabled (line 6); the exception escapes into the add-to-cart handler and the item is not added.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/cart/storage.ts` is not Python.\n\n**Severity `0.425`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/e7a2794c-6277-48f7-b77e-a01fae9249c4#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a68037c1…622b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/e7a2794c-6277-48f7-b77e-a01fae9249c4#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.425`** medium\n\n`localStorage.setItem()` throws when storage is full or disabled (line 6); the exception escapes into the add-to-cart handler and the item is not added.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/cart/storage.ts` is not Python.\n\n**Severity `0.425`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.060` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/e7a2794c-6277-48f7-b77e-a01fae9249c4#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a68037c1…622b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/e7a2794c-6277-48f7-b77e-a01fae9249c4#suppress)",
         "line": 8,
         "side": "RIGHT",
         "start_line": 6,
@@ -317,7 +317,7 @@
       },
       {
         "path": "src/cart/storage.ts",
-        "body": "**`proof_status: not_applicable`** · severity **`0.280`** low\n\nThe v2 cart shape keeps `contact.email` (line 35), and localStorage is readable by every script on the origin, including the analytics tags.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/cart/storage.ts` is not Python.\n\n**Severity `0.280`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/89bac1d4-1f76-4925-a665-a42f35812506#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 963ae770…d23a` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/89bac1d4-1f76-4925-a665-a42f35812506#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.280`** low\n\nThe v2 cart shape keeps `contact.email` (line 35), and localStorage is readable by every script on the origin, including the analytics tags.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/cart/storage.ts` is not Python.\n\n**Severity `0.280`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/89bac1d4-1f76-4925-a665-a42f35812506#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 963ae770…d23a` · [dismiss with a reason ↗](https://witness.acme.internal/findings/89bac1d4-1f76-4925-a665-a42f35812506#suppress)",
         "line": 37,
         "side": "RIGHT",
         "start_line": 35,

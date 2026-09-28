@@ -2,7 +2,7 @@
 // OWNER: d1 (wave 3). The LIVE view's right rail (dashboard §2.4 "/ 03 — COUNTERS"): live
 // counts, ticking cost and the degradations list — an ordinary panel (Surface + IndexStrip +
 // ProvenanceStrip), never <Exhibit>: these are page furniture reading off two poll responses,
-// not an artifact PRGuard is proving a claim about (plan §2 rule 1).
+// not an artifact Witness is proving a claim about (plan §2 rule 1).
 import { IndexStrip, ProvenanceLine, Surface } from "@/components/chrome";
 import { Warn } from "@/components/icons";
 import type { CostInfo, RunCounts } from "@/lib/api-types";

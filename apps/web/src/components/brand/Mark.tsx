@@ -1,41 +1,35 @@
-// OWNER: t1a (wave 1).
+// <Mark> — THE WITNESS EYE, static (./geometry has the construction). `size`
+// is the rendered edge in CSS px; the eye scales through the viewBox, so it is
+// the same drawing at every size. `frame` sets how much of that edge it fills.
 //
-// <Mark> — THE BENCH (brand-gaps §A): two panes, base and head, one hollow and
-// one solid, a seam between them, framed by crop marks. `size` is the rendered
-// edge in CSS px and it drives the mandatory simplification ladder:
-//   ≥ 32   full (corner ticks + seam)   ·   20–31   no ticks   ·   ≤ 19 or crop="circle"   two bars
-// Geometry is pixel-snapped per size (./geometry), so every form is crisp at 1x and 2x.
-//
-// Colour (brand-gaps §A): tone="signal" bars --signal, ticks --rule-2 (default,
-// dark) · "mono" bars --text-primary · "ink" bars --ink-0 with 14% black ticks,
-// for light print contexts · forced colours: CanvasText. Never a gradient, never
-// two colours in one mark; --alarm appears only for a blocked live head bar.
+// Colour: tone="signal" draws in --signal (default, dark surfaces) · "mono"
+// in --text-primary · "ink" in --ink-0, for light print contexts · forced
+// colours: CanvasText. One colour per mark; --alarm appears only on the pupil
+// of a blocked live review.
 //
 // Decorative by default (aria-hidden): next to the wordmark the name is already
 // in the DOM. Pass `title` when the mark stands alone (Lockup D does).
-// `live` is the one motion the mark is permitted — the head bar's 0ms verdict
-// flip — and belongs to the favicon (useLiveFavicon). The mark never animates
-// in the nav, the footer or a loading state; nothing here transitions.
+// <TrackingMark> is the animated variant for the marketing nav and footer.
 import type { SVGProps } from 'react';
 import { cn } from '@/lib/utils';
-import { markGeometry, markParts, type MarkCrop, type MarkLiveState } from './geometry';
+import { markGeometry, markParts, markViewBox, type MarkFrame, type MarkLiveState } from './geometry';
 
 export type MarkTone = 'signal' | 'mono' | 'ink';
 
 export interface MarkProps extends Omit<SVGProps<SVGSVGElement>, 'children' | 'width' | 'height' | 'viewBox'> {
-  /** Rendered edge in CSS px; drives the ladder. Default 24. Never drawn below 16. */
+  /** Rendered edge in CSS px. Default 24. Never drawn below 16. */
   size?: number;
   tone?: MarkTone;
-  /** "circle" forces the two-bar form at avatar proportions (bars at 56% width), for circle-cropped contexts. */
-  crop?: MarkCrop;
-  /** Head-bar state: running → hollow · clear → solid · blocked → --alarm. Favicon use only. */
+  /** How much of the edge the eye fills. "circle" leaves room for a circular crop. Default "bare". */
+  frame?: MarkFrame;
+  /** Pupil state: running → ring · clear → solid · blocked → --alarm. */
   live?: MarkLiveState;
   /** Accessible name. Omit when the mark sits next to the wordmark (it is then decorative). */
   title?: string;
 }
 
-export function Mark({ size = 24, tone = 'signal', crop = 'square', live, title, className, ...rest }: MarkProps) {
-  const geometry = markGeometry(size, { crop });
+export function Mark({ size = 24, tone = 'signal', frame = 'bare', live, title, className, ...rest }: MarkProps) {
+  const geometry = markGeometry(size, { frame });
   const parts = markParts(geometry, live);
   const named = Boolean(title);
   return (
@@ -44,23 +38,24 @@ export function Mark({ size = 24, tone = 'signal', crop = 'square', live, title,
       xmlns="http://www.w3.org/2000/svg"
       width={geometry.size}
       height={geometry.size}
-      viewBox={`0 0 ${geometry.size} ${geometry.size}`}
+      viewBox={markViewBox(geometry)}
       className={cn('prg-mark', className)}
+      data-frame={frame}
       data-form={geometry.form}
       data-tone={tone}
-      data-crop={crop}
       data-live={live}
       role={named ? 'img' : undefined}
       aria-label={named ? title : undefined}
       aria-hidden={named ? undefined : true}
       focusable="false"
     >
-      {parts.map((p, i) => (
+      {parts.map((p) => (
         <path
-          key={`${p.part}-${i}`}
+          key={p.part}
           className={`prg-mark__${p.paint}`}
           data-part={p.part}
-          fillRule={p.fillRule}
+          data-stroked={p.stroke ? '' : undefined}
+          strokeWidth={p.stroke}
           d={p.d}
         />
       ))}

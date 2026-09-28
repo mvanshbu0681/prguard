@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -214,12 +214,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#84` in 19.8s · [full run ↗](https://prguard.acme.internal/runs/811dc092-abaa-4aa8-ad63-913922de7cae)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#84` in 19.8s · [full run ↗](https://witness.acme.internal/runs/811dc092-abaa-4aa8-ad63-913922de7cae)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "8d5916e1392bb3e6b93aa70eeb405858a731f707",
     "comments": [
       {
         "path": ".github/workflows/ci.yml",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nWithout `concurrency:` (line 33) the second merge's deploy can finish before the first's.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `.github/workflows/ci.yml` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/33858a13-63f2-4a24-972d-6a41c97313aa#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 174f7ec5…ac13` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/33858a13-63f2-4a24-972d-6a41c97313aa#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nWithout `concurrency:` (line 33) the second merge's deploy can finish before the first's.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `.github/workflows/ci.yml` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/33858a13-63f2-4a24-972d-6a41c97313aa#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 174f7ec5…ac13` · [dismiss with a reason ↗](https://witness.acme.internal/findings/33858a13-63f2-4a24-972d-6a41c97313aa#suppress)",
         "line": 35,
         "side": "RIGHT",
         "start_line": 33,
@@ -227,7 +227,7 @@
       },
       {
         "path": ".github/workflows/ci.yml",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe key is `pip-${{ runner.os }}` (line 20), so a dependency bump restores the old wheels and the test job runs against them.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `.github/workflows/ci.yml` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/a74a41c1-9c15-46a0-9fdd-f6468398df6c#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 91c77dbe…1033` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/a74a41c1-9c15-46a0-9fdd-f6468398df6c#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe key is `pip-${{ runner.os }}` (line 20), so a dependency bump restores the old wheels and the test job runs against them.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `.github/workflows/ci.yml` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/a74a41c1-9c15-46a0-9fdd-f6468398df6c#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 91c77dbe…1033` · [dismiss with a reason ↗](https://witness.acme.internal/findings/a74a41c1-9c15-46a0-9fdd-f6468398df6c#suppress)",
         "line": 22,
         "side": "RIGHT",
         "start_line": 20,

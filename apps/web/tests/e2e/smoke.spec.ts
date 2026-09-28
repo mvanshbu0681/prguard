@@ -8,7 +8,7 @@ test("GET / renders the nine marketing section stubs", async ({ page, request })
   await expect(page.locator('[data-surface="marketing"]')).toBeVisible();
   const ids = await page.locator("main section[data-stub]").evaluateAll((els) => els.map((e) => e.id));
   expect(ids).toEqual(["proof", "negation", "wrong", "comment", "severity", "pipeline", "record", "accuracy", "run"]);
-  await expect(page).toHaveTitle("PRGuard — proven, or it doesn't block");
+  await expect(page).toHaveTitle("Witness — proven, or it doesn't block");
 });
 
 test("GET /overview renders the dashboard stub", async ({ page, request }) => {

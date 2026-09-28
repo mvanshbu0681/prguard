@@ -26,8 +26,8 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 web="$(cd "$here/.." && pwd)"
 
 # 1. Take a browser slot, then re-enter this script inside it.
-if [ "${PRGUARD_SHOOT_IN_SLOT:-}" != "1" ]; then
-  export PRGUARD_SHOOT_IN_SLOT=1
+if [ "${WITNESS_SHOOT_IN_SLOT:-}" != "1" ]; then
+  export WITNESS_SHOOT_IN_SLOT=1
   exec bash "$here/slot.sh" browser bash "$here/shoot.sh" "$@"
 fi
 
@@ -48,7 +48,7 @@ if port_busy "$port"; then
   exit 2
 fi
 
-log="${TMPDIR:-/tmp}/prguard-shoot-$port.log"
+log="${TMPDIR:-/tmp}/witness-shoot-$port.log"
 export NEXT_TELEMETRY_DISABLED=1
 SHOOT_PID=$$
 
@@ -71,7 +71,7 @@ sh -c '
     sleep 0.5
   done
   kill -KILL -- "-$$" 2>/dev/null
-' prguard-dev-watchdog "$web" "$port" "$SHOOT_PID" >"$log" 2>&1 &
+' witness-dev-watchdog "$web" "$port" "$SHOOT_PID" >"$log" 2>&1 &
 group=$!
 set +m
 

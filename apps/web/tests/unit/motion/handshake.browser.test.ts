@@ -76,7 +76,7 @@ function alive(pid: number): boolean {
 }
 
 async function acquireSlot(timeoutMs = 300_000): Promise<() => void> {
-  const root = process.env.PRGUARD_SLOT_DIR ?? path.join(process.env.TMPDIR ?? "/tmp", "prguard-slots");
+  const root = process.env.WITNESS_SLOT_DIR ?? path.join(process.env.TMPDIR ?? "/tmp", "witness-slots");
   mkdirSync(root, { recursive: true });
   const deadline = Date.now() + timeoutMs;
   for (;;) {

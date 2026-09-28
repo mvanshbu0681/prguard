@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -304,12 +304,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1129` in 18.4s · [full run ↗](https://prguard.acme.internal/runs/567edaff-6d2c-477b-89be-faeb12af07ea)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#1129` in 18.4s · [full run ↗](https://witness.acme.internal/runs/567edaff-6d2c-477b-89be-faeb12af07ea)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 1 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "2a3af920301121c94eda64a2dc7e1f06643af0a1",
     "comments": [
       {
         "path": "src/cart/storage.ts",
-        "body": "**`proof_status: not_applicable`** · severity **`0.395`** medium\n\nThe merge loops over both carts and sums quantities for every SKU (line 59), including those it already copied from the guest cart, so a shopper with two mugs in each cart ends up with six.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/cart/storage.ts` is not Python.\n\n**Severity `0.395`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/1219a7ca-8c56-4041-9365-b6e33f651289#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 68ec16eb…623b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/1219a7ca-8c56-4041-9365-b6e33f651289#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.395`** medium\n\nThe merge loops over both carts and sums quantities for every SKU (line 59), including those it already copied from the guest cart, so a shopper with two mugs in each cart ends up with six.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/cart/storage.ts` is not Python.\n\n**Severity `0.395`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/1219a7ca-8c56-4041-9365-b6e33f651289#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 68ec16eb…623b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/1219a7ca-8c56-4041-9365-b6e33f651289#suppress)",
         "line": 62,
         "side": "RIGHT",
         "start_line": 59,

@@ -4,7 +4,7 @@
 // app/tokens/core.css layer C, or the OG card and the tab icon drift from the
 // product.
 import { describe, expect, it } from 'vitest';
-import { BRAND_HEX, FLAT_HEX, flattenWhite } from '@/components/brand';
+import { BRAND_HEX, FLAT_HEX, WITNESS_HEX, flattenWhite } from '@/components/brand';
 import { readCss } from './css';
 
 const TOKEN_OF: Record<keyof typeof BRAND_HEX, string> = {
@@ -69,5 +69,20 @@ describe('flattenWhite', () => {
     expect(FLAT_HEX.ruleHairOnInk0).toBe('#16171A');
     expect(FLAT_HEX.rule1OnInk0).toBe('#1E2023');
     expect(FLAT_HEX.rule2OnInk0).toBe('#2B2C2F');
+  });
+});
+
+describe('WITNESS_HEX', () => {
+  it('equals the landing tokens the marks are drawn in (--lime, --ink)', () => {
+    const hero = readCss('src/components/v2/hero/hero.module.css');
+    expect(hero.match(/--lime:\s*(#[0-9a-fA-F]{6})/)?.[1].toUpperCase()).toBe(WITNESS_HEX.lime);
+    expect(hero.match(/--ink:\s*(#[0-9a-fA-F]{6})/)?.[1].toUpperCase()).toBe(WITNESS_HEX.ink);
+    // The footer draws the eye in its own --lime.
+    const footer = readCss('src/components/v2/footer/footer.module.css');
+    expect(footer.match(/--lime:\s*(#[0-9a-fA-F]{6})/)?.[1].toUpperCase()).toBe(WITNESS_HEX.lime);
+  });
+
+  it('shares the product alarm red', () => {
+    expect(WITNESS_HEX.alarm).toBe(BRAND_HEX.alarm);
   });
 });

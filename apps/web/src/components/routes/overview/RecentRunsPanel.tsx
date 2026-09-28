@@ -41,7 +41,7 @@ export function RecentRunsPanel({ compact, className }: RecentRunsPanelProps) {
         <ErrorState error={query.error} onRetry={() => query.refetch()} />
       ) : items.length === 0 ? (
         <EmptyState
-          message="No reviews yet. PRGuard reviews a pull request when GitHub sends a webhook, or on demand."
+          message="No reviews yet. Witness reviews a pull request when GitHub sends a webhook, or on demand."
           actions={[{ label: "Run a review on a seeded PR", href: "/#run" }]}
         />
       ) : (

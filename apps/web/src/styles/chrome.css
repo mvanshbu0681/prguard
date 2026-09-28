@@ -407,7 +407,6 @@
      ------------------------------------------------------------------------ */
   .prg-mark {
     --prg-mark-bar: var(--signal);
-    --prg-mark-tick: var(--rule-2);
     --prg-mark-alarm: var(--alarm);
     display: inline-block;
     flex: none;
@@ -419,20 +418,23 @@
   /* One colour on light (print, invoices, the light audit export). */
   .prg-mark[data-tone="ink"] {
     --prg-mark-bar: var(--ink-0);
-    --prg-mark-tick: oklch(0 0 0 / 0.14);
   }
   .prg-mark__bar {
     fill: var(--prg-mark-bar);
   }
-  .prg-mark__tick {
-    fill: var(--prg-mark-tick);
-  }
   .prg-mark__alarm {
     fill: var(--prg-mark-alarm);
   }
+  /* The lid (and a running pupil's ring) are strokes with round ends. */
+  .prg-mark [data-stroked] {
+    fill: none;
+    stroke: var(--prg-mark-bar);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
 
-  /* PRGUARD: Google Sans Code 560, caps, +0.04em, --text-primary. The negative
-     end margin cancels the tracking after the D, so the box ends at the last
+  /* WITNESS: Google Sans Code 560, caps, +0.04em, --text-primary. The negative
+     end margin cancels the tracking after the last S, so the box ends at the last
      advance and a centred lockup centres the letters, not the trailing gap. */
   .prg-wordmark {
     display: inline-block;
@@ -456,8 +458,8 @@
     color: var(--text-primary);
   }
   /* Optical alignment: inside a lockup the wordmark's box is trimmed to exactly
-     cap height → baseline, so centring puts the caps' centre on the mark's bar
-     stack and on the hairline, instead of on the line box (whose centre sits
+     cap height → baseline, so centring puts the caps' centre on the mark's
+     centre and on the hairline, instead of on the line box (whose centre sits
      0.87px below the caps in Google Sans Code). Where text-box is unsupported
      the untrimmed box is within a pixel. */
   @supports (text-box: trim-both cap alphabetic) {
@@ -509,9 +511,12 @@
 
   @media (forced-colors: active) {
     .prg-mark__bar,
-    .prg-mark__tick,
     .prg-mark__alarm {
       fill: CanvasText;
+    }
+    .prg-mark [data-stroked] {
+      fill: none;
+      stroke: CanvasText;
     }
     .prg-lockup__rule,
     .prg-lockup[data-variant="B"] .prg-lockup__word::after,

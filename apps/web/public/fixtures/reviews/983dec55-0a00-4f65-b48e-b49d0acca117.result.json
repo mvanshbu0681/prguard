@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "2 findings carry a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca",
       "43f5dda7-c839-4c53-a5de-3d2f0f77d46d"
@@ -112,7 +112,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_8d3214.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/oauth/authorize.py::verify_pkce.\n\nClaim: the plain method is accepted.\n\"\"\"\n\nfrom app.oauth.authorize import verify_pkce\n\n\ndef test_plain_method_is_rejected():\n    assert verify_pkce(\"abc123\", \"abc123\", \"plain\") is False\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/oauth/authorize.py::verify_pkce.\n\nClaim: the plain method is accepted.\n\"\"\"\n\nfrom app.oauth.authorize import verify_pkce\n\n\ndef test_plain_method_is_rejected():\n    assert verify_pkce(\"abc123\", \"abc123\", \"plain\") is False\n",
         "command": "pytest tests/test_repro_8d3214.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -187,7 +187,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_642f26.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/oauth/authorize.py::_redirect_ok.\n\nClaim: a look-alike host passes the redirect check.\n\"\"\"\n\nfrom app.oauth.authorize import redirect_allowed\n\n\ndef test_lookalike_host_is_rejected():\n    assert not redirect_allowed(\"https://app.acme.test.evil.test/cb\")\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/oauth/authorize.py::_redirect_ok.\n\nClaim: a look-alike host passes the redirect check.\n\"\"\"\n\nfrom app.oauth.authorize import redirect_allowed\n\n\ndef test_lookalike_host_is_rejected():\n    assert not redirect_allowed(\"https://app.acme.test.evil.test/cb\")\n",
         "command": "pytest tests/test_repro_642f26.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -360,12 +360,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#223` in 38.8s · [full run ↗](https://prguard.acme.internal/runs/983dec55-0a00-4f65-b48e-b49d0acca117)\n\n**Gate: failing** — 2 findings with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **2** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#223` in 38.8s · [full run ↗](https://witness.acme.internal/runs/983dec55-0a00-4f65-b48e-b49d0acca117)\n\n**Gate: failing** — 2 findings with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **2** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "05d8804e57a745fc43ffe233e294c53dd4df55c0",
     "comments": [
       {
         "path": "app/oauth/authorize.py",
-        "body": "**`proof_status: proven`** · severity **`0.735`** high\n\nOAuth 2.1 requires S256; `verify_pkce()` falls back to comparing the verifier with the challenge when the method is `plain` (line 35), so an intercepted authorization request carries everything needed to redeem the code.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `9e1d93e` | `1 passed in 0.31s` |\n| head | `05d8804` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>05d8804</code></summary>\n\n    E       AssertionError: assert True is False\n    E        +  where True = verify_pkce('abc123', 'abc123', 'plain')\n    tests/test_repro_8d3214.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.735`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint 109c8cf7…faa0` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.735`** high\n\nOAuth 2.1 requires S256; `verify_pkce()` falls back to comparing the verifier with the challenge when the method is `plain` (line 35), so an intercepted authorization request carries everything needed to redeem the code.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `9e1d93e` | `1 passed in 0.31s` |\n| head | `05d8804` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>05d8804</code></summary>\n\n    E       AssertionError: assert True is False\n    E        +  where True = verify_pkce('abc123', 'abc123', 'plain')\n    tests/test_repro_8d3214.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.735`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint 109c8cf7…faa0` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c6bb6d35-9dc4-4e0b-a0b2-9b53a68a8fca#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 37,
         "side": "RIGHT",
         "start_line": 35,
@@ -373,7 +373,7 @@
       },
       {
         "path": "app/oauth/authorize.py",
-        "body": "**`proof_status: proven`** · severity **`0.650`** high\n\n`uri.startswith(registered)` (line 47) accepts `https://app.acme.test.evil.test/cb` for a client registered with `https://app.acme.test`, and the authorization code is sent there.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `9e1d93e` | `1 passed in 0.29s` |\n| head | `05d8804` | `1 failed in 0.29s` |\n\n<details><summary>terminal output at head <code>05d8804</code></summary>\n\n    E       AssertionError: assert not True\n    E        +  where True = redirect_allowed('https://app.acme.test.evil.test/cb')\n    tests/test_repro_642f26.py:10: AssertionError\n    1 failed in 0.29s\n\n</details>\n\n**Severity `0.650`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/43f5dda7-c839-4c53-a5de-3d2f0f77d46d#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint 6392b13b…d6f6` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/43f5dda7-c839-4c53-a5de-3d2f0f77d46d#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.650`** high\n\n`uri.startswith(registered)` (line 47) accepts `https://app.acme.test.evil.test/cb` for a client registered with `https://app.acme.test`, and the authorization code is sent there.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `9e1d93e` | `1 passed in 0.29s` |\n| head | `05d8804` | `1 failed in 0.29s` |\n\n<details><summary>terminal output at head <code>05d8804</code></summary>\n\n    E       AssertionError: assert not True\n    E        +  where True = redirect_allowed('https://app.acme.test.evil.test/cb')\n    tests/test_repro_642f26.py:10: AssertionError\n    1 failed in 0.29s\n\n</details>\n\n**Severity `0.650`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/43f5dda7-c839-4c53-a5de-3d2f0f77d46d#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint 6392b13b…d6f6` · [dismiss with a reason ↗](https://witness.acme.internal/findings/43f5dda7-c839-4c53-a5de-3d2f0f77d46d#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 49,
         "side": "RIGHT",
         "start_line": 47,

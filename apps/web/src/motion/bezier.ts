@@ -91,7 +91,7 @@ export function easeFn(points: BezierPoints): EaseFn {
 /**
  * The inverse: the input progress at which the eased output first reaches `value`
  * (e.g. when a scan line eased on EASE.mass crosses a row). Assumes a monotone
- * curve, which every PRGuard easing is (y1, y2 ∈ [0, 1]).
+ * curve, which every Witness easing is (y1, y2 ∈ [0, 1]).
  */
 export function progressAt(points: BezierPoints, value: number): number {
   if (!(value > 0)) return 0;

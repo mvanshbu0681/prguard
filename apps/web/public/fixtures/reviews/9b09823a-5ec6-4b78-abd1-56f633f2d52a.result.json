@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -251,12 +251,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1126` in 30.8s · [full run ↗](https://prguard.acme.internal/runs/9b09823a-5ec6-4b78-abd1-56f633f2d52a)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 1 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#1126` in 30.8s · [full run ↗](https://witness.acme.internal/runs/9b09823a-5ec6-4b78-abd1-56f633f2d52a)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 1 inline at the exact line, 1 at the nearest line in a diff hunk. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "b726daf6d8307c2e30544fb080f875890e5a7b86",
     "comments": [
       {
         "path": "src/components/CurrencySwitcher.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.555`** high\n\n`formatPrice()` renders `amountMinor / 100` (line 24); JPY has no minor unit, so ¥1200 is shown as ¥12.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/CurrencySwitcher.tsx` is not Python.\n\n**Severity `0.555`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.105` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/5ea69916-4bb8-45d3-86f1-af996441ba91#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint fc08fd1f…4b5b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/5ea69916-4bb8-45d3-86f1-af996441ba91#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.555`** high\n\n`formatPrice()` renders `amountMinor / 100` (line 24); JPY has no minor unit, so ¥1200 is shown as ¥12.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/CurrencySwitcher.tsx` is not Python.\n\n**Severity `0.555`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.105` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/5ea69916-4bb8-45d3-86f1-af996441ba91#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint fc08fd1f…4b5b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/5ea69916-4bb8-45d3-86f1-af996441ba91#suppress)",
         "line": 26,
         "side": "RIGHT",
         "start_line": 24,
@@ -264,7 +264,7 @@
       },
       {
         "path": "src/components/CurrencySwitcher.tsx",
-        "body": "> Nearest reviewable line. The issue is at `src/components/CurrencySwitcher.tsx:36`.\n\n**`proof_status: not_applicable`** · severity **`0.380`** medium\n\n`useCurrency()` writes `\"acme.currency\"` directly (line 36) while every other preference goes through `storage.ts`, which namespaces keys per user.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/CurrencySwitcher.tsx` is not Python.\n\n**Severity `0.380`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bd3f6083-8368-4844-8d7c-493f518c325e#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 263bfd7f…a9aa` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bd3f6083-8368-4844-8d7c-493f518c325e#suppress)",
+        "body": "> Nearest reviewable line. The issue is at `src/components/CurrencySwitcher.tsx:36`.\n\n**`proof_status: not_applicable`** · severity **`0.380`** medium\n\n`useCurrency()` writes `\"acme.currency\"` directly (line 36) while every other preference goes through `storage.ts`, which namespaces keys per user.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/components/CurrencySwitcher.tsx` is not Python.\n\n**Severity `0.380`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/bd3f6083-8368-4844-8d7c-493f518c325e#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 263bfd7f…a9aa` · [dismiss with a reason ↗](https://witness.acme.internal/findings/bd3f6083-8368-4844-8d7c-493f518c325e#suppress)",
         "line": 32,
         "side": "RIGHT"
       }

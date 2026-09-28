@@ -11,11 +11,11 @@ export const GSC_CAP_HEIGHT = 0.716;
 /** Advance of every glyph (monospace, MONO axis pinned to 1): 1200 / 2000. */
 export const GSC_ADVANCE = 0.6;
 
-/** Left side bearing of "P" at wght 560: 142 / 2000. */
-export const GSC_P_LSB_560 = 0.071;
+/** Left side bearing of "W" at wght 560: 26 / 2000. */
+export const GSC_W_LSB_560 = 0.013;
 
-/** Right side bearing of "D" at wght 560: 91 / 2000. */
-export const GSC_D_RSB_560 = 0.0455;
+/** Right side bearing of "S" at wght 560: 82 / 2000. */
+export const GSC_S_RSB_560 = 0.041;
 
 /** Wordmark tracking (brand-gaps §B): +0.04em — tighter than the label tier's +0.12em, so it reads as a name. */
 export const WORDMARK_TRACKING = 0.04;
@@ -27,12 +27,12 @@ export const WORDMARK_WEIGHT = 560;
 export const WORDMARK_MIN = 12;
 
 /**
- * Horizontal ink extent of "PRGUARD" in em, measured from the start of the
- * text box: [P's left edge, D's right edge]. Lockup B's rail spans exactly
- * this ("at exactly the wordmark's width", brand-gaps §B); the trailing
- * tracking after the D is excluded.
+ * Horizontal ink extent of "WITNESS" in em, measured from the start of the
+ * text box: [W's left edge, the last S's right edge]. Lockup B's rail spans
+ * exactly this ("at exactly the wordmark's width", brand-gaps §B); the
+ * trailing tracking after the S is excluded.
  */
 export const WORDMARK_INK = {
-  start: GSC_P_LSB_560,
-  end: 7 * GSC_ADVANCE + 6 * WORDMARK_TRACKING - GSC_D_RSB_560,
+  start: GSC_W_LSB_560,
+  end: 7 * GSC_ADVANCE + 6 * WORDMARK_TRACKING - GSC_S_RSB_560,
 } as const;

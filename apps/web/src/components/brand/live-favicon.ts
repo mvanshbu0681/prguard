@@ -1,17 +1,15 @@
-// OWNER: t1a (wave 1).
-//
 // The live-state favicon (brand-gaps §C): during a live review the tab icon
 // becomes a runtime-drawn 32×32 variant of the mark, so the run is readable
-// from a background tab.
+// from a background tab. Only the pupil changes:
 //
-//   running   head bar hollow (--signal outline), ticking at the heartbeat period
-//   clear     both bars --signal, head solid (the mark at rest)
-//   blocked   head bar solid --alarm — the head bar's fill is a 0ms flip
+//   running   the pupil is a ring, ticking at the heartbeat period (still watching)
+//   clear     the pupil is solid lime (the mark at rest)
+//   blocked   the pupil is solid --alarm — a 0ms flip: the witness saw the bug
 //
-// Drawn on a solid --ink-0 tile, like favicon.ico ("never transparent"): the
-// state colours then hold their designed contrast in light and dark tab strips.
-// The geometry is the 16px two-bar favicon form at 2x (./geometry), so the live
-// icon and the static one are the same pixels apart from the head bar.
+// Drawn on the same rounded ink tile as favicon.ico ("never transparent"): the
+// state colours then hold their contrast in light and dark tab strips. The
+// geometry is the tile frame from ./geometry, so the live icon and the static
+// one are the same drawing apart from the pupil.
 //
 // The tick mirrors the heartbeat dot (design §4.7 / motion §4.9.2):
 //   @keyframes tick { 0%, 100% { opacity: .35 } 12% { opacity: 1 } }  on steps(1, end)
@@ -26,8 +24,8 @@
 // Framework-free so it is testable and reusable; useLiveFavicon is the React
 // binding. Every DOM access is guarded: without a 2D canvas it does nothing and
 // the static favicon stays, degraded, never broken.
-import { hollowRects, markGeometry, scaleGeometry, type Box, type MarkLiveState } from './geometry';
-import { BRAND_HEX } from './palette';
+import { MARK_LID_POINTS, TILE_RADIUS, markGeometry, type MarkLiveState } from './geometry';
+import { WITNESS_HEX } from './palette';
 
 export type LiveFaviconState = MarkLiveState | null;
 
@@ -41,32 +39,50 @@ export const HEARTBEAT_REST_OPACITY = 0.35;
 
 type Beat = 'on' | 'rest';
 
-/** The 16px favicon form drawn into the 32×32 frame. */
-const GEOMETRY = scaleGeometry(markGeometry(16, { form: 'two-bars' }), LIVE_FAVICON_SIZE / 16);
+/** Small form, like favicon.ico: the tab shows this 32px frame at 16 CSS px. */
+const GEOMETRY = markGeometry(LIVE_FAVICON_SIZE, { frame: 'tile', form: 'small' });
 
-function fillHollow(ctx: CanvasRenderingContext2D, box: Box, s: number) {
-  for (const r of hollowRects(box, s)) ctx.fillRect(r.x, r.y, r.w, r.h);
-}
-
-/** Paint one frame. The geometry has no radii at this size, so plain rects are exact. */
+/** Paint one frame: the ink tile, the lid, and the pupil in its live state. */
 export function paintLiveFavicon(ctx: CanvasRenderingContext2D, state: MarkLiveState, beat: Beat = 'on') {
   const g = GEOMETRY;
-  const s = g.base.stroke;
+  const k = g.size / g.box.side;
+  const { start, control, corner, vertex, tail } = MARK_LID_POINTS;
+  const { cx, cy, r } = g.pupil;
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
-  ctx.fillStyle = BRAND_HEX.ink0;
-  ctx.fillRect(0, 0, g.size, g.size);
+  ctx.clearRect(0, 0, g.size, g.size);
+  ctx.fillStyle = WITNESS_HEX.ink;
+  ctx.beginPath();
+  ctx.roundRect(0, 0, g.size, g.size, g.size * TILE_RADIUS);
+  ctx.fill();
 
-  ctx.fillStyle = BRAND_HEX.signal;
-  fillHollow(ctx, g.base, s);
+  // Artboard units from here on.
+  ctx.setTransform(k, 0, 0, k, -g.box.x * k, -g.box.y * k);
+  ctx.strokeStyle = WITNESS_HEX.lime;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = g.stroke;
+  ctx.beginPath();
+  ctx.moveTo(start[0], start[1]);
+  ctx.quadraticCurveTo(control[0], control[1], corner[0], corner[1]);
+  ctx.lineTo(vertex[0], vertex[1]);
+  ctx.lineTo(tail[0], tail[1]);
+  ctx.stroke();
 
+  ctx.beginPath();
   if (state === 'running') {
     ctx.globalAlpha = beat === 'on' ? 1 : HEARTBEAT_REST_OPACITY;
-    fillHollow(ctx, g.head, s);
-    ctx.globalAlpha = 1;
-    return;
+    ctx.lineWidth = g.stroke / 1.75;
+    ctx.arc(cx, cy, r - g.stroke / 3.5, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = state === 'blocked' ? WITNESS_HEX.alarm : WITNESS_HEX.lime;
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.fillStyle = state === 'blocked' ? BRAND_HEX.alarm : BRAND_HEX.signal;
-  ctx.fillRect(g.head.x, g.head.y, g.head.w, g.head.h);
+  ctx.globalAlpha = 1;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
 }
 
 export function prefersReducedMotion(doc: Document = document): boolean {

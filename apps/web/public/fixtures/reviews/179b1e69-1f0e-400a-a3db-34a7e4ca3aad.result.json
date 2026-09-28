@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_ae2826.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/push/dedupe.py::should_send.\n\nClaim: a steady burst still sends every minute.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_burst\n\n\ndef test_burst_every_fifty_seconds_sends_once():\n    assert sends_for_burst(50, 3) == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/push/dedupe.py::should_send.\n\nClaim: a steady burst still sends every minute.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_burst\n\n\ndef test_burst_every_fifty_seconds_sends_once():\n    assert sends_for_burst(50, 3) == 1\n",
         "command": "pytest tests/test_repro_ae2826.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -310,12 +310,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#71` in 31.3s · [full run ↗](https://prguard.acme.internal/runs/179b1e69-1f0e-400a-a3db-34a7e4ca3aad)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#71` in 31.3s · [full run ↗](https://witness.acme.internal/runs/179b1e69-1f0e-400a-a3db-34a7e4ca3aad)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 1 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "b4e1b1947bcd6eb84d9612c4ad696daa06c38119",
     "comments": [
       {
         "path": "app/push/dedupe.py",
-        "body": "**`proof_status: proven`** · severity **`0.470`** medium\n\nThe key's TTL is set once on the first push (line 14) and never refreshed, so a burst that keeps arriving every 50 seconds sends a notification every minute.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `cfda36a` | `1 passed in 0.32s` |\n| head | `b4e1b19` | `1 failed in 0.33s` |\n\n<details><summary>terminal output at head <code>b4e1b19</code></summary>\n\n    E       assert 2 == 1\n    E        +  where 2 = sends_for_burst(50, 3)\n    tests/test_repro_ae2826.py:10: AssertionError\n    1 failed in 0.33s\n\n</details>\n\n**Severity `0.470`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/eb05988e-4192-4f7f-9cee-51f7e8f649ae#severity)\n\nThis finding has `proof_status: proven` and scores `0.470` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint cb9103be…be8d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/eb05988e-4192-4f7f-9cee-51f7e8f649ae#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.470`** medium\n\nThe key's TTL is set once on the first push (line 14) and never refreshed, so a burst that keeps arriving every 50 seconds sends a notification every minute.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `cfda36a` | `1 passed in 0.32s` |\n| head | `b4e1b19` | `1 failed in 0.33s` |\n\n<details><summary>terminal output at head <code>b4e1b19</code></summary>\n\n    E       assert 2 == 1\n    E        +  where 2 = sends_for_burst(50, 3)\n    tests/test_repro_ae2826.py:10: AssertionError\n    1 failed in 0.33s\n\n</details>\n\n**Severity `0.470`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/eb05988e-4192-4f7f-9cee-51f7e8f649ae#severity)\n\nThis finding has `proof_status: proven` and scores `0.470` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint cb9103be…be8d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/eb05988e-4192-4f7f-9cee-51f7e8f649ae#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 17,
         "side": "RIGHT",
         "start_line": 14,

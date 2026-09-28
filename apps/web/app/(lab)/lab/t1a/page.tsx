@@ -274,7 +274,7 @@ export default function T1aLab() {
             <figure className="m-0 grid justify-items-start gap-2">
               <span className="block rounded-panel bg-ink-3 p-2">
                 <span className="block bg-ink-0" style={{ clipPath: 'circle(50%)' }}>
-                  <Mark size={96} crop="circle" />
+                  <Mark size={96} frame="circle" />
                 </span>
               </span>
               <figcaption className="type-data text-text-dim">96 · crop circle</figcaption>
@@ -354,8 +354,8 @@ export default function T1aLab() {
           <div className="flex flex-wrap items-end gap-8">
             <figure className="m-0 w-full max-w-[512px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/prguard-app-avatar-512.png" width={512} height={512} alt="PRGuard GitHub App avatar" className="block h-auto w-full border border-rule-1" />
-              <Caption>prguard-app-avatar-512.png</Caption>
+              <img src="/brand/witness-app-avatar-512.png" width={512} height={512} alt="Witness GitHub App avatar" className="block h-auto w-full border border-rule-1" />
+              <Caption>witness-app-avatar-512.png</Caption>
             </figure>
             {[
               ['light', 'bg-[#FFFFFF]'],
@@ -364,8 +364,8 @@ export default function T1aLab() {
               <figure key={theme} className="m-0">
                 <div className={`flex h-10 items-center gap-2 whitespace-nowrap rounded-data px-3 ${canvas}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/brand/prguard-app-avatar-512.png" width={20} height={20} alt="" className="block" style={{ clipPath: 'circle(50%)' }} />
-                  <span className={`font-prose text-[13px] ${theme === 'light' ? 'text-[#1F2328]' : 'text-[#E6EDF3]'}`}>prguard[bot] reviewed</span>
+                  <img src="/brand/witness-app-avatar-512.png" width={20} height={20} alt="" className="block" style={{ clipPath: 'circle(50%)' }} />
+                  <span className={`font-prose text-[13px] ${theme === 'light' ? 'text-[#1F2328]' : 'text-[#E6EDF3]'}`}>witness[bot] reviewed</span>
                 </div>
                 <Caption>20px · GitHub {theme}</Caption>
               </figure>
@@ -380,7 +380,7 @@ export default function T1aLab() {
 
       <LabSection index="10" title="OG card" note="app/opengraph-image.tsx, 1200 x 630, rendered by next/og from flat hex and static font instances.">
         {/* eslint-disable-next-line @next/next/no-img-element -- the generated route itself */}
-        <img src="/opengraph-image" width={1200} height={630} alt="The PRGuard social card" className="block h-auto w-full rounded-panel border border-rule-1" />
+        <img src="/opengraph-image" width={1200} height={630} alt="The Witness social card" className="block h-auto w-full rounded-panel border border-rule-1" />
       </LabSection>
     </div>
   );

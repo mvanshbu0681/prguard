@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_768690.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/templates/render.py::_environment.\n\nClaim: markup in a display name renders unescaped.\n\"\"\"\n\nfrom jinja2 import Environment\n\nfrom app.templates.render import render_email\n\n\ndef test_display_name_is_escaped():\n    assert \"<b>\" not in render_email(\"welcome.html\", {\"name\": \"<b>x</b>\"})\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/templates/render.py::_environment.\n\nClaim: markup in a display name renders unescaped.\n\"\"\"\n\nfrom jinja2 import Environment\n\nfrom app.templates.render import render_email\n\n\ndef test_display_name_is_escaped():\n    assert \"<b>\" not in render_email(\"welcome.html\", {\"name\": \"<b>x</b>\"})\n",
         "command": "pytest tests/test_repro_768690.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 2,
@@ -257,12 +257,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#72` in 28.7s · [full run ↗](https://prguard.acme.internal/runs/0d692033-6674-4494-aebb-08dc03b826c0)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#72` in 28.7s · [full run ↗](https://witness.acme.internal/runs/0d692033-6674-4494-aebb-08dc03b826c0)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "eee188f4c1305b73b46d3cdca1a488a2a881fcc4",
     "comments": [
       {
         "path": "app/templates/render.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.445`** medium\n\n`Environment(autoescape=False)` (line 29) renders a display name like `<img src=x onerror=...>` verbatim into HTML email.\n\n**Proof** — the repro test could not be imported at either SHA (`No module named 'jinja2'`), so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `5d7038f` | `1 error in 0.11s` |\n| head | `eee188f` | `1 error in 0.11s` |\n\n**Severity `0.445`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.075` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/372d3507-5dd6-4bf0-b845-c5855d1cfbd0#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 9e64aad4…bee2` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/372d3507-5dd6-4bf0-b845-c5855d1cfbd0#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.445`** medium\n\n`Environment(autoescape=False)` (line 29) renders a display name like `<img src=x onerror=...>` verbatim into HTML email.\n\n**Proof** — the repro test could not be imported at either SHA (`No module named 'jinja2'`), so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `5d7038f` | `1 error in 0.11s` |\n| head | `eee188f` | `1 error in 0.11s` |\n\n**Severity `0.445`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.075` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/372d3507-5dd6-4bf0-b845-c5855d1cfbd0#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 9e64aad4…bee2` · [dismiss with a reason ↗](https://witness.acme.internal/findings/372d3507-5dd6-4bf0-b845-c5855d1cfbd0#suppress)",
         "line": 31,
         "side": "RIGHT",
         "start_line": 29,
@@ -270,7 +270,7 @@
       },
       {
         "path": "app/templates/render.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.300`** low\n\nThe rendered subject is not stripped of `\\r\\n` (line 41).\n\n**Proof** — not attempted: severity `0.300` is below the `0.350` proof threshold.\n\n**Severity `0.300`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/724ef83c-eb22-4628-b343-22b0aca5fff3#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 73d6d27c…8ddb` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/724ef83c-eb22-4628-b343-22b0aca5fff3#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.300`** low\n\nThe rendered subject is not stripped of `\\r\\n` (line 41).\n\n**Proof** — not attempted: severity `0.300` is below the `0.350` proof threshold.\n\n**Severity `0.300`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/724ef83c-eb22-4628-b343-22b0aca5fff3#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 73d6d27c…8ddb` · [dismiss with a reason ↗](https://witness.acme.internal/findings/724ef83c-eb22-4628-b343-22b0aca5fff3#suppress)",
         "line": 43,
         "side": "RIGHT",
         "start_line": 41,

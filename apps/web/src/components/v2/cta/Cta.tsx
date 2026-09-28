@@ -60,7 +60,7 @@ export function Cta() {
             <span>doesn&rsquo;t block.</span>
           </h2>
           <p className={s.sub}>
-            Paste a pull request and watch PRGuard review it, stage by stage. It is read‑only: nothing is written to the PR.
+            Paste a pull request and watch Witness review it, stage by stage. It is read‑only: nothing is written to the PR.
           </p>
 
           <CtaForm chips={buildChips()} />

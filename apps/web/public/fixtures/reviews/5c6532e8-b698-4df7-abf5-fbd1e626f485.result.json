@@ -28,7 +28,7 @@
     "conclusion": "neutral",
     "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -330,12 +330,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4812` in 30.5s · [full run ↗](https://prguard.acme.internal/runs/5c6532e8-b698-4df7-abf5-fbd1e626f485)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4812` in 30.5s · [full run ↗](https://witness.acme.internal/runs/5c6532e8-b698-4df7-abf5-fbd1e626f485)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "4d02aed981dd74f9a3dbeae76c366f40f630a20b",
     "comments": [
       {
         "path": "app/billing/stripe_client.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.470`** medium\n\nThe intent is created with no `metadata` (line 14); support matches disputes by amount and date today.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.470`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/1fdc879f-211d-41df-9a0d-a95f097c2661#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint aec2d6fe…6c56` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/1fdc879f-211d-41df-9a0d-a95f097c2661#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.470`** medium\n\nThe intent is created with no `metadata` (line 14); support matches disputes by amount and date today.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.470`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/1fdc879f-211d-41df-9a0d-a95f097c2661#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint aec2d6fe…6c56` · [dismiss with a reason ↗](https://witness.acme.internal/findings/1fdc879f-211d-41df-9a0d-a95f097c2661#suppress)",
         "line": 16,
         "side": "RIGHT",
         "start_line": 14,
@@ -343,7 +343,7 @@
       },
       {
         "path": "app/billing/stripe_client.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.470`** medium\n\nstripe 12 removed the `return_url` keyword from `PaymentIntent.confirm()` in favour of `confirmation_token`; `confirm_intent()` still passes it (line 29). The SDK raises `TypeError` for 3-D Secure cards only, so the happy path in tests stays green.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.470`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/a25bbdee-2fc3-46e5-812d-89ac8adfa6db#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 14ad2cb1…d486` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/a25bbdee-2fc3-46e5-812d-89ac8adfa6db#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.470`** medium\n\nstripe 12 removed the `return_url` keyword from `PaymentIntent.confirm()` in favour of `confirmation_token`; `confirm_intent()` still passes it (line 29). The SDK raises `TypeError` for 3-D Secure cards only, so the happy path in tests stays green.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.470`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.015`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/a25bbdee-2fc3-46e5-812d-89ac8adfa6db#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 14ad2cb1…d486` · [dismiss with a reason ↗](https://witness.acme.internal/findings/a25bbdee-2fc3-46e5-812d-89ac8adfa6db#suppress)",
         "line": 31,
         "side": "RIGHT",
         "start_line": 29,
@@ -351,7 +351,7 @@
       },
       {
         "path": "app/billing/stripe_client.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.630`** high\n\nThe upgrade passes `tolerance=3600` to `stripe.Webhook.construct_event()` (line 43); the SDK default is 300 seconds. A captured webhook can be replayed for an hour, including `charge.refunded`.\n\n**Proof** — not attempted: the repro generator did not return a runnable test for this finding.\n\n**Severity `0.630`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/eb17bebb-570c-44d0-a065-78f8fe816a65#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 666a0069…0d4b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/eb17bebb-570c-44d0-a065-78f8fe816a65#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.630`** high\n\nThe upgrade passes `tolerance=3600` to `stripe.Webhook.construct_event()` (line 43); the SDK default is 300 seconds. A captured webhook can be replayed for an hour, including `charge.refunded`.\n\n**Proof** — not attempted: the repro generator did not return a runnable test for this finding.\n\n**Severity `0.630`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/eb17bebb-570c-44d0-a065-78f8fe816a65#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 666a0069…0d4b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/eb17bebb-570c-44d0-a065-78f8fe816a65#suppress)",
         "line": 46,
         "side": "RIGHT",
         "start_line": 43,

@@ -4,7 +4,7 @@
 // is correct on first paint and under SSR); the layout also drops the palette
 // and the keyboard chords at that width (useGlobalShortcuts' `enabled` prop),
 // matching the copy here.
-export const MOBILE_BANNER_TEXT = "PRGuard's dashboard is built for a keyboard and a wide screen. This is a read-only view.";
+export const MOBILE_BANNER_TEXT = "Witness's dashboard is built for a keyboard and a wide screen. This is a read-only view.";
 
 export function MobileBanner() {
   return (

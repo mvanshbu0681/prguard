@@ -1,10 +1,11 @@
-// PRGuard v2 hero, rebuilt on the otoma8.com system: a photographic frame with
+// Witness v2 hero, rebuilt on the otoma8.com system: a photographic frame with
 // the nav inside it, a centred Plus Jakarta headline, the lime pill with its
 // arrow chip, and a drifting row of real product cards. Server component: every
 // number on it comes from the demo corpus.
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { TrackingMark } from "@/components/brand/TrackingMark";
 import { SEVERITY_INPUTS } from "@/lib/contracts";
 import { getAccuracy, getAccuracySeries, getAuditChain, getDemoProvenFinding, getDemoResult, getManifest } from "@/lib/fixtures";
 import { v2FontVariables } from "../fonts";
@@ -80,12 +81,9 @@ export function Hero() {
         <div className={s.shade} aria-hidden />
 
         <header className={`${s.nav} ${s.rise}`}>
-          <Link href="/" className={s.logo} aria-label="PRGuard home">
-            <span className={s.logoMark} aria-hidden>
-              <i />
-              <i />
-            </span>
-            PRGuard
+          <Link href="/" className={s.logo} aria-label="Witness home">
+            <TrackingMark size={30} className={s.logoMark} />
+            Witness
           </Link>
           <nav className={s.links} aria-label="Primary">
             {NAV.map((n) => (
@@ -95,7 +93,8 @@ export function Hero() {
             ))}
           </nav>
           <Link href="/overview" className={`${s.pill} ${s.navCta}`}>
-            Open dashboard
+            <span className={s.navCtaFull}>Open dashboard</span>
+            <span className={s.navCtaShort}>Dashboard</span>
           </Link>
         </header>
 
@@ -105,7 +104,7 @@ export function Hero() {
             <span className={s.soft}>proves every claim</span>
           </h1>
           <p className={`${s.sub} ${s.rise}`} style={{ ["--d" as string]: "180ms" }}>
-            PRGuard writes a repro test, runs it at your base and head commit, and lets only a proven bug block the merge.
+            Witness writes a repro test, runs it at your base and head commit, and lets only a proven bug block the merge.
           </p>
           <div className={`${s.actions} ${s.rise}`} style={{ ["--d" as string]: "280ms" }}>
             <Link href={`/runs/${demoRun}?replay=1`} className={`${s.pill} ${s.glass}`}>
@@ -120,7 +119,7 @@ export function Hero() {
           </div>
         </div>
 
-        <div className={`${s.row} ${s.rise}`} style={{ ["--d" as string]: "420ms" }} aria-label="What PRGuard produces">
+        <div className={`${s.row} ${s.rise}`} style={{ ["--d" as string]: "420ms" }} aria-label="What Witness produces">
           <div className={s.track}>
             <HeroCards d={d} />
             <div aria-hidden style={{ display: "contents" }}>

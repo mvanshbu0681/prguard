@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_b5e86f.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reports/export.py::_row_for.\n\nClaim: formula-leading names reach the CSV unescaped.\n\"\"\"\n\nfrom app.reports.export import escape_cell\n\n\ndef test_formula_prefixed_cell_is_escaped():\n    assert escape_cell(\"=HYPERLINK(1)\") != \"=HYPERLINK(1)\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reports/export.py::_row_for.\n\nClaim: formula-leading names reach the CSV unescaped.\n\"\"\"\n\nfrom app.reports.export import escape_cell\n\n\ndef test_formula_prefixed_cell_is_escaped():\n    assert escape_cell(\"=HYPERLINK(1)\") != \"=HYPERLINK(1)\"\n",
         "command": "pytest tests/test_repro_b5e86f.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -304,12 +304,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#347` in 28.2s · [full run ↗](https://prguard.acme.internal/runs/b6dadbe2-b678-4c5d-bc61-28b334159221)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#347` in 28.2s · [full run ↗](https://witness.acme.internal/runs/b6dadbe2-b678-4c5d-bc61-28b334159221)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "89c15e6da602af047caacaab234ae11a87e90a12",
     "comments": [
       {
         "path": "app/reports/export.py",
-        "body": "**`proof_status: proven`** · severity **`0.535`** medium\n\nA counterparty named `=HYPERLINK(\"http://example.test\",\"refund\")` is written as-is (line 32); finance opens the export in a spreadsheet, which evaluates it.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `06467f2` | `1 passed in 0.26s` |\n| head | `89c15e6` | `1 failed in 0.27s` |\n\n<details><summary>terminal output at head <code>89c15e6</code></summary>\n\n    E       AssertionError: assert '=HYPERLINK(1)' != '=HYPERLINK(1)'\n    E        +  where '=HYPERLINK(1)' = escape_cell('=HYPERLINK(1)')\n    tests/test_repro_b5e86f.py:10: AssertionError\n    1 failed in 0.27s\n\n</details>\n\n**Severity `0.535`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/74dddee8-98f1-4fa2-93fa-3cba4cac757b#severity)\n\nThis finding has `proof_status: proven` and scores `0.535` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint cf27f4c3…5237` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/74dddee8-98f1-4fa2-93fa-3cba4cac757b#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.535`** medium\n\nA counterparty named `=HYPERLINK(\"http://example.test\",\"refund\")` is written as-is (line 32); finance opens the export in a spreadsheet, which evaluates it.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `06467f2` | `1 passed in 0.26s` |\n| head | `89c15e6` | `1 failed in 0.27s` |\n\n<details><summary>terminal output at head <code>89c15e6</code></summary>\n\n    E       AssertionError: assert '=HYPERLINK(1)' != '=HYPERLINK(1)'\n    E        +  where '=HYPERLINK(1)' = escape_cell('=HYPERLINK(1)')\n    tests/test_repro_b5e86f.py:10: AssertionError\n    1 failed in 0.27s\n\n</details>\n\n**Severity `0.535`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/74dddee8-98f1-4fa2-93fa-3cba4cac757b#severity)\n\nThis finding has `proof_status: proven` and scores `0.535` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint cf27f4c3…5237` · [dismiss with a reason ↗](https://witness.acme.internal/findings/74dddee8-98f1-4fa2-93fa-3cba4cac757b#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 34,
         "side": "RIGHT",
         "start_line": 32,
@@ -317,7 +317,7 @@
       },
       {
         "path": "app/reports/export.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.345`** low\n\nRe-running Monday's export on Tuesday produces a file dated Tuesday (line 46).\n\n**Proof** — not attempted: severity `0.345` is below the `0.350` proof threshold.\n\n**Severity `0.345`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/1ec13aaa-a7c6-4505-ba80-c57f77cd2f89#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 27cd6592…04d5` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/1ec13aaa-a7c6-4505-ba80-c57f77cd2f89#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.345`** low\n\nRe-running Monday's export on Tuesday produces a file dated Tuesday (line 46).\n\n**Proof** — not attempted: severity `0.345` is below the `0.350` proof threshold.\n\n**Severity `0.345`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/1ec13aaa-a7c6-4505-ba80-c57f77cd2f89#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 27cd6592…04d5` · [dismiss with a reason ↗](https://witness.acme.internal/findings/1ec13aaa-a7c6-4505-ba80-c57f77cd2f89#suppress)",
         "line": 48,
         "side": "RIGHT",
         "start_line": 46,

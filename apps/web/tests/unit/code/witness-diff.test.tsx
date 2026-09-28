@@ -1,7 +1,7 @@
-// OWNER: t1d. <PRGuardDiff>: glyph column, quarantined colours, finding lines, annotations.
+// OWNER: t1d. <WitnessDiff>: glyph column, quarantined colours, finding lines, annotations.
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PRGuardDiff } from "@/components/code";
+import { WitnessDiff } from "@/components/code";
 
 const DIFF = [
   "--- a/checkout/charge.py",
@@ -16,15 +16,15 @@ const DIFF = [
 
 const rowsOf = (container: HTMLElement) => [...container.querySelectorAll<HTMLElement>(".prg-diff__row")];
 
-describe("<PRGuardDiff>", () => {
+describe("<WitnessDiff>", () => {
   it("is a labelled, focusable region; unified by default", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} />);
+    const { container } = render(<WitnessDiff diff={DIFF} />);
     expect(screen.getByRole("region", { name: "Diff of checkout/charge.py" })).toHaveAttribute("tabindex", "0");
     expect(container.querySelector(".prg-diff")).toHaveAttribute("data-view", "unified");
   });
 
   it("renders every row with its kind and both line numbers, numbers as CSS content", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} />);
+    const { container } = render(<WitnessDiff diff={DIFF} />);
     const rows = rowsOf(container);
     expect(rows.map((r) => [r.dataset.kind, r.dataset.old ?? null, r.dataset.new ?? null])).toEqual([
       ["hunk", null, null],
@@ -42,7 +42,7 @@ describe("<PRGuardDiff>", () => {
   });
 
   it("carries the mandatory +/− glyph cell on every add and del row, readable to assistive tech", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} />);
+    const { container } = render(<WitnessDiff diff={DIFF} />);
     for (const row of rowsOf(container)) {
       const marker = row.querySelector(".prg-diff__marker");
       expect(marker, row.dataset.kind).not.toBeNull();
@@ -53,24 +53,24 @@ describe("<PRGuardDiff>", () => {
   });
 
   it("copies the code, not the gutter", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} />);
+    const { container } = render(<WitnessDiff diff={DIFF} />);
     expect(container.querySelector("pre")?.textContent).toBe(
       ["@@ -38,4 +38,4 @@ def charge(account, amount_cents):", '    audit.log("charge", receipt.id)', "    return receipt", "    ledger.record(receipt)", "", ""].join("\n"),
     );
   });
 
   it("highlights the finding's line on the side it names", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} highlight={[{ side: "new", start: 39, tone: "alarm", label: "finding a91f3c2e" }]} />);
+    const { container } = render(<WitnessDiff diff={DIFF} highlight={[{ side: "new", start: 39, tone: "alarm", label: "finding a91f3c2e" }]} />);
     const hl = rowsOf(container).filter((r) => r.dataset.hl);
     expect(hl.map((r) => [r.dataset.kind, r.dataset.new, r.dataset.hl])).toEqual([["add", "39", "alarm"]]);
     expect(screen.getByRole("region")).toHaveAccessibleDescription("Highlighted new line 39: finding a91f3c2e.");
-    const old = render(<PRGuardDiff diff={DIFF} highlight={[{ side: "old", start: 39, tone: "critical" }]} />);
+    const old = render(<WitnessDiff diff={DIFF} highlight={[{ side: "old", start: 39, tone: "critical" }]} />);
     expect(rowsOf(old.container).filter((r) => r.dataset.hl).map((r) => r.dataset.kind)).toEqual(["del"]);
   });
 
   it("fills the accused row with the finding's band, defaulting to the rail tone (dashboard §4)", () => {
     const { container } = render(
-      <PRGuardDiff
+      <WitnessDiff
         diff={DIFF}
         highlight={[
           { side: "new", start: 39, tone: "alarm", fill: "high" },
@@ -89,17 +89,17 @@ describe("<PRGuardDiff>", () => {
   });
 
   it("sets the hunk range apart from the section heading, and a copy still yields the @@ line", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} />);
+    const { container } = render(<WitnessDiff diff={DIFF} />);
     const hunk = container.querySelector('.prg-diff__row[data-kind="hunk"]') as HTMLElement;
     expect(hunk.querySelector(".prg-diff__range")?.textContent).toBe("@@ -38,4 +38,4 @@");
     expect(hunk.textContent).toBe("@@ -38,4 +38,4 @@ def charge(account, amount_cents):");
-    const bare = render(<PRGuardDiff diff={"@@ -1 +1 @@\n-a\n+b"} />);
+    const bare = render(<WitnessDiff diff={"@@ -1 +1 @@\n-a\n+b"} />);
     expect(bare.container.querySelector(".prg-diff__range")?.textContent).toBe("@@ -1 +1 @@");
   });
 
   it("hangs an annotation directly beneath its line, outside the pre", () => {
     const { container } = render(
-      <PRGuardDiff diff={DIFF} annotations={[{ side: "new", line: 39, tone: "alarm", label: "finding a91f3c2e", content: <p>card</p> }]} />,
+      <WitnessDiff diff={DIFF} annotations={[{ side: "new", line: 39, tone: "alarm", label: "finding a91f3c2e", content: <p>card</p> }]} />,
     );
     const note = screen.getByRole("note", { name: "finding a91f3c2e" });
     expect(note).toHaveTextContent("card");
@@ -113,12 +113,12 @@ describe("<PRGuardDiff>", () => {
   });
 
   it("uses no inline colour anywhere", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} highlight={[{ start: 39, tone: "alarm" }]} />);
+    const { container } = render(<WitnessDiff diff={DIFF} highlight={[{ start: 39, tone: "alarm" }]} />);
     expect(container.querySelectorAll("[style]")).toHaveLength(0);
   });
 
   it("prints path and change counts in the header, with words for assistive tech", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} filePath="checkout/charge.py" />);
+    const { container } = render(<WitnessDiff diff={DIFF} filePath="checkout/charge.py" />);
     const header = container.querySelector(".prg-diff__header") as HTMLElement;
     expect(within(header).getByText("checkout/charge.py")).toBeInTheDocument();
     expect(header.textContent).toContain("+1 −1");
@@ -126,7 +126,7 @@ describe("<PRGuardDiff>", () => {
   });
 
   it("names no file when a bare patch carries none", () => {
-    const { container } = render(<PRGuardDiff diff={"@@ -1 +1 @@\n-a\n+b"} />);
+    const { container } = render(<WitnessDiff diff={"@@ -1 +1 @@\n-a\n+b"} />);
     expect(screen.getByRole("region", { name: "Diff" })).toBeInTheDocument();
     expect(container.querySelector(".prg-diff__path")?.textContent).toBe("");
   });
@@ -140,7 +140,7 @@ describe("<PRGuardDiff>", () => {
       "+B2",
       " c",
     ].join("\n");
-    const { container } = render(<PRGuardDiff diff={split} view="split" highlight={[{ side: "new", start: 3, tone: "alarm" }]} />);
+    const { container } = render(<WitnessDiff diff={split} view="split" highlight={[{ side: "new", start: 3, tone: "alarm" }]} />);
     const [left, right] = [...container.querySelectorAll("pre")];
     expect(left).toHaveAttribute("data-side", "old");
     expect(right).toHaveAttribute("data-side", "new");
@@ -155,7 +155,7 @@ describe("<PRGuardDiff>", () => {
 
   it("never wraps: a long line stays one row", () => {
     const long = `+    return session.refund(${"receipt.id, ".repeat(30)}currency=session.currency)`;
-    const { container } = render(<PRGuardDiff diff={`@@ -1,0 +1,1 @@\n${long}`} />);
+    const { container } = render(<WitnessDiff diff={`@@ -1,0 +1,1 @@\n${long}`} />);
     const rows = rowsOf(container).filter((r) => r.dataset.kind === "add");
     expect(rows).toHaveLength(1);
     expect(rows[0].textContent).toBe(long.slice(1));

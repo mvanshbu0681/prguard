@@ -153,8 +153,8 @@ export function SuppressionsPage() {
             <EmptyState
               message={
                 filtersActive
-                  ? "No suppressions match this filter. Every finding PRGuard has raised outside it is still on the record."
-                  : "No suppressions. Every finding PRGuard has raised is still on the record."
+                  ? "No suppressions match this filter. Every finding Witness has raised outside it is still on the record."
+                  : "No suppressions. Every finding Witness has raised is still on the record."
               }
               actions={filtersActive ? [{ label: "Clear filters", onClick: clearFilters }] : []}
             />

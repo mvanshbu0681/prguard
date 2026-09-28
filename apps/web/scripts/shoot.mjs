@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // OWNER: T0 (wave 0). FROZEN once T0 merges.
 //
-// Screenshot routes of a running PRGuard dev server with Playwright's chromium.
+// Screenshot routes of a running Witness dev server with Playwright's chromium.
 // Normally driven by scripts/shoot.sh, which owns the dev server and the browser
 // slot. Run it directly only against a server you manage (pass --port or --base-url).
 //

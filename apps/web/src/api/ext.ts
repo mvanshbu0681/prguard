@@ -89,7 +89,7 @@ export async function listReviews(options: { query?: ListReviewsQuery; signal?: 
 // Live fallback: the runs this browser created.
 // ---------------------------------------------------------------------------
 
-const REMEMBER_KEY = "prguard:created-reviews:v1";
+const REMEMBER_KEY = "witness:created-reviews:v1";
 const REMEMBER_LIMIT = 20;
 
 function readRemembered(): ReviewAccepted[] {

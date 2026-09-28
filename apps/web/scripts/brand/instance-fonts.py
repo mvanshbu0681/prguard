@@ -53,10 +53,10 @@ def main() -> None:
         target = OUT / f"GoogleSansCode-{weight}.ttf"
         static.save(target, reorderTables=True)
         upm = static["head"].unitsPerEm
-        p_adv, p_lsb, _ = bearings(static, "P")
-        d_adv, _, d_rsb = bearings(static, "D")
+        w_adv, w_lsb, _ = bearings(static, "W")
+        s_adv, _, s_rsb = bearings(static, "S")
         print(f"{target.relative_to(WEB)}  {target.stat().st_size:>6} B  upm={upm}  "
-              f"P lsb={p_lsb} ({p_lsb / upm:.4f}em)  D rsb={d_rsb} ({d_rsb / upm:.4f}em)  adv={p_adv}")
+              f"W lsb={w_lsb} ({w_lsb / upm:.4f}em)  S rsb={s_rsb} ({s_rsb / upm:.4f}em)  adv={w_adv}")
 
 
 if __name__ == "__main__":

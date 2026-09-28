@@ -10,17 +10,17 @@
 // the payload's own markdown, unedited, plus the comment's own path/line for
 // the anchor breadcrumb. The only non-payload text is GitHub's UI chrome
 // itself (the header row, the "Comment" label, the file breadcrumb glyph),
-// which is this section re-drawing GitHub's interface, not a PRGuard claim.
+// which is this section re-drawing GitHub's interface, not a Witness claim.
 import { File } from "lucide-react";
 import { Mark } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { GithubMarkdown } from "./GithubMarkdown";
 import { formatRelativeTime } from "./relative-time";
-import { commentAnchor, titleCaseEvent, type PRGuardReviewComment, type PRGuardReviewPayload } from "./review-payload";
+import { commentAnchor, titleCaseEvent, type WitnessReviewComment, type WitnessReviewPayload } from "./review-payload";
 
 export interface GithubCommentMockProps {
-  payload: PRGuardReviewPayload;
-  provenComment: PRGuardReviewComment;
+  payload: WitnessReviewPayload;
+  provenComment: WitnessReviewComment;
   /** ReviewResult.timing.finished_at — drives "reviewed <relative> ago" (never a literal). */
   finishedAt?: string | null;
 }
@@ -28,7 +28,7 @@ export interface GithubCommentMockProps {
 function BotAvatar() {
   return (
     <span className="grid size-5 shrink-0 place-items-center overflow-hidden rounded-full bg-ink-0" aria-hidden="true">
-      <Mark size={13} tone="signal" crop="circle" />
+      <Mark size={20} tone="signal" frame="circle" />
     </span>
   );
 }
@@ -39,11 +39,11 @@ export function GithubCommentMock({ payload, provenComment, finishedAt }: Github
 
   return (
     <div className="gh-markdown-root overflow-hidden rounded-[6px] border border-[#d0d7de] bg-white text-[#1f2328]">
-      {/* Review header row — GitHub's own chrome, not a PRGuard evidence strip: no registration marks here. */}
+      {/* Review header row — GitHub's own chrome, not a Witness evidence strip: no registration marks here. */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#d0d7de] bg-[#f6f8fa] px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
           <BotAvatar />
-          <span className="truncate text-[14px] font-semibold text-[#1f2328]">prguard[bot]</span>
+          <span className="truncate text-[14px] font-semibold text-[#1f2328]">witness[bot]</span>
           <span className="whitespace-nowrap text-[13px] text-[#59636e]">reviewed{reviewedAgo ? ` ${reviewedAgo}` : ""}</span>
         </div>
         <span className="whitespace-nowrap text-[13px] text-[#59636e]">{eventLabel}</span>
@@ -64,7 +64,7 @@ export function GithubCommentMock({ payload, provenComment, finishedAt }: Github
 }
 
 /** The review summary comment, "beneath" the inline one — a separate card (brand-gaps §E composition). */
-export function GithubSummaryMock({ payload }: { payload: PRGuardReviewPayload }) {
+export function GithubSummaryMock({ payload }: { payload: WitnessReviewPayload }) {
   return (
     <div className="mt-4 overflow-hidden rounded-[6px] border border-[#d0d7de] bg-white px-4 py-4 text-[#1f2328]">
       <GithubMarkdown text={payload.body} />

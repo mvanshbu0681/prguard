@@ -26,7 +26,7 @@
     "conclusion": "neutral",
     "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
     "delivery": "dry_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -210,12 +210,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#92` in 27.5s · [full run ↗](https://prguard.acme.internal/runs/42507a60-eddb-485c-9f59-362c2ec61ccf)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#92` in 27.5s · [full run ↗](https://witness.acme.internal/runs/42507a60-eddb-485c-9f59-362c2ec61ccf)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "6831526496cca81652f290ae35141571d4856c4c",
     "comments": [
       {
         "path": "terraform/iam_ci.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.475`** medium\n\nThe trust condition matches `repo:acme/*` (line 33); any repository's workflow can assume the role.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/iam_ci.tf` is not Python.\n\n**Severity `0.475`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/477c7826-8ab4-48bc-b0dc-ca9a151ca252#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint d15457d9…2267` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/477c7826-8ab4-48bc-b0dc-ca9a151ca252#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.475`** medium\n\nThe trust condition matches `repo:acme/*` (line 33); any repository's workflow can assume the role.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/iam_ci.tf` is not Python.\n\n**Severity `0.475`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/477c7826-8ab4-48bc-b0dc-ca9a151ca252#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint d15457d9…2267` · [dismiss with a reason ↗](https://witness.acme.internal/findings/477c7826-8ab4-48bc-b0dc-ca9a151ca252#suppress)",
         "line": 36,
         "side": "RIGHT",
         "start_line": 33,
@@ -223,7 +223,7 @@
       },
       {
         "path": "terraform/iam_ci.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.475`** medium\n\n`Action = \"ecs:*\"` with `Resource = \"*\"` (line 18) lets the staging deploy job modify production services in the same account.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/iam_ci.tf` is not Python.\n\n**Severity `0.475`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/989a6476-98e1-43d6-b007-c336d2216f45#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint f64aac36…c372` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/989a6476-98e1-43d6-b007-c336d2216f45#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.475`** medium\n\n`Action = \"ecs:*\"` with `Resource = \"*\"` (line 18) lets the staging deploy job modify production services in the same account.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/iam_ci.tf` is not Python.\n\n**Severity `0.475`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/989a6476-98e1-43d6-b007-c336d2216f45#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint f64aac36…c372` · [dismiss with a reason ↗](https://witness.acme.internal/findings/989a6476-98e1-43d6-b007-c336d2216f45#suppress)",
         "line": 21,
         "side": "RIGHT",
         "start_line": 18,

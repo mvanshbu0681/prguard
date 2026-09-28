@@ -26,7 +26,7 @@ describe("Nav", () => {
 
   it("the wordmark links back to the hero", () => {
     render(<Nav />);
-    const home = screen.getByRole("link", { name: /PRGuard/i });
+    const home = screen.getByRole("link", { name: /Witness/i });
     expect(home).toHaveAttribute("href", "#proof");
   });
 

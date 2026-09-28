@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_dbb0ca.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
         "command": "pytest tests/test_repro_dbb0ca.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -351,12 +351,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4819` in 28.4s · [full run ↗](https://prguard.acme.internal/runs/6833478d-95f9-4ddb-9046-59bf81bccb00)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4819` in 28.4s · [full run ↗](https://witness.acme.internal/runs/6833478d-95f9-4ddb-9046-59bf81bccb00)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "1282da36443232d57246d1a60c3c263f465f4e82",
     "comments": [
       {
         "path": "app/billing/tax.py",
-        "body": "**`proof_status: proven`** · severity **`0.535`** medium\n\nRounding each line before summing (line 41) makes the invoice total differ from `rate * net` by up to one cent per line. Three lines of 333 cents at 19% give 189 where the invoice rate gives 190.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `3118894` | `1 passed in 0.29s` |\n| head | `1282da3` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>1282da3</code></summary>\n\n    E       AssertionError: assert 189 == 190\n    E        +  where 189 = invoice_tax_total([333, 333, 333], 'DE')\n    tests/test_repro_dbb0ca.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.535`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.150` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/f16a825f-3035-432b-85da-b522c57c3fda#severity)\n\nThis finding has `proof_status: proven` and scores `0.535` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 8849126d…3c6f` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/f16a825f-3035-432b-85da-b522c57c3fda#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.535`** medium\n\nRounding each line before summing (line 41) makes the invoice total differ from `rate * net` by up to one cent per line. Three lines of 333 cents at 19% give 189 where the invoice rate gives 190.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `3118894` | `1 passed in 0.29s` |\n| head | `1282da3` | `1 failed in 0.30s` |\n\n<details><summary>terminal output at head <code>1282da3</code></summary>\n\n    E       AssertionError: assert 189 == 190\n    E        +  where 189 = invoice_tax_total([333, 333, 333], 'DE')\n    tests/test_repro_dbb0ca.py:10: AssertionError\n    1 failed in 0.30s\n\n</details>\n\n**Severity `0.535`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.150` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/f16a825f-3035-432b-85da-b522c57c3fda#severity)\n\nThis finding has `proof_status: proven` and scores `0.535` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 8849126d…3c6f` · [dismiss with a reason ↗](https://witness.acme.internal/findings/f16a825f-3035-432b-85da-b522c57c3fda#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 44,
         "side": "RIGHT",
         "start_line": 41,
@@ -364,7 +364,7 @@
       },
       {
         "path": "app/billing/tax.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.490`** medium\n\n`rate_for_country()` now also returns the symbol printed on the receipt (line 29); a Swiss account paying in EUR gets \"CHF\" beside a euro amount.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.490`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c7c3da29-b130-46d4-9bc7-fb3c2b9b1770#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c652e169…78a2` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c7c3da29-b130-46d4-9bc7-fb3c2b9b1770#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.490`** medium\n\n`rate_for_country()` now also returns the symbol printed on the receipt (line 29); a Swiss account paying in EUR gets \"CHF\" beside a euro amount.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.490`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c7c3da29-b130-46d4-9bc7-fb3c2b9b1770#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c652e169…78a2` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c7c3da29-b130-46d4-9bc7-fb3c2b9b1770#suppress)",
         "line": 31,
         "side": "RIGHT",
         "start_line": 29,

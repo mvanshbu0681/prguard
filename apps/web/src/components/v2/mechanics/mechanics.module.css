@@ -6,7 +6,9 @@
 .section {
   --ink: #131313;
   --lime: #cbf857;
-  --slate: #94a3b8;
+  /* Slate-500, not slate-400: #94a3b8 on white is 2.56:1, below the 4.5:1 floor
+     for the card/subtitle copy that actually carries the section's argument. */
+  --slate: #5b6472; /* muted copy on white: 5.98:1, shared by every section */
   --fail: #e5484d;
   background: #ffffff;
   color: var(--ink);
@@ -123,6 +125,11 @@
   position: relative;
   height: 176px;
   overflow: hidden;
+  /* The chain visual re-sizes its blocks off the rendered card width, not the
+     viewport — that width can come from the mobile 1-col grid or the tablet
+     2-col grid, and only the actual box size tells which one applies. */
+  container-name: card-visual;
+  container-type: inline-size;
 }
 
 .visualInner {
@@ -209,7 +216,8 @@
 
 .termFile {
   margin-left: 8px;
-  color: rgba(255, 255, 255, 0.45);
+  /* 0.45 is the bare minimum for 4.5:1 on #131313 (4.53:1, no margin); 0.52 gives headroom. */
+  color: rgba(255, 255, 255, 0.52);
   font-size: 11px;
 }
 
@@ -230,7 +238,8 @@
 }
 
 .dim {
-  color: rgba(255, 255, 255, 0.4);
+  /* 0.4 measured 3.8:1 on #131313; 0.55 clears 4.5:1. */
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .pass {
@@ -305,7 +314,9 @@
   margin-top: 4px;
   font-family: var(--font-v2-mono), ui-monospace, monospace;
   font-size: 9.5px;
-  color: rgba(19, 19, 19, 0.5);
+  /* 0.5 measured 3.4:1 over the glass card (worse over the photo's darker sky
+     patches); 0.65 clears 4.5:1 against both. */
+  color: rgba(19, 19, 19, 0.65);
 }
 
 .ticks span {
@@ -337,6 +348,7 @@
 .block {
   position: relative;
   display: grid;
+  flex-shrink: 0;
   gap: 4px;
   width: 118px;
   padding: 10px 12px;
@@ -348,7 +360,8 @@
 }
 
 .blockSeq {
-  color: rgba(19, 19, 19, 0.45);
+  /* 0.45 measured 3:1 on the white block; 0.62 clears 4.5:1. */
+  color: rgba(19, 19, 19, 0.62);
 }
 
 .blockHash {
@@ -371,7 +384,47 @@
 .connector {
   width: 18px;
   height: 2px;
+  flex-shrink: 0;
   background: rgba(19, 19, 19, 0.25);
+}
+
+/* Three full-size blocks + two connectors need ~390px; narrow them whenever the
+   card itself is tighter than that, whether that's the mobile 1-col grid or a
+   768px-wide tablet row in the 2-col grid — a viewport breakpoint alone can't
+   tell those apart, so this keys off the visual's own rendered width.
+   flex-shrink is 0 on .block/.connector (above) so these are the actual
+   rendered sizes, not a browser auto-shrink guess that can crush the text
+   inside past what text-overflow: ellipsis can gracefully absorb. */
+@container card-visual (max-width: 400px) {
+  .block {
+    width: 104px;
+    padding: 10px 8px;
+  }
+  .blockType {
+    font-size: 9.5px;
+  }
+  .connector {
+    width: 10px;
+  }
+}
+
+/* Below ~336px even the narrowed tier above (needs ~332px: 3×104 + 2×10)
+   doesn't fit — the tightest real card, the 2-col tablet row at exactly the
+   1024px/641px cutover, renders at ~286-293px. One more size step, verified
+   against "stage completed" (the longest event-type label in the fixture
+   corpus, fixtures/audit/events.json) at 8px: needs ~70px, given 76px. */
+@container card-visual (max-width: 336px) {
+  .block {
+    width: 88px;
+    padding: 8px 6px;
+    font-size: 9px;
+  }
+  .blockType {
+    font-size: 8px;
+  }
+  .connector {
+    width: 6px;
+  }
 }
 
 .verified {
@@ -397,7 +450,8 @@
   font-family: var(--font-v2-mono), ui-monospace, monospace;
   font-size: 10px;
   letter-spacing: 0.6px;
-  color: rgba(19, 19, 19, 0.5);
+  /* 0.5 measured 3.4:1 on the chain background; 0.65 clears 4.5:1. */
+  color: rgba(19, 19, 19, 0.65);
   text-transform: uppercase;
 }
 
@@ -444,6 +498,14 @@
   .grid {
     grid-template-columns: 1fr 1fr;
   }
+  /* Three cards in a 2-column grid leave the third orphaned alone in row 2,
+     half-width, with a dead gap beside it. Span it and cap it back to a single
+     column's width so it reads as a centred third card, not a stray leftover. */
+  .grid > .card:last-child {
+    grid-column: 1 / -1;
+    max-width: calc(50% - 6px);
+    margin: 0 auto;
+  }
 }
 
 @media (max-width: 640px) {
@@ -467,15 +529,29 @@
   .grid {
     grid-template-columns: 1fr;
   }
-  /* Three chain blocks + two connectors must fit a ~356px card. */
-  .block {
-    width: 104px;
-    padding: 10px 8px;
+  .grid > .card:last-child {
+    max-width: none;
   }
-  .blockType {
-    font-size: 9.5px;
+}
+
+/* The full "See a proven finding" label wraps onto two lines once the pill's
+   content no longer fits the 320px viewport's available width, turning a
+   one-line pill into a lumpy two-line badge. Swap to a short label and tighten
+   the pill itself, same pattern as hero.module.css .navCtaFull/.navCtaShort. */
+@media (max-width: 360px) {
+  .ctaFull {
+    display: none;
   }
-  .connector {
-    width: 10px;
+  .cta {
+    gap: 10px;
+    padding: 4px 4px 4px 18px;
+    font-size: 12px;
+    letter-spacing: 1.1px;
+  }
+}
+
+@media (min-width: 361px) {
+  .ctaShort {
+    display: none;
   }
 }

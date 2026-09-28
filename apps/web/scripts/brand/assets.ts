@@ -1,75 +1,71 @@
-// OWNER: t1a (wave 1).
-//
-// The pure builders behind the committed brand assets: every byte that does not
-// need a browser to rasterise. build-assets.mts writes them; the unit tests
-// rebuild them and compare with the committed files, so a change to the mark's
-// geometry that is not followed by a re-run of the script fails the build.
-import { hollowRects, markGeometry, markParts, scaleGeometry, type MarkGeometry } from '../../src/components/brand/geometry';
-import { BRAND_HEX } from '../../src/components/brand/palette';
-import { encodeIco } from './ico';
-import { encodePng, rasterise } from './png';
+// The pure builders behind the committed brand assets: every SVG, built from
+// the mark's single geometry source (src/components/brand/geometry.ts).
+// build-assets.mts writes them and has Chromium rasterise the PNG/ICO files
+// from the same markup; the unit tests rebuild the SVGs and compare them with
+// the committed files, so a change to the mark that is not followed by a re-run
+// of the script fails the build.
+import { markGeometry, markParts, markViewBox, TILE_RADIUS, type MarkFrame, type MarkGeometry } from '../../src/components/brand/geometry';
+import { WITNESS_HEX } from '../../src/components/brand/palette';
 
-export type Paint = { bar: string; tick: string; alarm: string };
+const round = (v: number) => Math.round(v * 1000) / 1000;
 
-export const SIGNAL_ON_INK: Paint = { bar: BRAND_HEX.signal, tick: '#FFFFFF', alarm: BRAND_HEX.alarm };
-
-/** The 16px tab form every favicon file is drawn from. */
-export const TAB_GEOMETRY = markGeometry(16, { form: 'two-bars' });
-
-/** Paths with explicit fills, or with class names when `paint` is null (styled by `css`). */
-export function markSvg(g: MarkGeometry, options: { paint?: Paint | null; css?: string; background?: string; tickOpacity?: number } = {}): string {
-  const { paint = SIGNAL_ON_INK, css, background, tickOpacity = 0.14 } = options;
-  const paths = markParts(g)
+/** The eye's paths. `color` paints them directly; null leaves a class per part for `css`. */
+function eyePaths(g: MarkGeometry, color: string | null): string {
+  return markParts(g)
     .map((p) => {
-      const rule = p.fillRule ? ' fill-rule="evenodd"' : '';
-      if (!paint) return `<path class="${p.paint}"${rule} d="${p.d}"/>`;
-      const opacity = p.paint === 'tick' ? ` fill-opacity="${tickOpacity}"` : '';
-      return `<path fill="${paint[p.paint]}"${opacity}${rule} d="${p.d}"/>`;
+      const paint = color ? (p.stroke ? ` stroke="${color}"` : ` fill="${color}"`) : ` class="${p.part}"`;
+      return p.stroke
+        ? `<path${paint} fill="none" stroke-width="${p.stroke}" stroke-linecap="round" stroke-linejoin="round" d="${p.d}"/>`
+        : `<path${paint} d="${p.d}"/>`;
     })
     .join('');
+}
+
+/** A background square filling the viewBox; `radius` is a share of its edge. */
+function backdrop(g: MarkGeometry, color: string, radius: number): string {
+  const { x, y, side } = g.box;
+  const r = radius ? ` rx="${round(side * radius)}"` : '';
+  return `<rect x="${x}" y="${y}" width="${side}" height="${side}"${r} fill="${color}"/>`;
+}
+
+function svg(g: MarkGeometry, body: string, css?: string): string {
   const style = css ? `<style>${css}</style>` : '';
-  const bg = background ? `<rect width="${g.size}" height="${g.size}" fill="${background}"/>` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${g.size}" height="${g.size}" viewBox="0 0 ${g.size} ${g.size}">${style}${bg}${paths}</svg>\n`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${g.size}" height="${g.size}" viewBox="${markViewBox(g)}">${style}${body}</svg>\n`;
 }
 
-/** app/icon.svg — ≤19px form, --signal on transparent, --ink-0 under prefers-color-scheme: light. */
+/** The mark on the rounded ink tile, lime eye, in the small form (a tab shows it at 16 CSS px): every favicon frame. */
+export function tileSvg(size: number): string {
+  const g = markGeometry(size, { frame: 'tile', form: 'small' });
+  return svg(g, backdrop(g, WITNESS_HEX.ink, TILE_RADIUS) + eyePaths(g, WITNESS_HEX.lime));
+}
+
+/**
+ * Full-bleed ink square (no radius), for rasters another system crops: the touch
+ * icon (regular form) and the avatar (small form: GitHub shows it at 20px).
+ */
+export function solidMarkSvg(size: number, frame: Extract<MarkFrame, 'touch' | 'circle'>): string {
+  const g = markGeometry(size, { frame, form: frame === 'circle' ? 'small' : 'regular' });
+  return svg(g, backdrop(g, WITNESS_HEX.ink, 0) + eyePaths(g, WITNESS_HEX.lime));
+}
+
+/** app/icon.svg — the tile at 32: it holds its contrast in light and dark tab strips alike. */
 export function iconSvg(): string {
-  return markSvg(TAB_GEOMETRY, {
-    paint: null,
-    css: `path{fill:${BRAND_HEX.signal}}@media (prefers-color-scheme:light){path{fill:${BRAND_HEX.ink0}}}`,
-  });
+  return tileSvg(32);
 }
 
-/** public/brand/icon-mask.svg — Safari pinned tab: a single path, solid black. */
+/** public/brand/icon-mask.svg — Safari pinned tab: the eye alone, solid black. */
 export function maskSvg(): string {
-  const d = markParts(TAB_GEOMETRY)
-    .map((p) => p.d)
-    .join('');
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="#000000" fill-rule="evenodd" d="${d}"/></svg>\n`;
+  const g = markGeometry(16, { form: 'small' });
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${markViewBox(g)}">${eyePaths(g, '#000000')}</svg>\n`;
 }
 
-/** public/brand/prguard-mark.svg — the full mark at 96 (Lockup D) for docs and the README, light-scheme aware. */
+/** public/brand/witness-mark.svg — the eye at 96 for docs and the README, lime on dark, ink on light. */
 export function docMarkSvg(): string {
-  return markSvg(markGeometry(96), {
-    paint: null,
-    css:
-      `.bar{fill:${BRAND_HEX.signal}}.tick{fill:#FFFFFF;fill-opacity:.14}` +
-      `@media (prefers-color-scheme:light){.bar{fill:${BRAND_HEX.ink0}}.tick{fill:#000000}}`,
-  });
-}
-
-/** One favicon frame as exact RGBA pixels: --signal on --ink-0, whole pixels, no anti-aliasing. */
-export function faviconPng(g: MarkGeometry): Uint8Array {
-  const rects = [...hollowRects(g.base, g.base.stroke), g.head].map((r) => ({ ...r, color: BRAND_HEX.signal }));
-  return encodePng(g.size, g.size, rasterise(g.size, BRAND_HEX.ink0, rects));
-}
-
-/** app/favicon.ico — the 16×16 frame and the same form at 2x in the 32×32 frame. */
-export function faviconIco(): Uint8Array {
-  return encodeIco([faviconPng(TAB_GEOMETRY), faviconPng(scaleGeometry(TAB_GEOMETRY, 2))]);
-}
-
-/** The anti-aliased rasters (touch icon, avatar) come from Chromium; this is their SVG source. */
-export function solidMarkSvg(g: MarkGeometry): string {
-  return markSvg(g, { background: BRAND_HEX.ink0 });
+  const g = markGeometry(96);
+  return svg(
+    g,
+    eyePaths(g, null),
+    `.lid{stroke:${WITNESS_HEX.lime}}.pupil{fill:${WITNESS_HEX.lime}}` +
+      `@media (prefers-color-scheme:light){.lid{stroke:${WITNESS_HEX.ink}}.pupil{fill:${WITNESS_HEX.ink}}}`,
+  );
 }

@@ -190,7 +190,7 @@ function expectations(): Set<string> {
 let root: string;
 
 beforeAll(() => {
-  root = mkdtempSync(path.join(tmpdir(), "prguard-motion-lint-"));
+  root = mkdtempSync(path.join(tmpdir(), "witness-motion-lint-"));
   for (const [file, text] of Object.entries(FIXTURES)) {
     mkdirSync(path.dirname(path.join(root, file)), { recursive: true });
     writeFileSync(path.join(root, file), text);

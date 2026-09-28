@@ -8,7 +8,7 @@
 .section {
   --ink: #131313;
   --lime: #cbf857;
-  --slate: #94a3b8;
+  --slate: #5b6472; /* muted copy on white: 5.98:1, shared by every section */
   --navy: #0f172a;
   background: #ffffff;
   color: var(--ink);

@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -109,7 +109,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_35afe4.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/unsubscribe/links.py::_token_for.\n\nClaim: a forged token is accepted.\n\"\"\"\n\nfrom app.unsubscribe.links import verify_unsubscribe\n\n\ndef test_forged_token_is_rejected():\n    assert verify_unsubscribe(\"dXNyXzQ0MTp3ZWVrbHk=\") is None\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/unsubscribe/links.py::_token_for.\n\nClaim: a forged token is accepted.\n\"\"\"\n\nfrom app.unsubscribe.links import verify_unsubscribe\n\n\ndef test_forged_token_is_rejected():\n    assert verify_unsubscribe(\"dXNyXzQ0MTp3ZWVrbHk=\") is None\n",
         "command": "pytest tests/test_repro_35afe4.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -188,12 +188,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#61` in 26.6s · [full run ↗](https://prguard.acme.internal/runs/3b4dc1b1-748d-4ab6-a871-8186e06ed097)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#61` in 26.6s · [full run ↗](https://witness.acme.internal/runs/3b4dc1b1-748d-4ab6-a871-8186e06ed097)\n\n**Gate: passing** — 1 finding has `proof_status: proven`, scored below `high`, the lowest band that blocks.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "11b29aab05b2181041237df561b8ac7892abf738",
     "comments": [
       {
         "path": "app/unsubscribe/links.py",
-        "body": "**`proof_status: proven`** · severity **`0.525`** medium\n\nAnyone can unsubscribe any user by base64-encoding their id (line 40); `verify_unsubscribe()` only decodes the token.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `faa9681` | `1 passed in 0.30s` |\n| head | `11b29aa` | `1 failed in 0.31s` |\n\n<details><summary>terminal output at head <code>11b29aa</code></summary>\n\n    E       AssertionError: assert ('usr_441', 'weekly') is None\n    E        +  where ('usr_441', 'weekly') = verify_unsubscribe('dXNyXzQ0MTp3ZWVrbHk=')\n    tests/test_repro_35afe4.py:10: AssertionError\n    1 failed in 0.31s\n\n</details>\n\n**Severity `0.525`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/47df6a51-5bf5-46bd-868e-f43c1081c8da#severity)\n\nThis finding has `proof_status: proven` and scores `0.525` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 5c1d2371…2a7b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/47df6a51-5bf5-46bd-868e-f43c1081c8da#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.525`** medium\n\nAnyone can unsubscribe any user by base64-encoding their id (line 40); `verify_unsubscribe()` only decodes the token.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `faa9681` | `1 passed in 0.30s` |\n| head | `11b29aa` | `1 failed in 0.31s` |\n\n<details><summary>terminal output at head <code>11b29aa</code></summary>\n\n    E       AssertionError: assert ('usr_441', 'weekly') is None\n    E        +  where ('usr_441', 'weekly') = verify_unsubscribe('dXNyXzQ0MTp3ZWVrbHk=')\n    tests/test_repro_35afe4.py:10: AssertionError\n    1 failed in 0.31s\n\n</details>\n\n**Severity `0.525`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/47df6a51-5bf5-46bd-868e-f43c1081c8da#severity)\n\nThis finding has `proof_status: proven` and scores `0.525` medium, below `high`, the lowest band that blocks, so it is advisory.\n\n`fingerprint 5c1d2371…2a7b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/47df6a51-5bf5-46bd-868e-f43c1081c8da#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 42,
         "side": "RIGHT",
         "start_line": 40,

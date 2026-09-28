@@ -5,6 +5,7 @@ import Image from "next/image";
 import { FlaskConical, Undo2 } from "lucide-react";
 import { getAccuracy } from "@/lib/fixtures";
 import s from "./why.module.css";
+import { TrackingMark } from "@/components/brand/TrackingMark";
 
 const SPECIALISTS = [
   { initials: "BG", name: "bugs", color: "#1f2937" },
@@ -29,7 +30,7 @@ export function Why() {
     <section id="why" className={s.section} aria-labelledby="why-title">
       <div className={s.inner}>
         <p className={`${s.eyebrow} ${s.reveal}`}>
-          <span aria-hidden>•</span>Why PRGuard
+          <span aria-hidden>•</span>Why Witness
         </p>
         <h2 id="why-title" className={`${s.h2} ${s.reveal}`}>
           <span>A reviewer that earns trust</span>
@@ -54,7 +55,10 @@ export function Why() {
           <article className={`${s.card} ${s.tall} ${s.photoCard} ${s.reveal}`}>
             <Image src="/marketing/hero-sky.jpg" alt="" fill sizes="(max-width: 640px) 100vw, 33vw" />
             <div className={s.photoTop}>
-              <span className={s.brand}>PRGuard</span>
+              <span className={s.brand}>
+                <TrackingMark size={26} className={s.brandMark} />
+                Witness
+              </span>
               <span className={s.chip} aria-hidden>
                 <FlaskConical size={17} strokeWidth={1.8} />
               </span>

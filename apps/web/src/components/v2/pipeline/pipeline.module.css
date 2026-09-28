@@ -8,7 +8,7 @@
 .section {
   --ink: #131313;
   --lime: #cbf857;
-  --slate: #94a3b8;
+  --slate: #5b6472; /* muted copy on white: 5.98:1, shared by every section */
   --gutter: max(64px, calc((100% - 1312px) / 2));
   --loop: 8s;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -68,36 +68,23 @@
   gap: 8px;
 }
 
-.navBtn {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: #f2f2f2;
-  color: var(--ink);
-  cursor: pointer;
-  transition:
-    background-color 200ms ease,
-    opacity 200ms ease;
-}
+/* The prev/next buttons themselves are unified with caught's: CarouselButtons
+   defaults to caught.module.css's .navBtn, and Pipeline no longer overrides
+   it, so both carousels share one literal class and one visual treatment. */
 
-.navBtn:hover:not(:disabled) {
-  background: #e4e4e7;
-}
-
-.navBtn:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
-
-.navBtn:focus-visible,
-.card:focus-visible,
-.trackRow:focus-visible {
+.card:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
+}
+
+/* The row is full-bleed to the viewport edge, so a positive outline-offset
+   pushed the ring's left/right edges past the viewport — only the thin
+   top/bottom lines ever showed. Drawing the ring inward keeps all four sides
+   on-screen at every width; a closed 2px rectangle also reads as a focus ring
+   rather than a section rule, which is never more than a 1px straight line. */
+.trackRow:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
 }
 
 /* ---------- the track ---------- */
@@ -190,19 +177,23 @@
   letter-spacing: -0.35px;
 }
 
+/* A corner badge, not a centred overlay: the "video" here is a dense UI mock,
+   and a 56px circle dead-centre used to sit right on top of it (e.g. hiding
+   the "quality" row on the Specialists card). The top-right corner is clear
+   on every scene, at every width. */
 .play {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: 20px;
+  right: 20px;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--ink);
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.85);
+  transform: scale(0.85);
   transition:
     opacity 300ms ease,
     transform 400ms var(--ease);
@@ -211,7 +202,7 @@
 .card:hover .play,
 .card:focus-visible .play {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: scale(1);
 }
 
 .caption {
@@ -607,6 +598,7 @@
 }
 
 .hash span {
+  position: relative;
   padding: 6px 8px;
   border-radius: 8px;
   background: #f6f6f8;
@@ -614,6 +606,19 @@
   font-size: 12px;
   letter-spacing: 0.6px;
   text-align: center;
+}
+
+/* The lime "just computed" flash is a separate layer so the loop below only
+   ever animates its opacity, never the group's own background colour. */
+.hash span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: #e9f9c4;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ledger {
@@ -715,22 +720,7 @@
   height: 22px;
   border-radius: 7px;
   background: #111827;
-}
-
-.bot i {
-  display: block;
-  box-sizing: border-box;
-  width: 11px;
-  height: 4px;
-  border-radius: 1.5px;
-}
-
-.bot i:first-child {
-  border: 1.2px solid var(--lime);
-}
-
-.bot i:last-child {
-  background: var(--lime);
+  color: var(--lime);
 }
 
 .comment {
@@ -866,7 +856,8 @@
 .fill,
 .out,
 .seg,
-.hash span {
+.hash span,
+.hash span::after {
   animation-duration: var(--loop);
   animation-timing-function: var(--ease);
   animation-iteration-count: infinite;
@@ -955,24 +946,35 @@
 .g5 { animation-name: grow5; }
 @keyframes grow5 { 0%, 35% { transform: scaleX(0); } 41%, 100% { transform: scaleX(1); } }
 
+/* Each group dims in, then (on span::after, a separate layer) flashes lime
+   and fades back to the resting grey — opacity only, never `background`. */
 .hs0 { animation-name: hash0; }
-@keyframes hash0 { 0%, 8% { opacity: 0.2; } 11% { opacity: 1; background: #e9f9c4; } 18%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+@keyframes hash0 { 0%, 8% { opacity: 0.2; } 11%, 92% { opacity: 1; } 97%, 100% { opacity: 0.2; } }
+.hs0::after { animation-name: hashFlash0; }
+@keyframes hashFlash0 { 0%, 10% { opacity: 0; } 11% { opacity: 1; } 18%, 100% { opacity: 0; } }
 
 .hs1 { animation-name: hash1; }
-@keyframes hash1 { 0%, 15% { opacity: 0.2; } 18% { opacity: 1; background: #e9f9c4; } 25%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+@keyframes hash1 { 0%, 15% { opacity: 0.2; } 18%, 92% { opacity: 1; } 97%, 100% { opacity: 0.2; } }
+.hs1::after { animation-name: hashFlash1; }
+@keyframes hashFlash1 { 0%, 17% { opacity: 0; } 18% { opacity: 1; } 25%, 100% { opacity: 0; } }
 
 .hs2 { animation-name: hash2; }
-@keyframes hash2 { 0%, 22% { opacity: 0.2; } 25% { opacity: 1; background: #e9f9c4; } 32%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+@keyframes hash2 { 0%, 22% { opacity: 0.2; } 25%, 92% { opacity: 1; } 97%, 100% { opacity: 0.2; } }
+.hs2::after { animation-name: hashFlash2; }
+@keyframes hashFlash2 { 0%, 24% { opacity: 0; } 25% { opacity: 1; } 32%, 100% { opacity: 0; } }
 
 .hs3 { animation-name: hash3; }
-@keyframes hash3 { 0%, 29% { opacity: 0.2; } 32% { opacity: 1; background: #e9f9c4; } 39%, 92% { opacity: 1; background: #f6f6f8; } 97%, 100% { opacity: 0.2; } }
+@keyframes hash3 { 0%, 29% { opacity: 0.2; } 32%, 92% { opacity: 1; } 97%, 100% { opacity: 0.2; } }
+.hs3::after { animation-name: hashFlash3; }
+@keyframes hashFlash3 { 0%, 31% { opacity: 0; } 32% { opacity: 1; } 39%, 100% { opacity: 0; } }
 
 @media (prefers-reduced-motion: reduce) {
   .in,
   .fill,
   .out,
   .seg,
-  .hash span {
+  .hash span,
+  .hash span::after {
     animation: none;
   }
   .photo,
@@ -1055,6 +1057,12 @@
     top: 16px;
     left: 16px;
     font-size: 13px;
+  }
+  .play {
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
   }
   .caption {
     right: 16px;

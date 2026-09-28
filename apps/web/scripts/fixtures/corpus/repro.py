@@ -36,7 +36,7 @@ def repro_file(
     setup: tuple[str, ...] = (),
 ) -> str:
     """The whole test file. ``body`` lines are the test's statements, unindented."""
-    lines = [f'"""Repro for a prguard finding in {target}.', "", f"Claim: {claim}", '"""', ""]
+    lines = [f'"""Repro for a Witness finding in {target}.', "", f"Claim: {claim}", '"""', ""]
     lines.extend(imports)
     if setup:
         lines.extend(["", ""])

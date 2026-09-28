@@ -9,6 +9,7 @@ import { Check, FileCode2, Webhook, X } from "lucide-react";
 import { SEVERITY_INPUTS } from "@/lib/contracts";
 import type { Finding } from "@/lib/api-types";
 import s from "./pipeline.module.css";
+import { EyeGlyph } from "@/components/brand/EyeGlyph";
 
 export interface SceneData {
   repo: string;
@@ -55,8 +56,7 @@ function Ui({ children, width = 300, dark = false }: { children: ReactNode; widt
 function Bot() {
   return (
     <span className={s.bot} aria-hidden>
-      <i />
-      <i />
+      <EyeGlyph size={16} />
     </span>
   );
 }
@@ -274,7 +274,7 @@ export function DeliveryScene({ d }: { d: SceneData }) {
       <div className={s.uiHead}>
         <Bot />
         <span className={s.comment}>
-          <b>prguard[bot]</b> on {file}
+          <b>witness[bot]</b> on {file}
           {d.commentLine ? `:${d.commentLine}` : ""}
         </span>
       </div>

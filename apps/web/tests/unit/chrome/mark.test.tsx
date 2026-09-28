@@ -1,156 +1,152 @@
-// OWNER: t1a (wave 1). THE BENCH mark (brand-gaps §A): the mandatory
-// simplification ladder, the pixel-snapped geometry every renderer shares, and
-// the <Mark>, <Wordmark> and <Lockup> components.
+// THE WITNESS EYE: the geometry every renderer shares (forms, frames, the
+// pupil's safe travel, the live states) and the <Mark>, <TrackingMark>,
+// <Wordmark> and <Lockup> components.
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
-  CIRCLE_BAR_WIDTH,
   Lockup,
   LOCKUP_SIZES,
   LOCKUP_STACKED,
   Mark,
+  MARK_ARTBOARD,
+  MARK_FILL,
+  MARK_FORMS,
+  MARK_INK,
+  MARK_LID_POINTS,
+  MARK_PUPIL,
+  MARK_PUPIL_TRAVEL,
   markClearSpace,
   markForm,
   markGeometry,
   markParts,
+  TrackingMark,
   Wordmark,
+  type MarkForm,
+  type MarkFrame,
 } from '@/components/brand';
 
 const partsOf = (container: HTMLElement) => [...container.querySelectorAll('path')].map((p) => p.getAttribute('data-part'));
 
-describe('the simplification ladder', () => {
-  it('picks the form by rendered size: ≥32 full · 20–31 no ticks · ≤19 two bars', () => {
-    expect(markForm(16)).toBe('two-bars');
-    expect(markForm(19)).toBe('two-bars');
-    expect(markForm(20)).toBe('no-ticks');
-    expect(markForm(24)).toBe('no-ticks');
-    expect(markForm(31)).toBe('no-ticks');
-    expect(markForm(32)).toBe('full');
-    expect(markForm(96)).toBe('full');
+/** The lid's centreline, sampled: the arc, then both arms of the check. */
+function lidSamples(steps = 300): [number, number][] {
+  const { start: s, control: c, corner: k, vertex: v, tail: t } = MARK_LID_POINTS;
+  const out: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const u = i / steps;
+    out.push([(1 - u) ** 2 * s[0] + 2 * (1 - u) * u * c[0] + u * u * k[0], (1 - u) ** 2 * s[1] + 2 * (1 - u) * u * c[1] + u * u * k[1]]);
+  }
+  for (const [a, b] of [
+    [k, v],
+    [v, t],
+  ] as const) {
+    for (let i = 0; i <= steps; i++) out.push([a[0] + (b[0] - a[0]) * (i / steps), a[1] + (b[1] - a[1]) * (i / steps)]);
+  }
+  return out;
+}
+
+describe('the forms', () => {
+  it('switches to the small form when the eye would render under 20px wide', () => {
+    expect(markForm(16)).toBe('small'); // 14.7px of eye
+    expect(markForm(21)).toBe('small'); // 19.3px
+    expect(markForm(22)).toBe('regular'); // 20.2px
+    expect(markForm(96)).toBe('regular');
+    expect(markForm(20, 'tile')).toBe('small');
+    expect(markForm(28, 'circle')).toBe('small');
+    expect(markForm(32, 'circle')).toBe('regular');
   });
 
-  it('draws every circular crop as two bars, whatever the size', () => {
-    for (const size of [16, 32, 96, 512]) expect(markForm(size, 'circle')).toBe('two-bars');
+  it('thickens the lid and shrinks the pupil in the small form', () => {
+    expect(MARK_FORMS.small.stroke).toBeGreaterThan(MARK_FORMS.regular.stroke);
+    expect(MARK_FORMS.small.pupil).toBeLessThan(MARK_FORMS.regular.pupil);
+    expect(markGeometry(16).stroke).toBe(MARK_FORMS.small.stroke);
+    expect(markGeometry(32).stroke).toBe(MARK_FORMS.regular.stroke);
+    expect(markGeometry(512, { form: 'small' }).pupil.r).toBe(MARK_FORMS.small.pupil);
   });
 
-  it('<Mark> renders the right parts at 16, 24 and 32', () => {
-    const at16 = render(<Mark size={16} />).container;
-    expect(at16.querySelector('svg')).toHaveAttribute('data-form', 'two-bars');
-    expect(partsOf(at16)).toEqual(['base', 'head']);
-
-    const at24 = render(<Mark size={24} />).container;
-    expect(at24.querySelector('svg')).toHaveAttribute('data-form', 'no-ticks');
-    expect(partsOf(at24)).toEqual(['base', 'seam', 'head']);
-
-    const at32 = render(<Mark size={32} />).container;
-    expect(at32.querySelector('svg')).toHaveAttribute('data-form', 'full');
-    expect(partsOf(at32)).toEqual(['tick', 'tick', 'tick', 'tick', 'base', 'seam', 'head']);
-  });
-
-  it('bumps the stroke to 2px in the ≤19px form, and never draws below 16px', () => {
-    expect(markGeometry(16).base.stroke).toBe(2);
-    expect(markGeometry(19).base.stroke).toBe(2);
-    const tiny = markGeometry(10);
-    expect(tiny.size).toBe(16);
-    expect(tiny.form).toBe('two-bars');
-    const { container } = render(<Mark size={8} />);
-    expect(container.querySelector('svg')).toHaveAttribute('width', '16');
+  it('never draws below 16px', () => {
+    expect(markGeometry(8).size).toBe(16);
+    expect(render(<Mark size={10} />).container.querySelector('svg')).toHaveAttribute('width', '16');
   });
 });
 
-describe('the geometry', () => {
-  const sizes = [16, 17, 18, 19, 20, 21, 24, 28, 31, 32, 40, 48, 64, 96, 128];
-
-  it('lands every edge on a whole pixel, centred, with a hollow of at least 1px', () => {
-    for (const size of sizes) {
-      const g = markGeometry(size);
-      const boxes = [g.base, g.head, ...(g.seam ? [g.seam] : [])];
-      for (const b of boxes) for (const v of [b.x, b.y, b.w, b.h]) expect(Number.isInteger(v), `${size}px: ${JSON.stringify(b)}`).toBe(true);
-      expect(Number.isInteger(g.base.stroke)).toBe(true);
-      expect(g.base.h - 2 * g.base.stroke, `${size}px hollow`).toBeGreaterThanOrEqual(1);
-      // Horizontally and vertically centred on the artboard.
-      expect(g.base.x + g.base.w / 2).toBe(size / 2);
-      const top = g.base.y;
-      const bottom = g.head.y + g.head.h;
-      expect((top + bottom) / 2).toBe(size / 2);
-      // The two bars match, the head sits below the base, and they never touch.
-      expect([g.head.w, g.head.h]).toEqual([g.base.w, g.base.h]);
-      expect(g.head.y).toBeGreaterThan(g.base.y + g.base.h);
+describe('the frames', () => {
+  it('centres every viewBox on the artboard, and the measured ink on it too', () => {
+    expect(MARK_INK.x + MARK_INK.w / 2).toBeCloseTo(MARK_ARTBOARD / 2, 2);
+    expect(MARK_INK.y + MARK_INK.h / 2).toBeCloseTo(MARK_ARTBOARD / 2, 2);
+    for (const frame of ['bare', 'tile', 'touch', 'circle'] as MarkFrame[]) {
+      const { box } = markGeometry(64, { frame });
+      expect(box.x + box.side / 2).toBeCloseTo(MARK_ARTBOARD / 2, 2);
+      expect(box.y).toBe(box.x);
     }
   });
 
-  it('joins the bars with a seam flush left, one stroke wide, only from 20px', () => {
-    for (const size of sizes) {
-      const g = markGeometry(size);
-      if (size < 20) {
-        expect(g.seam).toBeNull();
-        continue;
+  it("fills each frame's share of the width with the eye", () => {
+    for (const frame of ['bare', 'tile', 'touch', 'circle'] as MarkFrame[]) {
+      for (const form of ['regular', 'small'] as MarkForm[]) {
+        const g = markGeometry(64, { frame, form });
+        const ink = MARK_INK.w + (g.stroke - MARK_FORMS.regular.stroke);
+        expect(ink / g.box.side).toBeCloseTo(MARK_FILL[frame], 2);
       }
-      expect(g.seam).not.toBeNull();
-      expect(g.seam!.x).toBe(g.base.x);
-      expect(g.seam!.w).toBe(g.base.stroke);
-      expect(g.seam!.y).toBeLessThanOrEqual(g.base.y + g.base.h);
-      expect(g.seam!.y + g.seam!.h).toBeGreaterThanOrEqual(g.head.y);
     }
   });
 
-  it('places four detached L-shaped ticks at the corners of the full form only', () => {
-    expect(markGeometry(31).ticks).toEqual([]);
-    const g = markGeometry(96);
-    expect(g.ticks.map((t) => t.corner)).toEqual(['tl', 'tr', 'bl', 'br']);
-    // 24-unit construction scaled by 4: 5×5 ticks, 1.5 thick, outer corners at (1,1) and (23,23).
-    const [tl, , , br] = g.ticks;
-    expect([tl.x, tl.y, tl.len, tl.t]).toEqual([4, 4, 20, 6]);
-    expect([br.x + br.len, br.y + br.len]).toEqual([92, 92]);
-    // Detached: no tick overlaps the bars.
-    for (const t of g.ticks) {
-      const overlapsX = t.x < g.base.x + g.base.w && t.x + t.len > g.base.x;
-      const overlapsY = t.y < g.head.y + g.head.h && t.y + t.len > g.base.y;
-      expect(overlapsX && overlapsY).toBe(false);
+  it('keeps the whole eye inside the circle crop', () => {
+    const { box } = markGeometry(512, { frame: 'circle', form: 'small' });
+    const r = box.side / 2;
+    const half = MARK_FORMS.small.stroke / 2;
+    for (const [x, y] of lidSamples(60)) expect(Math.hypot(x - 16, y - 16) + half).toBeLessThan(r);
+  });
+});
+
+describe('the pupil', () => {
+  const lid = lidSamples();
+  const clearance = (x: number, y: number, form: MarkForm) =>
+    Math.min(...lid.map(([lx, ly]) => Math.hypot(x - lx, y - ly))) - MARK_FORMS[form].pupil - MARK_FORMS[form].stroke / 2;
+
+  it('clears both lids at rest and at the edge of its travel, in both forms', () => {
+    for (const form of ['regular', 'small'] as MarkForm[]) {
+      expect(clearance(MARK_PUPIL.cx, MARK_PUPIL.cy, form)).toBeGreaterThan(1);
+      for (let k = 0; k < 48; k++) {
+        const a = (2 * Math.PI * k) / 48;
+        const x = MARK_PUPIL.cx + MARK_PUPIL_TRAVEL.x * Math.cos(a);
+        const y = MARK_PUPIL.cy + MARK_PUPIL_TRAVEL.y * Math.sin(a);
+        expect(clearance(x, y, form), `${form} at ${Math.round((a * 180) / Math.PI)}°`).toBeGreaterThan(0.5);
+      }
     }
   });
 
-  it('follows the 24-unit construction at 24px: 14×4 bars, a 4px gap, a 1px stroke', () => {
-    const g = markGeometry(24);
-    expect([g.base.x, g.base.y, g.base.w, g.base.h]).toEqual([5, 6, 14, 4]);
-    expect([g.head.x, g.head.y]).toEqual([5, 14]);
-    expect(g.base.stroke).toBe(1);
+  it('is the only part the live states change', () => {
+    const g = markGeometry(32, { frame: 'tile', form: 'small' });
+    const part = (live: 'running' | 'clear' | 'blocked' | undefined, name: 'lid' | 'pupil') => markParts(g, live).find((p) => p.part === name)!;
+    expect(part(undefined, 'pupil')).toMatchObject({ paint: 'bar' });
+    expect(part(undefined, 'pupil').stroke).toBeUndefined();
+    expect(part('clear', 'pupil')).toMatchObject({ paint: 'bar', live: 'clear' });
+    expect(part('running', 'pupil')).toMatchObject({ paint: 'bar', live: 'running' });
+    expect(part('running', 'pupil').stroke).toBeGreaterThan(0); // a ring
+    expect(part('blocked', 'pupil')).toMatchObject({ paint: 'alarm', live: 'blocked' });
+    for (const live of ['running', 'clear', 'blocked'] as const) expect(part(live, 'lid')).toMatchObject({ paint: 'bar', stroke: g.stroke });
   });
+});
 
-  it('scales the avatar bars to 56% of the frame, two bars, no seam, no ticks', () => {
-    const g = markGeometry(512, { crop: 'circle' });
-    expect(g.form).toBe('two-bars');
-    expect(g.seam).toBeNull();
-    expect(g.ticks).toEqual([]);
-    expect(Math.abs(g.base.w / 512 - CIRCLE_BAR_WIDTH)).toBeLessThan(0.01);
-  });
-
-  it('keeps the avatar legible at 20px: 2px stroke, 1px hollow, 2px gap, all whole pixels', () => {
-    const g = markGeometry(20, { crop: 'circle' });
-    expect(g.base.stroke).toBe(2);
-    expect(g.base.h - 2 * g.base.stroke).toBe(1);
-    expect(g.head.y - (g.base.y + g.base.h)).toBe(2);
-    for (const v of [g.base.y, g.base.h, g.head.y, g.head.h]) expect(Number.isInteger(v)).toBe(true);
-  });
-
-  it('changes only the head bar for the live states', () => {
-    const g = markGeometry(32, { form: 'two-bars' });
-    const head = (live?: 'running' | 'clear' | 'blocked') => markParts(g, live).find((p) => p.part === 'head')!;
-    expect(head().paint).toBe('bar');
-    expect(head().fillRule).toBeUndefined();
-    expect(head('clear')).toMatchObject({ paint: 'bar', live: 'clear' });
-    expect(head('running')).toMatchObject({ paint: 'bar', fillRule: 'evenodd', live: 'running' });
-    expect(head('blocked')).toMatchObject({ paint: 'alarm', live: 'blocked' });
-    // The base bar never takes the alarm colour.
-    for (const live of ['running', 'clear', 'blocked'] as const) {
-      expect(markParts(g, live).find((p) => p.part === 'base')!.paint).toBe('bar');
-    }
-  });
-
-  it('sets the clear space to one bar height: size ÷ 6', () => {
+describe('clear space', () => {
+  it('is a sixth of the edge', () => {
     expect(markClearSpace(24)).toBe(4);
     expect(markClearSpace(20)).toBe(3);
     expect(markClearSpace(32)).toBe(5);
+  });
+});
+
+describe('<TrackingMark>', () => {
+  it('renders the eye at rest in currentColor, decorative unless titled', () => {
+    const svg = render(<TrackingMark size={30} />).container.querySelector('svg')!;
+    expect(svg).toHaveAttribute('aria-hidden', 'true');
+    expect(svg.querySelector('path')).toHaveAttribute('stroke', 'currentColor');
+    const pupil = svg.querySelector('circle')!;
+    expect(pupil).toHaveAttribute('fill', 'currentColor');
+    expect([Number(pupil.getAttribute('cx')), Number(pupil.getAttribute('cy'))]).toEqual([MARK_PUPIL.cx, MARK_PUPIL.cy]);
+    const named = render(<TrackingMark title="Witness" />).container.querySelector('svg')!;
+    expect(named).toHaveAttribute('role', 'img');
+    expect(named).toHaveAttribute('aria-label', 'Witness');
   });
 });
 
@@ -160,10 +156,17 @@ describe('<Mark>', () => {
     expect(plain).toHaveAttribute('aria-hidden', 'true');
     expect(plain).not.toHaveAttribute('role');
 
-    const named = render(<Mark title="PRGuard" />).container.querySelector('svg')!;
+    const named = render(<Mark title="Witness" />).container.querySelector('svg')!;
     expect(named).toHaveAttribute('role', 'img');
-    expect(named).toHaveAttribute('aria-label', 'PRGuard');
+    expect(named).toHaveAttribute('aria-label', 'Witness');
     expect(named).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('draws the lid (stroked) and the pupil', () => {
+    const svg = render(<Mark size={32} />).container.querySelector('svg')!;
+    expect(partsOf(svg as unknown as HTMLElement)).toEqual(['lid', 'pupil']);
+    expect(svg.querySelector('[data-part="lid"]')).toHaveAttribute('data-stroked');
+    expect(svg.querySelector('[data-part="pupil"]')).not.toHaveAttribute('data-stroked');
   });
 
   it('carries the tone for the stylesheet, and paints with classes, never inline colour', () => {
@@ -171,7 +174,7 @@ describe('<Mark>', () => {
       const svg = render(<Mark size={48} tone={tone} />).container.querySelector('svg')!;
       expect(svg).toHaveAttribute('data-tone', tone);
       for (const path of svg.querySelectorAll('path')) {
-        expect(path.getAttribute('class')).toMatch(/^prg-mark__(bar|tick|alarm)$/);
+        expect(path.getAttribute('class')).toMatch(/^prg-mark__(bar|alarm)$/);
         expect(path).not.toHaveAttribute('fill');
       }
     }
@@ -182,7 +185,7 @@ describe('<Wordmark> and <Lockup>', () => {
   it('renders the prose name, set in caps by CSS, never below 12px', () => {
     const { container } = render(<Wordmark size={9} />);
     const el = container.firstElementChild as HTMLElement;
-    expect(el).toHaveTextContent('PRGuard');
+    expect(el).toHaveTextContent('Witness');
     expect(el).toHaveClass('prg-wordmark');
     expect(el.style.fontSize).toBe('12px');
   });
@@ -200,12 +203,12 @@ describe('<Wordmark> and <Lockup>', () => {
     const c = render(<Lockup variant="C" />).container.firstElementChild!;
     expect(c.querySelector('.prg-lockup__rule')).toBeNull();
     expect(c.querySelector('svg')).toHaveAttribute('width', String(LOCKUP_STACKED.mark));
-    expect(c.querySelector('svg')).toHaveAttribute('data-form', 'full');
+    expect(c.querySelector('svg')).toHaveAttribute('data-form', 'regular');
     expect((c.querySelector('.prg-wordmark') as HTMLElement).style.fontSize).toBe('15px');
 
     const d = render(<Lockup variant="D" />).container.firstElementChild!;
     expect(d.querySelector('.prg-wordmark')).toBeNull();
-    expect(d.querySelector('svg')).toHaveAttribute('aria-label', 'PRGuard');
+    expect(d.querySelector('svg')).toHaveAttribute('aria-label', 'Witness');
   });
 
   it('sizes the hairline to the wordmark cap height and pads by the clear space on request', () => {

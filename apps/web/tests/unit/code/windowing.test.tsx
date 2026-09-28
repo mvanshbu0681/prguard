@@ -2,7 +2,7 @@
 // then the windowed DOM and its copy fidelity for each surface.
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CodeBlock, PRGuardDiff, PYTEST_TONES, TerminalBlock } from "@/components/code";
+import { CodeBlock, WitnessDiff, PYTEST_TONES, TerminalBlock } from "@/components/code";
 import {
   WINDOW_THRESHOLD,
   allText,
@@ -281,12 +281,12 @@ function longDiff(changes: number): string {
   return ["--- a/big.py", "+++ b/big.py", `@@ -1000,${changes * 2} +1000,${changes * 2} @@ def big():`, ...body].join("\n");
 }
 
-describe("<PRGuardDiff> windowed", () => {
+describe("<WitnessDiff> windowed", () => {
   const DIFF = longDiff(300); // 1 hunk row + 900 rows
 
   it("renders the rows near the view in one pre, with the accused row's rail and fill", () => {
     const { container } = render(
-      <PRGuardDiff diff={DIFF} highlight={[{ side: "new", start: 1001, tone: "alarm", fill: "high", label: "finding a91f3c2e" }]} />,
+      <WitnessDiff diff={DIFF} highlight={[{ side: "new", start: 1001, tone: "alarm", fill: "high", label: "finding a91f3c2e" }]} />,
     );
     const region = screen.getByRole("region", { name: "Diff of big.py" });
     expect(region).toHaveAttribute("data-windowed");
@@ -304,7 +304,7 @@ describe("<PRGuardDiff> windowed", () => {
 
   it("hangs an annotation in the window as a measured note, and a copy across it yields rows only", () => {
     const { container } = render(
-      <PRGuardDiff diff={DIFF} annotations={[{ side: "new", line: 1000, label: "finding a91f3c2e", content: <p>card text</p> }]} />,
+      <WitnessDiff diff={DIFF} annotations={[{ side: "new", line: 1000, label: "finding a91f3c2e", content: <p>card text</p> }]} />,
     );
     const note = screen.getByRole("note", { name: "finding a91f3c2e" });
     // items: 0 hunk, 1 context 0 (new 1000), 2 the note, 3 removed 0, 4 added 0, 5 context 1
@@ -321,7 +321,7 @@ describe("<PRGuardDiff> windowed", () => {
   });
 
   it("windows split view by row pairs, copies one side, and select-all copies every row", () => {
-    const { container } = render(<PRGuardDiff diff={DIFF} view="split" />);
+    const { container } = render(<WitnessDiff diff={DIFF} view="split" />);
     const [left, right] = [...container.querySelectorAll("pre")];
     expect(left).toHaveAttribute("data-side", "old");
     expect(right).toHaveAttribute("data-side", "new");
@@ -341,7 +341,7 @@ describe("<PRGuardDiff> windowed", () => {
   });
 
   it("stays in full at or below the threshold", () => {
-    const { container } = render(<PRGuardDiff diff={longDiff(100)} />);
+    const { container } = render(<WitnessDiff diff={longDiff(100)} />);
     expect(container.querySelector("[data-windowed]")).toBeNull();
     expect(container.querySelectorAll(".prg-diff__row")).toHaveLength(301);
   });

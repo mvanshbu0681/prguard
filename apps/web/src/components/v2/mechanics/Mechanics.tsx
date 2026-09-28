@@ -70,6 +70,7 @@ function SeverityVisual() {
         <div className={s.ticks}>
           {ticks.map(([band, at]) => (
             <span key={band} style={{ left: `${at * 100}%` }}>
+              <i className={s.tickLine} />
               {at.toFixed(2).replace(/^0/, "")}
             </span>
           ))}
@@ -147,7 +148,8 @@ export function Mechanics() {
           </h2>
           <p className={s.sub}>Three mechanics that replace an AI reviewer&rsquo;s opinion with evidence your team can check, re‑run and audit.</p>
           <Link href={`/findings/${ids.proven_finding_id}`} className={s.cta}>
-            See a proven finding
+            <span className={s.ctaFull}>See a proven finding</span>
+            <span className={s.ctaShort}>See a finding</span>
             <span className={s.ctaChip} aria-hidden>
               <ArrowUpRight size={18} strokeWidth={2} />
             </span>

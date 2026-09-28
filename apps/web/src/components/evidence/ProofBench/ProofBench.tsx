@@ -255,7 +255,7 @@ export function ProofBench(props: ProofBenchProps) {
             </div>
           </div>
         ) : (
-          <p className="px-4 py-6 type-body text-text-dim">PRGuard did not execute a repro test for this finding.</p>
+          <p className="px-4 py-6 type-body text-text-dim">Witness did not execute a repro test for this finding.</p>
         )}
 
         <div className="flex h-11 items-center justify-between gap-4 border-t border-rule-1 bg-ink-2 px-4">

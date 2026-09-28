@@ -8,7 +8,7 @@
 // One highlighter per process (or per tab), created once and reused.
 import type { HighlighterCore } from "shiki/core";
 import { LANGUAGE_LOADERS, type SupportedLanguage } from "./languages";
-import { PRGUARD_COLD_THEME, PRGUARD_COLD_THEME_NAME, roleForColor } from "./theme";
+import { WITNESS_COLD_THEME, WITNESS_COLD_THEME_NAME, roleForColor } from "./theme";
 import { normaliseCode, type CodeLine, type CodeToken } from "./tokens";
 
 /** Lines longer than this are not tokenised (a minified blob would stall the tokenizer);
@@ -24,7 +24,7 @@ async function createCore(): Promise<HighlighterCore> {
     import("shiki/engine/javascript"),
   ]);
   return createHighlighterCore({
-    themes: [PRGUARD_COLD_THEME],
+    themes: [WITNESS_COLD_THEME],
     langs: [],
     engine: createJavaScriptRegexEngine(),
   });
@@ -56,7 +56,7 @@ export async function highlightCode(code: string, lang: SupportedLanguage): Prom
   await ensureGrammar(highlighter, lang);
   const lines = highlighter.codeToTokensBase(normaliseCode(code), {
     lang,
-    theme: PRGUARD_COLD_THEME_NAME,
+    theme: WITNESS_COLD_THEME_NAME,
     tokenizeMaxLineLength: TOKENIZE_MAX_LINE_LENGTH,
   });
   return lines.map((tokens) => {

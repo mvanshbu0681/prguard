@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -373,12 +373,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1102` in 27.4s · [full run ↗](https://prguard.acme.internal/runs/d9a4379f-e571-4016-8c7a-d4468bc7c895)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#1102` in 27.4s · [full run ↗](https://witness.acme.internal/runs/d9a4379f-e571-4016-8c7a-d4468bc7c895)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "69a16d51a8d3e776548c6bece94103f7a94c69bc",
     "comments": [
       {
         "path": "src/checkout/AddressForm.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.545`** medium\n\nThe label map is English-only (line 53); `Intl.DisplayNames` gives every locale.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.545`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/6ee007f6-12b6-4fc6-b36f-7b80d618a9c7#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4877a0c0…38aa` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/6ee007f6-12b6-4fc6-b36f-7b80d618a9c7#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.545`** medium\n\nThe label map is English-only (line 53); `Intl.DisplayNames` gives every locale.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.545`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/6ee007f6-12b6-4fc6-b36f-7b80d618a9c7#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4877a0c0…38aa` · [dismiss with a reason ↗](https://witness.acme.internal/findings/6ee007f6-12b6-4fc6-b36f-7b80d618a9c7#suppress)",
         "line": 55,
         "side": "RIGHT",
         "start_line": 53,
@@ -386,7 +386,7 @@
       },
       {
         "path": "src/checkout/AddressForm.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.660`** high\n\nThe UK pattern requires the separating space (line 7); `SW1A1AA` is refused at checkout even though `normalizePostcode()` would accept it one call later.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.660`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/4c5b51b8-a9d9-4184-86b9-b39d6958f88f#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a681ae48…0b12` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/4c5b51b8-a9d9-4184-86b9-b39d6958f88f#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.660`** high\n\nThe UK pattern requires the separating space (line 7); `SW1A1AA` is refused at checkout even though `normalizePostcode()` would accept it one call later.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.660`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/4c5b51b8-a9d9-4184-86b9-b39d6958f88f#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint a681ae48…0b12` · [dismiss with a reason ↗](https://witness.acme.internal/findings/4c5b51b8-a9d9-4184-86b9-b39d6958f88f#suppress)",
         "line": 9,
         "side": "RIGHT",
         "start_line": 7,
@@ -394,7 +394,7 @@
       },
       {
         "path": "src/checkout/AddressForm.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.645`** high\n\nThe `<label>` has no `htmlFor` and the input no `id` (line 36), so screen readers announce the field as \"edit text\".\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.645`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/5ace92d5-76e6-42ac-9709-812b14d2e184#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4ab013f0…05ca` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/5ace92d5-76e6-42ac-9709-812b14d2e184#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.645`** high\n\nThe `<label>` has no `htmlFor` and the input no `id` (line 36), so screen readers announce the field as \"edit text\".\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/checkout/AddressForm.tsx` is not Python.\n\n**Severity `0.645`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.030`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/5ace92d5-76e6-42ac-9709-812b14d2e184#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4ab013f0…05ca` · [dismiss with a reason ↗](https://witness.acme.internal/findings/5ace92d5-76e6-42ac-9709-812b14d2e184#suppress)",
         "line": 38,
         "side": "RIGHT",
         "start_line": 36,

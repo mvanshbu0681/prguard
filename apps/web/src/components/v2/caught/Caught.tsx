@@ -11,6 +11,7 @@ import { getFindings, getReviewsIndex } from "@/lib/fixtures";
 import type { Finding } from "@/lib/api-types";
 import { CarouselButtons } from "./CarouselButtons";
 import s from "./caught.module.css";
+import { EyeGlyph } from "@/components/brand/EyeGlyph";
 
 const TRACK_ID = "caught-track";
 const SHOWN = 8;
@@ -32,10 +33,9 @@ function ProofCard({ f }: { f: Finding }) {
     <div className={s.proof}>
       <div className={s.proofHead}>
         <span className={s.bot} aria-hidden>
-          <i />
-          <i />
+          <EyeGlyph size={16} />
         </span>
-        <span className={s.botName}>prguard[bot]</span>
+        <span className={s.botName}>witness[bot]</span>
         <span className={`${s.band} ${s[`band_${sev?.band ?? "info"}`] ?? ""}`}>{sev?.band}</span>
       </div>
       <div className={s.scoreRow}>
@@ -80,7 +80,8 @@ export function Caught() {
         </h2>
         <div className={s.headRow}>
           <Link href="/findings" className={s.cta}>
-            Browse findings
+            <span className={s.ctaFull}>Browse findings</span>
+            <span className={s.ctaShort}>Findings</span>
             <span className={s.ctaChip} aria-hidden>
               <ArrowUpRight size={18} strokeWidth={2} />
             </span>

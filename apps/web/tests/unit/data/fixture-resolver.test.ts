@@ -524,8 +524,8 @@ describe("the other routes", () => {
   });
 
   it("strips the API base's own path prefix", async () => {
-    const { resolver } = testResolver({ apiBase: "https://api.example.com/prguard" });
-    const res = await resolver(new Request("https://api.example.com/prguard/v1/findings/" + F2.id));
+    const { resolver } = testResolver({ apiBase: "https://api.example.com/witness" });
+    const res = await resolver(new Request("https://api.example.com/witness/v1/findings/" + F2.id));
     expect(res.status).toBe(200);
     expect((await res.json()).id).toBe(F2.id);
   });

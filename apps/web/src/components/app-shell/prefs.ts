@@ -16,10 +16,10 @@
 import { useSyncExternalStore } from 'react';
 
 export const CONTRAST_ATTR = 'data-contrast';
-export const CONTRAST_STORAGE_KEY = 'prguard:contrast';
+export const CONTRAST_STORAGE_KEY = 'witness:contrast';
 export const DENSITY_ATTR = 'data-density';
-export const DENSITY_STORAGE_KEY = 'prguard:density';
-export const SIDEBAR_STORAGE_KEY = 'prguard:sidebar-collapsed';
+export const DENSITY_STORAGE_KEY = 'witness:density';
+export const SIDEBAR_STORAGE_KEY = 'witness:sidebar-collapsed';
 
 type Listener = () => void;
 

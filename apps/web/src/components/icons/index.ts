@@ -1,4 +1,4 @@
-// OWNER: t1c (wave 1). Every icon PRGuard renders, in one hand (docs/design/02-design-system.md §6).
+// OWNER: t1c (wave 1). Every icon Witness renders, in one hand (docs/design/02-design-system.md §6).
 //
 //   Mechanic marks   ProofMark({ status }) · SeverityMark · FingerprintMark · GovernanceMark
 //   Stations         StageGlyph({ stage }) for each of the nine STAGES

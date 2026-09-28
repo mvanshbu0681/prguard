@@ -1,7 +1,7 @@
 // OWNER: T3 (wave 1). The MARKETING-ONLY animation entry: GSAP 3.15 + ScrollTrigger.
 //
 // Import GSAP through this module (or useReplay), never from "gsap" directly, so every
-// timeline gets the registered plugins, the PRGuard eases and the handshake. GSAP never
+// timeline gets the registered plugins, the Witness eases and the handshake. GSAP never
 // enters app/(app)/ or src/components/charts/ (plan §2 hard rule 2): ESLint bans "gsap"
 // there and `npm run motion:lint` bans this module, useReplay and GsapRuntime there.
 //
@@ -40,7 +40,7 @@ import { DUR_S, EASE } from "./tokens";
 
 export { gsap, ScrollTrigger, useGSAP };
 
-type PrguardGlobal = typeof globalThis & { __prguardGsap?: "ok" | "failed" };
+type WitnessGlobal = typeof globalThis & { __witnessGsap?: "ok" | "failed" };
 
 /**
  * Register once, in the browser. Safe to call any number of times; the module calls it
@@ -50,8 +50,8 @@ type PrguardGlobal = typeof globalThis & { __prguardGsap?: "ok" | "failed" };
  */
 export function ensureGsap(): boolean {
   if (typeof window === "undefined") return false;
-  const g = globalThis as PrguardGlobal;
-  if (g.__prguardGsap) return g.__prguardGsap === "ok"; // also survives Fast Refresh re-evaluating this module
+  const g = globalThis as WitnessGlobal;
+  if (g.__witnessGsap) return g.__witnessGsap === "ok"; // also survives Fast Refresh re-evaluating this module
 
   try {
     for (const token of Object.values(EASE)) gsap.registerEase(token.gsap, easeFn(token.points));
@@ -59,11 +59,11 @@ export function ensureGsap(): boolean {
     gsap.registerPlugin(useGSAP, ScrollTrigger);
     ScrollTrigger.config({ ignoreMobileResize: true });
   } catch (error) {
-    g.__prguardGsap = "failed";
+    g.__witnessGsap = "failed";
     if (process.env.NODE_ENV !== "production") console.warn("[motion] GSAP registration failed; [data-anim] content will force-reveal", error);
     return false;
   }
-  g.__prguardGsap = "ok";
+  g.__witnessGsap = "ok";
 
   document.fonts?.ready.then(
     () => ScrollTrigger.refresh(),

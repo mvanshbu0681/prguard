@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -184,12 +184,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#94` in 14.6s · [full run ↗](https://prguard.acme.internal/runs/b74cf26f-0edb-4668-868e-fa4a28cde0cc)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#94` in 14.6s · [full run ↗](https://witness.acme.internal/runs/b74cf26f-0edb-4668-868e-fa4a28cde0cc)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "573d5bfb6ee4b08d419811ac231863d105edb5b3",
     "comments": [
       {
         "path": "terraform/s3_invoices.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`expiration { days = 90 }` applies to current objects (line 52); the rule was meant for noncurrent versions, and invoices must be kept for ten years.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/s3_invoices.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/6653e2a6-caba-46be-81be-9f87d50e16ce#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint efeccc32…8a8d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/6653e2a6-caba-46be-81be-9f87d50e16ce#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`expiration { days = 90 }` applies to current objects (line 52); the rule was meant for noncurrent versions, and invoices must be kept for ten years.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/s3_invoices.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/6653e2a6-caba-46be-81be-9f87d50e16ce#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint efeccc32…8a8d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/6653e2a6-caba-46be-81be-9f87d50e16ce#suppress)",
         "line": 55,
         "side": "RIGHT",
         "start_line": 52,

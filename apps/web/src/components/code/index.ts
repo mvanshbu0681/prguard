@@ -3,7 +3,7 @@
 //   <TerminalBlock>    captured stdout/stderr (anser → classes). Server or client.
 //   <CodeBlock>        Shiki-highlighted source. ASYNC SERVER COMPONENT.
 //   <CodeBlockClient>  the same block inside a Client Component (lazy highlighter).
-//   <PRGuardDiff>      the one diff component (own renderer; the decision is in its header).
+//   <WitnessDiff>      the one diff component (own renderer; the decision is in its header).
 //
 // Importing this barrel from a Client Component is safe: Shiki is only ever reached
 // through dynamic import(), so it lands in the client bundle only if <CodeBlockClient>
@@ -33,13 +33,13 @@ export { SYNTAX_ROLES, type SyntaxRole } from "./shiki/theme";
 export type { CodeLine, CodeToken } from "./shiki/tokens";
 
 export {
-  PRGuardDiff,
+  WitnessDiff,
   lineOn,
   type DiffAnnotation,
   type DiffHighlight,
   type DiffSide,
-  type PRGuardDiffProps,
-} from "./diff/PRGuardDiff";
+  type WitnessDiffProps,
+} from "./diff/WitnessDiff";
 export { parseUnifiedDiff, pairRows, type DiffRow, type DiffRowKind, type ParsedDiff } from "./diff/parse";
 
 export { RAIL_TONES, TEXT_TONES, type LineHighlight, type RailTone, type TextTone } from "./shared/types";

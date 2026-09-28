@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "f0b8eaec-0169-48ee-b324-11c781fa19ad"
     ]
@@ -111,7 +111,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_901de9.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::batch_total.\n\nClaim: large batches lose a cent to float summation.\n\"\"\"\n\nfrom app.payouts.batch import batch_total_minor\n\n\ndef test_ten_thousand_dimes_total_one_thousand():\n    assert batch_total_minor(10, 10000) == 100000\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::batch_total.\n\nClaim: large batches lose a cent to float summation.\n\"\"\"\n\nfrom app.payouts.batch import batch_total_minor\n\n\ndef test_ten_thousand_dimes_total_one_thousand():\n    assert batch_total_minor(10, 10000) == 100000\n",
         "command": "pytest tests/test_repro_901de9.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -186,7 +186,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_9ca851.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
         "command": "pytest tests/test_repro_9ca851.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 1,
@@ -359,12 +359,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#318` in 37.9s · [full run ↗](https://prguard.acme.internal/runs/82dcce51-7bfb-4127-99b4-098465d8ade6)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#318` in 37.9s · [full run ↗](https://witness.acme.internal/runs/82dcce51-7bfb-4127-99b4-098465d8ade6)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "daa0d52db8535831c10fb4039ac5c241ea9676a2",
     "comments": [
       {
         "path": "app/payouts/batch.py",
-        "body": "**`proof_status: proven`** · severity **`0.800`** critical\n\n`batch_total()` converts each amount to major units before summing (line 43), so the total of 10 000 payouts of 0.10 is 999.9999999999 and the batch file reports 999.99.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `e597c2c` | `1 passed in 0.52s` |\n| head | `daa0d52` | `1 failed in 0.49s` |\n\n<details><summary>terminal output at head <code>daa0d52</code></summary>\n\n    E       assert 99999 == 100000\n    E        +  where 99999 = batch_total_minor(10, 10000)\n    tests/test_repro_901de9.py:10: AssertionError\n    1 failed in 0.49s\n\n</details>\n\n**Severity `0.800`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.035`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/f0b8eaec-0169-48ee-b324-11c781fa19ad#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 1fe13987…6d8d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/f0b8eaec-0169-48ee-b324-11c781fa19ad#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.800`** critical\n\n`batch_total()` converts each amount to major units before summing (line 43), so the total of 10 000 payouts of 0.10 is 999.9999999999 and the batch file reports 999.99.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `e597c2c` | `1 passed in 0.52s` |\n| head | `daa0d52` | `1 failed in 0.49s` |\n\n<details><summary>terminal output at head <code>daa0d52</code></summary>\n\n    E       assert 99999 == 100000\n    E        +  where 99999 = batch_total_minor(10, 10000)\n    tests/test_repro_901de9.py:10: AssertionError\n    1 failed in 0.49s\n\n</details>\n\n**Severity `0.800`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.035`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/f0b8eaec-0169-48ee-b324-11c781fa19ad#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 1fe13987…6d8d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/f0b8eaec-0169-48ee-b324-11c781fa19ad#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 45,
         "side": "RIGHT",
         "start_line": 43,
@@ -372,7 +372,7 @@
       },
       {
         "path": "app/payouts/batch.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.565`** high\n\n`build_payout_batch()` seeds every currency's batch with a placeholder entry (line 13) and never removes it, so a currency with no payouts produces a zero-amount instruction that the bank rejects for the whole file.\n\n**Proof** — a repro test was executed at both SHAs and failed at both, so the failure predates this pull request:\n\n| | SHA | result |\n|---|---|---|\n| base | `e597c2c` | `1 failed in 0.33s` |\n| head | `daa0d52` | `1 failed in 0.34s` |\n\n**Severity `0.565`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.035`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/78cdb890-350c-4ca2-870b-aceadadbb704#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint dab532ad…f7e5` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/78cdb890-350c-4ca2-870b-aceadadbb704#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.565`** high\n\n`build_payout_batch()` seeds every currency's batch with a placeholder entry (line 13) and never removes it, so a currency with no payouts produces a zero-amount instruction that the bank rejects for the whole file.\n\n**Proof** — a repro test was executed at both SHAs and failed at both, so the failure predates this pull request:\n\n| | SHA | result |\n|---|---|---|\n| base | `e597c2c` | `1 failed in 0.33s` |\n| head | `daa0d52` | `1 failed in 0.34s` |\n\n**Severity `0.565`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.035`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/78cdb890-350c-4ca2-870b-aceadadbb704#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint dab532ad…f7e5` · [dismiss with a reason ↗](https://witness.acme.internal/findings/78cdb890-350c-4ca2-870b-aceadadbb704#suppress)",
         "line": 15,
         "side": "RIGHT",
         "start_line": 13,

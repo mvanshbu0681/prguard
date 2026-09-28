@@ -1,7 +1,8 @@
-// The hero's product cards. Each one is a real PRGuard artefact from the demo
+// The hero's product cards. Each one is a real Witness artefact from the demo
 // corpus, drawn in otoma8's card language (20px radius, hairline, no shadow).
 import { ArrowUpRight, Check, FlaskConical, X } from "lucide-react";
 import s from "./cards.module.css";
+import { EyeGlyph } from "@/components/brand/EyeGlyph";
 
 export interface HeroCardData {
   baseSha: string;
@@ -154,13 +155,10 @@ function CommentCard({ d }: { d: HeroCardData }) {
     <div className={s.card}>
       <div className={s.author}>
         <span className={s.avatar} aria-hidden>
-          <span>
-            <i />
-            <i />
-          </span>
+          <EyeGlyph size={18} />
         </span>
         <span style={{ display: "grid" }}>
-          <span className={s.name}>prguard[bot]</span>
+          <span className={s.name}>witness[bot]</span>
           <span className={s.meta}>reviewed · comment</span>
         </span>
       </div>

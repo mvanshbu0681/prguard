@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -111,7 +111,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_e06808.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/session.py::issue_session.\n\nClaim: a remember-me refresh token is never rotated.\n\"\"\"\n\nfrom app.auth.session import rotated_on_refresh\n\n\ndef test_remember_me_refresh_token_rotates():\n    assert rotated_on_refresh(remember_me=True)\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::issue_session.\n\nClaim: a remember-me refresh token is never rotated.\n\"\"\"\n\nfrom app.auth.session import rotated_on_refresh\n\n\ndef test_remember_me_refresh_token_rotates():\n    assert rotated_on_refresh(remember_me=True)\n",
         "command": "pytest tests/test_repro_e06808.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -284,7 +284,7 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#211` in 34.1s · [full run ↗](https://prguard.acme.internal/runs/e68e08fc-9bc5-42ee-958b-32eadfdf955c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 0 |\n\nDelivered: nothing to deliver, no finding was published. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#211` in 34.1s · [full run ↗](https://witness.acme.internal/runs/e68e08fc-9bc5-42ee-958b-32eadfdf955c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 3 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 0 |\n\nDelivered: nothing to deliver, no finding was published. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "b6faa77fbd3ed55778e47cc8fb7812af829ce61a",
     "comments": []
   },

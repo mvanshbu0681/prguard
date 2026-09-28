@@ -77,7 +77,7 @@ describe("bezierYRange", () => {
     expect(bezierYRange([0.2, 1.1, 0.4, 0]).max).toBeGreaterThan(1); // y1 > 1 overshoots too
   });
 
-  it("keeps every PRGuard curve inside [0, 1]", () => {
+  it("keeps every Witness curve inside [0, 1]", () => {
     for (const token of Object.values(EASE)) {
       const { min, max } = bezierYRange(token.points);
       expect(min).toBeGreaterThanOrEqual(0);

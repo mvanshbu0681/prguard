@@ -91,7 +91,7 @@ export function AuditPage() {
 
   function onDownload() {
     const text = stringifyLosslessJson({ items: losslessEvents, chain: chain ?? null });
-    downloadJson(`prguard-audit-${Date.now()}.json`, text);
+    downloadJson(`witness-audit-${Date.now()}.json`, text);
   }
 
   return (
@@ -99,7 +99,7 @@ export function AuditPage() {
       <p className="type-label text-text-dim">/audit</p>
       <h1 className="mt-2 type-display-h3 text-text-primary">Audit chain</h1>
       <p className="mt-2 max-w-(--measure-body) type-body text-text-body">
-        Every decision PRGuard makes lands in this chain: hash-linked, sequence-ordered, checked in your browser against the recorded event_hash.
+        Every decision Witness makes lands in this chain: hash-linked, sequence-ordered, checked in your browser against the recorded event_hash.
       </p>
 
       <div className="mt-6 flex flex-wrap items-end gap-3">

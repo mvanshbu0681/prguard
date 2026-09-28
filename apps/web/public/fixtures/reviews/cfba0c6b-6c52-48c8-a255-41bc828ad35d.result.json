@@ -26,7 +26,7 @@
     "conclusion": "neutral",
     "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -180,7 +180,7 @@
         "isolation": "degraded",
         "baseline_mode": "skipped",
         "test_file_path": "tests/test_repro_b4e9ed.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/workers/digest.py::digest_window.\n\nClaim: the window ignores the user's timezone.\n\"\"\"\n\nfrom app.workers.digest import week_start_for\n\n\ndef test_tokyo_monday_starts_a_new_week():\n    assert week_start_for(\"2026-09-06T16:00:00+00:00\", \"Asia/Tokyo\") == \"2026-09-07\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/workers/digest.py::digest_window.\n\nClaim: the window ignores the user's timezone.\n\"\"\"\n\nfrom app.workers.digest import week_start_for\n\n\ndef test_tokyo_monday_starts_a_new_week():\n    assert week_start_for(\"2026-09-06T16:00:00+00:00\", \"Asia/Tokyo\") == \"2026-09-07\"\n",
         "command": "",
         "base": {
           "exit_code": null,
@@ -328,12 +328,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#65` in 29.2s · [full run ↗](https://prguard.acme.internal/runs/cfba0c6b-6c52-48c8-a255-41bc828ad35d)\n\n**Gate: neutral** — no sandbox was available to run a repro test, so nothing could be proven and no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#65` in 29.2s · [full run ↗](https://witness.acme.internal/runs/cfba0c6b-6c52-48c8-a255-41bc828ad35d)\n\n**Gate: neutral** — no sandbox was available to run a repro test, so nothing could be proven and no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "beb0d1ed5277ece114ec8666796eabae51ac7b7d",
     "comments": [
       {
         "path": "app/workers/digest.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.290`** low\n\nThe subject is built with `f\"{n} updates\"`-style formatting (line 47) and no singular form.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.290`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/ba741c7a-7b34-4b58-99f0-8f4d61d0e951#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint b4c250fb…4440` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/ba741c7a-7b34-4b58-99f0-8f4d61d0e951#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.290`** low\n\nThe subject is built with `f\"{n} updates\"`-style formatting (line 47) and no singular form.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.290`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/ba741c7a-7b34-4b58-99f0-8f4d61d0e951#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint b4c250fb…4440` · [dismiss with a reason ↗](https://witness.acme.internal/findings/ba741c7a-7b34-4b58-99f0-8f4d61d0e951#suppress)",
         "line": 49,
         "side": "RIGHT",
         "start_line": 47,
@@ -341,7 +341,7 @@
       },
       {
         "path": "app/workers/digest.py",
-        "body": "**`proof_status: skipped_no_env`** · severity **`0.410`** medium\n\n`digest_window()` uses `now.date()` on a UTC timestamp (line 60), so users east of UTC get Monday's items in the previous week's digest.\n\n**Proof** — skipped: no sandbox was available for this run, so nothing was executed.\n\n**Severity `0.410`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/63b35a54-c017-4174-822b-c366fc331df3#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint d53fe124…fdf3` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/63b35a54-c017-4174-822b-c366fc331df3#suppress)",
+        "body": "**`proof_status: skipped_no_env`** · severity **`0.410`** medium\n\n`digest_window()` uses `now.date()` on a UTC timestamp (line 60), so users east of UTC get Monday's items in the previous week's digest.\n\n**Proof** — skipped: no sandbox was available for this run, so nothing was executed.\n\n**Severity `0.410`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.060` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/63b35a54-c017-4174-822b-c366fc331df3#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint d53fe124…fdf3` · [dismiss with a reason ↗](https://witness.acme.internal/findings/63b35a54-c017-4174-822b-c366fc331df3#suppress)",
         "line": 62,
         "side": "RIGHT",
         "start_line": 60,
@@ -349,7 +349,7 @@
       },
       {
         "path": "app/workers/digest.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.215`** low\n\nTopics are pre-seeded with empty lists (line 32) and never filtered.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.215`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.025`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 5dd6992e…adb3` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.215`** low\n\nTopics are pre-seeded with empty lists (line 32) and never filtered.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.215`** — path_sensitivity `0.000` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.025`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 5dd6992e…adb3` · [dismiss with a reason ↗](https://witness.acme.internal/findings/bfc8d10c-4fd9-44a4-8c4e-953b0d3be88d#suppress)",
         "line": 34,
         "side": "RIGHT",
         "start_line": 32,

@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "af6d69be-5afb-4cbf-a6e7-a80861107b51"
     ]
@@ -180,7 +180,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_74e97b.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/jwks.py::get_signing_keys.\n\nClaim: the key set is never refreshed.\n\"\"\"\n\nfrom app.auth.jwks import fetches_after\n\n\ndef test_key_set_is_refetched_after_an_hour():\n    assert fetches_after(3601) == 2\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/jwks.py::get_signing_keys.\n\nClaim: the key set is never refreshed.\n\"\"\"\n\nfrom app.auth.jwks import fetches_after\n\n\ndef test_key_set_is_refetched_after_an_hour():\n    assert fetches_after(3601) == 2\n",
         "command": "pytest tests/test_repro_74e97b.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -259,12 +259,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#227` in 35.3s · [full run ↗](https://prguard.acme.internal/runs/44ef4bba-e50f-4377-b2b3-96b02119a976)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#227` in 35.3s · [full run ↗](https://witness.acme.internal/runs/44ef4bba-e50f-4377-b2b3-96b02119a976)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "8f4ff4ece4473f32fb8cb563cbfe8c1161c2aa47",
     "comments": [
       {
         "path": "app/auth/jwks.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.535`** medium\n\nA failed fetch is logged with `log.debug` (line 29), so a rotation outage is silent in production.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.535`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/ade753c2-781b-40c6-8563-b0a2fe4f57b1#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 584cbdcf…9d73` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/ade753c2-781b-40c6-8563-b0a2fe4f57b1#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.535`** medium\n\nA failed fetch is logged with `log.debug` (line 29), so a rotation outage is silent in production.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.535`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/ade753c2-781b-40c6-8563-b0a2fe4f57b1#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 584cbdcf…9d73` · [dismiss with a reason ↗](https://witness.acme.internal/findings/ade753c2-781b-40c6-8563-b0a2fe4f57b1#suppress)",
         "line": 31,
         "side": "RIGHT",
         "start_line": 29,
@@ -272,7 +272,7 @@
       },
       {
         "path": "app/auth/jwks.py",
-        "body": "**`proof_status: proven`** · severity **`0.770`** critical\n\n`@functools.cache` on `get_signing_keys()` (line 12) never expires, so after the IdP rotates its key every token signed with the new key fails verification until the pods restart.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `2a42ced` | `1 passed in 0.34s` |\n| head | `8f4ff4e` | `1 failed in 0.33s` |\n\n<details><summary>terminal output at head <code>8f4ff4e</code></summary>\n\n    E       assert 1 == 2\n    E        +  where 1 = fetches_after(3601)\n    tests/test_repro_74e97b.py:10: AssertionError\n    1 failed in 0.33s\n\n</details>\n\n**Severity `0.770`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.075` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.020`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/af6d69be-5afb-4cbf-a6e7-a80861107b51#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 6fdcd746…79a0` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/af6d69be-5afb-4cbf-a6e7-a80861107b51#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.770`** critical\n\n`@functools.cache` on `get_signing_keys()` (line 12) never expires, so after the IdP rotates its key every token signed with the new key fails verification until the pods restart.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `2a42ced` | `1 passed in 0.34s` |\n| head | `8f4ff4e` | `1 failed in 0.33s` |\n\n<details><summary>terminal output at head <code>8f4ff4e</code></summary>\n\n    E       assert 1 == 2\n    E        +  where 1 = fetches_after(3601)\n    tests/test_repro_74e97b.py:10: AssertionError\n    1 failed in 0.33s\n\n</details>\n\n**Severity `0.770`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.075` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.020`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/af6d69be-5afb-4cbf-a6e7-a80861107b51#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 6fdcd746…79a0` · [dismiss with a reason ↗](https://witness.acme.internal/findings/af6d69be-5afb-4cbf-a6e7-a80861107b51#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 14,
         "side": "RIGHT",
         "start_line": 12,

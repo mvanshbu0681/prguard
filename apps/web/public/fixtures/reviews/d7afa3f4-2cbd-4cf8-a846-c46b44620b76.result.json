@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -182,12 +182,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4776` in 30.6s · [full run ↗](https://prguard.acme.internal/runs/d7afa3f4-2cbd-4cf8-a846-c46b44620b76)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 at file level. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4776` in 30.6s · [full run ↗](https://witness.acme.internal/runs/d7afa3f4-2cbd-4cf8-a846-c46b44620b76)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 1 at file level. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "a71e47da57c9fe534f2e60311202af574900e263",
     "comments": [
       {
         "path": "app/billing/retry.py",
-        "body": "> File-level comment. The issue is at `app/billing/retry.py:33-34`.\n\n**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`_backoff()` returns `0.5 * 2 ** attempt` seconds with no ceiling (line 33). `MAX_ATTEMPTS` comes from config, and at the configured 12 the last sleep is 2048 seconds, held on the request thread that is serving the checkout.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.040`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/c49f6143-f3de-4ee6-a754-96baf3a05654#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 03d0d4f9…028a` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/c49f6143-f3de-4ee6-a754-96baf3a05654#suppress)",
+        "body": "> File-level comment. The issue is at `app/billing/retry.py:33-34`.\n\n**`proof_status: not_attempted`** · severity **`0.480`** medium\n\n`_backoff()` returns `0.5 * 2 ** attempt` seconds with no ceiling (line 33). `MAX_ATTEMPTS` comes from config, and at the configured 12 the last sleep is 2048 seconds, held on the request thread that is serving the checkout.\n\n**Proof** — not attempted: a `performance` finding is not one a test can settle.\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.040`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/c49f6143-f3de-4ee6-a754-96baf3a05654#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 03d0d4f9…028a` · [dismiss with a reason ↗](https://witness.acme.internal/findings/c49f6143-f3de-4ee6-a754-96baf3a05654#suppress)",
         "subject_type": "file"
       }
     ]

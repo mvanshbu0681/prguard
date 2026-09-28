@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "afd36799-4b16-47ef-96bc-5f041bd2c045"
     ]
@@ -111,7 +111,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_2b5bae.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/reset.py::verify_reset_token.\n\nClaim: the comparison is not constant-time.\n\"\"\"\n\nfrom app.auth.reset import compare_calls_for\n\n\ndef test_reset_token_uses_compare_digest():\n    assert compare_calls_for(\"tok_5e1b\") == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/reset.py::verify_reset_token.\n\nClaim: the comparison is not constant-time.\n\"\"\"\n\nfrom app.auth.reset import compare_calls_for\n\n\ndef test_reset_token_uses_compare_digest():\n    assert compare_calls_for(\"tok_5e1b\") == 1\n",
         "command": "pytest tests/test_repro_2b5bae.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -192,7 +192,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_da5c25.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/reset.py::_rate_limit_key.\n\nClaim: the key differs by case.\n\"\"\"\n\nfrom app.auth.reset import _rate_limit_key\n\n\ndef test_rate_limit_key_ignores_case():\n    assert _rate_limit_key(\"Alice@acme.test\") == \"reset:alice@acme.test\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/reset.py::_rate_limit_key.\n\nClaim: the key differs by case.\n\"\"\"\n\nfrom app.auth.reset import _rate_limit_key\n\n\ndef test_rate_limit_key_ignores_case():\n    assert _rate_limit_key(\"Alice@acme.test\") == \"reset:alice@acme.test\"\n",
         "command": "pytest tests/test_repro_da5c25.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -318,12 +318,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#219` in 36.6s · [full run ↗](https://prguard.acme.internal/runs/6563ff71-034e-4c85-95ed-d2b85554cce8)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#219` in 36.6s · [full run ↗](https://witness.acme.internal/runs/6563ff71-034e-4c85-95ed-d2b85554cce8)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 1 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "bc6978730716d19aebf4c49a73188ee055e9c324",
     "comments": [
       {
         "path": "app/auth/reset.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.645`** high\n\n`verify_reset_token()` checks `hashlib.sha256(token).hexdigest() == stored_hash` (line 31). `hmac.compare_digest` is the constant-time comparison for secrets.\n\n**Proof** — the repro test failed at head, but without the predicted `TimingLeak`, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `8788bc2` | `1 passed in 0.29s` |\n| head | `bc69787` | `1 failed in 0.28s` |\n\n**Severity `0.645`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/ff7abd2e-60f6-45dc-8a3b-1dac2210c624#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 211740bd…2670` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/ff7abd2e-60f6-45dc-8a3b-1dac2210c624#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.645`** high\n\n`verify_reset_token()` checks `hashlib.sha256(token).hexdigest() == stored_hash` (line 31). `hmac.compare_digest` is the constant-time comparison for secrets.\n\n**Proof** — the repro test failed at head, but without the predicted `TimingLeak`, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `8788bc2` | `1 passed in 0.29s` |\n| head | `bc69787` | `1 failed in 0.28s` |\n\n**Severity `0.645`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/ff7abd2e-60f6-45dc-8a3b-1dac2210c624#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 211740bd…2670` · [dismiss with a reason ↗](https://witness.acme.internal/findings/ff7abd2e-60f6-45dc-8a3b-1dac2210c624#suppress)",
         "line": 33,
         "side": "RIGHT",
         "start_line": 31,
@@ -331,7 +331,7 @@
       },
       {
         "path": "app/auth/reset.py",
-        "body": "**`proof_status: proven`** · severity **`0.605`** high\n\nThe rate-limit key is built from the raw email (line 43); varying the case sends five more reset emails per variant.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `8788bc2` | `1 passed in 0.27s` |\n| head | `bc69787` | `1 failed in 0.26s` |\n\n<details><summary>terminal output at head <code>bc69787</code></summary>\n\n    E       AssertionError: assert 'reset:Alice@acme.test' == 'reset:alice@acme.test'\n    E         \n    E         - reset:alice@acme.test\n    E         ?       ^\n    E         + reset:Alice@acme.test\n    E         ?       ^\n    tests/test_repro_da5c25.py:10: AssertionError\n    1 failed in 0.26s\n\n</details>\n\n**Severity `0.605`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/afd36799-4b16-47ef-96bc-5f041bd2c045#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 5c64f439…4230` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/afd36799-4b16-47ef-96bc-5f041bd2c045#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.605`** high\n\nThe rate-limit key is built from the raw email (line 43); varying the case sends five more reset emails per variant.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `8788bc2` | `1 passed in 0.27s` |\n| head | `bc69787` | `1 failed in 0.26s` |\n\n<details><summary>terminal output at head <code>bc69787</code></summary>\n\n    E       AssertionError: assert 'reset:Alice@acme.test' == 'reset:alice@acme.test'\n    E         \n    E         - reset:alice@acme.test\n    E         ?       ^\n    E         + reset:Alice@acme.test\n    E         ?       ^\n    tests/test_repro_da5c25.py:10: AssertionError\n    1 failed in 0.26s\n\n</details>\n\n**Severity `0.605`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.015`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/afd36799-4b16-47ef-96bc-5f041bd2c045#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 5c64f439…4230` · [dismiss with a reason ↗](https://witness.acme.internal/findings/afd36799-4b16-47ef-96bc-5f041bd2c045#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 44,
         "side": "RIGHT",
         "start_line": 43,

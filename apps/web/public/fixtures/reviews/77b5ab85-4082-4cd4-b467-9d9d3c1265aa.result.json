@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -178,7 +178,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_569c9e.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/invoices/numbering.py::next_invoice_number.\n\nClaim: two concurrent callers get the same number.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.invoices.numbering import next_invoice_number\n\n\ndef test_concurrent_numbers_are_distinct():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        numbers = list(pool.map(next_invoice_number, [\"tnt_4a\", \"tnt_4a\"]))\n    assert numbers[0] != numbers[1]\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/invoices/numbering.py::next_invoice_number.\n\nClaim: two concurrent callers get the same number.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.invoices.numbering import next_invoice_number\n\n\ndef test_concurrent_numbers_are_distinct():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        numbers = list(pool.map(next_invoice_number, [\"tnt_4a\", \"tnt_4a\"]))\n    assert numbers[0] != numbers[1]\n",
         "command": "pytest tests/test_repro_569c9e.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -253,7 +253,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_27dc73.py",
-        "test_code": "\"\"\"Repro for a prguard finding in migrations/versions/0087_invoice_sequences.py::upgrade.\n\nClaim: the ALTER TABLE fails on a populated table.\n\"\"\"\n\nimport sqlalchemy as sa\nfrom alembic.migration import MigrationContext\nfrom alembic.operations import Operations\n\n\ndef test_upgrade_on_a_populated_table():\n    engine = sa.create_engine(\"sqlite://\")\n    with engine.begin() as connection:\n        connection.execute(sa.text(\"CREATE TABLE invoices (id INTEGER PRIMARY KEY)\"))\n        connection.execute(sa.text(\"INSERT INTO invoices (id) VALUES (1)\"))\n        op = Operations(MigrationContext.configure(connection))\n        op.add_column(\"invoices\", sa.Column(\"seq\", sa.Integer(), nullable=False))\n",
+        "test_code": "\"\"\"Repro for a Witness finding in migrations/versions/0087_invoice_sequences.py::upgrade.\n\nClaim: the ALTER TABLE fails on a populated table.\n\"\"\"\n\nimport sqlalchemy as sa\nfrom alembic.migration import MigrationContext\nfrom alembic.operations import Operations\n\n\ndef test_upgrade_on_a_populated_table():\n    engine = sa.create_engine(\"sqlite://\")\n    with engine.begin() as connection:\n        connection.execute(sa.text(\"CREATE TABLE invoices (id INTEGER PRIMARY KEY)\"))\n        connection.execute(sa.text(\"INSERT INTO invoices (id) VALUES (1)\"))\n        op = Operations(MigrationContext.configure(connection))\n        op.add_column(\"invoices\", sa.Column(\"seq\", sa.Integer(), nullable=False))\n",
         "command": "pytest tests/test_repro_27dc73.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 2,
@@ -385,12 +385,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#322` in 129.7s · [full run ↗](https://prguard.acme.internal/runs/77b5ab85-4082-4cd4-b467-9d9d3c1265aa)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#322` in 129.7s · [full run ↗](https://witness.acme.internal/runs/77b5ab85-4082-4cd4-b467-9d9d3c1265aa)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "13109153cd7bd6c0b86fe79e5ad52e0d0df844bd",
     "comments": [
       {
         "path": "app/invoices/numbering.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.465`** medium\n\n`format_number()` renders `INV-2026-87` (line 28); the template and the bank reference field assume `INV-2026-000087`.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.465`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/20e5c874-7880-420f-942b-b6bab51ecdea#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint e9347bec…8ea9` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/20e5c874-7880-420f-942b-b6bab51ecdea#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.465`** medium\n\n`format_number()` renders `INV-2026-87` (line 28); the template and the bank reference field assume `INV-2026-000087`.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.465`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.010`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/20e5c874-7880-420f-942b-b6bab51ecdea#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint e9347bec…8ea9` · [dismiss with a reason ↗](https://witness.acme.internal/findings/20e5c874-7880-420f-942b-b6bab51ecdea#suppress)",
         "line": 30,
         "side": "RIGHT",
         "start_line": 28,
@@ -398,7 +398,7 @@
       },
       {
         "path": "app/invoices/numbering.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.630`** high\n\nTwo invoices finalised together for one tenant both read the same `MAX(seq)` (line 12) and are given the same number; the unique index then fails the second finalisation with a 500.\n\n**Proof** — the repro test passed at base and was stopped at head after the `90s` limit, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `bd0f4dd` | `1 passed in 0.62s` |\n| head | `1310915` | `killed after 90s` |\n\n**Severity `0.630`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.010`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/a1d1de0a-e830-40e9-af54-4e81c749b43a#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 8f097429…5523` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/a1d1de0a-e830-40e9-af54-4e81c749b43a#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.630`** high\n\nTwo invoices finalised together for one tenant both read the same `MAX(seq)` (line 12) and are given the same number; the unique index then fails the second finalisation with a 500.\n\n**Proof** — the repro test passed at base and was stopped at head after the `90s` limit, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `bd0f4dd` | `1 passed in 0.62s` |\n| head | `1310915` | `killed after 90s` |\n\n**Severity `0.630`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.010`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/a1d1de0a-e830-40e9-af54-4e81c749b43a#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 8f097429…5523` · [dismiss with a reason ↗](https://witness.acme.internal/findings/a1d1de0a-e830-40e9-af54-4e81c749b43a#suppress)",
         "line": 15,
         "side": "RIGHT",
         "start_line": 12,
@@ -406,7 +406,7 @@
       },
       {
         "path": "migrations/versions/0087_invoice_sequences.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.480`** medium\n\n`upgrade()` adds `invoices.seq` as `nullable=False` with no `server_default` (line 14); on production's 1.9 million invoices the `ALTER TABLE` fails.\n\n**Proof** — the repro test could not be imported at either SHA (`No module named 'alembic'`), so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `bd0f4dd` | `1 error in 0.12s` |\n| head | `1310915` | `1 error in 0.12s` |\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/97a746bf-c066-4510-8d69-7195f5a07cc5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c2322911…6630` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/97a746bf-c066-4510-8d69-7195f5a07cc5#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.480`** medium\n\n`upgrade()` adds `invoices.seq` as `nullable=False` with no `server_default` (line 14); on production's 1.9 million invoices the `ALTER TABLE` fails.\n\n**Proof** — the repro test could not be imported at either SHA (`No module named 'alembic'`), so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `bd0f4dd` | `1 error in 0.12s` |\n| head | `1310915` | `1 error in 0.12s` |\n\n**Severity `0.480`** — path_sensitivity `0.250` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.005`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/97a746bf-c066-4510-8d69-7195f5a07cc5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c2322911…6630` · [dismiss with a reason ↗](https://witness.acme.internal/findings/97a746bf-c066-4510-8d69-7195f5a07cc5#suppress)",
         "line": 16,
         "side": "RIGHT",
         "start_line": 14,

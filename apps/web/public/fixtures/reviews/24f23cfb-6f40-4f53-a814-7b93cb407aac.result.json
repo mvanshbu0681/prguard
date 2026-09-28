@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -178,7 +178,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_f6ab88.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/refunds.py::create_refund.\n\nClaim: create_refund() accepts a negative amount.\n\"\"\"\n\nfrom app.billing.refunds import create_refund\n\n\ndef test_negative_refund_is_rejected():\n    refund = create_refund(\"ch_3Qx9\", -500, reason=\"duplicate\")\n    assert refund.status == \"rejected\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/refunds.py::create_refund.\n\nClaim: create_refund() accepts a negative amount.\n\"\"\"\n\nfrom app.billing.refunds import create_refund\n\n\ndef test_negative_refund_is_rejected():\n    refund = create_refund(\"ch_3Qx9\", -500, reason=\"duplicate\")\n    assert refund.status == \"rejected\"\n",
         "command": "pytest tests/test_repro_f6ab88.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -373,12 +373,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#4783` in 32.4s · [full run ↗](https://prguard.acme.internal/runs/24f23cfb-6f40-4f53-a814-7b93cb407aac)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#4783` in 32.4s · [full run ↗](https://witness.acme.internal/runs/24f23cfb-6f40-4f53-a814-7b93cb407aac)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 3 |\n\nDelivered: 3 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "f0de2b00745f83f9e482c020ae50b68bddfaf92d",
     "comments": [
       {
         "path": "app/billing/refunds.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.540`** medium\n\nThe bare `except` (line 58) hides a refund confirmation that never went out.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.540`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d850ab0e-412e-4b28-88e3-ad5395c32932#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 75018c18…e44c` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d850ab0e-412e-4b28-88e3-ad5395c32932#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.540`** medium\n\nThe bare `except` (line 58) hides a refund confirmation that never went out.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.540`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/d850ab0e-412e-4b28-88e3-ad5395c32932#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 75018c18…e44c` · [dismiss with a reason ↗](https://witness.acme.internal/findings/d850ab0e-412e-4b28-88e3-ad5395c32932#suppress)",
         "line": 60,
         "side": "RIGHT",
         "start_line": 58,
@@ -386,7 +386,7 @@
       },
       {
         "path": "app/billing/refunds.py",
-        "body": "**`proof_status: inconclusive`** · severity **`0.670`** high\n\nThe amount check moved into `validate_reason()` with this change and now only runs when a reason code is given (line 13). `create_refund(\"ch_3Qx9\", -500)` builds a refund of -500, which the gateway books as a charge.\n\n**Proof** — the repro test failed at head, but without the predicted `ValueError`, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `0d962c5` | `1 passed in 0.33s` |\n| head | `f0de2b0` | `1 failed in 0.31s` |\n\n**Severity `0.670`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.045` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/bd0e9ce5-8270-4c31-a73d-c2cf3a726eef#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c78cc04f…baba` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/bd0e9ce5-8270-4c31-a73d-c2cf3a726eef#suppress)",
+        "body": "**`proof_status: inconclusive`** · severity **`0.670`** high\n\nThe amount check moved into `validate_reason()` with this change and now only runs when a reason code is given (line 13). `create_refund(\"ch_3Qx9\", -500)` builds a refund of -500, which the gateway books as a charge.\n\n**Proof** — the repro test failed at head, but without the predicted `ValueError`, so nothing is claimed:\n\n| | SHA | result |\n|---|---|---|\n| base | `0d962c5` | `1 passed in 0.33s` |\n| head | `f0de2b0` | `1 failed in 0.31s` |\n\n**Severity `0.670`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.045` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/bd0e9ce5-8270-4c31-a73d-c2cf3a726eef#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint c78cc04f…baba` · [dismiss with a reason ↗](https://witness.acme.internal/findings/bd0e9ce5-8270-4c31-a73d-c2cf3a726eef#suppress)",
         "line": 15,
         "side": "RIGHT",
         "start_line": 13,
@@ -394,7 +394,7 @@
       },
       {
         "path": "app/billing/refunds.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.555`** high\n\n`validate_reason()` checks `code in REASON_CODES.values()` (line 31), so the human-readable label \"Duplicate charge\" passes as a code and is stored verbatim.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.555`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/1513ca34-4387-4656-9398-fe45eb208f96#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 6c94faad…602e` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/1513ca34-4387-4656-9398-fe45eb208f96#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.555`** high\n\n`validate_reason()` checks `code in REASON_CODES.values()` (line 31), so the human-readable label \"Duplicate charge\" passes as a code and is stored verbatim.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.555`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.075` + churn `0.025`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/1513ca34-4387-4656-9398-fe45eb208f96#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 6c94faad…602e` · [dismiss with a reason ↗](https://witness.acme.internal/findings/1513ca34-4387-4656-9398-fe45eb208f96#suppress)",
         "line": 33,
         "side": "RIGHT",
         "start_line": 31,

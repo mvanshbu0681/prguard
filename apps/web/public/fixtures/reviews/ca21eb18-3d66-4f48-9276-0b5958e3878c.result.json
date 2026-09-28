@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -255,12 +255,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#90` in 18.8s · [full run ↗](https://prguard.acme.internal/runs/ca21eb18-3d66-4f48-9276-0b5958e3878c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#90` in 18.8s · [full run ↗](https://witness.acme.internal/runs/ca21eb18-3d66-4f48-9276-0b5958e3878c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "570f615702bcfc6b01626842cbc10cd1072a948a",
     "comments": [
       {
         "path": "terraform/waf.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nWAF rejects `203.0.113.7` without `/32` (line 29), so the apply fails after the ACL is created.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/waf.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/4663f4df-4797-493c-a0a5-9b6cf46ece7c#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint cbf659c4…b157` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/4663f4df-4797-493c-a0a5-9b6cf46ece7c#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nWAF rejects `203.0.113.7` without `/32` (line 29), so the apply fails after the ACL is created.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/waf.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/4663f4df-4797-493c-a0a5-9b6cf46ece7c#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint cbf659c4…b157` · [dismiss with a reason ↗](https://witness.acme.internal/findings/4663f4df-4797-493c-a0a5-9b6cf46ece7c#suppress)",
         "line": 31,
         "side": "RIGHT",
         "start_line": 29,
@@ -268,7 +268,7 @@
       },
       {
         "path": "terraform/waf.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`override_action { count {} }` (line 6) records matches without blocking them, so the ACL this change attaches to the public load balancer blocks nothing.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/waf.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 0e5b0b58…b1b2` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`override_action { count {} }` (line 6) records matches without blocking them, so the ACL this change attaches to the public load balancer blocks nothing.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/waf.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 0e5b0b58…b1b2` · [dismiss with a reason ↗](https://witness.acme.internal/findings/d127a7b9-64ff-4e67-bb53-2cf1ff6ee2e4#suppress)",
         "line": 9,
         "side": "RIGHT",
         "start_line": 6,

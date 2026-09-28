@@ -69,7 +69,7 @@ describe('<OgCard>', () => {
 
   it('carries the lockup, the headline, the bench, the PROVEN chip and the rail', () => {
     for (const phrase of [
-      'PRGUARD',
+      'WITNESS',
       "We don't guess.",
       'We run the test.',
       `base ${story.baseSha}`,
@@ -109,7 +109,7 @@ describe('opengraph-image.alt.txt', () => {
 
   it('describes the card in the product voice', () => {
     expect(alt.length).toBeGreaterThan(40);
-    expect(alt).toContain('PRGuard');
+    expect(alt).toContain('Witness');
     expect(alt).not.toMatch(/!/);
     expect(alt).not.toMatch(/\b(intelligent|smart|seamless|powerful|robust|supercharge|unlock|leverage|empower|AI-powered|best-in-class)\b/i);
     expect((alt.match(/—/g) ?? []).length).toBeLessThanOrEqual(1);

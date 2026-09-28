@@ -519,7 +519,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_2c9e40.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/charge.py::_to_settlement.\n\nClaim: zero-decimal currencies are scaled down instead of up.\n1200 JPY at 0.006734 USD per JPY is 8.08 USD, which is 808 US cents.\n\"\"\"\n\nfrom app.billing.charge import _to_settlement\n\n\ndef test_zero_decimal_currency_settles_in_cents():\n    assert _to_settlement(1200, \"jpy\") == 808\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/charge.py::_to_settlement.\n\nClaim: zero-decimal currencies are scaled down instead of up.\n1200 JPY at 0.006734 USD per JPY is 8.08 USD, which is 808 US cents.\n\"\"\"\n\nfrom app.billing.charge import _to_settlement\n\n\ndef test_zero_decimal_currency_settles_in_cents():\n    assert _to_settlement(1200, \"jpy\") == 808\n",
         "command": "pytest tests/test_repro_2c9e40.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 1,
@@ -596,7 +596,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_b04d19.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/rates.py::get_rate.\n\nClaim: get_rate() may return None for an unsupported currency.\nFails if get_rate() hands back None for a code the rate table does not carry.\n\"\"\"\n\nfrom app.billing.rates import get_rate\n\n\ndef test_get_rate_never_returns_none_for_an_unsupported_code():\n    try:\n        rate = get_rate(\"xts\")\n    except ValueError:\n        return\n    assert rate is not None\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/rates.py::get_rate.\n\nClaim: get_rate() may return None for an unsupported currency.\nFails if get_rate() hands back None for a code the rate table does not carry.\n\"\"\"\n\nfrom app.billing.rates import get_rate\n\n\ndef test_get_rate_never_returns_none_for_an_unsupported_code():\n    try:\n        rate = get_rate(\"xts\")\n    except ValueError:\n        return\n    assert rate is not None\n",
         "command": "pytest tests/test_repro_b04d19.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -671,7 +671,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_7e3f1a.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/charge.py::charge.\n\nClaim: charge() dereferences a None currency when the account has no default.\nPasses at base, where the legacy account is charged in \"usd\". Fails at head.\n\"\"\"\n\nimport pytest\n\nfrom app.billing import accounts, gateway\nfrom app.billing.accounts import resolve_account\nfrom app.billing.charge import charge\n\n#: A row exactly as the v1 ledger import wrote it: a currency, no default_currency.\nLEGACY_ROW = {\n    \"id\": \"acct_7f31\",\n    \"currency\": \"usd\",\n    \"country\": \"US\",\n    \"billing_email\": \"ap@northwind.test\",\n}\n\n\nclass RecordingGateway:\n    \"\"\"Stands in for the processor, so the repro never leaves the sandbox.\"\"\"\n\n    def __init__(self):\n        self.sent = []\n\n    def create_charge(self, account_id, amount_minor, currency):\n        self.sent.append((account_id, amount_minor, currency))\n        return \"ch_repro_%04d\" % len(self.sent)\n\n\n@pytest.fixture(autouse=True)\ndef isolated_billing(monkeypatch):\n    monkeypatch.setattr(accounts, \"_ROWS\", {LEGACY_ROW[\"id\"]: dict(LEGACY_ROW)})\n    monkeypatch.setattr(gateway, \"client\", RecordingGateway())\n\n\ndef test_charge_uses_account_currency():\n    acct = resolve_account(\"acct_7f31\")\n    assert charge(acct, 1200).currency == \"usd\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/charge.py::charge.\n\nClaim: charge() dereferences a None currency when the account has no default.\nPasses at base, where the legacy account is charged in \"usd\". Fails at head.\n\"\"\"\n\nimport pytest\n\nfrom app.billing import accounts, gateway\nfrom app.billing.accounts import resolve_account\nfrom app.billing.charge import charge\n\n#: A row exactly as the v1 ledger import wrote it: a currency, no default_currency.\nLEGACY_ROW = {\n    \"id\": \"acct_7f31\",\n    \"currency\": \"usd\",\n    \"country\": \"US\",\n    \"billing_email\": \"ap@northwind.test\",\n}\n\n\nclass RecordingGateway:\n    \"\"\"Stands in for the processor, so the repro never leaves the sandbox.\"\"\"\n\n    def __init__(self):\n        self.sent = []\n\n    def create_charge(self, account_id, amount_minor, currency):\n        self.sent.append((account_id, amount_minor, currency))\n        return \"ch_repro_%04d\" % len(self.sent)\n\n\n@pytest.fixture(autouse=True)\ndef isolated_billing(monkeypatch):\n    monkeypatch.setattr(accounts, \"_ROWS\", {LEGACY_ROW[\"id\"]: dict(LEGACY_ROW)})\n    monkeypatch.setattr(gateway, \"client\", RecordingGateway())\n\n\ndef test_charge_uses_account_currency():\n    acct = resolve_account(\"acct_7f31\")\n    assert charge(acct, 1200).currency == \"usd\"\n",
         "command": "pytest tests/test_repro_7e3f1a.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -1307,7 +1307,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_721709.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/admin/break_glass.py::break_glass_login.\n\nClaim: an empty reason is accepted.\n\"\"\"\n\nimport pytest\n\nfrom app.admin.break_glass import require_reason\n\n\ndef test_empty_reason_is_rejected():\n    with pytest.raises(ValueError):\n        require_reason(\"\")\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/admin/break_glass.py::break_glass_login.\n\nClaim: an empty reason is accepted.\n\"\"\"\n\nimport pytest\n\nfrom app.admin.break_glass import require_reason\n\n\ndef test_empty_reason_is_rejected():\n    with pytest.raises(ValueError):\n        require_reason(\"\")\n",
         "command": "pytest tests/test_repro_721709.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -2181,7 +2181,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_dbb0ca.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
         "command": "pytest tests/test_repro_dbb0ca.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -2488,7 +2488,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_768690.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/templates/render.py::_environment.\n\nClaim: markup in a display name renders unescaped.\n\"\"\"\n\nfrom jinja2 import Environment\n\nfrom app.templates.render import render_email\n\n\ndef test_display_name_is_escaped():\n    assert \"<b>\" not in render_email(\"welcome.html\", {\"name\": \"<b>x</b>\"})\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/templates/render.py::_environment.\n\nClaim: markup in a display name renders unescaped.\n\"\"\"\n\nfrom jinja2 import Environment\n\nfrom app.templates.render import render_email\n\n\ndef test_display_name_is_escaped():\n    assert \"<b>\" not in render_email(\"welcome.html\", {\"name\": \"<b>x</b>\"})\n",
         "command": "pytest tests/test_repro_768690.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 2,
@@ -2962,7 +2962,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_b5e86f.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reports/export.py::_row_for.\n\nClaim: formula-leading names reach the CSV unescaped.\n\"\"\"\n\nfrom app.reports.export import escape_cell\n\n\ndef test_formula_prefixed_cell_is_escaped():\n    assert escape_cell(\"=HYPERLINK(1)\") != \"=HYPERLINK(1)\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reports/export.py::_row_for.\n\nClaim: formula-leading names reach the CSV unescaped.\n\"\"\"\n\nfrom app.reports.export import escape_cell\n\n\ndef test_formula_prefixed_cell_is_escaped():\n    assert escape_cell(\"=HYPERLINK(1)\") != \"=HYPERLINK(1)\"\n",
         "command": "pytest tests/test_repro_b5e86f.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -3316,7 +3316,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_09fcaa.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/tax.py::invoice_tax_total.\n\nClaim: the invoice total drifts from rate times net.\n\"\"\"\n\nfrom app.billing.tax import invoice_tax_total\n\n\ndef test_three_lines_total_at_the_invoice_rate():\n    assert invoice_tax_total([333, 333, 333], \"DE\") == 190\n",
         "command": "pytest tests/test_repro_09fcaa.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -3393,7 +3393,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_e0585b.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/tax.py::vat_for.\n\nClaim: vat_for() rounds half-to-even.\n\"\"\"\n\nfrom app.billing.tax import vat_for\n\n\ndef test_half_cent_vat_rounds_up():\n    assert vat_for(1250, \"DE\") == 238\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/tax.py::vat_for.\n\nClaim: vat_for() rounds half-to-even.\n\"\"\"\n\nfrom app.billing.tax import vat_for\n\n\ndef test_half_cent_vat_rounds_up():\n    assert vat_for(1250, \"DE\") == 238\n",
         "command": "pytest tests/test_repro_e0585b.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -3637,7 +3637,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_ae2826.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/push/dedupe.py::should_send.\n\nClaim: a steady burst still sends every minute.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_burst\n\n\ndef test_burst_every_fifty_seconds_sends_once():\n    assert sends_for_burst(50, 3) == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/push/dedupe.py::should_send.\n\nClaim: a steady burst still sends every minute.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_burst\n\n\ndef test_burst_every_fifty_seconds_sends_once():\n    assert sends_for_burst(50, 3) == 1\n",
         "command": "pytest tests/test_repro_ae2826.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -3806,7 +3806,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_f8ac5f.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/scim/users.py::deprovision_user.\n\nClaim: sessions survive deprovisioning.\n\"\"\"\n\nfrom app.scim.users import live_sessions_after_deprovision\n\n\ndef test_deprovisioned_user_has_no_live_sessions():\n    assert live_sessions_after_deprovision(\"usr_58\") == 0\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/scim/users.py::deprovision_user.\n\nClaim: sessions survive deprovisioning.\n\"\"\"\n\nfrom app.scim.users import live_sessions_after_deprovision\n\n\ndef test_deprovisioned_user_has_no_live_sessions():\n    assert live_sessions_after_deprovision(\"usr_58\") == 0\n",
         "command": "pytest tests/test_repro_f8ac5f.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -4213,7 +4213,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_944228.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/refunds/reconcile.py::apply_partial_refund.\n\nClaim: a partial refund credits the full fee.\n\"\"\"\n\nfrom app.refunds.reconcile import fee_credit_minor\n\n\ndef test_ten_percent_refund_credits_ten_percent_of_the_fee():\n    assert fee_credit_minor(90, 300, 3000) == 9\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/refunds/reconcile.py::apply_partial_refund.\n\nClaim: a partial refund credits the full fee.\n\"\"\"\n\nfrom app.refunds.reconcile import fee_credit_minor\n\n\ndef test_ten_percent_refund_credits_ten_percent_of_the_fee():\n    assert fee_credit_minor(90, 300, 3000) == 9\n",
         "command": "pytest tests/test_repro_944228.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -4836,7 +4836,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_74e97b.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/jwks.py::get_signing_keys.\n\nClaim: the key set is never refreshed.\n\"\"\"\n\nfrom app.auth.jwks import fetches_after\n\n\ndef test_key_set_is_refetched_after_an_hour():\n    assert fetches_after(3601) == 2\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/jwks.py::get_signing_keys.\n\nClaim: the key set is never refreshed.\n\"\"\"\n\nfrom app.auth.jwks import fetches_after\n\n\ndef test_key_set_is_refetched_after_an_hour():\n    assert fetches_after(3601) == 2\n",
         "command": "pytest tests/test_repro_74e97b.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -5102,7 +5102,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_b559fa.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/push/dedupe.py::should_send.\n\nClaim: two workers can both send one notification.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_two_workers\n\n\ndef test_two_workers_send_once():\n    assert sends_for_two_workers() == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/push/dedupe.py::should_send.\n\nClaim: two workers can both send one notification.\n\"\"\"\n\nfrom app.push.dedupe import sends_for_two_workers\n\n\ndef test_two_workers_send_once():\n    assert sends_for_two_workers() == 1\n",
         "command": "pytest tests/test_repro_b559fa.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -5816,7 +5816,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_455f92.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::schedule_batch.\n\nClaim: a 15:30 CET batch is moved to the next day.\n\"\"\"\n\nfrom app.payouts.batch import run_date_for\n\n\ndef test_half_past_three_cet_runs_the_same_day():\n    assert run_date_for(\"2026-09-14T13:30:00+00:00\") == \"2026-09-14\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::schedule_batch.\n\nClaim: a 15:30 CET batch is moved to the next day.\n\"\"\"\n\nfrom app.payouts.batch import run_date_for\n\n\ndef test_half_past_three_cet_runs_the_same_day():\n    assert run_date_for(\"2026-09-14T13:30:00+00:00\") == \"2026-09-14\"\n",
         "command": "pytest tests/test_repro_455f92.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -6337,7 +6337,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_22eb54.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/settlement/fetch.py::fetch_settlements.\n\nClaim: one hung provider stalls the whole fetch.\n\"\"\"\n\nimport pytest\n\nfrom app.settlement.fetch import fetch_with_deadline\n\n\ndef test_hung_provider_is_cut_off():\n    assert fetch_with_deadline(0.05) == []\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/settlement/fetch.py::fetch_settlements.\n\nClaim: one hung provider stalls the whole fetch.\n\"\"\"\n\nimport pytest\n\nfrom app.settlement.fetch import fetch_with_deadline\n\n\ndef test_hung_provider_is_cut_off():\n    assert fetch_with_deadline(0.05) == []\n",
         "command": "pytest tests/test_repro_22eb54.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -6807,7 +6807,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_bd83d4.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/checkout/cards.py::mask_card.\n\nClaim: the masked number still shows the BIN.\n\"\"\"\n\nfrom app.checkout.cards import mask_card\n\n\ndef test_masked_card_hides_the_bin():\n    assert mask_card(\"4242424242424242\") == \"************4242\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/checkout/cards.py::mask_card.\n\nClaim: the masked number still shows the BIN.\n\"\"\"\n\nfrom app.checkout.cards import mask_card\n\n\ndef test_masked_card_hides_the_bin():\n    assert mask_card(\"4242424242424242\") == \"************4242\"\n",
         "command": "pytest tests/test_repro_bd83d4.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -7023,7 +7023,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_642f26.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/oauth/authorize.py::_redirect_ok.\n\nClaim: a look-alike host passes the redirect check.\n\"\"\"\n\nfrom app.oauth.authorize import redirect_allowed\n\n\ndef test_lookalike_host_is_rejected():\n    assert not redirect_allowed(\"https://app.acme.test.evil.test/cb\")\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/oauth/authorize.py::_redirect_ok.\n\nClaim: a look-alike host passes the redirect check.\n\"\"\"\n\nfrom app.oauth.authorize import redirect_allowed\n\n\ndef test_lookalike_host_is_rejected():\n    assert not redirect_allowed(\"https://app.acme.test.evil.test/cb\")\n",
         "command": "pytest tests/test_repro_642f26.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -7098,7 +7098,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_8d3214.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/oauth/authorize.py::verify_pkce.\n\nClaim: the plain method is accepted.\n\"\"\"\n\nfrom app.oauth.authorize import verify_pkce\n\n\ndef test_plain_method_is_rejected():\n    assert verify_pkce(\"abc123\", \"abc123\", \"plain\") is False\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/oauth/authorize.py::verify_pkce.\n\nClaim: the plain method is accepted.\n\"\"\"\n\nfrom app.oauth.authorize import verify_pkce\n\n\ndef test_plain_method_is_rejected():\n    assert verify_pkce(\"abc123\", \"abc123\", \"plain\") is False\n",
         "command": "pytest tests/test_repro_8d3214.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -7531,7 +7531,7 @@
         "isolation": "degraded",
         "baseline_mode": "skipped",
         "test_file_path": "tests/test_repro_b4e9ed.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/workers/digest.py::digest_window.\n\nClaim: the window ignores the user's timezone.\n\"\"\"\n\nfrom app.workers.digest import week_start_for\n\n\ndef test_tokyo_monday_starts_a_new_week():\n    assert week_start_for(\"2026-09-06T16:00:00+00:00\", \"Asia/Tokyo\") == \"2026-09-07\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/workers/digest.py::digest_window.\n\nClaim: the window ignores the user's timezone.\n\"\"\"\n\nfrom app.workers.digest import week_start_for\n\n\ndef test_tokyo_monday_starts_a_new_week():\n    assert week_start_for(\"2026-09-06T16:00:00+00:00\", \"Asia/Tokyo\") == \"2026-09-07\"\n",
         "command": "",
         "base": {
           "exit_code": null,
@@ -7769,7 +7769,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_5440c9.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reports/export.py::_row_for.\n\nClaim: formula-leading names reach the CSV unescaped.\n\"\"\"\n\nfrom app.reports.export import escape_cell\n\n\ndef test_formula_prefixed_cell_is_escaped():\n    assert escape_cell(\"=HYPERLINK(1)\") != \"=HYPERLINK(1)\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reports/export.py::_row_for.\n\nClaim: formula-leading names reach the CSV unescaped.\n\"\"\"\n\nfrom app.reports.export import escape_cell\n\n\ndef test_formula_prefixed_cell_is_escaped():\n    assert escape_cell(\"=HYPERLINK(1)\") != \"=HYPERLINK(1)\"\n",
         "command": "pytest tests/test_repro_5440c9.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -8062,7 +8062,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_4993cc.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/checkout/session.py::create_checkout_session.\n\nClaim: two carts for one account share a single checkout session.\n\"\"\"\n\nfrom app.checkout.session import create_checkout_session\n\n\ndef test_second_cart_gets_its_own_session():\n    first = create_checkout_session(\"acct_31c\", cart_id=\"cart_a\")\n    second = create_checkout_session(\"acct_31c\", cart_id=\"cart_b\")\n    assert first.id != second.id\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/checkout/session.py::create_checkout_session.\n\nClaim: two carts for one account share a single checkout session.\n\"\"\"\n\nfrom app.checkout.session import create_checkout_session\n\n\ndef test_second_cart_gets_its_own_session():\n    first = create_checkout_session(\"acct_31c\", cart_id=\"cart_a\")\n    second = create_checkout_session(\"acct_31c\", cart_id=\"cart_b\")\n    assert first.id != second.id\n",
         "command": "pytest tests/test_repro_4993cc.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -8592,7 +8592,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_35afe4.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/unsubscribe/links.py::_token_for.\n\nClaim: a forged token is accepted.\n\"\"\"\n\nfrom app.unsubscribe.links import verify_unsubscribe\n\n\ndef test_forged_token_is_rejected():\n    assert verify_unsubscribe(\"dXNyXzQ0MTp3ZWVrbHk=\") is None\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/unsubscribe/links.py::_token_for.\n\nClaim: a forged token is accepted.\n\"\"\"\n\nfrom app.unsubscribe.links import verify_unsubscribe\n\n\ndef test_forged_token_is_rejected():\n    assert verify_unsubscribe(\"dXNyXzQ0MTp3ZWVrbHk=\") is None\n",
         "command": "pytest tests/test_repro_35afe4.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -8761,7 +8761,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_da5c25.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/reset.py::_rate_limit_key.\n\nClaim: the key differs by case.\n\"\"\"\n\nfrom app.auth.reset import _rate_limit_key\n\n\ndef test_rate_limit_key_ignores_case():\n    assert _rate_limit_key(\"Alice@acme.test\") == \"reset:alice@acme.test\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/reset.py::_rate_limit_key.\n\nClaim: the key differs by case.\n\"\"\"\n\nfrom app.auth.reset import _rate_limit_key\n\n\ndef test_rate_limit_key_ignores_case():\n    assert _rate_limit_key(\"Alice@acme.test\") == \"reset:alice@acme.test\"\n",
         "command": "pytest tests/test_repro_da5c25.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -8836,7 +8836,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_2b5bae.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/reset.py::verify_reset_token.\n\nClaim: the comparison is not constant-time.\n\"\"\"\n\nfrom app.auth.reset import compare_calls_for\n\n\ndef test_reset_token_uses_compare_digest():\n    assert compare_calls_for(\"tok_5e1b\") == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/reset.py::verify_reset_token.\n\nClaim: the comparison is not constant-time.\n\"\"\"\n\nfrom app.auth.reset import compare_calls_for\n\n\ndef test_reset_token_uses_compare_digest():\n    assert compare_calls_for(\"tok_5e1b\") == 1\n",
         "command": "pytest tests/test_repro_2b5bae.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -9133,7 +9133,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_f1f59b.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/api/orders.py::export_orders_csv.\n\nClaim: cancelled orders reach the export.\n\"\"\"\n\nfrom app.api.orders import exported_row_count\n\n\ndef test_cancelled_orders_are_not_exported():\n    assert exported_row_count(\"acct_19f\") == 18\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/api/orders.py::export_orders_csv.\n\nClaim: cancelled orders reach the export.\n\"\"\"\n\nfrom app.api.orders import exported_row_count\n\n\ndef test_cancelled_orders_are_not_exported():\n    assert exported_row_count(\"acct_19f\") == 18\n",
         "command": "pytest tests/test_repro_f1f59b.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -9302,7 +9302,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_dea2d1.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reconcile/adyen.py::match_payouts.\n\nClaim: two equal rows claim one payout.\n\"\"\"\n\nfrom app.reconcile.adyen import matches_for_amount\n\n\ndef test_each_payout_is_matched_once():\n    assert matches_for_amount(1250, 2) == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reconcile/adyen.py::match_payouts.\n\nClaim: two equal rows claim one payout.\n\"\"\"\n\nfrom app.reconcile.adyen import matches_for_amount\n\n\ndef test_each_payout_is_matched_once():\n    assert matches_for_amount(1250, 2) == 1\n",
         "command": "pytest tests/test_repro_dea2d1.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -9737,7 +9737,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_d483c9.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/api/orders.py::list_orders.\n\nClaim: page 2 skips the 21st order.\n\"\"\"\n\nfrom app.api.orders import page_offset\n\n\ndef test_page_two_starts_at_the_twenty_first_order():\n    assert page_offset(2, 20) == 20\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/api/orders.py::list_orders.\n\nClaim: page 2 skips the 21st order.\n\"\"\"\n\nfrom app.api.orders import page_offset\n\n\ndef test_page_two_starts_at_the_twenty_first_order():\n    assert page_offset(2, 20) == 20\n",
         "command": "pytest tests/test_repro_d483c9.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -10022,7 +10022,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_27dc73.py",
-        "test_code": "\"\"\"Repro for a prguard finding in migrations/versions/0087_invoice_sequences.py::upgrade.\n\nClaim: the ALTER TABLE fails on a populated table.\n\"\"\"\n\nimport sqlalchemy as sa\nfrom alembic.migration import MigrationContext\nfrom alembic.operations import Operations\n\n\ndef test_upgrade_on_a_populated_table():\n    engine = sa.create_engine(\"sqlite://\")\n    with engine.begin() as connection:\n        connection.execute(sa.text(\"CREATE TABLE invoices (id INTEGER PRIMARY KEY)\"))\n        connection.execute(sa.text(\"INSERT INTO invoices (id) VALUES (1)\"))\n        op = Operations(MigrationContext.configure(connection))\n        op.add_column(\"invoices\", sa.Column(\"seq\", sa.Integer(), nullable=False))\n",
+        "test_code": "\"\"\"Repro for a Witness finding in migrations/versions/0087_invoice_sequences.py::upgrade.\n\nClaim: the ALTER TABLE fails on a populated table.\n\"\"\"\n\nimport sqlalchemy as sa\nfrom alembic.migration import MigrationContext\nfrom alembic.operations import Operations\n\n\ndef test_upgrade_on_a_populated_table():\n    engine = sa.create_engine(\"sqlite://\")\n    with engine.begin() as connection:\n        connection.execute(sa.text(\"CREATE TABLE invoices (id INTEGER PRIMARY KEY)\"))\n        connection.execute(sa.text(\"INSERT INTO invoices (id) VALUES (1)\"))\n        op = Operations(MigrationContext.configure(connection))\n        op.add_column(\"invoices\", sa.Column(\"seq\", sa.Integer(), nullable=False))\n",
         "command": "pytest tests/test_repro_27dc73.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 2,
@@ -10103,7 +10103,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_569c9e.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/invoices/numbering.py::next_invoice_number.\n\nClaim: two concurrent callers get the same number.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.invoices.numbering import next_invoice_number\n\n\ndef test_concurrent_numbers_are_distinct():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        numbers = list(pool.map(next_invoice_number, [\"tnt_4a\", \"tnt_4a\"]))\n    assert numbers[0] != numbers[1]\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/invoices/numbering.py::next_invoice_number.\n\nClaim: two concurrent callers get the same number.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.invoices.numbering import next_invoice_number\n\n\ndef test_concurrent_numbers_are_distinct():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        numbers = list(pool.map(next_invoice_number, [\"tnt_4a\", \"tnt_4a\"]))\n    assert numbers[0] != numbers[1]\n",
         "command": "pytest tests/test_repro_569c9e.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -10984,7 +10984,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_c60e37.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/workers/webhooks.py::deliver_webhook.\n\nClaim: a 410 endpoint is retried without end.\n\"\"\"\n\nfrom app.workers.webhooks import attempts_for_status\n\n\ndef test_gone_endpoint_is_not_retried():\n    assert attempts_for_status(410) == 1\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/workers/webhooks.py::deliver_webhook.\n\nClaim: a 410 endpoint is retried without end.\n\"\"\"\n\nfrom app.workers.webhooks import attempts_for_status\n\n\ndef test_gone_endpoint_is_not_retried():\n    assert attempts_for_status(410) == 1\n",
         "command": "pytest tests/test_repro_c60e37.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -11269,7 +11269,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_78a203.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/sso/saml.py::_check_conditions.\n\nClaim: a NotBefore ten minutes ahead validates.\n\"\"\"\n\nfrom app.sso.saml import conditions_hold\n\n\ndef test_not_before_ten_minutes_ahead_is_rejected():\n    assert not conditions_hold(600)\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/sso/saml.py::_check_conditions.\n\nClaim: a NotBefore ten minutes ahead validates.\n\"\"\"\n\nfrom app.sso.saml import conditions_hold\n\n\ndef test_not_before_ten_minutes_ahead_is_rejected():\n    assert not conditions_hold(600)\n",
         "command": "pytest tests/test_repro_78a203.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -11739,7 +11739,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_f6ab88.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/refunds.py::create_refund.\n\nClaim: create_refund() accepts a negative amount.\n\"\"\"\n\nfrom app.billing.refunds import create_refund\n\n\ndef test_negative_refund_is_rejected():\n    refund = create_refund(\"ch_3Qx9\", -500, reason=\"duplicate\")\n    assert refund.status == \"rejected\"\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/refunds.py::create_refund.\n\nClaim: create_refund() accepts a negative amount.\n\"\"\"\n\nfrom app.billing.refunds import create_refund\n\n\ndef test_negative_refund_is_rejected():\n    refund = create_refund(\"ch_3Qx9\", -500, reason=\"duplicate\")\n    assert refund.status == \"rejected\"\n",
         "command": "pytest tests/test_repro_f6ab88.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -12052,7 +12052,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_d98e5f.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/providers/sms.py::handle_delivery_receipt.\n\nClaim: an unsigned receipt is accepted.\n\"\"\"\n\nfrom app.providers.sms import receipt_accepted\n\n\ndef test_unsigned_receipt_is_rejected():\n    assert receipt_accepted(\"unsigned\") is False\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/providers/sms.py::handle_delivery_receipt.\n\nClaim: an unsigned receipt is accepted.\n\"\"\"\n\nfrom app.providers.sms import receipt_accepted\n\n\ndef test_unsigned_receipt_is_rejected():\n    assert receipt_accepted(\"unsigned\") is False\n",
         "command": "pytest tests/test_repro_d98e5f.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -12174,7 +12174,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_6028c7.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
         "command": "pytest tests/test_repro_6028c7.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 1,
@@ -12398,7 +12398,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_e06808.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/session.py::issue_session.\n\nClaim: a remember-me refresh token is never rotated.\n\"\"\"\n\nfrom app.auth.session import rotated_on_refresh\n\n\ndef test_remember_me_refresh_token_rotates():\n    assert rotated_on_refresh(remember_me=True)\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::issue_session.\n\nClaim: a remember-me refresh token is never rotated.\n\"\"\"\n\nfrom app.auth.session import rotated_on_refresh\n\n\ndef test_remember_me_refresh_token_rotates():\n    assert rotated_on_refresh(remember_me=True)\n",
         "command": "pytest tests/test_repro_e06808.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -12614,7 +12614,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_9ca851.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::build_payout_batch.\n\nClaim: an empty currency produces a zero-amount entry.\n\"\"\"\n\nfrom app.payouts.batch import build_payout_batch\n\n\ndef test_empty_currency_builds_an_empty_batch():\n    assert len(build_payout_batch([], \"sek\")) == 0\n",
         "command": "pytest tests/test_repro_9ca851.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 1,
@@ -12689,7 +12689,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_901de9.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/payouts/batch.py::batch_total.\n\nClaim: large batches lose a cent to float summation.\n\"\"\"\n\nfrom app.payouts.batch import batch_total_minor\n\n\ndef test_ten_thousand_dimes_total_one_thousand():\n    assert batch_total_minor(10, 10000) == 100000\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/payouts/batch.py::batch_total.\n\nClaim: large batches lose a cent to float summation.\n\"\"\"\n\nfrom app.payouts.batch import batch_total_minor\n\n\ndef test_ten_thousand_dimes_total_one_thousand():\n    assert batch_total_minor(10, 10000) == 100000\n",
         "command": "pytest tests/test_repro_901de9.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -13615,7 +13615,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_b695e3.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/session.py::revoke_session.\n\nClaim: a revoked session can still be refreshed.\n\"\"\"\n\nfrom app.auth.session import refresh_after_revoke\n\n\ndef test_revoked_session_cannot_refresh():\n    assert refresh_after_revoke(\"ses_77ab\") is None\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::revoke_session.\n\nClaim: a revoked session can still be refreshed.\n\"\"\"\n\nfrom app.auth.session import refresh_after_revoke\n\n\ndef test_revoked_session_cannot_refresh():\n    assert refresh_after_revoke(\"ses_77ab\") is None\n",
         "command": "pytest tests/test_repro_b695e3.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -13692,7 +13692,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_3f3726.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/session.py::refresh_session.\n\nClaim: two concurrent refreshes with one token both succeed.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.auth.session import refresh_session_outcome\n\n\ndef test_one_refresh_token_refreshes_once():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        results = list(pool.map(refresh_session_outcome, [\"rt_9f2c\", \"rt_9f2c\"]))\n    assert sorted(results) == [\"ok\", \"reused\"]\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::refresh_session.\n\nClaim: two concurrent refreshes with one token both succeed.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.auth.session import refresh_session_outcome\n\n\ndef test_one_refresh_token_refreshes_once():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        results = list(pool.map(refresh_session_outcome, [\"rt_9f2c\", \"rt_9f2c\"]))\n    assert sorted(results) == [\"ok\", \"reused\"]\n",
         "command": "pytest tests/test_repro_3f3726.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -14093,7 +14093,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_58a651.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/billing/retry.py::create_charge_with_retry.\n\nClaim: each retry sends a new idempotency key.\n\"\"\"\n\nfrom app.billing.retry import create_charge_with_retry\n\n\nclass TimesOutOnce:\n    \"\"\"Times out on the first call after recording it, as the gateway does.\"\"\"\n\n    def __init__(self):\n        self.keys = []\n\n    def create_charge(self, params, idempotency_key):\n        self.keys.append(idempotency_key)\n        if len(self.keys) == 1:\n            raise TimeoutError(\"gateway read timeout\")\n        return {\"id\": \"ch_repro_0001\"}\n\n\ndef test_retry_reuses_the_idempotency_key():\n    gateway = TimesOutOnce()\n    create_charge_with_retry({\"amount_minor\": 1200, \"currency\": \"usd\"}, client=gateway)\n    first, second = gateway.keys\n    assert first == second\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/billing/retry.py::create_charge_with_retry.\n\nClaim: each retry sends a new idempotency key.\n\"\"\"\n\nfrom app.billing.retry import create_charge_with_retry\n\n\nclass TimesOutOnce:\n    \"\"\"Times out on the first call after recording it, as the gateway does.\"\"\"\n\n    def __init__(self):\n        self.keys = []\n\n    def create_charge(self, params, idempotency_key):\n        self.keys.append(idempotency_key)\n        if len(self.keys) == 1:\n            raise TimeoutError(\"gateway read timeout\")\n        return {\"id\": \"ch_repro_0001\"}\n\n\ndef test_retry_reuses_the_idempotency_key():\n    gateway = TimesOutOnce()\n    create_charge_with_retry({\"amount_minor\": 1200, \"currency\": \"usd\"}, client=gateway)\n    first, second = gateway.keys\n    assert first == second\n",
         "command": "pytest tests/test_repro_58a651.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -14713,7 +14713,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_4499ac.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/reconcile/adyen.py::_parse_report_row.\n\nClaim: report rows parse to naive datetimes.\n\"\"\"\n\nfrom datetime import UTC, datetime\n\nfrom app.reconcile.adyen import parse_booked_at\n\n\ndef test_report_timestamps_compare_with_booked_payouts():\n    assert parse_booked_at(\"2026-08-18 23:14:09\") < datetime(2026, 8, 19, tzinfo=UTC)\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/reconcile/adyen.py::_parse_report_row.\n\nClaim: report rows parse to naive datetimes.\n\"\"\"\n\nfrom datetime import UTC, datetime\n\nfrom app.reconcile.adyen import parse_booked_at\n\n\ndef test_report_timestamps_compare_with_booked_payouts():\n    assert parse_booked_at(\"2026-08-18 23:14:09\") < datetime(2026, 8, 19, tzinfo=UTC)\n",
         "command": "pytest tests/test_repro_4499ac.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,

@@ -1,4 +1,4 @@
-/* PRGuard v2 hero, on the otoma8.com system (values measured from the live site):
+/* Witness v2 hero, on the otoma8.com system (values measured from the live site):
    a 12px white inset around a 28px-radius photographic frame, Plus Jakarta Sans
    60/600/-1.5px, Geist Mono 14px +1.68px pills, 20px cards with a 5% hairline
    and no shadow, and a row of product cards drifting under the headline. */
@@ -71,23 +71,8 @@
 }
 
 .logoMark {
-  display: grid;
-  gap: 3px;
-  width: 22px;
-}
-
-.logoMark i {
-  display: block;
-  height: 7px;
-  border-radius: 2px;
-}
-
-.logoMark i:first-child {
-  border: 1.75px solid var(--lime);
-}
-
-.logoMark i:last-child {
-  background: var(--lime);
+  flex: none;
+  color: var(--lime);
 }
 
 .links {
@@ -126,6 +111,10 @@
   white-space: nowrap;
   transition:
     background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    -webkit-backdrop-filter 220ms ease,
+    backdrop-filter 220ms ease,
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -145,17 +134,51 @@
   background: #d6fb77;
 }
 
+/* The hero sits on a photograph, and this pill lands on the brightest part of it --
+   a white cloud. A white-tinted glass with white text disappears there: blurring white
+   gives you white. So the backdrop filter darkens and desaturates what is behind the
+   pill as well as blurring it, which manufactures contrast wherever it happens to sit
+   rather than relying on the photo to supply it. */
 .glass {
+  position: relative;
   height: 48px;
   padding: 14px 28px;
-  background: rgba(18, 40, 53, 0.25);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.72);
   color: #ffffff;
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  font-weight: 500;
+  /* the 0.62 brightness is the whole fix: it pulls the cloud down far enough for white
+     type to read, while blur + saturate keep it looking like glass over sky */
+  -webkit-backdrop-filter: blur(18px) saturate(1.4) brightness(0.62);
+  backdrop-filter: blur(18px) saturate(1.4) brightness(0.62);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 10px 28px rgba(6, 26, 62, 0.3);
+  /* a last line of defence for the glyphs themselves, independent of the backdrop */
+  text-shadow: 0 1px 3px rgba(5, 20, 48, 0.55);
 }
 
 .glass:hover {
-  background: rgba(18, 40, 53, 0.38);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.16));
+  border-color: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5) brightness(0.55);
+  backdrop-filter: blur(18px) saturate(1.5) brightness(0.55);
+}
+
+/* Safari before 18 and Firefox with backdrop-filter disabled get no darkening at all,
+   which is exactly the invisible-button bug. Give them an opaque tinted fill instead. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: linear-gradient(160deg, rgba(9, 32, 72, 0.72), rgba(9, 32, 72, 0.58));
+  }
+
+  .glass:hover {
+    background: linear-gradient(160deg, rgba(9, 32, 72, 0.82), rgba(9, 32, 72, 0.68));
+  }
+}
+
+.glass:focus-visible {
+  outline-color: #ffffff;
 }
 
 .lime {
@@ -230,8 +253,12 @@
 
 .row {
   margin-top: 64px;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%);
+  /* Fixed-pixel stops (not percentages) so the fade band stays a constant width
+     regardless of viewport: at 1440px an 11% stop ate ~79% of the first card's
+     200px width, washing its label out; a constant ~64px keeps every card's
+     text legible past the very edge at every width. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 64px, #000 calc(100% - 64px), transparent 100%);
   overflow: hidden;
 }
 
@@ -353,5 +380,59 @@
   }
   .row {
     margin-top: 44px;
+  }
+  /* Nav: on phones "Open dashboard" at full length left only ~16px next to the
+     logo at 360px wide. Grow both tap targets to 44px and drop to the shorter
+     label so the pill has real breathing room instead of hugging the logo. */
+  .logo {
+    padding: 6px 0;
+    margin: -6px 0;
+  }
+  .navCta {
+    height: 44px;
+    padding: 10px 16px;
+  }
+  .navCtaFull {
+    display: none;
+  }
+}
+
+@media (min-width: 641px) {
+  .navCtaShort {
+    display: none;
+  }
+}
+
+/* Landscape phones (e.g. 844x390) keep the desktop-size headline and spacing
+   at widths above the 640px portrait tier, so the headline + CTAs get pushed
+   past the first ~390px of viewport height. Compact the nav/headline/subtitle/
+   CTA spacing so headline, subtitle and both CTAs sit inside the fold; the
+   drifting card row may start below it. Portrait and desktop are untouched —
+   this only fires on short, wide (landscape) viewports. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .nav {
+    padding: 10px 20px 0;
+  }
+  .content {
+    padding: 14px 24px 0;
+  }
+  .h1 {
+    font-size: 32px;
+    letter-spacing: -0.7px;
+    line-height: 1.1;
+  }
+  .sub {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .actions {
+    margin-top: 14px;
+  }
+  .row {
+    margin-top: 20px;
+  }
+  .proofWrap {
+    margin: 12px 16px 16px;
   }
 }

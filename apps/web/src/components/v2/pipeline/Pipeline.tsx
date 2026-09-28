@@ -157,7 +157,9 @@ export function Pipeline() {
             Follow the demo review of PR #{d.pr} from the webhook to the merge gate: {total.toFixed(1)} seconds, start to finish.
           </p>
         </div>
-        <CarouselButtons trackId={TRACK_ID} label="stage" className={s.nav} buttonClassName={s.navBtn} />
+        {/* buttonClassName is left to its default so both carousels share the
+        exact same arrow-button class from caught.module.css. */}
+        <CarouselButtons trackId={TRACK_ID} label="stage" className={s.nav} />
       </div>
 
       <div id={TRACK_ID} className={s.trackRow} role="region" aria-label="Pipeline stages" tabIndex={0}>
@@ -191,12 +193,12 @@ export function Pipeline() {
                 {String(i + 1).padStart(2, "0")} · {look.name}
               </span>
               <span className={s.play} aria-hidden>
-                <Play size={20} strokeWidth={2} fill="currentColor" />
+                <Play size={16} strokeWidth={2} fill="currentColor" />
               </span>
               <div className={s.caption} aria-hidden>
                 <Icon size={22} strokeWidth={1.8} className={s.capIcon} />
                 <p className={s.quote}>{QUOTES[st.key as Stage]}</p>
-                <p className={s.who}>- {(st.duration_ms / 1000).toFixed(2)}s</p>
+                <p className={s.who}>{(st.duration_ms / 1000).toFixed(2)}s</p>
               </div>
             </Link>
           );

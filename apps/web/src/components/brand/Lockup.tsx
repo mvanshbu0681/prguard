@@ -12,8 +12,7 @@
 //
 // `size` scales A/B/D: "nav" = mark 20 / wordmark 15 / gaps 10 (the spec
 // values); "footer" = the 20px footer wordmark with the mark (28) and gaps (13)
-// in the same proportion — 28 is also where the mark's bar stack (14px) meets
-// the 20px wordmark's cap height (14.3px). Minimum widths hold at both:
+// in the same proportion. Minimum widths hold at both:
 // Lockup A 96px (nav: 108px) · C 32px · mark 16px · wordmark 12px.
 //
 // Clear space (brand-gaps §B) is mark-height ÷ 6 on every side; nothing may
@@ -47,16 +46,16 @@ export interface LockupProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'chil
   tone?: MarkTone;
   /** Pad by the clear-space rule (mark-height ÷ 6). */
   clearSpace?: boolean;
-  /** Accessible name when the lockup is the mark alone (D). Default "PRGuard". */
+  /** Accessible name when the lockup is the mark alone (D). Default "Witness". */
   label?: string;
 }
 
-export function Lockup({ variant = 'A', size = 'nav', tone = 'signal', clearSpace = false, label = 'PRGuard', className, style, ...rest }: LockupProps) {
+export function Lockup({ variant = 'A', size = 'nav', tone = 'signal', clearSpace = false, label = 'Witness', className, style, ...rest }: LockupProps) {
   const dims = variant === 'C' ? LOCKUP_STACKED : LOCKUP_SIZES[size];
   const vars = {
     '--prg-lockup-gap': `${dims.gap}px`,
     '--prg-lockup-rule': `${Math.round(dims.wordmark * GSC_CAP_HEIGHT)}px`,
-    // Lockup B's rail, in em of the wordmark: P's left ink edge to D's right ink edge.
+    // Lockup B's rail, in em of the wordmark: W's left ink edge to the last S's right ink edge.
     ...(variant === 'B' ? { '--prg-rail-start': em(WORDMARK_INK.start), '--prg-rail-width': em(WORDMARK_INK.end - WORDMARK_INK.start) } : null),
     ...(clearSpace ? { padding: `${markClearSpace(dims.mark)}px` } : null),
     ...style,

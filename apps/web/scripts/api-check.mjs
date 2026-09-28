@@ -47,7 +47,7 @@ function firstDifference(a, b) {
 }
 
 process.chdir(web); // openapi-ts.config.ts resolves its paths from web/
-const tmp = mkdtempSync(join(tmpdir(), "prguard-api-check-"));
+const tmp = mkdtempSync(join(tmpdir(), "witness-api-check-"));
 const regeneratedDir = join(tmp, "regenerated");
 let exitCode = 0;
 

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { highlightCode, loadedLanguages } from "@/components/code/shiki/highlighter";
 import { LANGUAGE_LOADERS, resolveLanguage, SUPPORTED_LANGUAGES, extensionOf } from "@/components/code/shiki/languages";
-import { PRGUARD_COLD_THEME, ROLE_TOKEN, roleForColor, SYNTAX_ROLES } from "@/components/code/shiki/theme";
+import { WITNESS_COLD_THEME, ROLE_TOKEN, roleForColor, SYNTAX_ROLES } from "@/components/code/shiki/theme";
 import { normaliseCode, plainLines } from "@/components/code/shiki/tokens";
 
 const LISTED = ["python", "typescript", "tsx", "javascript", "json", "bash", "yaml", "toml", "markdown", "diff"];
@@ -103,10 +103,10 @@ describe("bundle discipline (runtime)", () => {
   });
 });
 
-describe("prguard-cold theme", () => {
+describe("witness-cold theme", () => {
   it("rewrites every role to its token, and maps tokens back to roles", () => {
     for (const role of SYNTAX_ROLES) {
-      expect(Object.values(PRGUARD_COLD_THEME.colorReplacements ?? {})).toContain(ROLE_TOKEN[role]);
+      expect(Object.values(WITNESS_COLD_THEME.colorReplacements ?? {})).toContain(ROLE_TOKEN[role]);
       expect(roleForColor(ROLE_TOKEN[role])).toBe(role);
     }
     expect(ROLE_TOKEN.keyword).toBe("var(--syn-keyword)");
@@ -116,10 +116,10 @@ describe("prguard-cold theme", () => {
   });
 
   it("carries no display colour of its own: every theme colour is a sentinel that gets replaced", () => {
-    const replaced = new Set(Object.keys(PRGUARD_COLD_THEME.colorReplacements ?? {}));
+    const replaced = new Set(Object.keys(WITNESS_COLD_THEME.colorReplacements ?? {}));
     const used = [
-      ...(PRGUARD_COLD_THEME.settings ?? []).flatMap((s) => [s.settings.foreground, s.settings.background]),
-      ...Object.values(PRGUARD_COLD_THEME.colors ?? {}),
+      ...(WITNESS_COLD_THEME.settings ?? []).flatMap((s) => [s.settings.foreground, s.settings.background]),
+      ...Object.values(WITNESS_COLD_THEME.colors ?? {}),
     ].filter(Boolean);
     for (const c of used) expect(replaced.has(String(c).toLowerCase()), String(c)).toBe(true);
   });

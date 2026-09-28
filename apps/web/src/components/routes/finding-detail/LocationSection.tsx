@@ -1,9 +1,9 @@
 // OWNER: d3 (wave 3). §02 — LOCATION (dashboard-blueprint §2.7, brief
 // override): file_path:start_line-end_line, side, language, symbol_path
-// (mono). The blueprint's own sketch puts a <PRGuardDiff> here, but the brief
+// (mono). The blueprint's own sketch puts a <WitnessDiff> here, but the brief
 // is explicit and overrides it: "the API has no source text for the file, so
 // do not invent a code excerpt; the code shown is the repro test
-// (proof.test_code) in a <CodeBlockClient> with its file path." <PRGuardDiff>
+// (proof.test_code) in a <CodeBlockClient> with its file path." <WitnessDiff>
 // needs the file's actual before/after source, which no endpoint in
 // web/openapi/openapi.json serves — rendering it here would mean fabricating
 // source text, which the hard rules forbid outright.

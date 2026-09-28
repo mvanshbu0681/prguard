@@ -360,7 +360,7 @@ def summary_body(record: Any) -> str:
     row = record.row
     seconds = (row.finished_at - row.started_at).total_seconds()
     header = (
-        f"**PRGuard** reviewed `#{record.spec.pr}` in {seconds:.1f}s · "
+        f"**Witness** reviewed `#{record.spec.pr}` in {seconds:.1f}s · "
         f"[full run ↗]({DASHBOARD}/runs/{row.id})"
     )
     counts = tally(record)
@@ -392,7 +392,7 @@ def summary_body(record: Any) -> str:
         table = summary_table(record)
         if table:
             parts.append(table)
-    parts.append("`event: COMMENT` — PRGuard does not approve pull requests.")
+    parts.append("`event: COMMENT` — Witness does not approve pull requests.")
     return "\n\n".join(parts)
 
 

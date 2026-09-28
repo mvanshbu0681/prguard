@@ -28,7 +28,7 @@
     "conclusion": "neutral",
     "reason": "Nothing could be executed in this run, so nothing is claimed or blocked.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -255,12 +255,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#1120` in 28.9s · [full run ↗](https://prguard.acme.internal/runs/82fb1861-c6f2-4846-a2f7-4bad30b9042e)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#1120` in 28.9s · [full run ↗](https://witness.acme.internal/runs/82fb1861-c6f2-4846-a2f7-4bad30b9042e)\n\n**Gate: neutral** — the run degraded before every check completed, so no merge verdict is claimed.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "871cd94a3da3d9d24f5fe4c6eb1f7fcb46982edf",
     "comments": [
       {
         "path": "src/routes/index.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.270`** low\n\nReact Router 7 needs `throw new Response(null, { status: 404 })` for a 404 (line 37); crawlers index the page.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/routes/index.tsx` is not Python.\n\n**Severity `0.270`** — path_sensitivity `0.000` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.045`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4485b777…fcd6` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.270`** low\n\nReact Router 7 needs `throw new Response(null, { status: 404 })` for a 404 (line 37); crawlers index the page.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/routes/index.tsx` is not Python.\n\n**Severity `0.270`** — path_sensitivity `0.000` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.045`, crossing the `0.150` low threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 4485b777…fcd6` · [dismiss with a reason ↗](https://witness.acme.internal/findings/f927e6d7-eba3-4e0d-a9a7-a7e3cd5bffba#suppress)",
         "line": 39,
         "side": "RIGHT",
         "start_line": 37,
@@ -268,7 +268,7 @@
       },
       {
         "path": "src/routes/index.tsx",
-        "body": "**`proof_status: not_applicable`** · severity **`0.485`** medium\n\nReact Router 7 loaders must throw a `Response` for the error boundary to render; `productLoader()` returns `null` on 404 (line 48), and the product page renders nothing.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/routes/index.tsx` is not Python.\n\n**Severity `0.485`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.045`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/ae0db7d0-1a9f-4665-9798-7a5019341648#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 8580b309…306d` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/ae0db7d0-1a9f-4665-9798-7a5019341648#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.485`** medium\n\nReact Router 7 loaders must throw a `Response` for the error boundary to render; `productLoader()` returns `null` on 404 (line 48), and the product page renders nothing.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `src/routes/index.tsx` is not Python.\n\n**Severity `0.485`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.015` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.045`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/ae0db7d0-1a9f-4665-9798-7a5019341648#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 8580b309…306d` · [dismiss with a reason ↗](https://witness.acme.internal/findings/ae0db7d0-1a9f-4665-9798-7a5019341648#suppress)",
         "line": 51,
         "side": "RIGHT",
         "start_line": 48,

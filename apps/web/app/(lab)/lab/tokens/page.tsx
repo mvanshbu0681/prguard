@@ -36,7 +36,7 @@ const TYPE_SAMPLES: Record<string, string> = {
   "type-display-h3": "The score is arithmetic.",
   "type-display-h4": "Rejections stick.",
   "type-label": "/ 05 — Computed severity",
-  "type-lead": "PRGuard executes a test before it claims a bug.",
+  "type-lead": "Witness executes a test before it claims a bug.",
   "type-body": "Every number carries its denominator; no adjective does a measurement's job.",
   "type-small": "12s since last output · 1,284 findings · n = 312",
   "type-micro": "captured 2026-09-19T14:22:07Z",

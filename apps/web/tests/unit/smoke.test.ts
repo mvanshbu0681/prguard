@@ -25,7 +25,7 @@ describe("seed", () => {
     expect(Object.values(SEVERITY_THRESHOLDS)).toEqual([0.15, 0.35, 0.55, 0.75]);
   });
 
-  it("merges PRGuard theme scales in cn()", () => {
+  it("merges Witness theme scales in cn()", () => {
     expect(cn("rounded-md", "rounded-data")).toBe("rounded-data");
     expect(cn("shadow-palette", "shadow-modal")).toBe("shadow-modal");
     expect(cn("ease-snap", "ease-instrument")).toBe("ease-instrument");

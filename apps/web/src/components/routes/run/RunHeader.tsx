@@ -3,7 +3,7 @@
 // PR, head SHA, risk tier, trigger and elapsed — the one panel that never remounts across the
 // live → result transition (plan §2 hard rule "0ms colour flip", read together with the
 // blueprint's "never a route change, never a remount"). Not evidence-bearing (it is page
-// chrome describing where the run's own identity came from, not an artifact PRGuard is
+// chrome describing where the run's own identity came from, not an artifact Witness is
 // proving a claim about), so it gets the ordinary-panel bracket (Surface + IndexStrip +
 // ProvenanceStrip), never <Exhibit>'s registration marks (plan §2 rule 1).
 import type { ReactNode } from "react";

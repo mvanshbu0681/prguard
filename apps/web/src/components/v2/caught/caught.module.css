@@ -7,7 +7,7 @@
 .section {
   --ink: #131313;
   --lime: #cbf857;
-  --slate: #94a3b8;
+  --slate: #5b6472; /* muted copy on white: 5.98:1, shared by every section */
   --gutter: max(64px, calc((100% - 1312px) / 2));
   background: #ffffff;
   color: var(--ink);
@@ -51,6 +51,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* A floor, not the usual spacing: space-between still spreads any extra
+     room, but the pill and the prev/next pair never end up closer than this,
+     even when the row is too narrow to spread them apart on its own. */
+  gap: 10px;
   margin-top: 24px;
 }
 
@@ -76,6 +80,12 @@
   background: #262420;
 }
 
+/* Below ~360px "Browse findings" no longer fits the row next to the prev/next
+   pair on one line; swap to the shorter label instead of letting it wrap. */
+.ctaShort {
+  display: none;
+}
+
 .ctaChip {
   display: grid;
   place-items: center;
@@ -99,8 +109,8 @@
 .navBtn {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -109,7 +119,7 @@
   cursor: pointer;
   transition:
     background-color 200ms ease,
-    opacity 200ms ease;
+    color 200ms ease;
 }
 
 .navBtn:hover:not(:disabled) {
@@ -118,15 +128,27 @@
 
 .navBtn:disabled {
   cursor: default;
-  opacity: 0.4;
+  /* Same circle as the resting state, just a fainter chevron — a plain
+     opacity fade on the whole button used to wash both out to near-white. */
+  background: #f2f2f2;
+  color: rgba(19, 19, 19, 0.45);
 }
 
 .cta:focus-visible,
 .navBtn:focus-visible,
-.card:focus-visible,
-.track:focus-visible {
+.card:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
+}
+
+/* The track is full-bleed to the viewport edge, so a positive outline-offset
+   pushed the ring's left/right edges past the viewport — only the thin
+   top/bottom lines ever showed. Drawing the ring inward keeps all four sides
+   on-screen at every width; a closed 2px rectangle also reads as a focus ring
+   rather than a section rule, which is never more than a 1px straight line. */
+.track:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
 }
 
 /* ---------- the track ---------- */
@@ -174,6 +196,10 @@
   -webkit-line-clamp: 2;
   line-clamp: 2;
   min-height: 52px;
+  /* A finding title can carry an unbroken identifier (a snake_case function
+     name, a "flag=value") wider than the card at narrow widths; without this
+     it overruns the clamped box instead of wrapping onto the next line. */
+  overflow-wrap: anywhere;
 }
 
 .role {
@@ -243,22 +269,7 @@
   height: 24px;
   border-radius: 7px;
   background: #111827;
-}
-
-.bot i {
-  display: block;
-  width: 12px;
-  height: 4px;
-  border-radius: 1.5px;
-}
-
-.bot i:first-child {
-  border: 1.2px solid var(--lime);
-  box-sizing: border-box;
-}
-
-.bot i:last-child {
-  background: var(--lime);
+  color: var(--lime);
 }
 
 .botName {
@@ -311,7 +322,9 @@
   font-family: var(--font-v2-mono), ui-monospace, monospace;
   font-size: 10px;
   letter-spacing: 0.6px;
-  color: rgba(19, 19, 19, 0.5);
+  /* 0.5 measured ~3.5:1 on the white proof card, under the 4.5:1 floor for
+     text this small; 0.62 clears it with a little room. */
+  color: rgba(19, 19, 19, 0.62);
   text-transform: uppercase;
 }
 
@@ -362,7 +375,8 @@
   border-top: 1px solid rgba(19, 19, 19, 0.07);
   font-family: var(--font-v2-mono), ui-monospace, monospace;
   font-size: 10px;
-  color: rgba(19, 19, 19, 0.5);
+  /* Same contrast fix as .scoreLabel: 0.5 read ~3.5:1 on white. */
+  color: rgba(19, 19, 19, 0.62);
 }
 
 /* ---------- card foot ---------- */
@@ -379,7 +393,9 @@
   overflow: hidden;
   font-family: var(--font-v2-mono), ui-monospace, monospace;
   font-size: 12px;
-  color: rgba(19, 19, 19, 0.55);
+  /* 0.55 read ~3.4:1 on the #f0f0f2 card, under the 4.5:1 floor; 0.62
+     clears it (~5:1) and matches the proof card's own muted labels. */
+  color: rgba(19, 19, 19, 0.62);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -456,6 +472,15 @@
   .headRow {
     margin-top: 20px;
   }
+  .cta {
+    /* Reclaim width so the pill and the prev/next pair don't collide at the
+       narrowest widths (measured as low as 1px apart before this). */
+    gap: 10px;
+    padding-left: 20px;
+  }
+  .nav {
+    gap: 6px;
+  }
   .track {
     gap: 12px;
     margin-top: 28px;
@@ -489,5 +514,28 @@
   }
   .where {
     font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Same idea as hero.module.css's .navCtaFull/.navCtaShort: swap to the
+     shorter label instead of wrapping once "Browse findings" no longer fits
+     next to the prev/next pair. */
+  .ctaFull {
+    display: none;
+  }
+  .ctaShort {
+    display: inline;
+  }
+}
+
+@media (max-width: 340px) {
+  /* At 320px the longest demo titles need a fourth line; give every card the
+     room (min-height keeps the cards level) instead of ending a finding title
+     on an ellipsis. */
+  .name {
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    min-height: 92px;
   }
 }

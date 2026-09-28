@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -261,12 +261,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#81` in 28.2s · [full run ↗](https://prguard.acme.internal/runs/9b7c3184-c45f-4ac6-a41b-9f70d6a70564)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#81` in 28.2s · [full run ↗](https://witness.acme.internal/runs/9b7c3184-c45f-4ac6-a41b-9f70d6a70564)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 1 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "ab17d517e9bd8bc520effb973d8f5a75497665f4",
     "comments": [
       {
         "path": "terraform/rds_ledger.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`storage_encrypted` defaults to false for a replica in another region (line 5); the primary is encrypted, and the replica would hold the same data in the clear.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/rds_ledger.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/9aad09f1-8e58-4e17-ae98-90b9bf785fab#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1c348ee9…a300` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/9aad09f1-8e58-4e17-ae98-90b9bf785fab#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`storage_encrypted` defaults to false for a replica in another region (line 5); the primary is encrypted, and the replica would hold the same data in the clear.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/rds_ledger.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/9aad09f1-8e58-4e17-ae98-90b9bf785fab#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 1c348ee9…a300` · [dismiss with a reason ↗](https://witness.acme.internal/findings/9aad09f1-8e58-4e17-ae98-90b9bf785fab#suppress)",
         "line": 8,
         "side": "RIGHT",
         "start_line": 5,
@@ -274,7 +274,7 @@
       },
       {
         "path": "terraform/rds_ledger.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe replica inherits a retention of 0 days (line 10).\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/rds_ledger.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/d5ca1348-bdd6-46a2-9da2-f614c1c1f226#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 106a30e3…b661` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/d5ca1348-bdd6-46a2-9da2-f614c1c1f226#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nThe replica inherits a retention of 0 days (line 10).\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/rds_ledger.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/d5ca1348-bdd6-46a2-9da2-f614c1c1f226#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 106a30e3…b661` · [dismiss with a reason ↗](https://witness.acme.internal/findings/d5ca1348-bdd6-46a2-9da2-f614c1c1f226#suppress)",
         "line": 12,
         "side": "RIGHT",
         "start_line": 10,

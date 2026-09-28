@@ -12,7 +12,7 @@ case "$kind" in
   *) echo "usage: slot.sh <build|browser> <command...>" >&2; exit 2 ;;
 esac
 [ "$#" -gt 0 ] || { echo "slot.sh: no command given" >&2; exit 2; }
-root="${PRGUARD_SLOT_DIR:-${TMPDIR:-/tmp}/prguard-slots}"
+root="${WITNESS_SLOT_DIR:-${TMPDIR:-/tmp}/witness-slots}"
 mkdir -p "$root"
 held=""; waited=0
 while [ -z "$held" ]; do

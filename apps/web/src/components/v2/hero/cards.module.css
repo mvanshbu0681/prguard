@@ -1,5 +1,5 @@
 /* Product cards for the hero row: 200px squares, 20px radius, a 5% hairline,
-   no shadow (otoma8's card), each one a real PRGuard artefact. */
+   no shadow (otoma8's card), each one a real Witness artefact. */
 
 .card {
   --ink: #131313;
@@ -231,20 +231,7 @@
   height: 28px;
   border-radius: 999px;
   background: var(--ink);
-}
-
-.avatar i {
-  display: block;
-  width: 12px;
-  height: 4px;
-  border-radius: 1px;
-  background: var(--lime);
-}
-
-.avatar i:first-child {
-  margin-bottom: 2px;
-  border: 1px solid var(--lime);
-  background: transparent;
+  color: var(--lime);
 }
 
 .name {

@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -65,7 +65,7 @@
   "findings": [],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#63` in 20.5s · [full run ↗](https://prguard.acme.internal/runs/a959fc95-d58d-4616-95a3-4a3fd20d947a)\n\n**Gate: passing** — two specialists reviewed 1 file and raised nothing, so nothing blocks.\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#63` in 20.5s · [full run ↗](https://witness.acme.internal/runs/a959fc95-d58d-4616-95a3-4a3fd20d947a)\n\n**Gate: passing** — two specialists reviewed 1 file and raised nothing, so nothing blocks.\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "da3c61a1b43ac8066523221ae90b328ffbaef572",
     "comments": []
   },

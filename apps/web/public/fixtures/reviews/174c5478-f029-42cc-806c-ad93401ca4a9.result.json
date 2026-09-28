@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "9d68c62e-0722-4fec-94b2-63bdab3d1371"
     ]
@@ -111,7 +111,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_f8ac5f.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/scim/users.py::deprovision_user.\n\nClaim: sessions survive deprovisioning.\n\"\"\"\n\nfrom app.scim.users import live_sessions_after_deprovision\n\n\ndef test_deprovisioned_user_has_no_live_sessions():\n    assert live_sessions_after_deprovision(\"usr_58\") == 0\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/scim/users.py::deprovision_user.\n\nClaim: sessions survive deprovisioning.\n\"\"\"\n\nfrom app.scim.users import live_sessions_after_deprovision\n\n\ndef test_deprovisioned_user_has_no_live_sessions():\n    assert live_sessions_after_deprovision(\"usr_58\") == 0\n",
         "command": "pytest tests/test_repro_f8ac5f.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -237,12 +237,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#229` in 28.8s · [full run ↗](https://prguard.acme.internal/runs/174c5478-f029-42cc-806c-ad93401ca4a9)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#229` in 28.8s · [full run ↗](https://witness.acme.internal/runs/174c5478-f029-42cc-806c-ad93401ca4a9)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 3 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "1e982b1bbfda09e6482095a008e9df1cad64a36f",
     "comments": [
       {
         "path": "app/scim/users.py",
-        "body": "**`proof_status: proven`** · severity **`0.555`** high\n\nSCIM `DELETE` sets `active = False` (line 14) and never calls `revoke_session()`, so a deprovisioned employee keeps working until their access token expires, up to 24 hours later.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `6745d01` | `1 passed in 0.52s` |\n| head | `1e982b1` | `1 failed in 0.50s` |\n\n<details><summary>terminal output at head <code>1e982b1</code></summary>\n\n    E       AssertionError: assert 2 == 0\n    E        +  where 2 = live_sessions_after_deprovision('usr_58')\n    tests/test_repro_f8ac5f.py:10: AssertionError\n    1 failed in 0.50s\n\n</details>\n\n**Severity `0.555`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.010`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/9d68c62e-0722-4fec-94b2-63bdab3d1371#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint ff741063…e99b` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/9d68c62e-0722-4fec-94b2-63bdab3d1371#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.555`** high\n\nSCIM `DELETE` sets `active = False` (line 14) and never calls `revoke_session()`, so a deprovisioned employee keeps working until their access token expires, up to 24 hours later.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `6745d01` | `1 passed in 0.52s` |\n| head | `1e982b1` | `1 failed in 0.50s` |\n\n<details><summary>terminal output at head <code>1e982b1</code></summary>\n\n    E       AssertionError: assert 2 == 0\n    E        +  where 2 = live_sessions_after_deprovision('usr_58')\n    tests/test_repro_f8ac5f.py:10: AssertionError\n    1 failed in 0.50s\n\n</details>\n\n**Severity `0.555`** — path_sensitivity `0.000` + reachability `0.200` + blast_radius `0.045` + coverage_gap `0.150` + proof_confidence `0.150` + churn `0.010`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/9d68c62e-0722-4fec-94b2-63bdab3d1371#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint ff741063…e99b` · [dismiss with a reason ↗](https://witness.acme.internal/findings/9d68c62e-0722-4fec-94b2-63bdab3d1371#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 17,
         "side": "RIGHT",
         "start_line": 14,

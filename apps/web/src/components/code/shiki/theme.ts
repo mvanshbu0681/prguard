@@ -1,4 +1,4 @@
-// OWNER: t1d (wave 1). `prguard-cold`: the Shiki theme, built from the --syn-* tokens.
+// OWNER: t1d (wave 1). `witness-cold`: the Shiki theme, built from the --syn-* tokens.
 //
 // Near-monochrome by design (design §1.12): six roles, no new hues. Never github-dark.
 //   comment  --syn-comment   (the one deliberate sub-floor value; high contrast promotes it)
@@ -125,11 +125,11 @@ const SCOPES: Readonly<Record<SyntaxRole, readonly string[]>> = {
   deleted: ["markup.deleted", "punctuation.definition.deleted"],
 };
 
-export const PRGUARD_COLD_THEME_NAME = "prguard-cold";
+export const WITNESS_COLD_THEME_NAME = "witness-cold";
 
-export const PRGUARD_COLD_THEME: ThemeRegistration = {
-  name: PRGUARD_COLD_THEME_NAME,
-  displayName: "PRGuard Cold",
+export const WITNESS_COLD_THEME: ThemeRegistration = {
+  name: WITNESS_COLD_THEME_NAME,
+  displayName: "Witness Cold",
   type: "dark",
   fg: SENTINEL.plain,
   bg: BACKGROUND_SENTINEL,

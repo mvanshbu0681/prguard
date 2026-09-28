@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "e1e42302-e5f6-495a-b34c-0cf66b441f92"
     ]
@@ -113,7 +113,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_3f3726.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/session.py::refresh_session.\n\nClaim: two concurrent refreshes with one token both succeed.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.auth.session import refresh_session_outcome\n\n\ndef test_one_refresh_token_refreshes_once():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        results = list(pool.map(refresh_session_outcome, [\"rt_9f2c\", \"rt_9f2c\"]))\n    assert sorted(results) == [\"ok\", \"reused\"]\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::refresh_session.\n\nClaim: two concurrent refreshes with one token both succeed.\n\"\"\"\n\nfrom concurrent.futures import ThreadPoolExecutor\n\nfrom app.auth.session import refresh_session_outcome\n\n\ndef test_one_refresh_token_refreshes_once():\n    with ThreadPoolExecutor(max_workers=2) as pool:\n        results = list(pool.map(refresh_session_outcome, [\"rt_9f2c\", \"rt_9f2c\"]))\n    assert sorted(results) == [\"ok\", \"reused\"]\n",
         "command": "pytest tests/test_repro_3f3726.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -188,7 +188,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_b695e3.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/auth/session.py::revoke_session.\n\nClaim: a revoked session can still be refreshed.\n\"\"\"\n\nfrom app.auth.session import refresh_after_revoke\n\n\ndef test_revoked_session_cannot_refresh():\n    assert refresh_after_revoke(\"ses_77ab\") is None\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/auth/session.py::revoke_session.\n\nClaim: a revoked session can still be refreshed.\n\"\"\"\n\nfrom app.auth.session import refresh_after_revoke\n\n\ndef test_revoked_session_cannot_refresh():\n    assert refresh_after_revoke(\"ses_77ab\") is None\n",
         "command": "pytest tests/test_repro_b695e3.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -361,12 +361,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#208` in 38.5s · [full run ↗](https://prguard.acme.internal/runs/8821ff12-c376-47b8-82ee-7efcdaf7e39c)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#208` in 38.5s · [full run ↗](https://witness.acme.internal/runs/8821ff12-c376-47b8-82ee-7efcdaf7e39c)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 5 |\n| dropped at the coordinator | 2 |\n| deduplicated | 1 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 1 |\n| inconclusive / not attempted | 0 |\n\nDelivered: 1 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "5fad0b02f87cbd93cbfedab381238943fba5f268",
     "comments": [
       {
         "path": "app/auth/session.py",
-        "body": "**`proof_status: proven`** · severity **`0.790`** critical\n\nWith rotation on, `revoke_session()` removes the session's current access token (line 44) and not the refresh token issued with it, so a revoked session is back after one refresh.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `72b5f89` | `1 passed in 0.46s` |\n| head | `5fad0b0` | `1 failed in 0.44s` |\n\n<details><summary>terminal output at head <code>5fad0b0</code></summary>\n\n    E       AssertionError: assert 'ses_91d0' is None\n    E        +  where 'ses_91d0' = refresh_after_revoke('ses_77ab')\n    tests/test_repro_b695e3.py:10: AssertionError\n    1 failed in 0.44s\n\n</details>\n\n**Severity `0.790`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.025`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/e1e42302-e5f6-495a-b34c-0cf66b441f92#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing.\n\n`fingerprint 15d84297…1851` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/e1e42302-e5f6-495a-b34c-0cf66b441f92#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.790`** critical\n\nWith rotation on, `revoke_session()` removes the session's current access token (line 44) and not the refresh token issued with it, so a revoked session is back after one refresh.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `72b5f89` | `1 passed in 0.46s` |\n| head | `5fad0b0` | `1 failed in 0.44s` |\n\n<details><summary>terminal output at head <code>5fad0b0</code></summary>\n\n    E       AssertionError: assert 'ses_91d0' is None\n    E        +  where 'ses_91d0' = refresh_after_revoke('ses_77ab')\n    tests/test_repro_b695e3.py:10: AssertionError\n    1 failed in 0.44s\n\n</details>\n\n**Severity `0.790`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.090` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.025`, crossing the `0.750` critical threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/e1e42302-e5f6-495a-b34c-0cf66b441f92#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing.\n\n`fingerprint 15d84297…1851` · [dismiss with a reason ↗](https://witness.acme.internal/findings/e1e42302-e5f6-495a-b34c-0cf66b441f92#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 47,
         "side": "RIGHT",
         "start_line": 44,

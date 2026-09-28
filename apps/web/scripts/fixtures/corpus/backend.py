@@ -76,7 +76,7 @@ TENANT_SLUG = "acme"
 
 #: Self-hosted deployment origin used for the links inside posted reviews. ``.internal`` is
 #: reserved for private use, so the URL cannot collide with anyone's public site.
-PUBLIC_BASE_URL = "https://prguard.acme.internal"
+PUBLIC_BASE_URL = "https://witness.acme.internal"
 
 #: §4.8 defaults, pinned so the corpus never depends on the shell it was generated in.
 SETTINGS = Settings(
@@ -96,7 +96,7 @@ SETTINGS = Settings(
     PROOF_REQUIRE_BASELINE=True,
     PROOF_ALLOW_SUBPROCESS=True,
     NEAREST_LINE_MAX_DISTANCE=10,
-    GATE_CONTEXT_NAME="prguard/merge-gate",
+    GATE_CONTEXT_NAME="witness/merge-gate",
     PUBLIC_BASE_URL=PUBLIC_BASE_URL,
 )
 

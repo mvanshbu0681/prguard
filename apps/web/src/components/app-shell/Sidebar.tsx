@@ -70,7 +70,7 @@ export function Sidebar() {
       )}
     >
       <div className={cn('flex h-12 items-center border-b border-rule-1', collapsed ? 'justify-center px-0' : 'px-4')}>
-        <Link href="/overview" aria-label="PRGuard overview" className="outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal-hi">
+        <Link href="/overview" aria-label="Witness overview" className="outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal-hi">
           <Lockup variant={collapsed ? 'D' : 'A'} size="nav" />
         </Link>
       </div>

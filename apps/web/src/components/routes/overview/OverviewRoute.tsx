@@ -29,7 +29,7 @@ export function OverviewRoute({ weekly }: OverviewRouteProps) {
     <div className="mx-auto flex max-w-[1280px] flex-col gap-8 px-4 py-8 md:px-8">
       <header className="flex flex-col gap-2">
         <p className="type-label text-text-dim">/ overview</p>
-        <h1 className="type-display-h3 text-text-primary">What PRGuard has been proving</h1>
+        <h1 className="type-display-h3 text-text-primary">What Witness has been proving</h1>
         <p className="type-small text-text-body">Every run it has completed, whether the gate held, and how the self-report is trending.</p>
       </header>
 

@@ -26,7 +26,7 @@
     "conclusion": "success",
     "reason": "No finding was both proven by execution and severe enough to block.",
     "delivery": "commit_status",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": []
   },
   "delivery": {
@@ -208,12 +208,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#88` in 18.5s · [full run ↗](https://prguard.acme.internal/runs/42e119e6-d399-41ca-be7b-bea0d261251c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#88` in 18.5s · [full run ↗](https://witness.acme.internal/runs/42e119e6-d399-41ca-be7b-bea0d261251c)\n\n**Gate: passing** — no finding carries a repro test that passes at base and fails at head.\n\n| | |\n|---|---|\n| raised | 2 |\n| dropped at the coordinator | 0 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **0** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 2 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "82265152452e4fac6583bb0542014ad740b7e0b9",
     "comments": [
       {
         "path": "terraform/kms.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`deletion_window_in_days = 7` (line 7) leaves one week to notice a scheduled deletion; the account default is 30.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/kms.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/1da92f3e-1186-4c81-a8a7-cf183275d3e5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 31bd9016…76ed` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/1da92f3e-1186-4c81-a8a7-cf183275d3e5#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\n`deletion_window_in_days = 7` (line 7) leaves one week to notice a scheduled deletion; the account default is 30.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/kms.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/1da92f3e-1186-4c81-a8a7-cf183275d3e5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 31bd9016…76ed` · [dismiss with a reason ↗](https://witness.acme.internal/findings/1da92f3e-1186-4c81-a8a7-cf183275d3e5#suppress)",
         "line": 9,
         "side": "RIGHT",
         "start_line": 7,
@@ -221,7 +221,7 @@
       },
       {
         "path": "terraform/kms.tf",
-        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nAutomatic rotation is off for the replacement key (line 4); the old key had it on.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/kms.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/201d03ab-2499-4637-8f79-69fbf66fc487#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 563715a4…92cb` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/201d03ab-2499-4637-8f79-69fbf66fc487#suppress)",
+        "body": "**`proof_status: not_applicable`** · severity **`0.375`** medium\n\nAutomatic rotation is off for the replacement key (line 4); the old key had it on.\n\n**Proof** — not applicable: the sandbox executes Python repro tests, and `terraform/kms.tf` is not Python.\n\n**Severity `0.375`** — path_sensitivity `0.150` + reachability `0.000` + blast_radius `0.000` + coverage_gap `0.150` + proof_confidence `0.075` + churn `0.000`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/201d03ab-2499-4637-8f79-69fbf66fc487#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 563715a4…92cb` · [dismiss with a reason ↗](https://witness.acme.internal/findings/201d03ab-2499-4637-8f79-69fbf66fc487#suppress)",
         "line": 6,
         "side": "RIGHT",
         "start_line": 4,

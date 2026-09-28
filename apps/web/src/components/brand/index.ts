@@ -1,33 +1,44 @@
-// OWNER: t1a (wave 1). The PRGuard brand: THE BENCH mark, the PRGUARD wordmark,
-// the four lockups and the live-state favicon (docs/design/06-brand-gaps-and-corrections.md §A–§C).
+// The Witness brand: THE WITNESS EYE mark, the WITNESS wordmark, the four
+// lockups and the live-state favicon.
 //
 // Quick reference for consumers:
-//   Nav:        <a href="/"><Lockup variant="A" /></a>           mark 20 · hairline · PRGUARD 15px
+//   Landing:    <TrackingMark size={26} />                        the eye follows the pointer; colour from the parent
+//   Nav:        <a href="/"><Lockup variant="A" /></a>           mark 20 · hairline · WITNESS 15px
 //   Footer:     <Lockup variant="B" size="footer" />             adds the --signal-lo rail (never the nav)
-//   404/print:  <Lockup variant="C" />                           stacked, mark 32 over PRGUARD 15px
-//   Mark only:  <Mark size={24} title="PRGuard" />               size drives the ladder; decorative without title
+//   404/print:  <Lockup variant="C" />                           stacked, mark 32 over WITNESS 15px
+//   Mark only:  <Mark size={24} title="Witness" />               decorative without title
 //   Live tab:   useLiveFavicon(running ? 'running' : gate === 'failure' ? 'blocked' : gate ? 'clear' : null)
-// The mark never animates in the nav, footer or a loading state; `live` is for the favicon.
-// Renderers without CSS variables (OG card, canvas) use BRAND_HEX / FLAT_HEX, test-locked to the tokens.
+// Renderers without CSS variables (OG card, canvas) use BRAND_HEX / FLAT_HEX / WITNESS_HEX, test-locked to the tokens.
 export { Mark, type MarkProps, type MarkTone } from './Mark';
+export { TrackingMark, type TrackingMarkProps } from './TrackingMark';
 export { Wordmark, type WordmarkProps } from './Wordmark';
 export { Lockup, LOCKUP_SIZES, LOCKUP_STACKED, type LockupProps, type LockupSize, type LockupVariant } from './Lockup';
 export {
-  CIRCLE_BAR_WIDTH,
-  MARK_LADDER,
+  circlePath,
+  MARK_ARTBOARD,
+  MARK_FILL,
+  MARK_FORMS,
+  MARK_INK,
+  MARK_LID,
+  MARK_LID_POINTS,
   MARK_MIN,
+  MARK_PUPIL,
+  MARK_PUPIL_TRAVEL,
+  MARK_SMALL_BELOW,
+  MARK_STROKE,
   markClearSpace,
   markForm,
   markGeometry,
   markParts,
-  scaleGeometry,
-  type MarkCrop,
+  markViewBox,
+  TILE_RADIUS,
   type MarkForm,
+  type MarkFrame,
   type MarkGeometry,
   type MarkLiveState,
   type MarkPart,
 } from './geometry';
-export { BRAND_HEX, FLAT_HEX, flattenWhite } from './palette';
+export { BRAND_HEX, FLAT_HEX, WITNESS_HEX, flattenWhite } from './palette';
 export {
   createLiveFavicon,
   HEARTBEAT_PERIOD_MS,

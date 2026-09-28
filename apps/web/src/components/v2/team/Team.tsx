@@ -5,6 +5,7 @@ import { Bug, Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { getAccuracy, getDemoProvenFinding, getFindings } from "@/lib/fixtures";
 import type { Finding } from "@/lib/api-types";
+import { EyeGlyph } from "@/components/brand/EyeGlyph";
 import s from "./team.module.css";
 
 const score = (f: Finding) => f.severity?.score ?? 0;
@@ -175,7 +176,7 @@ export function Team() {
           <article className={`${s.card} ${s.reveal}`}>
             <div className={`${s.stage} ${s.stageTall}`} aria-hidden>
               <div className={s.art}>
-              <div className={`${s.mini} ${s.miniWhite} ${s.tiltA}`} style={{ left: "calc(50% - 236px)", top: 112, width: 244, padding: 14, ["--r" as string]: "-3deg" }}>
+              <div className={`${s.mini} ${s.miniWhite} ${s.tiltA}`} style={{ left: "calc(50% - 216px)", top: 96, width: 244, padding: 14, ["--r" as string]: "-3deg" }}>
                 <div className={s.float}>
                   <span className={s.miniLabel}>Dropped as noise</span>
                   <div className={s.miniSub}>tests and quality suggestions</div>
@@ -192,7 +193,7 @@ export function Team() {
                   </div>
                 </div>
               </div>
-              <div className={`${s.mini} ${s.miniDark} ${s.tiltB}`} style={{ left: "calc(50% - 24px)", top: 26, width: 260, padding: 14, ["--r" as string]: "4deg" }}>
+              <div className={`${s.mini} ${s.miniDark} ${s.tiltB}`} style={{ left: "calc(50% - 40px)", top: 56, width: 260, padding: 14, ["--r" as string]: "4deg" }}>
                 <div className={`${s.float} ${s.float2}`}>
                   <div className={s.codeBar}>
                     <span className={s.dots}>
@@ -222,7 +223,7 @@ export function Team() {
             </div>
             <h3 className={s.title}>Tests &amp; quality</h3>
             <p className={s.desc}>
-              PRGuard writes the repro test itself. Suggestions face the same bar: {noisyDropped.length} of {noisy.length} were dropped as noise before anyone read them.
+              Witness writes the repro test itself. Suggestions face the same bar: {noisyDropped.length} of {noisy.length} were dropped as noise before anyone read them.
             </p>
           </article>
 
@@ -234,8 +235,7 @@ export function Team() {
                 <span key={d} className={s.orbit} style={{ width: d, height: d }} />
               ))}
               <span className={s.core}>
-                <i />
-                <i />
+                <EyeGlyph size={30} />
               </span>
               {PEOPLE.map((p) => (
                 <span key={p.key} className={s.person} style={p.style}>

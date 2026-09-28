@@ -19,15 +19,19 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s — PRGuard",
-    default: "PRGuard — proven, or it doesn't block",
+    template: "%s — Witness",
+    default: "Witness — proven, or it doesn't block",
   },
   description:
     "An AI code reviewer that executes its own claims. Every finding carries a repro test run at your base SHA and your head SHA. Only proven findings can block a merge.",
-  // icon.svg, favicon.ico, apple-icon.png and the OG/Twitter cards are picked up from
-  // app/ by file convention. The Safari pinned-tab mask is not, so it is declared here
-  // (brand-gaps §C; t1a review, minor 2).
-  icons: { other: [{ rel: "mask-icon", url: "/brand/icon-mask.svg", color: "#2ECEDD" }] },
+  // favicon.ico and the OG/Twitter cards are picked up from app/ by file convention.
+  // Declaring `icons` at all drops the icon.svg and apple-icon.png conventions from the
+  // head, so they are listed here with the Safari pinned-tab mask (brand-gaps §C).
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+    other: [{ rel: "mask-icon", url: "/brand/icon-mask.svg", color: "#131313" }],
+  },
 };
 
 export const viewport: Viewport = {

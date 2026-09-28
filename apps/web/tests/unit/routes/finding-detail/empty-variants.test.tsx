@@ -33,10 +33,10 @@ describe("ProofSection — not_attempted empty variant", () => {
 
   it("wraps the bench at 60% opacity rather than rendering an absence", () => {
     const { container } = render(<ProofSection finding={notAttempted} baseSha={null} headSha={null} reviewShort="4e8b1d0" />);
-    expect(screen.getByText("PRGuard did not execute a repro test for this finding.")).toBeInTheDocument();
+    expect(screen.getByText("Witness did not execute a repro test for this finding.")).toBeInTheDocument();
     const dimmed = container.querySelector(".opacity-60");
     expect(dimmed).not.toBeNull();
-    expect(dimmed?.textContent).toContain("PRGuard did not execute a repro test for this finding.");
+    expect(dimmed?.textContent).toContain("Witness did not execute a repro test for this finding.");
   });
 
   it("does not dim the bench for a proof that was attempted", () => {

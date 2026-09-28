@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { getDemoResult } from "@/lib/fixtures";
-import { asReviewPayload, commentAnchor, findProvenComment, ReviewPayloadShapeError, titleCaseEvent, type PRGuardReviewComment } from "@/components/sections/comment/review-payload";
+import { asReviewPayload, commentAnchor, findProvenComment, ReviewPayloadShapeError, titleCaseEvent, type WitnessReviewComment } from "@/components/sections/comment/review-payload";
 
 describe("asReviewPayload — narrows the demo run's real review_payload", () => {
   it("parses the demo run's actual review_payload", () => {
@@ -16,7 +16,7 @@ describe("asReviewPayload — narrows the demo run's real review_payload", () =>
     expect(payload.event).toBe("COMMENT");
     expect(payload.commit_id).toBe(result.pull_request.head_sha);
     expect(payload.comments.length).toBeGreaterThan(0);
-    expect(payload.body).toContain("PRGuard");
+    expect(payload.body).toContain("Witness");
   });
 
   it("throws a ReviewPayloadShapeError, not a silent empty render, on a malformed payload", () => {
@@ -47,17 +47,17 @@ describe("findProvenComment", () => {
 
 describe("commentAnchor — GitHub's own L41-L44 / L44 / bare-path grammar", () => {
   it("renders a range when start_line differs from line", () => {
-    const c: PRGuardReviewComment = { path: "app/billing/charge.py", body: "", line: 44, start_line: 41 };
+    const c: WitnessReviewComment = { path: "app/billing/charge.py", body: "", line: 44, start_line: 41 };
     expect(commentAnchor(c)).toBe("app/billing/charge.py · L41-L44");
   });
 
   it("renders a single line when there is no distinct start_line", () => {
-    const c: PRGuardReviewComment = { path: "app/billing/charge.py", body: "", line: 38 };
+    const c: WitnessReviewComment = { path: "app/billing/charge.py", body: "", line: 38 };
     expect(commentAnchor(c)).toBe("app/billing/charge.py · L38");
   });
 
   it("renders the bare path for a file-level comment", () => {
-    const c: PRGuardReviewComment = { path: "app/api/checkout.py", body: "", subject_type: "file" };
+    const c: WitnessReviewComment = { path: "app/api/checkout.py", body: "", subject_type: "file" };
     expect(commentAnchor(c)).toBe("app/api/checkout.py");
   });
 });

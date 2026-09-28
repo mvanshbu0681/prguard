@@ -26,7 +26,7 @@
     "conclusion": "failure",
     "reason": "1 finding carries a repro test that passes at base and fails at head.",
     "delivery": "check_run",
-    "context_name": "prguard/merge-gate",
+    "context_name": "witness/merge-gate",
     "blocking_finding_ids": [
       "05bdf7f5-34ea-44c6-99da-dd671ce24a40"
     ]
@@ -180,7 +180,7 @@
         "isolation": "isolated",
         "baseline_mode": "compared",
         "test_file_path": "tests/test_repro_78a203.py",
-        "test_code": "\"\"\"Repro for a prguard finding in app/sso/saml.py::_check_conditions.\n\nClaim: a NotBefore ten minutes ahead validates.\n\"\"\"\n\nfrom app.sso.saml import conditions_hold\n\n\ndef test_not_before_ten_minutes_ahead_is_rejected():\n    assert not conditions_hold(600)\n",
+        "test_code": "\"\"\"Repro for a Witness finding in app/sso/saml.py::_check_conditions.\n\nClaim: a NotBefore ten minutes ahead validates.\n\"\"\"\n\nfrom app.sso.saml import conditions_hold\n\n\ndef test_not_before_ten_minutes_ahead_is_rejected():\n    assert not conditions_hold(600)\n",
         "command": "pytest tests/test_repro_78a203.py -q -p no:cacheprovider",
         "base": {
           "exit_code": 0,
@@ -306,12 +306,12 @@
   ],
   "review_payload": {
     "event": "COMMENT",
-    "body": "**PRGuard** reviewed `#214` in 29.9s · [full run ↗](https://prguard.acme.internal/runs/f263bc08-4544-4504-a2f7-78d46f97e985)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — PRGuard does not approve pull requests.",
+    "body": "**Witness** reviewed `#214` in 29.9s · [full run ↗](https://witness.acme.internal/runs/f263bc08-4544-4504-a2f7-78d46f97e985)\n\n**Gate: failing** — 1 finding with `proof_status: proven`.\n\n| | |\n|---|---|\n| raised | 4 |\n| dropped at the coordinator | 2 |\n| deduplicated | 0 |\n| suppressed by an existing rule | 0 |\n| **proven** | **1** |\n| disproven — refuted by execution | 0 |\n| inconclusive / not attempted | 1 |\n\nDelivered: 2 inline at the exact line. **0 silently dropped.**\n\n`event: COMMENT` — Witness does not approve pull requests.",
     "commit_id": "856bff13acef8e3b15ce54d315f2b590d0521ff3",
     "comments": [
       {
         "path": "app/sso/saml.py",
-        "body": "**`proof_status: not_attempted`** · severity **`0.460`** medium\n\nAudience URIs are compared after `.lower()` (line 63); SAML treats them as case-sensitive strings.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.460`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/43fb9707-7cf0-428f-8da8-db2335d34fa5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 74905574…6285` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/43fb9707-7cf0-428f-8da8-db2335d34fa5#suppress)",
+        "body": "**`proof_status: not_attempted`** · severity **`0.460`** medium\n\nAudience URIs are compared after `.lower()` (line 63); SAML treats them as case-sensitive strings.\n\n**Proof** — not attempted: a `maintainability` finding is not one a test can settle.\n\n**Severity `0.460`** — path_sensitivity `0.250` + reachability `0.100` + blast_radius `0.015` + coverage_gap `0.000` + proof_confidence `0.075` + churn `0.020`, crossing the `0.350` medium threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/43fb9707-7cf0-428f-8da8-db2335d34fa5#severity)\n\nOnly proven findings can block a merge. Everything else is a comment.\n\n`fingerprint 74905574…6285` · [dismiss with a reason ↗](https://witness.acme.internal/findings/43fb9707-7cf0-428f-8da8-db2335d34fa5#suppress)",
         "line": 65,
         "side": "RIGHT",
         "start_line": 63,
@@ -319,7 +319,7 @@
       },
       {
         "path": "app/sso/saml.py",
-        "body": "**`proof_status: proven`** · severity **`0.725`** high\n\nThe skew allowance is applied to both `NotBefore` and `NotOnOrAfter` with the same sign (line 32), so an assertion whose `NotBefore` is ten minutes ahead validates now. The IdP's own clocks are within 30 seconds.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `8fad7a7` | `1 passed in 0.38s` |\n| head | `856bff1` | `1 failed in 0.37s` |\n\n<details><summary>terminal output at head <code>856bff1</code></summary>\n\n    E       assert not True\n    E        +  where True = conditions_hold(600)\n    tests/test_repro_78a203.py:10: AssertionError\n    1 failed in 0.37s\n\n</details>\n\n**Severity `0.725`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.020`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://prguard.acme.internal/findings/05bdf7f5-34ea-44c6-99da-dd671ce24a40#severity)\n\nThis finding has `proof_status: proven`, so the `prguard/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 10104a74…81ea` · [dismiss with a reason ↗](https://prguard.acme.internal/findings/05bdf7f5-34ea-44c6-99da-dd671ce24a40#suppress) · [how often we're wrong ↗](https://prguard.acme.internal/accuracy)",
+        "body": "**`proof_status: proven`** · severity **`0.725`** high\n\nThe skew allowance is applied to both `NotBefore` and `NotOnOrAfter` with the same sign (line 32), so an assertion whose `NotBefore` is ten minutes ahead validates now. The IdP's own clocks are within 30 seconds.\n\n**Proof** — a repro test was generated and executed in a sandbox at both SHAs:\n\n| | SHA | result |\n|---|---|---|\n| base | `8fad7a7` | `1 passed in 0.38s` |\n| head | `856bff1` | `1 failed in 0.37s` |\n\n<details><summary>terminal output at head <code>856bff1</code></summary>\n\n    E       assert not True\n    E        +  where True = conditions_hold(600)\n    tests/test_repro_78a203.py:10: AssertionError\n    1 failed in 0.37s\n\n</details>\n\n**Severity `0.725`** — path_sensitivity `0.250` + reachability `0.200` + blast_radius `0.030` + coverage_gap `0.075` + proof_confidence `0.150` + churn `0.020`, crossing the `0.550` high threshold.\n[inputs and weights ↗](https://witness.acme.internal/findings/05bdf7f5-34ea-44c6-99da-dd671ce24a40#severity)\n\nThis finding has `proof_status: proven`, so the `witness/merge-gate` check is failing. One other finding in this review is advisory and do not block.\n\n`fingerprint 10104a74…81ea` · [dismiss with a reason ↗](https://witness.acme.internal/findings/05bdf7f5-34ea-44c6-99da-dd671ce24a40#suppress) · [how often we're wrong ↗](https://witness.acme.internal/accuracy)",
         "line": 35,
         "side": "RIGHT",
         "start_line": 32,
