@@ -1,1 +1,3 @@
-# Witness web — OWNER: t11 (wave 4). Stub from T0 — replace entirely.
+# web
+
+The marketing website. `npm install && npm run dev`.
