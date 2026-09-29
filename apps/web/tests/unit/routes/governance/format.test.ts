@@ -59,3 +59,30 @@ describe("ledgerState (re-exported from @/lib/fixture-query)", () => {
     expect(ledgerState(SUPPRESSIONS[0]!, Date.now())).toBe("active");
   });
 });
+
+describe("scope, expiry and hash helpers", () => {
+  it("orders scopes by reach, one finding (1) to every repository (5)", async () => {
+    const { scopeLevel, SCOPE_ORDER } = await import("@/components/routes/suppressions/format");
+    expect(SCOPE_ORDER.map(scopeLevel)).toEqual([1, 2, 3, 4, 5]);
+    expect(scopeLevel("tenant")).toBe(5);
+  });
+  it("counts whole days to an expiry, negative once passed, null when open-ended", async () => {
+    const { daysUntil } = await import("@/components/routes/suppressions/format");
+    const now = Date.parse("2026-09-23T12:00:00Z");
+    expect(daysUntil("2026-10-15T00:00:00Z", now)).toBe(22);
+    expect(daysUntil("2026-09-10T00:00:00Z", now)).toBe(-13);
+    expect(daysUntil(null, now)).toBeNull();
+  });
+  it("prints a compact countdown: days under 60, then weeks, then months", async () => {
+    const { compactDays } = await import("@/components/routes/suppressions/format");
+    expect(compactDays(22)).toBe("22d");
+    expect(compactDays(63)).toBe("9w");
+    expect(compactDays(200)).toBe("7mo");
+  });
+  it("abbreviates a 64-hex hash as first 8 … last 4, and leaves short strings whole", async () => {
+    const { shortHash } = await import("@/components/routes/suppressions/format");
+    expect(shortHash("70f2459184df78fcdcbae1df66c153908fbaa353d9d8658c11b4b31d5d67333d")).toBe("70f24591…333d");
+    expect(shortHash("abc")).toBe("abc");
+    expect(shortHash(null)).toBe("—");
+  });
+});

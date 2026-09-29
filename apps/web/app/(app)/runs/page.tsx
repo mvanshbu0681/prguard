@@ -1,11 +1,19 @@
-// OWNER: t9a (wave 2). Plan A3: `/runs` (the list) is not built for the beta —
-// only `/runs/:id` is (another track owns that dynamic route; this file is the
-// bare `/runs`, listed as a known-but-unbuilt path).
+// /runs — the review history. A thin server page: the list itself is read live on
+// the client (useReviewList). The only server-side input is the demo run's id, so
+// "Watch a live review" can replay it (the fixture resolver's ?replay=1 flag).
 import type { Metadata } from 'next';
-import { BetaNotFound } from '@/components/app-shell';
+import { Suspense } from 'react';
+import { RunsListView } from '@/components/routes/runs-list/RunsListView';
+import { FIXTURES } from '@/lib/env';
+import { getManifest } from '@/lib/fixtures';
 
-export const metadata: Metadata = { title: 'Runs' };
+export const metadata: Metadata = { title: 'Reviews' };
 
 export default function Page() {
-  return <BetaNotFound route="/runs" />;
+  const replayHref = FIXTURES ? `/runs/${getManifest().ids.demo_review_id}?replay=1` : undefined;
+  return (
+    <Suspense fallback={null}>
+      <RunsListView replayHref={replayHref} />
+    </Suspense>
+  );
 }

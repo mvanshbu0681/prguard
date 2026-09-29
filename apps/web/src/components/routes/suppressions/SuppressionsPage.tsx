@@ -1,219 +1,271 @@
 "use client";
-// OWNER: d4 (wave 3). /suppressions — the suppression ledger (dashboard-blueprint §2.8;
-// plan A8). A list, not a fixed-row table: the reason is printed in full ("never
-// truncated to meaninglessness"), so a row's height follows its own content instead of
-// the dashboard's usual 32/26px table row (design §0.2's density applies to the
-// metadata line, not the reason). Filters live in the URL (useSuppressionFilters,
-// t2a) so the view is a shareable link, including the ?fingerprint= deep link a
-// finding's detail page sends here.
+// /suppressions — the governance ledger. A suppression is the governed way a person
+// tells Witness "don't raise this again": it names a scope, a reason and an author,
+// may expire, and revoking it is itself recorded. The page answers two jobs:
+//   1. posture (the bento): how much is silenced, why, how widely, by whom, and
+//      what is open-ended — so a lead can see whether silencing is healthy;
+//   2. the ledger: every row, newest first, with the finding it silenced, its
+//      exact target, the reason in full, and a link to its seq on the audit chain.
 //
-// `SuppressionItem` (components.schemas, via @/lib/api-types) carries no fingerprint
-// field — only the ledger's cross-reference (src/lib/fixture-query.ts, resolver-side)
-// knows which fingerprints a row matches, so `?fingerprint=` still filters the server
-// response correctly even though no column can print it per row (raised: props.ts's
-// SuppressionItem should probably grow a fingerprint field so the deep link's target
-// row is identifiable on screen, not just present in a filtered result).
-import { useState } from "react";
-import { useCompactRowsToggle, EmptyState, ErrorState, LoadingState, useListKeys } from "@/components/app-shell";
-import { IndexStrip, ProvenanceStrip, Surface } from "@/components/chrome";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { SUPPRESSION_SCOPES, type SuppressionScope } from "@/lib/contracts";
-import { useSuppressionFilters, useSuppressions } from "@/lib/hooks";
-import { cn } from "@/lib/utils";
-import { LedgerStateChip } from "./LedgerStateChip";
-import { RevokeDialog } from "./RevokeDialog";
-import { formatRelativeDay, formatUtcDate, formatUtcStamp, ledgerState, matchLabel, shortSuppressionId } from "./format";
+// Filters live in the URL so a view is a shareable link. `repository`, `scope`,
+// `active` and `fingerprint` are the API's own (useSuppressionFilters — the
+// findings page deep-links here with ?fingerprint=); `state` (expired | revoked)
+// and `q` (free-text search) are this page's refinements on top, applied client-side.
+import { ChevronDown, FolderGit2, Link2, Search, ShieldCheck, X } from "lucide-react";
+import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { useMemo, useState } from "react";
+import { ErrorState, LoadingState } from "@/components/app-shell";
+import { CORPUS_NOW } from "@/components/dash/format";
+import { Button, EmptyState, Page, PageHeader, Rise, SectionHeader, Segmented, Skeleton, TextField } from "@/components/dash/kit";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { SuppressionScope } from "@/lib/contracts";
+import { FIXTURES } from "@/lib/env";
+import { useAudit, useFindings, useReviewList, useSuppressionFilters, useSuppressions } from "@/lib/hooks";
+import { SCOPE_LABEL, SCOPE_ORDER, shortHash } from "./format";
+import { buildEntries, findingsBySuppression, indexAudit, matchesSearch, summarize, type AuditIndex } from "./ledger-model";
+import { LedgerEntryCard } from "./LedgerEntryCard";
+import { LedgerSummary } from "./LedgerSummary";
+import s from "./suppressions.module.css";
 
-const ALL_SCOPE = "__all__";
+type StateView = "active" | "expired" | "revoked" | "all";
+const REFINED_STATES = ["expired", "revoked"] as const;
+const ANY_REPO = "__any__";
 
-function TotalsMeta({ active, expired, revoked }: { active: number; expired: number; revoked: number }) {
-  return (
-    <p className="type-data text-text-dim">
-      {active.toLocaleString("en-US")} active · {expired.toLocaleString("en-US")} expired · {revoked.toLocaleString("en-US")} revoked
-    </p>
-  );
+function repoString(r: { owner: string; name: string }): string {
+  return `${r.owner}/${r.name}`;
 }
 
 export function SuppressionsPage() {
   const [filters, setFilters] = useSuppressionFilters();
-  const [compact] = useCompactRowsToggle();
-  // Computed once, at mount: a state (active vs. expired) only actually changes when
-  // the ledger refetches (a revoke, a filter change), so there is no need to re-derive
-  // it every render — and Date.now() called directly during render is impure
-  // (react-hooks/purity), same as OfflineBanner's own now/setNow (src/components/app-shell).
-  const [nowMs] = useState(() => Date.now());
-  const query = useSuppressions({
+  const [refined, setRefined] = useQueryState("state", parseAsStringLiteral(REFINED_STATES));
+  const [search, setSearch] = useQueryState("q", parseAsString.withDefault(""));
+  // Relative times read from the corpus's frozen instant in fixture mode (the kit's
+  // CORPUS_NOW), so "expires in 22d" never drifts as the wall clock passes. Taken
+  // once, at mount: Date.now() during render is impure.
+  const [nowMs] = useState(() => (FIXTURES ? CORPUS_NOW : Date.now()));
+
+  const view: StateView = filters.active ? "active" : (refined ?? "all");
+
+  // The ledger in scope. Active-only is the API's own default and stays server-side;
+  // any other view reads every row in scope and refines by state here.
+  const ledger = useSuppressions({
     scope: filters.scope,
     repository: filters.repository,
-    active: filters.active,
     fingerprint: filters.fingerprint,
+    active: filters.active,
     limit: 100,
   });
+  // The whole ledger, unfiltered, for the posture summary (shares a cache entry with
+  // `ledger` whenever no filter is set).
+  const overview = useSuppressions({ active: false, limit: 100 });
+  const findings = useFindings({ status: "suppressed", limit: 200 });
+  const reviews = useReviewList({ limit: 200 });
+  const created = useAudit({ event_type: "suppression.created" });
+  const revoked = useAudit({ event_type: "suppression.revoked" });
+  const breakGlass = useAudit({ event_type: "override.break_glass" });
 
-  const items = query.data?.items ?? [];
-  const totals = query.data?.totals ?? { active: 0, expired: 0, revoked: 0 };
-  const { gridProps, rowProps } = useListKeys({ count: items.length });
+  const joins = useMemo(() => {
+    const repoByReview = new Map((reviews.data?.items ?? []).map((r) => [r.review_id, repoString(r.repository)]));
+    const audit: AuditIndex = indexAudit([...(created.data?.items ?? []), ...(revoked.data?.items ?? []), ...(breakGlass.data?.items ?? [])]);
+    return { findings: findingsBySuppression(findings.data?.items ?? []), repoByReview, audit };
+  }, [reviews.data, created.data, revoked.data, breakGlass.data, findings.data]);
 
-  const filtersActive = Boolean(filters.scope || filters.repository || filters.fingerprint || !filters.active);
+  const allEntries = useMemo(() => buildEntries(overview.data?.items ?? [], nowMs, joins), [overview.data, nowMs, joins]);
+  const summary = useMemo(() => summarize(allEntries, nowMs), [allEntries, nowMs]);
+  const entries = useMemo(() => buildEntries(ledger.data?.items ?? [], nowMs, joins), [ledger.data, nowMs, joins]);
+  const rows = useMemo(
+    () => entries.filter((e) => (view === "all" || view === "active" ? true : e.state === view)).filter((e) => matchesSearch(e, search)),
+    [entries, view, search],
+  );
+
+  const repositories = useMemo(() => {
+    const set = new Set<string>();
+    for (const e of allEntries) if (e.repository) set.add(e.repository);
+    if (filters.repository) set.add(filters.repository);
+    return [...set].sort();
+  }, [allEntries, filters.repository]);
+
+  const totals = ledger.data?.totals ?? { active: 0, expired: 0, revoked: 0 };
+  const counts = { active: totals.active ?? 0, expired: totals.expired ?? 0, revoked: totals.revoked ?? 0 };
+  const filtersActive = Boolean(filters.scope || filters.repository || filters.fingerprint || view !== "active" || search);
+
+  function setView(next: StateView) {
+    void setFilters({ active: next === "active" });
+    void setRefined(next === "expired" || next === "revoked" ? next : null);
+  }
+
+  function setScope(scope: SuppressionScope | null) {
+    void setFilters({ scope });
+  }
 
   function clearFilters() {
     void setFilters({ scope: null, repository: null, active: true, fingerprint: null });
+    void setRefined(null);
+    void setSearch(null);
   }
 
-  return (
-    <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
-      <p className="type-label text-text-dim">/suppressions</p>
-      <h1 className="mt-2 type-display-h3 text-text-primary">Suppression ledger</h1>
-      <p className="mt-2 max-w-(--measure-body) type-body text-text-body">
-        Only proven findings can block a merge. Everything else is a comment. A suppression records why a finding was set aside; revoking one does not remove it from this record.
-      </p>
+  const silenced = overview.data ? summary.silenced : null;
 
-      <Surface elevation={2} variant="panel" as="section" className="mt-6" aria-labelledby="suppressions-strip">
-        <IndexStrip
-          index="01"
-          category="Suppression ledger"
-          identifier={`${((totals.active ?? 0) + (totals.expired ?? 0) + (totals.revoked ?? 0)).toLocaleString("en-US")} entries in scope`}
-          meta={<TotalsMeta active={totals.active ?? 0} expired={totals.expired ?? 0} revoked={totals.revoked ?? 0} />}
-          labelId="suppressions-strip"
+  return (
+    <Page>
+      <PageHeader
+        eyebrow="Governance"
+        title={silenced === null ? "Suppressions," : `${silenced.toLocaleString("en-US")} findings silenced to date,`}
+        soft="every one on the record."
+        description={
+          overview.data
+            ? `${summary.active.toLocaleString("en-US")} active ${summary.active === 1 ? "suppression" : "suppressions"} still silence ${summary.silencedNow.toLocaleString("en-US")} of them; the other ${(summary.silenced - summary.silencedNow).toLocaleString("en-US")} fell under rules since expired or revoked.`
+            : "Where, why and who, for everything Witness was told to stop raising."
+        }
+        actions={
+          <Button variant="outline" icon={Link2} href="/audit?kind=suppressions">
+            Audit trail
+          </Button>
+        }
+      />
+
+      <Rise delay={60}>
+        {overview.isPending ? (
+          <div className={s.bento} aria-hidden>
+            <Skeleton className={s.bentoHero} style={{ minHeight: 360, borderRadius: 20 }} />
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} style={{ minHeight: 172, borderRadius: 20 }} />
+            ))}
+          </div>
+        ) : overview.isError ? null : (
+          <LedgerSummary
+            summary={summary}
+            nowMs={nowMs}
+            scope={filters.scope}
+            onScope={setScope}
+            onReviewSecurity={() => {
+              setView("active");
+              void setSearch("security");
+            }}
+          />
+        )}
+      </Rise>
+
+      <Rise delay={120} as="section" className={s.ledgerSection}>
+        <SectionHeader
+          id="ledger-title"
+          title="The ledger"
+          description="Newest first. Revoking never deletes a row; it adds one to the audit chain."
         />
 
-        <div className="flex flex-wrap items-end gap-3 border-b border-rule-1 px-3 py-3">
-          <label className="flex flex-col gap-1">
-            <span className="type-label text-text-dim">State</span>
-            <ToggleGroup
-              type="single"
-              value={filters.active ? "active" : "all"}
-              onValueChange={(v) => v && void setFilters({ active: v === "active" })}
-              aria-label="Ledger state filter"
-            >
-              <ToggleGroupItem value="active">ACTIVE ONLY</ToggleGroupItem>
-              <ToggleGroupItem value="all">ALL ROWS</ToggleGroupItem>
-            </ToggleGroup>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="type-label text-text-dim">Scope</span>
-            <Select value={filters.scope ?? ALL_SCOPE} onValueChange={(v) => void setFilters({ scope: v === ALL_SCOPE ? null : (v as SuppressionScope) })}>
-              <SelectTrigger className="w-40" aria-label="Scope">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_SCOPE}>All scopes</SelectItem>
-                {SUPPRESSION_SCOPES.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="type-label text-text-dim">Repository</span>
-            <Input
-              value={filters.repository ?? ""}
-              onChange={(e) => void setFilters({ repository: e.target.value || null })}
-              placeholder="owner/name"
-              mono
-              className="w-48"
+        <div className={s.toolbar}>
+          <Segmented<StateView>
+            label="Ledger state"
+            value={view}
+            onChange={setView}
+            options={[
+              { value: "active", label: "Active", count: counts.active },
+              { value: "expired", label: "Expired", count: counts.expired },
+              { value: "revoked", label: "Revoked", count: counts.revoked },
+              { value: "all", label: "All", count: counts.active + counts.expired + counts.revoked },
+            ]}
+          />
+          <Segmented<SuppressionScope | "any">
+            label="Scope"
+            size="sm"
+            value={filters.scope ?? "any"}
+            onChange={(v) => setScope(v === "any" ? null : v)}
+            className={s.scopeSeg}
+            options={[{ value: "any", label: "Any scope" }, ...SCOPE_ORDER.map((k) => ({ value: k, label: SCOPE_LABEL[k] }))]}
+          />
+          <div className={s.toolbarEnd}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" icon={FolderGit2} className={s.repoTrigger} aria-label={`Repository: ${filters.repository ?? "all repositories"}`}>
+                  <span className={s.repoTriggerLabel}>{filters.repository ?? "All repos"}</span>
+                  <ChevronDown size={14} strokeWidth={2} aria-hidden />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className={s.repoMenu}>
+                <DropdownMenuLabel>Repository</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={filters.repository ?? ANY_REPO} onValueChange={(v) => void setFilters({ repository: v === ANY_REPO ? null : v })}>
+                  <DropdownMenuRadioItem value={ANY_REPO}>All repositories</DropdownMenuRadioItem>
+                  <DropdownMenuSeparator />
+                  {repositories.map((r) => (
+                    <DropdownMenuRadioItem key={r} value={r} className={s.mono}>
+                      {r}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <TextField
+              size="sm"
+              icon={Search}
+              type="search"
+              aria-label="Search the ledger"
+              placeholder="Search the ledger"
+              value={search}
+              onChange={(e) => void setSearch(e.target.value || null)}
+              wrapperClassName={s.search}
             />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="type-label text-text-dim">Fingerprint</span>
-            <Input
-              value={filters.fingerprint ?? ""}
-              onChange={(e) => void setFilters({ fingerprint: e.target.value || null })}
-              placeholder="a91f3c2e…"
-              mono
-              className="w-44"
-            />
-          </label>
-
-          {filtersActive ? (
-            <button type="button" onClick={clearFilters} className="type-label text-text-dim underline decoration-dotted hover:text-text-body">
-              CLEAR FILTERS
-            </button>
-          ) : null}
+          </div>
         </div>
 
-        {query.isPending ? (
-          <div className="px-3 py-2">
-            <LoadingState rows={6} density={compact ? "compact" : "full"} label="Loading the suppression ledger." />
+        {filtersActive ? (
+          <div className={s.chips}>
+            {filters.fingerprint ? (
+              <span className={s.chip} title={filters.fingerprint}>
+                <span className={s.chipKey}>Fingerprint</span>
+                <code>{shortHash(filters.fingerprint)}</code>
+                <button type="button" className={s.chipX} aria-label="Remove the fingerprint filter" onClick={() => void setFilters({ fingerprint: null })}>
+                  <X size={12} strokeWidth={2.2} aria-hidden />
+                </button>
+              </span>
+            ) : null}
+            <span className={s.chipsCount} role="status">
+              {ledger.isSuccess ? `${rows.length.toLocaleString("en-US")} of ${(counts.active + counts.expired + counts.revoked).toLocaleString("en-US")} in scope` : ""}
+            </span>
+            <Button variant="ghost" size="sm" onClick={clearFilters} icon={X}>
+              Clear filters
+            </Button>
           </div>
-        ) : query.isError ? (
-          <div className="px-3 py-4">
-            <ErrorState error={query.error} onRetry={() => query.refetch()} />
-          </div>
-        ) : items.length === 0 ? (
-          <div className="px-3">
+        ) : null}
+
+        {ledger.isPending ? (
+          <LoadingState rows={5} label="Loading the suppression ledger." />
+        ) : ledger.isError ? (
+          <ErrorState error={ledger.error} onRetry={() => ledger.refetch()} />
+        ) : rows.length === 0 ? (
+          <div className={s.emptyWrap}>
             <EmptyState
-              message={
+              icon={ShieldCheck}
+              title={filtersActive ? "Nothing silenced here" : "Nothing silenced yet"}
+              body={
                 filtersActive
-                  ? "No suppressions match this filter. Every finding Witness has raised outside it is still on the record."
+                  ? "No suppression matches these filters. Every finding outside them is still raised."
                   : "No suppressions. Every finding Witness has raised is still on the record."
               }
-              actions={filtersActive ? [{ label: "Clear filters", onClick: clearFilters }] : []}
+              action={
+                filtersActive ? (
+                  <Button variant="outline" size="sm" onClick={clearFilters}>
+                    Clear filters
+                  </Button>
+                ) : null
+              }
             />
           </div>
         ) : (
-          <ol {...gridProps} className="m-0 list-none p-0" aria-label="Suppression ledger rows">
-            {items.map((item, i) => {
-              const state = ledgerState(item, nowMs);
-              return (
-                <li
-                  key={item.suppression_id}
-                  {...rowProps(i)}
-                  data-ledger-row={state}
-                  className={cn(
-                    "border-b border-rule-hair px-3 py-3 outline-none last:border-b-0 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-signal-hi",
-                    state === "revoked" && "opacity-45",
-                  )}
-                >
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <LedgerStateChip state={state} />
-                    <span className="type-data tabular text-text-dim" title={item.suppression_id}>
-                      sup_{shortSuppressionId(item.suppression_id)}
-                    </span>
-                    <time dateTime={item.created_at} className="type-data tabular text-text-dim">
-                      {formatUtcStamp(item.created_at)}
-                    </time>
-                    <span className="type-data text-text-body">{item.created_by ?? "system"}</span>
-                    <Badge variant="outline">scope={item.scope}</Badge>
-                    {item.category ? <Badge variant="outline">{item.category}</Badge> : null}
-                  </div>
-
-                  <p className={cn("mt-1.5 max-w-(--measure-body) type-body text-text-body", state === "revoked" && "line-through decoration-1")}>
-                    &ldquo;{item.reason}&rdquo;
-                  </p>
-
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 type-data text-text-dim">
-                    <span className="min-w-0 truncate" title={matchLabel(item)}>
-                      matches {matchLabel(item)}
-                    </span>
-                    <span>{item.expires_at ? `expires ${formatUtcDate(item.expires_at)}` : "no expiry"}</span>
-                    <span>suppressed {(item.suppressed_count ?? 0).toLocaleString("en-US")} findings</span>
-                    <span>{item.last_matched_at ? `last matched ${formatRelativeDay(item.last_matched_at)}` : "never matched"}</span>
-                    <span>{item.source === "auto_convention" ? "auto convention" : "human via API"}</span>
-                    <span className="ml-auto flex items-center gap-3">
-                      {state === "active" ? (
-                        <RevokeDialog suppression={item} />
-                      ) : state === "revoked" && item.revoked_at ? (
-                        <span className="type-label text-text-dim">revoked {formatUtcDate(item.revoked_at)}</span>
-                      ) : null}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
+          <ol className={s.list} aria-labelledby="ledger-title">
+            {rows.map((entry) => (
+              <LedgerEntryCard key={entry.item.suppression_id} entry={entry} nowMs={nowMs} showState={view === "all"} />
+            ))}
           </ol>
         )}
-
-        <ProvenanceStrip source="GET /v1/suppressions" />
-      </Surface>
-    </div>
+      </Rise>
+    </Page>
   );
 }

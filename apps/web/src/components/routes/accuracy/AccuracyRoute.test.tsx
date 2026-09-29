@@ -31,13 +31,49 @@ vi.mock("@/lib/hooks", () => ({
     isPending: false,
     isError: false,
   }),
+  auditHref: (path: string) => path,
 }));
 
 const { AccuracyRoute } = await import("./AccuracyRoute");
+const { corpusFromFixtures, windowedAccuracy } = await import("./corpus-window");
+const fx = {
+  reviews: (await import("@fixtures/reviews/index.json")).default as unknown as { items: never[] },
+  findings: (await import("@fixtures/findings/index.json")).default as unknown as { items: never[] },
+  audit: (await import("@fixtures/audit/events.json")).default as unknown as { items: never[] },
+  report: (await import("@fixtures/accuracy/report.json")).default as unknown as AccuracyReport,
+};
+const CORPUS = corpusFromFixtures({ reviews: fx.reviews.items, findings: fx.findings.items, audit: fx.audit.items, report: fx.report });
 
 const EMPTY_SERIES = { weekly: [], dismissal_by_category: [], calibration: [], raw_counts: {} };
 
+describe("AccuracyRoute — the numbers on screen are the report's", () => {
+  it("writes the headline from the counts and shows each proxy's value, n and interval", () => {
+    render(<AccuracyRoute series={EMPTY_SERIES} />, { wrapper: withNuqsTestingAdapter() });
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("312 bugs proven by execution, and 75 of its own claims refuted first.");
+    // All four proxies render the backend's rounded value, with n in plain words and a 95% interval.
+    expect(screen.getAllByText("0.910")).toHaveLength(4);
+    expect(screen.getByText(/284 of 312 executed, published findings held up/)).toBeInTheDocument();
+    expect(screen.getAllByText(/95% interval 0\.\d{3}–0\.\d{3}/).length).toBeGreaterThanOrEqual(4);
+    // The API's own definitions are one disclosure away, verbatim.
+    expect(screen.getByText("How these are computed")).toBeInTheDocument();
+    // The gate: 3 red of 76 verdicts.
+    expect(screen.getByText(/of 76 gates held a merge/)).toBeInTheDocument();
+  });
+});
+
 describe("AccuracyRoute — the window filter lives in the URL", () => {
+  it("a preset writes a whole-day since from the corpus's frozen now, and leaves until open", async () => {
+    const onUrlUpdate = vi.fn();
+    render(<AccuracyRoute series={EMPTY_SERIES} />, { wrapper: withNuqsTestingAdapter({ onUrlUpdate, hasMemory: true }) });
+
+    fireEvent.click(screen.getByRole("button", { name: "7 days" }));
+
+    await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
+    const last = onUrlUpdate.mock.calls.at(-1)![0] as { searchParams: URLSearchParams };
+    expect(last.searchParams.get("since")).toBe("2026-09-16");
+    expect(last.searchParams.get("until")).toBeNull();
+  });
+
   it("setting Since pushes ?since=… into the URL", async () => {
     const onUrlUpdate = vi.fn();
     render(<AccuracyRoute series={EMPTY_SERIES} />, { wrapper: withNuqsTestingAdapter({ onUrlUpdate, hasMemory: true }) });
@@ -71,17 +107,47 @@ describe("AccuracyRoute — the window filter lives in the URL", () => {
     expect(screen.getByLabelText("Until")).toHaveValue("2026-09-01");
   });
 
-  it("CLEAR removes both params from the URL", async () => {
+  it("Clear removes both params from the URL", async () => {
     const onUrlUpdate = vi.fn();
     render(<AccuracyRoute series={EMPTY_SERIES} />, {
       wrapper: withNuqsTestingAdapter({ onUrlUpdate, hasMemory: true, searchParams: "?since=2026-08-01&until=2026-09-01" }),
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "CLEAR" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
 
     await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled());
     const last = onUrlUpdate.mock.calls.at(-1)![0] as { searchParams: URLSearchParams };
     expect(last.searchParams.get("since")).toBeNull();
     expect(last.searchParams.get("until")).toBeNull();
+  });
+});
+
+describe("AccuracyRoute — a window really changes the numbers in fixture mode", () => {
+  it("recomputes the report for the window from the corpus, and says which window it is", () => {
+    render(<AccuracyRoute series={EMPTY_SERIES} corpus={CORPUS} />, { wrapper: withNuqsTestingAdapter({ searchParams: "?since=2026-09-16" }) });
+    const expected = windowedAccuracy(CORPUS, "2026-09-16T00:00:00.000Z", null).report;
+    expect(expected.runs.total).toBeLessThan(76);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(`${expected.proof.proven} bugs proven by execution`);
+    expect(screen.getByText("Last 7 days")).toBeInTheDocument();
+    expect(screen.getByText("Last 7 days").closest("p")).toHaveTextContent(`${expected.runs.total} runs graded`);
+  });
+
+  it("refuses an inverted range inline and never writes it to the URL", async () => {
+    const onUrlUpdate = vi.fn();
+    render(<AccuracyRoute series={EMPTY_SERIES} corpus={CORPUS} />, {
+      wrapper: withNuqsTestingAdapter({ onUrlUpdate, hasMemory: true, searchParams: "?until=2026-08-01" }),
+    });
+    fireEvent.change(screen.getByLabelText("Since"), { target: { value: "2026-09-01" } });
+    expect(screen.getByRole("alert")).toHaveTextContent(/can't be after To/);
+    expect(onUrlUpdate).not.toHaveBeenCalled();
+  });
+
+  it("an inverted range that arrives in the URL is flagged and not applied", () => {
+    render(<AccuracyRoute series={EMPTY_SERIES} corpus={CORPUS} />, {
+      wrapper: withNuqsTestingAdapter({ searchParams: "?since=2026-09-01&until=2026-08-01" }),
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(/isn't applied/);
+    // Not applied: the page is the all-time report (the mocked query), not an empty window.
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("312 bugs proven by execution");
   });
 });

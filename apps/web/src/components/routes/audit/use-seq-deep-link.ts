@@ -1,67 +1,51 @@
 "use client";
-// OWNER: d4 (wave 3). `?seq=<n>` — scroll to and expand one event (dashboard-blueprint
-// §2.9). <ChainRail> (t6, wave 2) exposes no imperative "scroll to and expand this row"
-// API: its row ids come from an internal `useId()` the parent cannot predict, and past
-// `virtualizeThreshold` rows it only renders what @tanstack/react-virtual has already
-// mounted (RAISED — ChainRail could usefully grow a `focusSeq` prop; this hook is the
-// workaround until it does, see 'raised'). What IS public and stable is `data-seq` on
-// each row's <li> (ChainRail.tsx `ChainRow`) and the scroll container's own
-// `.overflow-y-auto` div once the rail virtualizes.
-//
-// The approach: poll for the row. If it is not mounted yet (deep in a virtualized
-// window), nudge the scroll container toward an estimated position — a fraction of
-// `scrollHeight`, which already reflects the virtualizer's own total-size estimate, so
-// no assumption about row height is needed here — and poll again. Once the row exists,
-// scroll it into view and, if it is not already expanded, click its own toggle button
-// (the same affordance a visitor's click uses; this never reaches into ChainRail's
-// state).
+// `?seq=<n>` — scroll one event into view. The page owns the expansion and the
+// highlight (the block for `seq` renders expanded and ringed); this hook only waits
+// for that block to mount — it may be deep in the windowed log, or its page may
+// still be loading — then scrolls it to the top of the scroller and moves focus
+// to its toggle (without a second scroll), so a keyboard user lands on it too.
 import { useEffect, useRef } from "react";
 
-const MAX_ATTEMPTS = 40;
-const POLL_MS = 40;
+const MAX_ATTEMPTS = 60;
+const POLL_MS = 50;
 
 export interface UseSeqDeepLinkOptions {
-  /** The ChainRail instance's own wrapping element. */
+  /** The element that contains every rendered block. */
   containerRef: React.RefObject<HTMLElement | null>;
-  /** The `seq` to focus, or `null`/`undefined` when there is no deep link. */
+  /** The `seq` to focus, or null when there is no deep link. */
   seq: number | null | undefined;
-  /** True once the data holding `seq` (if it exists) has finished loading — avoids
-   *  polling against a still-empty rail. */
+  /** True once the data that would hold `seq` has loaded. */
   ready: boolean;
+  /** Bump to scroll to the same `seq` again (a second "Show #n" click). */
+  nonce?: number;
 }
 
-/** Best-effort: scrolls the row for `seq` into view and expands it once, if found. */
-export function useSeqDeepLink({ containerRef, seq, ready }: UseSeqDeepLinkOptions): void {
-  const handledSeq = useRef<number | null>(null);
+export function useSeqDeepLink({ containerRef, seq, ready, nonce = 0 }: UseSeqDeepLinkOptions): void {
+  const handled = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!ready || seq == null || handledSeq.current === seq) return;
+    const key = `${seq}:${nonce}`;
+    if (!ready || seq == null || handled.current === key) return;
     let attempt = 0;
-    let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
 
     function tick() {
       if (cancelled) return;
-      const root = containerRef.current;
-      const row = root?.querySelector<HTMLElement>(`[data-seq="${seq}"]`);
+      const row = containerRef.current?.querySelector<HTMLElement>(`[data-seq="${seq}"]`);
       if (row) {
-        handledSeq.current = seq!;
-        row.scrollIntoView({ block: "center" });
-        const toggle = row.querySelector<HTMLButtonElement>("button[aria-expanded]");
-        if (toggle && toggle.getAttribute("aria-expanded") === "false") toggle.click();
+        handled.current = key;
+        const reduce = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // "start" (with the block's scroll-margin clearing the glass top bar), so an
+        // expanded block taller than the viewport still shows its head.
+        row.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+        // Focus follows only a jump the visitor asked for on this page; a deep link
+        // arriving from elsewhere scrolls and highlights without stealing focus.
+        if (nonce > 0) row.querySelector<HTMLElement>("button[aria-expanded]")?.focus({ preventScroll: true });
         return;
       }
       attempt += 1;
-      if (attempt >= MAX_ATTEMPTS || !root) return;
-      const scroller = root.querySelector<HTMLElement>(".overflow-y-auto") ?? root;
-      // Nudge toward the end of the visible window each attempt — the seq a link points
-      // at is almost always the most recently loaded event (the tamper demo, or a
-      // finding's own audit trail), so a monotonic downward nudge converges quickly
-      // without needing to know which direction the target sits in.
-      if (scroller.scrollHeight > scroller.clientHeight) {
-        scroller.scrollTop = Math.min(scroller.scrollTop + scroller.clientHeight * 0.8, scroller.scrollHeight);
-      }
-      timer = setTimeout(tick, POLL_MS);
+      if (attempt < MAX_ATTEMPTS) timer = setTimeout(tick, POLL_MS);
     }
 
     tick();
@@ -69,5 +53,5 @@ export function useSeqDeepLink({ containerRef, seq, ready }: UseSeqDeepLinkOptio
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [containerRef, seq, ready]);
+  }, [containerRef, seq, ready, nonce]);
 }

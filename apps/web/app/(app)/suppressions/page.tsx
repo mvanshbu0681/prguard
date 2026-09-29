@@ -1,29 +1,31 @@
-// OWNER: d4 (wave 3). /suppressions (dashboard-blueprint §2.8; plan A3, A8). A thin
-// Server Component: the route has no dynamic segment, so there is no `params` to await
-// (Next 16 rule), but the page's own filters live in the URL and are read with nuqs'
-// useQueryStates, which needs a <Suspense> boundary around anything that calls it
-// (src/lib/hooks/url-state.ts) so a statically rendered shell never blocks on
-// useSearchParams. The client component does all the work.
+// /suppressions — a thin Server Component. The route has no dynamic segment (no
+// `params` to await), but the page's filters live in the URL and are read with
+// nuqs, which needs a <Suspense> boundary around anything that calls it so a
+// statically rendered shell never blocks on useSearchParams. The client
+// component does all the work; the fallback holds the page's rhythm.
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { LoadingState } from "@/components/app-shell";
+import { Page, Skeleton } from "@/components/dash/kit";
 import { SuppressionsPage } from "@/components/routes/suppressions";
 
 export const metadata: Metadata = { title: "Suppressions" };
 
 function Fallback() {
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
-      <p className="type-label text-text-dim">/suppressions</p>
-      <h1 className="mt-2 type-display-h3 text-text-primary">Suppression ledger</h1>
-      <div className="mt-6">
-        <LoadingState rows={8} label="Loading the suppression ledger." />
+    <Page>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-8 w-[30rem] max-w-full" />
+        <Skeleton className="h-3.5 w-[26rem] max-w-full" />
       </div>
-    </div>
+      <Skeleton className="h-[360px] w-full rounded-w-card" />
+      <LoadingState rows={5} label="Loading the suppression ledger." />
+    </Page>
   );
 }
 
-export default function Page() {
+export default function SuppressionsRoute() {
   return (
     <Suspense fallback={<Fallback />}>
       <SuppressionsPage />

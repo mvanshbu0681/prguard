@@ -1,16 +1,11 @@
 'use client';
-// OWNER: t9a (wave 2). The dashboard's one empty-state grammar (dashboard §2.0):
-// never "No data available" — the message names the filter that produced the
-// empty result, and offers the next action. Wave 3's screens supply both; this
-// component only lays them out identically everywhere.
-//
-//   <EmptyState
-//     message="No findings above medium in this run. 4 were dropped at S4 as speculative."
-//     actions={[{ label: 'Show dropped', onClick: showDropped }, { label: 'Clear filters', href: '/findings' }]}
-//   />
-import Link from 'next/link';
+// An empty result, on the landing system: a lime icon disc, one sentence that
+// names the filter or condition that produced it (never a bare "No data"), and
+// pill actions. Routes with their own illustrated empty state use the kit's
+// <EmptyState> directly; this one keeps the older message/actions API.
+import { SearchX } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/dash/kit';
 import { cn } from '@/lib/utils';
 
 export interface EmptyStateAction {
@@ -28,21 +23,18 @@ export interface EmptyStateProps {
 
 export function EmptyState({ message, actions = [], className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-start gap-4 py-12', className)} data-empty-state="">
-      <p className="type-body max-w-(--measure-body) text-text-body">{message}</p>
+    <div className={cn('flex flex-col items-center gap-4 rounded-w-card bg-w-surface px-6 py-12 text-center', className)} data-empty-state="">
+      <span className="grid size-12 place-items-center rounded-w-pill bg-w-lime text-w-on-lime" aria-hidden>
+        <SearchX size={20} strokeWidth={1.9} />
+      </span>
+      <p className="max-w-[52ch] text-[15px] leading-relaxed text-w-text-2">{message}</p>
       {actions.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {actions.map((action) =>
-            action.href ? (
-              <Button key={action.label} asChild variant="ghost">
-                <Link href={action.href}>{action.label}</Link>
-              </Button>
-            ) : (
-              <Button key={action.label} variant="ghost" onClick={action.onClick}>
-                {action.label}
-              </Button>
-            ),
-          )}
+        <div className="flex flex-wrap justify-center gap-2">
+          {actions.map((action) => (
+            <Button key={action.label} variant="outline" size="sm" href={action.href} onClick={action.onClick}>
+              {action.label}
+            </Button>
+          ))}
         </div>
       ) : null}
     </div>

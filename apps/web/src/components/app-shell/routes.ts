@@ -8,7 +8,7 @@
 // is a one-line change here rather than a hunt through the shell.
 
 /** The three sidebar groups, in display order. */
-export const NAV_GROUPS = ['Reviews', 'Governance', 'Settings'] as const;
+export const NAV_GROUPS = ['Workspace', 'Governance', 'Settings'] as const;
 export type NavGroup = (typeof NAV_GROUPS)[number];
 
 export interface AppNavItem {
@@ -22,13 +22,15 @@ export interface AppNavItem {
 }
 
 /**
- * The six navigable destinations. Two of the eight D2 routes — `/runs/:id` and
- * `/findings/:id` — are reached from a row, not the rail, so they are not nav
- * items; `breadcrumbsForPath` below still names them.
+ * The eight navigable destinations. `/runs/:id`, `/findings/:id` and the
+ * repository / pull-request pages under `/repos` are reached from a row, not
+ * the rail; `breadcrumbsForPath` below still names them.
  */
 export const APP_NAV_ITEMS: readonly AppNavItem[] = [
-  { href: '/overview', label: 'Overview', group: 'Reviews', chord: 'o' },
-  { href: '/findings', label: 'Findings', group: 'Reviews', chord: 'f' },
+  { href: '/overview', label: 'Overview', group: 'Workspace', chord: 'o' },
+  { href: '/repos', label: 'Repositories', group: 'Workspace', chord: 'r' },
+  { href: '/runs', label: 'Reviews', group: 'Workspace', chord: 'v' },
+  { href: '/findings', label: 'Findings', group: 'Workspace', chord: 'f' },
   { href: '/suppressions', label: 'Suppressions', group: 'Governance', chord: 's' },
   { href: '/audit', label: 'Audit', group: 'Governance', chord: 'a' },
   { href: '/accuracy', label: 'Accuracy', group: 'Governance', chord: 'c' },
@@ -43,11 +45,11 @@ export function navItemsByGroup(group: NavGroup): AppNavItem[] {
 export const CHORD_MAP: ReadonlyMap<string, AppNavItem> = new Map(APP_NAV_ITEMS.map((item) => [item.chord, item]));
 
 /** Known-but-unbuilt paths (plan A3): the beta 404 names what exists instead. */
-export const BETA_ROUTES = ['/runs', '/repos', '/cost', '/settings'] as const;
+export const BETA_ROUTES = ['/cost', '/settings'] as const;
 
-/** True when `pathname` is exactly one of the six nav items (drives the active-rail mark). */
+/** True when `pathname` is the nav item or a page beneath it (drives the active pill). */
 export function isActiveNavItem(pathname: string, href: string): boolean {
-  return pathname === href;
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 // ---------------------------------------------------------------------------
@@ -61,7 +63,7 @@ export interface Crumb {
 
 const SEGMENT_LABEL: Record<string, string> = {
   overview: 'Overview',
-  runs: 'Runs',
+  runs: 'Reviews',
   findings: 'Findings',
   suppressions: 'Suppressions',
   audit: 'Audit',
@@ -75,6 +77,7 @@ const SEGMENT_LABEL: Record<string, string> = {
   'api-keys': 'API keys',
   budgets: 'Budgets',
   repositories: 'Repositories',
+  pulls: 'Pull requests',
 };
 
 /** `a91f3c2e-…` to `a91f3c2e`: a dynamic segment reads as its short id (plan A10 style), never the whole UUID. */
@@ -94,6 +97,18 @@ function labelFor(segment: string): string {
  */
 export function breadcrumbsForPath(pathname: string): Crumb[] {
   const segments = pathname.split('/').filter(Boolean);
+  // Repository pages collapse owner/name into one crumb and "pulls/:n" into "#n":
+  // /repos/acme/checkout-service/pulls/4821 → Repositories › checkout-service › #4821.
+  if (segments[0] === 'repos' && segments.length >= 3) {
+    const [, owner, name, pulls, number] = segments;
+    const repoHref = `/repos/${owner}/${name}`;
+    const crumbs: Crumb[] = [
+      { label: 'Repositories', href: '/repos' },
+      { label: decodeURIComponent(name), href: repoHref },
+    ];
+    if (pulls === 'pulls' && number) crumbs.push({ label: `#${decodeURIComponent(number)}`, href: `${repoHref}/pulls/${number}` });
+    return crumbs;
+  }
   const crumbs: Crumb[] = [];
   let href = '';
   for (const segment of segments) {

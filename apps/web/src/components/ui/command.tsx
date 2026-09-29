@@ -18,6 +18,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import { SearchIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useRestoreFocus } from "./restore-focus";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return <CommandPrimitive data-slot="command" className={cn("ui-command", className)} {...props} />;
@@ -36,11 +37,12 @@ function CommandDialog({
   className?: string;
   container?: React.ComponentProps<typeof DialogPrimitive.Portal>["container"];
 }) {
+  const focus = useRestoreFocus();
   return (
     <DialogPrimitive.Root data-slot="command-dialog" {...props}>
       <DialogPrimitive.Portal container={container}>
         <DialogPrimitive.Overlay data-slot="command-dialog-overlay" className="ui-scrim" />
-        <DialogPrimitive.Content data-slot="command-dialog-content" className={cn("ui-palette", className)}>
+        <DialogPrimitive.Content data-slot="command-dialog-content" className={cn("ui-palette", className)} {...focus}>
           <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
           <DialogPrimitive.Description className="sr-only">{description}</DialogPrimitive.Description>
           {children}

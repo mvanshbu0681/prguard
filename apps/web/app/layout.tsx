@@ -13,7 +13,9 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { AnimHandshake } from "@/motion/handshake";
+import { DASH_PREPAINT_JS } from "@/components/dash/prepaint";
 import { Providers } from "@/lib/providers";
+import { v2FontVariables } from "@/components/v2/fonts";
 import { gsc, inter } from "./fonts";
 import "./globals.css";
 
@@ -41,9 +43,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${gsc.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${gsc.variable} ${inter.variable} ${v2FontVariables}`} suppressHydrationWarning>
       <head>
         <AnimHandshake />
+        {/* Dashboard theme / contrast / density / rail before first paint (no-op off the dashboard). */}
+        <script dangerouslySetInnerHTML={{ __html: DASH_PREPAINT_JS }} />
       </head>
       <body>
         <Providers>{children}</Providers>

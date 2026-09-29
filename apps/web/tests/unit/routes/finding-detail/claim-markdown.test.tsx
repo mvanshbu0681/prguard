@@ -43,9 +43,12 @@ describe("ClaimMarkdown", () => {
     expect(screen.getByText("Not a real heading in this schema")).toBeInTheDocument();
   });
 
-  it("gives inline code the restricted schema's own class hook (12.5px on --ink-2)", () => {
+  it("sets inline code in the mono face on a themed well (dashboard tokens, not the legacy ink ramp)", () => {
     const { container } = render(<ClaimMarkdown>{"`create_session`"}</ClaimMarkdown>);
-    expect(container.querySelector("code")?.className).toContain("bg-ink-2");
+    const cls = container.querySelector("code")?.className ?? "";
+    expect(cls).toContain("font-w-mono");
+    expect(cls).toContain("bg-w-surface");
+    expect(cls).not.toContain("bg-ink-2");
   });
 });
 

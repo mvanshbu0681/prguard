@@ -1,77 +1,97 @@
-"use client";
-// OWNER: d5 (wave 3). /overview — dashboard blueprint §2.1 folded into the
-// brief's five bands: recent runs, gate outcome, the three headline metrics,
-// the proof-composition chart at half height, and the demo run surfaced
-// prominently. Single column, 1280px max (the page shell below provides the
-// width and padding; AppShell's <main> supplies none of its own).
-import type { ReactNode } from "react";
-import { useCompactRowsToggle } from "@/components/app-shell";
-import { ProofCompositionChart } from "@/components/charts";
-import type { AccuracySeriesWeeklyRow } from "@/components/charts";
-import { DemoRunPanel } from "./DemoRunPanel";
-import { GateOutcomeSection } from "./GateOutcomeSection";
-import { HeadlineMetrics } from "./HeadlineMetrics";
-import { RecentRunsPanel } from "./RecentRunsPanel";
+'use client';
+// /overview answers four questions at a glance, top to bottom:
+//   1. Is Witness catching real bugs?          → the photograph
+//   2. Is the merge gate holding the right PRs? → the lime card
+//   3. What needs me right now?                → Needs attention + activity
+//   4. What does it cost, how fast is it?      → the ink card, Spend & speed
+// then the evidence behind "is it noisy?" (the noise filter, the page's
+// signature chart) and the repositories. The window control re-scopes every
+// dated number (and lives in the URL, ?window=7d|30d); needs attention,
+// activity, the reviewer rates and the
+// repository cards are "now" / all time by nature and say so. Deeper
+// analytics (proof by week, calibration) belong to /accuracy.
+import { Plus } from 'lucide-react';
+import { Button, Page, PageHeader, Rise, SectionHeader, Segmented } from '@/components/dash/kit';
+import type { RepoSummary } from '@/components/routes/repos/model';
+import type { OverviewModel, WindowKey } from './model';
+import { Hero } from './Hero';
+import { AttentionSection } from './Attention';
+import { FunnelCard } from './Signal';
+import { RepoGrid } from './Repos';
+import { SpendGrid } from './Spend';
+import { windowCaption, windowPhrase } from './format';
+import { useOverviewWindow } from './url-state';
+import s from './overview.module.css';
 
 export interface OverviewRouteProps {
-  /** accuracy/series.json → weekly (plan A11, fixture-only): server-loaded once, in the thin page.tsx, and handed down — no hook reads this shape, so there is nothing to poll. */
-  weekly: AccuracySeriesWeeklyRow[];
+  model: OverviewModel;
+  /** /repos's own per-repository summaries, so both pages print the same numbers. */
+  repos: RepoSummary[];
 }
 
-function Band({ children }: { children: ReactNode }) {
-  return <section className="flex flex-col gap-3">{children}</section>;
-}
+const WINDOW_OPTIONS: { value: WindowKey; label: string }[] = [
+  { value: '7d', label: '7 days' },
+  { value: '30d', label: '30 days' },
+  { value: 'all', label: 'All time' },
+];
 
-export function OverviewRoute({ weekly }: OverviewRouteProps) {
-  const [compact] = useCompactRowsToggle();
+export function OverviewRoute({ model, repos }: OverviewRouteProps) {
+  const [win, setWin] = useOverviewWindow();
+  const w = model.windows[win];
+  const caption = windowCaption(win, model.firstRunAt);
+  const proven = w.proof.proven;
 
   return (
-    <div className="mx-auto flex max-w-[1280px] flex-col gap-8 px-4 py-8 md:px-8">
-      <header className="flex flex-col gap-2">
-        <p className="type-label text-text-dim">/ overview</p>
-        <h1 className="type-display-h3 text-text-primary">What Witness has been proving</h1>
-        <p className="type-small text-text-body">Every run it has completed, whether the gate held, and how the self-report is trending.</p>
-      </header>
+    <Page className={s.root}>
+      <PageHeader
+        eyebrow="Overview"
+        title={`${proven} ${proven === 1 ? 'bug' : 'bugs'} proven`}
+        soft={`${windowPhrase(win, model.firstRunAt)}.`}
+        description="Each one reproduced by a test that fails at the pull request’s head and passes at its base. Only a proven bug can block a merge."
+        actions={
+          <>
+            <Segmented label="Time window" options={WINDOW_OPTIONS} value={win} onChange={setWin} />
+            <Button variant="primary" chip={Plus} chipStill href="/repos?new=1">
+              New review
+            </Button>
+          </>
+        }
+      />
 
-      <Band>
-        <RecentRunsPanel compact={compact} />
-      </Band>
+      <Rise delay={60}>
+        <Hero model={model} w={w} />
+      </Rise>
 
-      <Band>
-        <GateOutcomeSection />
-      </Band>
+      <Rise delay={120}>
+        <AttentionSection topFindings={model.topFindings} />
+      </Rise>
 
-      <Band>
-        <HeadlineMetrics />
-      </Band>
+      <Rise delay={180}>
+        <FunnelCard w={w} caption={caption} />
+      </Rise>
 
-      <Band>
-        {/*
-         * "At half height" (brief) — <ProofCompositionChart> renders its plot
-         * in a ChartContainer fixed at h-64 (256px), with no height prop and
-         * no className passthrough to that inner node (charts/proof-composition-chart.tsx
-         * only forwards `className` to the outer <ChartFrame>). Rebuilding or
-         * restyling the frozen wave-2 component is out of scope (plan §8), so
-         * this halves only the plot's own rendered height with a scoped CSS
-         * rule targeting ChartContainer's stable `[data-slot="chart"]` hook —
-         * an unlayered <style> tag beats a Tailwind utility class under
-         * Tailwind 4's cascade layers regardless of specificity, no
-         * !important needed. Recharts' <ResponsiveContainer> measures
-         * whatever pixel height that div computes to and redraws the SVG
-         * there; every label (the header, the axis ticks, the legend) stays
-         * at its native, fully legible size — nothing is scaled or blurred,
-         * only the plot area is shorter. Reported under 'raised': t10 should
-         * add a `height` prop so a caller does not need this.
-         */}
-        <style>{`.prg-mini-proof-chart [data-slot="chart"] { height: 128px; }`}</style>
-        <div className="prg-mini-proof-chart">
-          <ProofCompositionChart weekly={weekly} index="04" provenance="accuracy/series.json → weekly" />
-        </div>
-      </Band>
+      <section className={s.section} aria-labelledby="ov-repos">
+        <SectionHeader
+          id="ov-repos"
+          title="Repositories"
+          description={`${repos.length} in this workspace. The ones holding a blocked pull request come first.`}
+          actions={
+            <Button variant="outline" size="sm" href="/repos">
+              All repositories
+            </Button>
+          }
+        />
+        <RepoGrid repos={repos} />
+      </section>
 
-      <Band>
-        <DemoRunPanel />
-      </Band>
-    </div>
+      <section className={s.section} aria-labelledby="ov-spend">
+        <SectionHeader
+          id="ov-spend"
+          title="Spend & speed"
+          description="What a review costs and where its half-minute goes."
+        />
+        <SpendGrid model={model} w={w} caption={caption} />
+      </section>
+    </Page>
   );
 }

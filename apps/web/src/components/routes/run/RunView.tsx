@@ -1,284 +1,459 @@
-"use client";
-// OWNER: d1 (wave 3). /runs/[id] — the dashboard's showpiece (dashboard §2.4 LIVE, §2.5
-// RESULT). ONE route whose mode switches on `status`: LIVE while queued/running, RESULT once
-// terminal. Data comes from the client hooks (@/lib/hooks), never the server fixture loaders
-// (those are for the marketing build and the /lab pages) — this file reads live.
+'use client';
+// /runs/[id] — one review. The mode follows the run's own status: LIVE while it
+// is queued or running (the rail lights up stage by stage, a log narrates each
+// poll, the counters arrive, the clock ticks), RESULT once it is terminal (the
+// verdict lands, the findings open up by outcome, cost / delivery / details fill
+// the rail). The hero, the pipeline rail and the side rail stay mounted across
+// that transition — only their props change — so scroll and focus survive it.
 //
-// The header, the gate area and the <StageRail> instrument are the same three elements
-// across both modes (never remounted, never keyed on `mode`): only their props change as the
-// run's own status changes, so the "0ms colour flip, never a route change" promise (plan §2
-// hard rule 3; dashboard §2.4) is structural, not animated in after the fact.
-import { parseAsStringLiteral, useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
-import { useLiveFavicon } from "@/components/brand";
-import { ErrorState, useIsMobile } from "@/components/app-shell";
-import { GateArea } from "./GateArea";
-import { StageRail, stageStatesFromReviewStatus, type StageEntry } from "@/components/evidence/StageRail";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CodeBlockClient } from "@/components/code";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useReviewList, useReviewResult, useReviewStatus, useRerunReview } from "@/lib/hooks";
-import { STAGES, type Stage } from "@/lib/contracts";
-import { CostTimingPanel } from "./CostTimingPanel";
-import { DeliveryPanel } from "./DeliveryPanel";
-import { FindingsTable } from "./FindingsTable";
-import { formatDurationSeconds, formatElapsed, runMode } from "./format";
-import { LiveRightRail } from "./LiveRightRail";
-import { PipelineSummaryStrip } from "./PipelineSummaryStrip";
-import { RunHeader } from "./RunHeader";
-import { useElapsedSeconds } from "./useElapsedSeconds";
-import { cn } from "@/lib/utils";
-
-const RESULT_TABS = ["pipeline", "findings", "delivery", "cost"] as const;
-type ResultTab = (typeof RESULT_TABS)[number];
+// Data comes from the client hooks (@/lib/hooks): the polled status, the partial
+// result while live, the final result once terminal, and the run list for the
+// trigger and the pull request's other runs. In fixture mode ?replay=1 replays
+// the demo run and Re-run simulates a fresh one (src/lib/fixture-resolver.ts).
+import { ArrowLeft } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { useLiveFavicon } from '@/components/brand';
+import { ErrorState } from '@/components/app-shell';
+import { stageStatesFromReviewStatus } from '@/components/evidence/StageRail';
+import { CodeBlockClient } from '@/components/code';
+import { Button, Card, Page, PageHeader, Rise, SectionHeader, Skeleton, type GateConclusion } from '@/components/dash/kit';
+import { plural, relTime } from '@/components/dash/format';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import type { Finding, ReviewListItem } from '@/lib/api-types';
+import { STAGES, type Stage } from '@/lib/contracts';
+import { isLiveStatus, useReviewList, useReviewResult, useReviewStatus, useRerunReview } from '@/lib/hooks';
+import { medianDuration, threadsOf } from '../runs-list/model';
+import { CostTimingPanel } from './CostTimingPanel';
+import { DeliveryPanel } from './DeliveryPanel';
+import { FindingsByOutcome } from './FindingsByOutcome';
+import { bySeverity, groupFindings, proofTally } from './findings-model';
+import { formatDurationSeconds, formatElapsed, runMode } from './format';
+import { logEvents, snapshotKey, snapshotOf, type LiveSnapshot, type LogEvent } from './live-model';
+import { LiveLog } from './LiveLog';
+import {
+  FunnelArtefact,
+  LiveCountsArtefact,
+  LiveProofArtefact,
+  ProofArtefact,
+  ProofTallyArtefact,
+  RunHero,
+  SeverityArtefact,
+  StagesArtefact,
+  type Verdict,
+} from './RunHero';
+import { RunMetaPanel } from './RunMetaPanel';
+import { STAGE_META, stageProgress, stageViews, totalMs } from './stage-model';
+import { StageTimeline } from './StageTimeline';
+import { elapsedSince, useNow } from './useElapsedSeconds';
+import s from './run.module.css';
 
 export interface RunViewProps {
   id: string;
-  /** getCostSummary().per_stage p50s, ×1000 (server-loaded — dashboard §2.4's expectedSeconds). */
+  /** Workspace p50 per stage (GET /v1/cost), in ms — the rail's "typical" widths. */
   expectedMs: Partial<Record<Stage, number>>;
+  /** This run's own recorded stage durations, in ms, when the corpus has them. */
+  recordedMs?: Partial<Record<Stage, number>> | null;
+  /** How long each stage lasts in a simulated (fixture) live run, in ms. */
+  simStageMs?: Partial<Record<Stage, number>> | null;
+  /** The workspace's p50 review cost. */
+  costP50?: number | null;
+  /** Where "Watch replay" goes, when this run can be replayed. */
+  replayHref?: string | null;
 }
 
-export function RunView({ id, expectedMs }: RunViewProps) {
+const TRIGGER_LABEL: Record<string, string> = { webhook: 'Webhook', rerun: 'Re-run', api: 'API' };
+const TIER_LABEL: Record<string, string> = { full: 'Full review', standard: 'Standard review', trivial: 'Trivial change' };
+
+interface LogState {
+  id: string;
+  key: string | null;
+  prev: LiveSnapshot | null;
+  events: LogEvent[];
+  stageIndex: number;
+  /** Seconds into the run when the current stage was first seen. */
+  stageAt: number | null;
+  /** started_at of the live run being logged (a finished status may carry another clock). */
+  liveStart: string | null;
+}
+
+const emptyLog = (id: string): LogState => ({ id, key: null, prev: null, events: [], stageIndex: 0, stageAt: null, liveStart: null });
+
+function secondsBetween(a?: string | null, b?: string | null): number | null {
+  if (!a || !b) return null;
+  const d = (Date.parse(b) - Date.parse(a)) / 1000;
+  return Number.isFinite(d) ? d : null;
+}
+
+export function RunView({ id, expectedMs, recordedMs, simStageMs, costP50, replayHref }: RunViewProps) {
   const status = useReviewStatus(id);
 
-  // RE-RUN resets the status query (@/lib/hooks' useRerunReview: `resetQueries`), which
-  // clears `status.data` to undefined for the moment between the reset and the next poll
-  // landing. Without this, that gap would hit the "no id yet" skeleton below — a full
-  // unmount of the header, gate area and stage rail (and, with it, keyboard focus) for a
-  // run whose identity we already know. Keeping the last good poll bridges that gap so
-  // the same continuity guarantee that covers the live → result transition also covers a
-  // RE-RUN — adjusted during render (React's own "storing information from previous
-  // renders" pattern), not in an effect, so there is no extra committed frame the old
-  // data is visible under a new id. Tagged with the id it belongs to so a navigation to a
-  // different run never shows the old one's cached header.
+  // RE-RUN resets the status query, clearing `status.data` for the moment between the
+  // reset and the next poll. Keep the last good poll (tagged with its id) so that gap
+  // never unmounts the page — adjusted during render, not in an effect.
   const [cachedStatus, setCachedStatus] = useState<{ id: string; data: NonNullable<typeof status.data> } | null>(null);
   if (status.data && (cachedStatus?.id !== id || cachedStatus.data !== status.data)) {
     setCachedStatus({ id, data: status.data });
   }
-  const effectiveStatusData = status.data ?? (cachedStatus?.id === id ? cachedStatus.data : undefined);
+  const st = status.data ?? (cachedStatus?.id === id ? cachedStatus.data : undefined);
 
-  const mode = effectiveStatusData ? runMode(effectiveStatusData.status) : null;
-  const isLive = mode === "live";
-  const isResult = mode === "result";
-  const isMobile = useIsMobile();
+  const mode = st ? runMode(st.status) : null;
+  const isLive = mode === 'live';
+  const isResult = mode === 'result';
 
   const partial = useReviewResult(id, { partial: true, enabled: isLive });
   const result = useReviewResult(id, { enabled: isResult });
-  // Best-effort trigger lookup (ReviewStatus/ReviewResult carry no `trigger` — only
-  // ReviewAccepted / the plan-A11 list item do). A miss just omits the field.
-  const list = useReviewList({ limit: 200 }, { enabled: !!effectiveStatusData });
-  const listItem = list.data?.items.find((r) => r.review_id === id);
-
+  const list = useReviewList({ limit: 200 }, { enabled: !!st });
   const rerun = useRerunReview({ notify: true });
+  const now = useNow(isLive);
+  const elapsedLive = isLive ? elapsedSince(st?.started_at, now) : null;
+  const [payloadOpen, setPayloadOpen] = useState(false);
 
-  const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(RESULT_TABS).withDefault("pipeline"));
+  const r = isResult ? result.data : undefined;
+  const p = partial.data;
+  const gateConclusion = r?.gate?.conclusion ?? null;
+  useLiveFavicon(isLive ? 'running' : gateConclusion === 'failure' ? 'blocked' : gateConclusion ? 'clear' : null);
 
-  const elapsedLive = useElapsedSeconds(effectiveStatusData?.started_at, isLive);
-
-  const gateConclusion = result.data?.gate?.conclusion ?? null;
-  useLiveFavicon(isLive ? "running" : gateConclusion === "failure" ? "blocked" : gateConclusion ? "clear" : null);
-
-  const stageEntries: StageEntry[] = useMemo(() => {
-    if (!effectiveStatusData) return STAGES.map((key) => ({ key, state: "pending" as const }));
-    return stageStatesFromReviewStatus(effectiveStatusData);
-  }, [effectiveStatusData]);
-
-  const stageLabels = useMemo<Partial<Record<Stage, string>>>(() => {
-    const s = effectiveStatusData;
-    if (!s?.stage || !s.stage_label) return {};
-    return STAGES.includes(s.stage as Stage) ? { [s.stage as Stage]: s.stage_label } : {};
-  }, [effectiveStatusData]);
-
-  // Only the very first load (no cached poll at all) gets the bare "no id yet" skeleton;
-  // a RE-RUN's reset-then-refetch gap falls through to the unified render below instead.
-  if (status.isPending && !effectiveStatusData) {
-    return (
-      <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
-        <div className="h-24 animate-none rounded-panel border border-rule-hair bg-ink-1" aria-hidden="true" />
-        <StageRail
-          mode="static"
-          orientation={isMobile ? "vertical" : "horizontal"}
-          stages={STAGES.map((key) => ({ key, state: "pending" as const }))}
-          index="02"
-          category="PIPELINE"
-        />
-      </div>
-    );
+  // ---- the live log: a diff between polls, kept in state -------------------------
+  const [log, setLog] = useState<LogState>(() => emptyLog(id));
+  if (log.id !== id) {
+    setLog(emptyLog(id));
+  } else if (st) {
+    const snap = snapshotOf(st);
+    const key = snapshotKey(snap);
+    const restarted = log.prev != null && !isLiveStatus(log.prev.status) && isLiveStatus(snap.status);
+    const logging = isLiveStatus(snap.status) || log.events.length > 0;
+    if (logging && key !== log.key) {
+      const base = restarted ? emptyLog(id) : log;
+      const live = isLiveStatus(snap.status);
+      const at = live ? elapsedLive : base.liveStart ? elapsedSince(base.liveStart, now) : secondsBetween(st.started_at, st.finished_at);
+      const added = logEvents(restarted ? null : base.prev, snap, at);
+      setLog({
+        id,
+        key,
+        prev: snap,
+        events: [...base.events, ...added],
+        stageIndex: snap.stageIndex,
+        stageAt: snap.stageIndex !== base.stageIndex ? at : base.stageAt,
+        liveStart: live ? (st.started_at ?? base.liveStart) : base.liveStart,
+      });
+    }
   }
 
-  if (status.isError && !effectiveStatusData) {
+  const states = useMemo(() => (st ? stageStatesFromReviewStatus(st) : STAGES.map((key) => ({ key, state: 'pending' as const }))), [st]);
+  const views = useMemo(() => stageViews(states, recordedMs, expectedMs), [states, recordedMs, expectedMs]);
+
+  const items = useMemo(() => list.data?.items ?? [], [list.data]);
+  const threads = useMemo(() => threadsOf(items), [items]);
+  const listItem = items.find((x) => x.review_id === id);
+  const thread = threads.get(id);
+  const durationMedian = useMemo(() => medianDuration(items), [items]);
+
+
+  // ---- first load / errors -----------------------------------------------------
+  if (status.isPending && !st) return <RunSkeleton />;
+  // A 404 is an answer, not a failure: no Retry, just the way back.
+  if (status.isError && !st && isNotFound(status.error)) return <RunNotFound id={id} />;
+  if (isResult && result.isError && isNotFound(result.error)) return <RunNotFound id={id} />;
+  if (status.isError && !st) {
     return (
-      <div className="px-4 py-8 md:px-6">
+      <Page>
         <ErrorState error={status.error} onRetry={() => status.refetch()} />
-      </div>
+      </Page>
     );
   }
-
-  const s = effectiveStatusData!;
-  const handleRerun = () => rerun.mutate({ reviewId: id });
-
-  // A true fetch failure on the result query swaps the whole page for an error state —
-  // distinct from the ordinary "result not loaded yet" gap below, which keeps the header,
-  // gate area and stage rail mounted and simply waits for `r`.
   if (isResult && result.isError) {
     return (
-      <div className="px-4 py-8 md:px-6">
+      <Page>
         <ErrorState error={result.error} onRetry={() => result.refetch()} />
-      </div>
+      </Page>
     );
   }
 
-  const p = partial.data;
-  const r = isResult ? result.data : undefined;
-  const resultLoaded = isResult && !!r;
-  const rawPayload = r?.review_payload;
+  const s0 = st!;
+  const findings: Finding[] = r?.findings ?? [];
+  const pr = r?.pull_request ?? p?.pull_request;
+  const repo = r?.repository ?? p?.repository ?? listItem?.repository ?? null;
+  const prNumber = pr?.number ?? listItem?.pull_request.number;
+  const prTitle = pr?.title ?? listItem?.pull_request.title;
+  const prAuthor = pr?.author ?? listItem?.pull_request.author;
+  const headSha = pr?.head_sha ?? s0.head_sha;
+  const baseSha = pr?.base_sha;
+  const riskTier = r?.risk_tier ?? p?.risk_tier ?? s0.risk_tier;
+  const trigger = listItem?.trigger ?? null;
 
-  // RunHeader, GateArea and StageRail render at the SAME position/type across LIVE and
-  // RESULT (dashboard §2.4: "never a route change, never a remount — scroll position and
-  // selection survive"): only the values fed into them change as the run's own status and
-  // result resolve. `r` wins once the result has loaded; `p` (the live partial) covers the
-  // gap before it; `s` (the poll, always present here) is the final fallback.
-  const repoLabel = r
-    ? `${r.repository.owner}/${r.repository.name}`
-    : p?.repository
-      ? `${p.repository.owner}/${p.repository.name}`
-      : undefined;
-  const prNumber = r ? r.pull_request.number : p?.pull_request?.number;
-  const prTitle = r ? r.pull_request.title : p?.pull_request?.title;
-  const prAuthor = r ? r.pull_request.author : p?.pull_request?.author;
-  const prUrl = r ? r.pull_request.url : p?.pull_request?.url;
-  const headSha = r ? r.pull_request.head_sha : (p?.pull_request?.head_sha ?? s.head_sha);
-  const baseSha = r ? r.pull_request.base_sha : p?.pull_request?.base_sha;
-  const riskTier = r ? r.risk_tier : (p?.risk_tier ?? s.risk_tier);
-  const elapsedLabel = isLive ? formatElapsed(elapsedLive) : formatDurationSeconds(r?.timing?.duration_seconds);
-  const headerStatus = r ? r.status : s.status;
-  const headerProvenance = isResult ? `GET /v1/reviews/${id}/result` : `GET /v1/reviews/${id}`;
+  // ---- live progress -----------------------------------------------------------
+  const currentKey = STAGES[(s0.stage_index ?? 1) - 1] ?? null;
+  const inStage = elapsedLive != null && log.stageAt != null ? elapsedLive - log.stageAt : null;
+  const progress = isLive && currentKey ? stageProgress(inStage, simStageMs?.[currentKey] ?? expectedMs[currentKey]) : 0;
+
+  // ---- the verdict ---------------------------------------------------------------
+  const published = r?.counts?.published ?? findings.filter((f) => f.status === 'published').length;
+  const blockingIds = r?.gate?.blocking_finding_ids ?? findings.filter((f) => f.blocking).map((f) => f.id);
+  let verdict: Verdict;
+  if (isLive) {
+    verdict = {
+      kind: 'live',
+      elapsed: formatElapsed(elapsedLive ?? 0),
+      stageIndex: s0.stage_index ?? 1,
+      stageName: currentKey ? STAGE_META[currentKey].name : '—',
+      stageLabel: s0.stage_label ?? (currentKey ? STAGE_META[currentKey].doing : ''),
+      queued: s0.status === 'queued',
+    };
+  } else if (s0.status === 'failed') {
+    const k = s0.stage as Stage | null | undefined;
+    verdict = { kind: 'failed', stageName: k && STAGE_META[k] ? STAGE_META[k].name : null, code: s0.error?.code ?? null, message: s0.error?.message ?? null };
+  } else if (s0.status === 'cancelled') {
+    if (s0.error?.code === 'SUPERSEDED' || thread?.superseded) {
+      const by = thread?.next ?? null;
+      verdict = { kind: 'superseded', byId: by?.review_id ?? null, byHref: by ? `/runs/${by.review_id}` : null };
+    } else verdict = { kind: 'cancelled', message: s0.error?.message ?? null };
+  } else if (!r) {
+    verdict = { kind: 'loading' };
+  } else if (r.gate?.conclusion === 'failure') {
+    const blocking = blockingIds.length || r.counts?.blocking || 0;
+    verdict = {
+      kind: 'blocked',
+      blocking,
+      advisory: Math.max(0, published - blocking),
+      contextName: r.gate.context_name ?? 'witness/merge-gate',
+      delivery: r.gate.delivery ?? null,
+      findingHref: blockingIds[0] ? `/findings/${blockingIds[0]}` : null,
+    };
+  } else if (r.gate?.conclusion === 'success') {
+    verdict = { kind: 'clear', advisory: published, contextName: r.gate.context_name ?? 'witness/merge-gate', delivery: r.gate.delivery ?? null };
+  } else {
+    verdict = { kind: 'neutral', reason: r.gate?.reason ?? null, contextName: r.gate?.context_name ?? 'witness/merge-gate' };
+  }
+  const railVerdict: GateConclusion = isLive ? 'running' : r?.gate?.conclusion ?? (s0.status === 'succeeded' && r ? 'neutral' : null);
+
+  // ---- the artefact cards --------------------------------------------------------
+  const proven = findings.find((f) => blockingIds.includes(f.id)) ?? findings.filter((f) => f.status === 'published' && f.proof?.status === 'proven').sort(bySeverity)[0];
+  const top = findings.filter((f) => f.status === 'published' && f.severity).sort(bySeverity)[0];
+  let artefacts: ReactNode = null;
+  if (isLive) {
+    artefacts = (
+      <>
+        <LiveCountsArtefact counts={s0.counts} />
+        <LiveProofArtefact stageIndex={s0.stage_index ?? 0} />
+      </>
+    );
+  } else if (r && s0.status === 'succeeded') {
+    artefacts = (
+      <>
+        {proven ? <ProofArtefact finding={proven} baseSha={baseSha} headSha={headSha} /> : <ProofTallyArtefact tally={proofTally(findings)} />}
+        {top ? <SeverityArtefact finding={top} of={published} /> : null}
+        <FunnelArtefact counts={r.counts} findings={findings} />
+      </>
+    );
+  } else if (r || st) {
+    const reached = s0.status === 'succeeded' ? 9 : Math.max(0, (s0.stage_index ?? 1) - 1);
+    artefacts = (
+      <>
+        <StagesArtefact reached={reached} durationLabel={formatDurationSeconds(r?.timing?.duration_seconds ?? secondsBetween(s0.started_at, s0.finished_at))} />
+        {(r?.counts?.proposed ?? 0) > 0 ? <FunnelArtefact counts={r?.counts} findings={findings} /> : null}
+      </>
+    );
+  }
+
+  // ---- labels ------------------------------------------------------------------
+  const wall = r?.timing?.duration_seconds ?? secondsBetween(s0.started_at, s0.finished_at);
+  const timeLabel = isLive
+    ? s0.status === 'queued'
+      ? 'Queued just now'
+      : `Running · ${formatElapsed(elapsedLive ?? 0)}`
+    : `${s0.status === 'succeeded' ? 'Finished' : 'Stopped'} ${relTime(s0.finished_at ?? r?.timing?.finished_at)} · ${formatDurationSeconds(wall)}`;
+  const recorded = views.some((v) => v.kind === 'recorded');
+  const railTotal = totalMs(views);
+  const groups = groupFindings(findings);
+  const count = (k: string) => groups.find((g) => g.key === k)?.findings.length ?? 0;
+
+  const siblings = thread ? pullRequestRuns(items, listItem).filter((x) => x.review_id !== id) : [];
+  const supersedes = thread?.prev && threads.get(thread.prev.review_id)?.superseded ? thread.prev : null;
+  const supersededBy = thread?.superseded ? thread.next : null;
+
+  const body = r?.review_payload && typeof r.review_payload.body === 'string' ? (r.review_payload.body as string) : null;
+
+  const meta = (wide: boolean) => (
+    <RunMetaPanel
+      wide={wide}
+      reviewId={id}
+      headSha={headSha}
+      baseSha={baseSha}
+      riskTier={riskTier}
+      trigger={trigger}
+      startedAt={s0.started_at}
+      finishedAt={s0.finished_at}
+      siblings={siblings}
+      supersedes={supersedes}
+      supersededBy={supersededBy}
+      supersededIds={new Set(siblings.filter((x) => threads.get(x.review_id)?.superseded).map((x) => x.review_id))}
+      auditHref={`/audit?review_id=${id}`}
+    />
+  );
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4 md:px-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <RunHeader
-          className="flex-1"
-          reviewId={id}
-          status={headerStatus}
-          repoLabel={repoLabel}
+    <Page className={s.page}>
+      <Rise>
+        <RunHero
+          repoLabel={repo ? `${repo.owner}/${repo.name}` : null}
+          repoName={repo?.name ?? null}
           prNumber={prNumber}
           prTitle={prTitle}
           prAuthor={prAuthor}
-          prUrl={prUrl}
-          headSha={headSha}
+          prUrl={pr?.url ?? null}
           baseSha={baseSha}
-          riskTier={riskTier}
-          trigger={listItem?.trigger}
-          elapsedLabel={elapsedLabel}
-          provenance={headerProvenance}
-          onRerun={handleRerun}
+          headSha={headSha}
+          triggerLabel={trigger ? TRIGGER_LABEL[trigger] ?? trigger : null}
+          riskLabel={riskTier ? TIER_LABEL[riskTier] ?? riskTier : null}
+          timeLabel={timeLabel}
+          onRerun={() => rerun.mutate({ reviewId: id })}
           rerunPending={rerun.isPending}
+          replayHref={isLive ? null : replayHref}
+          verdict={verdict}
+          artefacts={artefacts}
         />
-        <GateArea gate={r?.gate ?? null} error={s.error} live={isLive} className="shrink-0" />
+      </Rise>
+
+      <Rise delay={80}>
+        <Card tone="surface" pad="lg" as="section" aria-labelledby="pipeline-h" className={s.pipeline}>
+          <div className={s.pipeHead}>
+            <div>
+              <h2 id="pipeline-h" className={s.sectionTitle}>
+                Pipeline
+              </h2>
+              <p className={s.sectionSub}>
+                {isLive
+                  ? `Stage ${s0.stage_index ?? 0} of 9 · ${s0.stage_label ?? (currentKey ? STAGE_META[currentKey].doing : '')}`
+                  : s0.status === 'succeeded'
+                    ? `Nine stages in ${formatDurationSeconds(wall)}. The four specialists read the diff in parallel.`
+                    : `Stopped at stage ${s0.stage_index ?? '—'} of 9 after ${formatDurationSeconds(wall)}.`}
+              </p>
+            </div>
+            <span className={s.pipeKey}>
+              {recorded ? 'Timings recorded for this run' : railTotal != null ? '~ typical stage time, workspace p50' : null}
+            </span>
+          </div>
+          <StageTimeline views={views} progress={progress} verdict={railVerdict} cancelled={s0.status === 'cancelled'} className={s.rail} />
+        </Card>
+      </Rise>
+
+      <div className={s.body}>
+        <Rise delay={140} className={s.mainCol}>
+          {isLive ? (
+            <LiveLog events={log.events} live elapsed={formatElapsed(elapsedLive ?? 0)} />
+          ) : (
+            <section aria-labelledby="findings-h" className={s.findings}>
+              <SectionHeader
+                id="findings-h"
+                title="Findings"
+                description={
+                  r
+                    ? findings.length
+                      ? `${plural(r.counts?.proposed ?? findings.length, 'finding')} raised · ${published} published${count('blocking') ? ` · ${count('blocking')} ${count('blocking') === 1 ? 'blocks' : 'block'} the merge` : ''}`
+                      : undefined
+                    : 'Loading…'
+                }
+              />
+              {r ? (
+                <FindingsByOutcome findings={findings} baseSha={baseSha} headSha={headSha} gateClear={gateConclusion === 'success'} />
+              ) : (
+                <div className="flex flex-col gap-3" aria-hidden>
+                  <Skeleton className="h-[220px] w-full" style={{ borderRadius: 20 }} />
+                  <Skeleton className="h-[72px] w-full" style={{ borderRadius: 16 }} />
+                  <Skeleton className="h-[72px] w-full" style={{ borderRadius: 16 }} />
+                </div>
+              )}
+            </section>
+          )}
+          {!isLive ? meta(true) : null}
+        </Rise>
+
+        <Rise delay={200} as="aside" className={s.aside}>
+          {!isLive && log.events.length ? <LiveLog events={log.events} live={false} elapsed={formatElapsed(log.events[log.events.length - 1]?.at ?? wall)} /> : null}
+          {isResult ? (
+            <>
+              <CostTimingPanel
+                cost={r?.cost}
+                timing={r?.timing}
+                context={r?.context}
+                degradations={r?.degradations ?? s0.degradations ?? []}
+                costP50={costP50}
+                durationMedian={durationMedian}
+              />
+              <DeliveryPanel
+                delivery={r?.delivery}
+                gate={r?.gate}
+                published={r?.counts?.published}
+                findings={findings}
+                onShowPayload={r?.review_payload ? () => setPayloadOpen(true) : undefined}
+              />
+            </>
+          ) : null}
+          {isLive ? meta(false) : null}
+        </Rise>
       </div>
 
-      {isResult ? <PipelineSummaryStrip stages={stageEntries} wallClockSeconds={r?.timing?.duration_seconds} /> : null}
+      {r?.review_payload ? (
+        <Dialog open={payloadOpen} onOpenChange={setPayloadOpen}>
+          <DialogContent className={s.payloadDialog}>
+            <DialogHeader>
+              <DialogTitle>What Witness posted</DialogTitle>
+            </DialogHeader>
+            {body ? <pre className={s.payloadBody}>{body}</pre> : null}
+            <CodeBlockClient code={JSON.stringify(r.review_payload, null, 2)} lang="json" title="review_payload" maxHeight={360} />
+          </DialogContent>
+        </Dialog>
+      ) : null}
+    </Page>
+  );
+}
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as ResultTab)}>
-        {isResult ? (
-          <div className="flex items-center justify-between gap-3">
-            <TabsList>
-              <TabsTrigger value="pipeline">PIPELINE</TabsTrigger>
-              <TabsTrigger value="findings">FINDINGS</TabsTrigger>
-              <TabsTrigger value="delivery">DELIVERY</TabsTrigger>
-              <TabsTrigger value="cost">COST &amp; TIMING</TabsTrigger>
-            </TabsList>
-            {rawPayload ? (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button type="button" variant="quiet" size="sm">
-                    RAW PAYLOAD
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-3xl">
-                  <DialogHeader>
-                    <DialogTitle>review_payload</DialogTitle>
-                  </DialogHeader>
-                  <CodeBlockClient code={JSON.stringify(rawPayload, null, 2)} lang="json" title="review_payload" maxHeight={480} />
-                </DialogContent>
-              </Dialog>
-            ) : null}
-          </div>
-        ) : null}
+function isNotFound(error: { status?: number; code?: string } | null | undefined): boolean {
+  return error?.status === 404 || error?.code === 'REVIEW_NOT_FOUND';
+}
 
-        {/* The stage rail is ONE persistent instance, never reparented under a TabsContent —
-            a live run keeps it (plus the counters rail) visible unconditionally; a terminal
-            run keeps this same node mounted and only toggles it with the `hidden` attribute
-            when another sub-tab is selected, so it survives the live → result transition and
-            every subsequent tab switch. */}
-        <div
-          role={isResult ? "tabpanel" : undefined}
-          aria-label={isResult ? "Pipeline" : undefined}
-          className={cn(
-            "grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]",
-            isResult && "pt-4",
-            isResult && tab !== "pipeline" && "hidden",
-          )}
-        >
-          <StageRail
-            mode={isLive ? "live" : "static"}
-            orientation={isMobile ? "vertical" : "horizontal"}
-            stages={stageEntries}
-            stageIndex={isLive ? s.stage_index : undefined}
-            secondsSinceHeartbeat={isLive ? s.seconds_since_heartbeat : undefined}
-            stageLabels={isLive ? stageLabels : undefined}
-            expectedMs={isLive ? expectedMs : undefined}
-            index="02"
-            category="PIPELINE"
-            identifier={`run ${id.slice(0, 7)}`}
-            provenance={
-              isLive
-                ? `GET /v1/reviews/${id} → stage_index · stage_total · stage_label · heartbeat`
-                : `GET /v1/reviews/${id}/result → status`
-            }
-          />
-          {isLive ? (
-            <LiveRightRail
-              counts={s.counts}
-              cost={p?.cost}
-              degradations={s.degradations ?? []}
-              countsProvenance={`GET /v1/reviews/${id} → counts`}
-              costProvenance={`GET /v1/reviews/${id}/result?partial=true → cost`}
-            />
-          ) : null}
-        </div>
-
-        {resultLoaded && r ? (
+/** `/runs/<unknown id>`: a page of its own, with an h1 and the way back to the list. */
+export function RunNotFound({ id }: { id: string }) {
+  return (
+    <Page className={s.page}>
+      <PageHeader
+        eyebrow="Reviews"
+        title="No review with that id."
+        description={
           <>
-            <TabsContent value="findings" className="pt-4">
-              <FindingsTable
-                findings={r.findings ?? []}
-                gateConclusion={r.gate?.conclusion}
-                provenance={`GET /v1/reviews/${id}/result → findings`}
-              />
-            </TabsContent>
-            <TabsContent value="delivery" className="pt-4">
-              <DeliveryPanel
-                delivery={r.delivery}
-                gate={r.gate}
-                published={r.counts?.published}
-                provenance={`GET /v1/reviews/${id}/result → delivery · gate · counts`}
-              />
-            </TabsContent>
-            <TabsContent value="cost" className="pt-4">
-              <CostTimingPanel
-                cost={r.cost}
-                timing={r.timing}
-                context={r.context}
-                degradations={r.degradations ?? []}
-                provenance={`GET /v1/reviews/${id}/result → cost · timing · context · degradations`}
-              />
-            </TabsContent>
+            Witness has no run <span className={s.notFoundId}>{id}</span>. The link may be mistyped, or the run belongs to another workspace.
           </>
-        ) : null}
-      </Tabs>
-    </div>
+        }
+        actions={
+          <Button variant="dark" icon={ArrowLeft} href="/runs">
+            All reviews
+          </Button>
+        }
+      />
+    </Page>
+  );
+}
+
+/** Every run on the same pull request as `item`, oldest first. */
+function pullRequestRuns(items: readonly ReviewListItem[], item: ReviewListItem | undefined): ReviewListItem[] {
+  if (!item) return [];
+  return items
+    .filter((x) => x.repository.owner === item.repository.owner && x.repository.name === item.repository.name && x.pull_request.number === item.pull_request.number)
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+}
+
+function RunSkeleton() {
+  return (
+    <Page className={s.page}>
+      <Skeleton className="h-[420px] w-full" style={{ borderRadius: 20 }} />
+      <Skeleton className="h-[200px] w-full" style={{ borderRadius: 20 }} />
+      <div className={s.body}>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-[220px] w-full" style={{ borderRadius: 20 }} />
+          <Skeleton className="h-[72px] w-full" style={{ borderRadius: 16 }} />
+        </div>
+        <Skeleton className="h-[320px] w-full" style={{ borderRadius: 20 }} />
+      </div>
+    </Page>
   );
 }

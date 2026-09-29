@@ -18,6 +18,7 @@ import { Dialog as SheetPrimitive } from "radix-ui";
 import { XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useRestoreFocus } from "./restore-focus";
 
 function Sheet(props: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -45,6 +46,8 @@ function SheetContent({
   side = "right",
   showCloseButton = true,
   container,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   /** Right only (design §5.10). The prop exists so shadcn call sites compile. */
@@ -52,10 +55,11 @@ function SheetContent({
   showCloseButton?: boolean;
   container?: React.ComponentProps<typeof SheetPrimitive.Portal>["container"];
 }) {
+  const focus = useRestoreFocus(onOpenAutoFocus, onCloseAutoFocus);
   return (
     <SheetPortal container={container}>
       <SheetOverlay />
-      <SheetPrimitive.Content data-slot="sheet-content" data-side={side} className={cn("ui-sheet", className)} {...props}>
+      <SheetPrimitive.Content data-slot="sheet-content" data-side={side} className={cn("ui-sheet", className)} {...props} {...focus}>
         {children}
         {showCloseButton ? (
           <SheetPrimitive.Close data-slot="sheet-close" asChild>

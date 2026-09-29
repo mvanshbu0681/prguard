@@ -15,11 +15,9 @@
 // localStorage persistence.
 import { useSyncExternalStore } from 'react';
 
-export const CONTRAST_ATTR = 'data-contrast';
-export const CONTRAST_STORAGE_KEY = 'witness:contrast';
-export const DENSITY_ATTR = 'data-density';
-export const DENSITY_STORAGE_KEY = 'witness:density';
-export const SIDEBAR_STORAGE_KEY = 'witness:sidebar-collapsed';
+import { CONTRAST_ATTR, CONTRAST_STORAGE_KEY, DENSITY_ATTR, DENSITY_STORAGE_KEY, RAIL_ATTR, SIDEBAR_STORAGE_KEY } from './pref-keys';
+
+export { CONTRAST_ATTR, CONTRAST_STORAGE_KEY, DENSITY_ATTR, DENSITY_STORAGE_KEY, RAIL_ATTR, SIDEBAR_STORAGE_KEY };
 
 type Listener = () => void;
 
@@ -116,6 +114,11 @@ function setSidebarCollapsed(next: boolean): void {
   sidebarCollapsed = next;
   sidebarHydrated = true;
   safeLocalStorage()?.setItem(SIDEBAR_STORAGE_KEY, next ? '1' : '0');
+  // Mirrors the pre-paint flag (see RAIL_ATTR) so CSS and state never disagree.
+  if (typeof document !== 'undefined') {
+    if (next) document.documentElement.setAttribute(RAIL_ATTR, '');
+    else document.documentElement.removeAttribute(RAIL_ATTR);
+  }
   sidebarListeners.forEach((l) => l());
 }
 

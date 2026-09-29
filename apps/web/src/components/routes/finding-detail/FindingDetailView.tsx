@@ -1,108 +1,126 @@
 "use client";
-// OWNER: d3 (wave 3). /findings/[id] — the finding detail, as evidence
-// (dashboard-blueprint §2.7). One scroll, sticky section headers in fixed
-// order, no tabs. Composes wave-1/wave-2 chrome, badges and evidence
-// components with client data from @/lib/hooks; this file owns only
-// orchestration (which query, which section, the suppress dialog's open
-// state, the two bare-key bindings) — every section's own markup lives in its
-// own file.
+// /findings/[id] — the evidence page. The header says what was claimed and
+// where; the main column carries the claim, proof by execution (the hero) and
+// the location; the rail carries the severity arithmetic, identity & history,
+// delivery and the audit trail. `s` opens the suppress dialog, `e` exports the
+// finding's JSON exactly as the API returned it.
 import { useState } from "react";
-import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { ErrorState } from "@/components/app-shell";
-import { GraphPaper } from "@/components/chrome";
-import { Lockup } from "@/components/brand";
-import { Button } from "@/components/ui/button";
+import { Button, Page, PageHeader, Rise } from "@/components/dash/kit";
 import { useFinding, useReviewResult } from "@/lib/hooks";
 import { useKeyBinding } from "@/motion/keys";
-import { AuditSection } from "./AuditSection";
-import { BackLink } from "./BackLink";
-import { ClaimSection } from "./ClaimSection";
-import { DeliverySection } from "./DeliverySection";
+import { AuditCard } from "./AuditCard";
+import { ClaimCard } from "./ClaimCard";
+import { DeliveryCard } from "./DeliveryCard";
+import { DetailHeader } from "./DetailHeader";
 import { downloadFindingEvidence } from "./export-evidence";
+import { runOutcome } from "./format";
 import { FindingDetailSkeleton } from "./FindingDetailSkeleton";
-import { IdentitySection } from "./IdentitySection";
-import { LocationSection } from "./LocationSection";
-import { PageHeader } from "./PageHeader";
-import { ProofSection } from "./ProofSection";
-import { SeveritySection } from "./SeveritySection";
-import { StickyMiniHeader } from "./StickyMiniHeader";
+import { IdentityCard } from "./IdentityCard";
+import { LocationCard } from "./LocationCard";
+import { ProofCard } from "./ProofCard";
+import { SeverityCard } from "./SeverityCard";
+import { StateNotice } from "./StateNotice";
 import { SuppressDialog } from "./SuppressDialog";
-
-function NotFoundFrame({ id }: { id: string }) {
-  return (
-    <div className="relative isolate flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
-      <GraphPaper aria-hidden="true" className="absolute inset-0" />
-      <div className="relative z-10 flex flex-col items-center gap-6">
-        <p className="type-label text-text-dim">/ 404 — NO SUCH FINDING</p>
-        <Lockup variant="C" />
-        <p className="max-w-(--measure-body) type-body text-text-body">
-          No finding matches <span className="type-data text-text-primary">{id.slice(0, 8)}</span>. It may have been part of a run that was never
-          persisted, or the id is wrong.
-        </p>
-        <Button asChild variant="ghost">
-          <Link href="/findings">← BACK TO FINDINGS</Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
+import s from "./detail.module.css";
 
 export function FindingDetailView({ id }: { id: string }) {
   const findingQuery = useFinding(id);
   const finding = findingQuery.data;
   const reviewQuery = useReviewResult(finding?.review_id, { enabled: Boolean(finding?.review_id) });
+  const review = reviewQuery.data;
   const [suppressOpen, setSuppressOpen] = useState(false);
 
   useKeyBinding("s", () => setSuppressOpen(true), Boolean(finding) && finding?.status !== "suppressed");
-  useKeyBinding(
-    "e",
-    () => {
-      if (finding) downloadFindingEvidence(finding);
-    },
-    Boolean(finding),
-  );
+  useKeyBinding("e", () => finding && downloadFindingEvidence(finding), Boolean(finding));
 
   if (findingQuery.isPending) {
     return (
-      <div className="mx-auto max-w-[940px] px-4 py-8 md:px-8">
+      <Page>
         <FindingDetailSkeleton />
-      </div>
+      </Page>
     );
   }
 
   if (findingQuery.isError) {
-    if (findingQuery.error.status === 404) {
-      return <NotFoundFrame id={id} />;
-    }
     return (
-      <div className="mx-auto max-w-[940px] px-4 py-8 md:px-8">
-        <BackLink />
-        <div className="mt-6">
+      <Page>
+        {findingQuery.error.status === 404 ? (
+          <PageHeader
+            eyebrow="Findings"
+            title="No finding with that id."
+            description={
+              <>
+                Nothing in the corpus matches <span className="font-w-mono text-w-text">{id.slice(0, 8)}</span>. It may belong to a run that was never persisted, or the link is
+                wrong.
+              </>
+            }
+            actions={
+              <Button variant="dark" size="md" href="/findings" icon={ArrowLeft}>
+                All findings
+              </Button>
+            }
+          />
+        ) : (
           <ErrorState error={findingQuery.error} onRetry={() => findingQuery.refetch()} />
-        </div>
-      </div>
+        )}
+      </Page>
     );
   }
 
-  if (!finding) return null; // Unreachable: isPending/isError above cover every other TanStack Query state.
-
-  const review = reviewQuery.data;
-  const reviewShort = finding.review_id.slice(0, 7);
+  if (!finding) return null; // isPending / isError above cover every other query state.
+  const executed = Boolean(finding.proof?.test_code) || runOutcome(finding.proof?.base).kind !== "not_run" || runOutcome(finding.proof?.head).kind !== "not_run";
 
   return (
-    <div className="mx-auto max-w-[940px] px-4 md:px-8">
-      <StickyMiniHeader finding={finding} onSuppress={() => setSuppressOpen(true)} onExport={() => downloadFindingEvidence(finding)} suppressed={finding.status === "suppressed"} />
-      <div className="flex flex-col gap-6 pb-16 pt-6">
-        <PageHeader finding={finding} />
-        <ClaimSection finding={finding} />
-        <LocationSection finding={finding} />
-        <SeveritySection finding={finding} />
-        <ProofSection finding={finding} baseSha={review?.pull_request.base_sha ?? null} headSha={review?.pull_request.head_sha ?? null} reviewShort={reviewShort} />
-        <DeliverySection finding={finding} repository={review?.repository ?? null} prNumber={review?.pull_request.number ?? null} />
-        <IdentitySection finding={finding} onSuppress={() => setSuppressOpen(true)} />
-        <AuditSection finding={finding} />
+    <Page className="gap-8">
+      <DetailHeader finding={finding} review={review} onSuppress={() => setSuppressOpen(true)} onExport={() => downloadFindingEvidence(finding)} />
+      <div className={s.layout}>
+        <div className={s.mainCol}>
+          <Rise delay={60}>
+            <StateNotice finding={finding} />
+          </Rise>
+          <Rise delay={60}>
+            <ClaimCard finding={finding} />
+          </Rise>
+          <Rise delay={120}>
+            <ProofCard finding={finding} review={review} />
+          </Rise>
+          <Rise delay={180}>
+            <LocationCard finding={finding} review={review} />
+          </Rise>
+          {/* A proof that never ran is a short card: keep the columns balanced by moving the history cards across. */}
+          {executed ? null : (
+            <>
+              <Rise delay={240}>
+                <DeliveryCard finding={finding} review={review} />
+              </Rise>
+              <Rise delay={300}>
+                <AuditCard finding={finding} />
+              </Rise>
+            </>
+          )}
+        </div>
+        <div className={s.railCol}>
+          <Rise delay={120}>
+            <SeverityCard finding={finding} />
+          </Rise>
+          <Rise delay={180}>
+            <IdentityCard finding={finding} />
+          </Rise>
+          {executed ? (
+            <>
+              <Rise delay={240}>
+                <DeliveryCard finding={finding} review={review} />
+              </Rise>
+              <Rise delay={300}>
+                <AuditCard finding={finding} />
+              </Rise>
+            </>
+          ) : null}
+        </div>
       </div>
       <SuppressDialog finding={finding} open={suppressOpen} onOpenChange={setSuppressOpen} />
-    </div>
+    </Page>
   );
 }

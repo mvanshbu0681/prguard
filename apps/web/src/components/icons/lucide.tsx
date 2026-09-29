@@ -20,26 +20,23 @@ export const LUCIDE_STROKE = 1.5;
 /**
  * Banned icons, matched against lucide's display names (PascalCase; an alias such as
  * `SparklesIcon` or `Smile` resolves to its canonical name, `Sparkles` / `FaceSlightlySmiling`).
- *   scope "6.5"   §6.5 outright: sparkles (the four-point AI star), brains, robots, shields,
- *                 hexagon grids, neural-network node clouds, magic wands, chat bubbles,
- *                 globes, orbiting integration rings, every emoji.
- *   scope "rule"  the build's hard rules: spinners (every long operation has known structure
- *                 and a heartbeat) and "pass" checkmarks (gate clear is achromatic).
+ * The AI-product clichés stay banned: sparkles (the four-point AI star), brains, robots,
+ * hexagon grids, neural-network node clouds, magic wands, globes, orbiting integration
+ * rings and every emoji. The COLD LIGHT rules against shields, chat bubbles, spinners and
+ * "pass" ticks were retired with that design: the landing-page system (src/components/v2,
+ * and the dashboard built on it) uses a shield for "verified", a speech bubble for a PR
+ * comment and a lime tick for a clear gate.
  */
 export const BANNED_ICON_PATTERNS: readonly { pattern: RegExp; reason: string; scope: "6.5" | "rule" }[] = [
   { pattern: /Sparkle/, reason: "sparkles: the four-point AI star concedes the ground Witness fights for (§6.5)", scope: "6.5" },
   { pattern: /Brain/, reason: "brains (§6.5)", scope: "6.5" },
   { pattern: /^Bot(?![a-z])|Robot/, reason: "robots (§6.5)", scope: "6.5" },
-  { pattern: /Shield/, reason: "shields and shields-with-ticks (§6.5)", scope: "6.5" },
   { pattern: /Hexagon/, reason: "hexagon grids (§6.5)", scope: "6.5" },
   { pattern: /Network/, reason: "neural-network node clouds (§6.5)", scope: "6.5" },
   { pattern: /Wand/, reason: "magic wands (§6.5)", scope: "6.5" },
-  { pattern: /Message|Speech/, reason: "chat bubbles (§6.5)", scope: "6.5" },
   { pattern: /Globe|Earth/, reason: "globes (§6.5)", scope: "6.5" },
   { pattern: /Orbit/, reason: "orbiting integration rings (§6.5)", scope: "6.5" },
   { pattern: /^Face/, reason: "emoji faces (§6.5: every emoji)", scope: "6.5" },
-  { pattern: /^Loader/, reason: "spinners: show the stage and the heartbeat instead (§5.15)", scope: "rule" },
-  { pattern: /^(CircleCheck|CheckCircle|BadgeCheck|SquareCheck|CheckSquare)/, reason: 'a "pass" checkmark: gate clear is achromatic, never a tick (§1.8)', scope: "rule" },
 ];
 
 /** The reason an icon name is banned, or null when it may be used. */
