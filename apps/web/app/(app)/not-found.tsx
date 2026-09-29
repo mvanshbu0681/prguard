@@ -1,37 +1,25 @@
 'use client';
-// OWNER: t9a (wave 2). The dashboard's 404 (brand-gaps §F): Lockup C, --ink-0,
-// graph paper, no grain — no illustration, no "Oops!", no search box, no
-// sitemap. The provenance footer prints the path that was actually requested
-// and the status code, same device as every evidence frame, applied to a
-// failure. §F's own example CTA ("← BACK TO THE PROOF BENCH") targets the
-// marketing site's pinned section; the dashboard has no such section, so the
-// ghost CTA here returns to /overview instead — the one adaptation this track
-// made to the copy, flagged under `raised`.
-//
-// usePathname (not a route param: not-found.tsx receives none) is what makes
-// the requested path printable, so this is a Client Component.
-import Link from 'next/link';
+// A dashboard path that does not exist: the landing's sky, a glass card, one
+// way back. Renders inside the shell, so the rail stays usable.
 import { usePathname } from 'next/navigation';
-import { Lockup } from '@/components/brand';
-import { GraphPaper, ProvenanceLine } from '@/components/chrome';
-import { Button } from '@/components/ui/button';
+import { Button, GlassTile, PhotoCard } from '@/components/dash/kit';
 
 export default function NotFound() {
   const pathname = usePathname();
   return (
-    <div className="relative isolate flex min-h-dvh flex-col items-center justify-center bg-ink-0 px-4">
-      <GraphPaper aria-hidden="true" className="absolute inset-0" />
-      <div className="relative z-10 flex flex-col items-center gap-6 text-center">
-        <p className="type-label text-text-dim">/ 404 — NO SUCH ROUTE</p>
-        <Lockup variant="C" />
-        <p className="type-body max-w-(--measure-body) text-text-body">There is nothing at this path.</p>
-        <Button asChild variant="ghost">
-          <Link href="/overview">← BACK TO OVERVIEW</Link>
+    <div className="mx-auto flex w-full max-w-[1320px] px-4 py-8 md:px-9">
+      <PhotoCard className="flex min-h-[520px] w-full flex-col items-center justify-center gap-6 text-center" position="50% 70%" priority>
+        <p className="font-w-mono text-[12px] tracking-[0.14em] text-white/80 uppercase">404 · no such page</p>
+        <h1 className="font-w-display text-[44px] leading-[1.05] font-semibold tracking-[-1.2px] text-white max-sm:text-[30px]">
+          Nothing to witness here
+        </h1>
+        <GlassTile tone="navy" className="px-4 py-2 font-w-mono text-[12.5px]">
+          GET {pathname} · 404
+        </GlassTile>
+        <Button variant="primary" chip href="/overview" size="lg">
+          Back to overview
         </Button>
-      </div>
-      <div className="relative z-10 mt-16">
-        <ProvenanceLine source={`GET ${pathname} · 404`} />
-      </div>
+      </PhotoCard>
     </div>
   );
 }

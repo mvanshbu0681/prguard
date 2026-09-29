@@ -1,35 +1,36 @@
 "use client";
-// OWNER: d3 (wave 3). Finding.body_markdown, styled for the dark surface
-// (dashboard-blueprint §2.7 §01 CLAIM): "restricted schema: p, ul, ol, code,
-// pre, strong, em, a, blockquote. No raw HTML. Inline `code` gets Google Sans
-// Code at 12.5px on --ink-2 with 2px radius."
-//
-// `skipHtml` drops raw HTML outright (never parsed as markup — printed as
-// literal text would still be a channel for injected markup, so it is
-// dropped); `allowedElements` + `unwrapDisallowed` keeps anything outside the
-// restricted schema (a heading, a table, an image) as plain text content
-// instead of silently deleting a specialist's sentence.
+// Finding.body_markdown with the restricted schema: p, ul, ol, code, pre,
+// strong, em, a, blockquote. `skipHtml` drops raw HTML outright; anything
+// outside the schema (a heading, a table, an image) is unwrapped to its text
+// rather than silently deleting a specialist's sentence.
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 const ALLOWED_ELEMENTS = ["p", "ul", "ol", "li", "code", "pre", "strong", "em", "a", "blockquote"] as const;
 
-// `node` (react-markdown's mdast source node) must be pulled out of every override's
-// props before the rest are spread onto a real DOM element — leaving it in would leak an
-// unknown `node` attribute onto <p>, <a>, etc. Naming it to discard it is unused by design.
+const BODY = "text-[15.5px] leading-[1.7] text-w-text-2";
+
+// `node` (react-markdown's mdast source node) is pulled out of every override's
+// props so it never leaks onto a DOM element as an unknown attribute.
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const COMPONENTS: Components = {
-  p: ({ node: _node, ...props }) => <p className="type-body text-text-body" {...props} />,
-  ul: ({ node: _node, ...props }) => <ul className="type-body list-disc space-y-1 pl-5 text-text-body" {...props} />,
-  ol: ({ node: _node, ...props }) => <ol className="type-body list-decimal space-y-1 pl-5 text-text-body" {...props} />,
+  p: ({ node: _node, ...props }) => <p className={BODY} {...props} />,
+  ul: ({ node: _node, ...props }) => <ul className={cn(BODY, "list-disc space-y-1 pl-5")} {...props} />,
+  ol: ({ node: _node, ...props }) => <ol className={cn(BODY, "list-decimal space-y-1 pl-5")} {...props} />,
   li: ({ node: _node, ...props }) => <li {...props} />,
-  strong: ({ node: _node, ...props }) => <strong className="font-semibold text-text-primary" {...props} />,
+  strong: ({ node: _node, ...props }) => <strong className="font-semibold text-w-text" {...props} />,
   em: ({ node: _node, ...props }) => <em {...props} />,
-  blockquote: ({ node: _node, ...props }) => <blockquote className="border-l-2 border-rule-2 pl-4 text-text-dim" {...props} />,
-  a: ({ node: _node, className, ...props }) => <a className={cn("link-prose", className)} target="_blank" rel="noreferrer noopener" {...props} />,
-  code: ({ node: _node, className, ...props }) => <code className={cn("rounded-[2px] bg-ink-2 px-[0.3em] py-[0.05em] font-mono text-[12.5px] text-text-primary", className)} {...props} />,
-  pre: ({ node: _node, className, ...props }) => <pre className={cn("overflow-x-auto rounded-panel border border-rule-1 bg-ink-1 p-3 font-mono text-[12.5px] leading-[1.5]", className)} {...props} />,
+  blockquote: ({ node: _node, ...props }) => <blockquote className="border-l-2 border-w-line-heavy pl-4 text-w-muted" {...props} />,
+  a: ({ node: _node, className, ...props }) => (
+    <a className={cn("text-w-text underline decoration-w-line-heavy underline-offset-[3px] hover:decoration-current", className)} target="_blank" rel="noreferrer noopener" {...props} />
+  ),
+  code: ({ node: _node, className, ...props }) => (
+    <code className={cn("rounded-[6px] bg-w-surface px-[0.34em] py-[0.06em] font-w-mono text-[0.84em] text-w-text shadow-[inset_0_0_0_1px_var(--w-line)] [box-decoration-break:clone]", className)} {...props} />
+  ),
+  pre: ({ node: _node, className, ...props }) => (
+    <pre className={cn("overflow-x-auto rounded-w-inner bg-w-surface-3 p-4 font-w-mono text-[12.5px] leading-[1.6] [&_code]:bg-transparent [&_code]:p-0", className)} {...props} />
+  ),
 };
 /* eslint-enable @typescript-eslint/no-unused-vars */
 
@@ -39,10 +40,9 @@ export interface ClaimMarkdownProps {
   className?: string;
 }
 
-/** The finding's claim, rendered with the restricted schema (§2.7 §01 CLAIM). */
 export function ClaimMarkdown({ children, className }: ClaimMarkdownProps) {
   return (
-    <div className={cn("max-w-(--measure-body) space-y-3", className)} data-slot="claim-markdown">
+    <div className={cn("max-w-[72ch] space-y-3", className)} data-slot="claim-markdown">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={COMPONENTS} allowedElements={[...ALLOWED_ELEMENTS]} unwrapDisallowed skipHtml>
         {children}
       </ReactMarkdown>

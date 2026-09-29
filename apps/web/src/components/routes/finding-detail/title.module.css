@@ -1,0 +1,15 @@
+/* Inline code inside a finding title (`get_rate()`): Geist Mono, a quiet well,
+   sized to sit on the title's own x-height in a list row and in the hero. */
+.code {
+  padding: 0.06em 0.34em 0.1em;
+  border-radius: 0.34em;
+  background: var(--w-surface-3);
+  color: var(--w-text);
+  font-family: var(--w-font-mono);
+  font-size: 0.84em;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+

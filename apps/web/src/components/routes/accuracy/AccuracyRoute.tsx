@@ -1,92 +1,196 @@
 "use client";
-// OWNER: d5 (wave 3). /accuracy — the full self-report (dashboard blueprint
-// §2.10, plan §13 A6/D3, brief): the six metrics with always-visible
-// definitions/n/Wilson intervals (MetricGrid), then the three /accuracy
-// charts, each with its own provenance and ext note. A since/until window
-// filter lives in the URL and is passed to useAccuracy — the response's own
-// `window` field states what it actually covers (src/lib/hooks/use-accuracy.ts:
-// "repository / since / until cannot be recomputed from one stored report").
-// Nothing here counts up: every number renders once, from the query result.
-import { EmptyState, ErrorState, LoadingState } from "@/components/app-shell";
-import { CalibrationChart, DismissalByCategoryChart, MetricGrid, ProofCompositionChart, type AccuracySeriesExt } from "@/components/charts";
-import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+// /accuracy — Witness grading itself on this deployment's own data. A headline
+// written from the counts, the four precision proxies as the landing's bento
+// (each with n, a Wilson 95% interval and what it means), then the working
+// sections: where findings go and what the gate did, proof week by week,
+// calibration and dismissals, and the report's own caveats.
+//
+// The since/until window lives in the URL (window-filter.ts) and is passed to
+// useAccuracy; the response's own `window` says what it actually covers. The
+// three chart series are fixture-only (plan A11) and arrive from page.tsx.
+import { CalendarRange, Info, RotateCcw, TriangleAlert } from "lucide-react";
+import { Button, Card, EmptyState, Page, PageHeader, Rise, Skeleton } from "@/components/dash/kit";
+import { CORPUS_NOW, shortDate } from "@/components/dash/format";
+import { FIXTURES } from "@/lib/env";
+import type { AccuracySeriesExt } from "@/components/charts";
+import { useMemo } from "react";
 import { useAccuracy } from "@/lib/hooks";
-import { formatCaptured } from "@/components/chrome";
-import { sinceIso, toDateInputValue, untilIso, useAccuracyWindowFilter } from "./window-filter";
+import type { AccuracyReport } from "@/lib/api-types";
+import { type AccuracyCorpus, windowedAccuracy } from "./corpus-window";
+import { WINDOW_PRESETS, activePreset, duration, headline, proxy } from "./derive";
+import { FlowSection } from "./FlowSection";
+import { ProxyBento } from "./ProxyBento";
+import { SeverityEvidence } from "./SeverityEvidence";
+import { WeeklyProof } from "./WeeklyProof";
+import { WindowControl } from "./WindowControl";
+import { sinceIso, untilIso, useAccuracyWindowFilter } from "./window-filter";
+import s from "./accuracy.module.css";
 
 export interface AccuracyRouteProps {
   /** accuracy/series.json (plan A11, fixture-only): server-loaded once in the thin page.tsx, handed down — no live endpoint serves these three charts' shapes yet. */
   series: AccuracySeriesExt;
+  /**
+   * Fixture mode only: the compact corpus the report is computed from. The
+   * fixture resolver serves one all-time report, so a window set here is
+   * recomputed client-side from this (corpus-window.ts) instead of being
+   * silently ignored. Absent in live mode, where the API applies the window.
+   */
+  corpus?: AccuracyCorpus | null;
 }
 
-export function AccuracyRoute({ series }: AccuracyRouteProps) {
+/** "Last 7 days", "16 Sep → 23 Sep", or "Every run, first to latest". */
+function windowLabel(since: Date | null, until: Date | null, inverted: boolean): string {
+  if (inverted || (!since && !until)) return "Every run, first to latest";
+  const preset = activePreset(since, until, FIXTURES ? CORPUS_NOW : Date.now());
+  const hit = WINDOW_PRESETS.find((p) => p.id === preset);
+  if (hit) return `Last ${hit.label}`;
+  return `${since ? shortDate(since.toISOString()) : "First run"} → ${until ? shortDate(until.toISOString()) : "now"}`;
+}
+
+function WindowLine({ report, label, allTimeCharts }: { report: AccuracyReport; label: string; allTimeCharts: boolean }) {
+  const runs = report.runs.total ?? 0;
+  return (
+    <p className={s.meta}>
+      <span>
+        <CalendarRange size={14} strokeWidth={1.8} aria-hidden />
+        <b>{label}</b>
+        {report.window.repository ? <> · {report.window.repository}</> : null}
+        <span>
+          · <b>{runs}</b> {runs === 1 ? "run" : "runs"} graded
+        </span>
+      </span>
+      <span>
+        median review <b>{duration(report.runs.median_duration_seconds)}</b>
+      </span>
+      {allTimeCharts ? <span className={s.metaAllTime}>Charts below are all-time: the API serves them for the whole corpus only.</span> : null}
+      <span className={s.metaSource}>GET /v1/accuracy</span>
+    </p>
+  );
+}
+
+function Caveats({ caveats }: { caveats: string[] }) {
+  if (!caveats.length) return null;
+  return (
+    <Card tone="panel" pad="lg" className={s.note} as="aside" aria-labelledby="acc-caveats">
+      <span className={s.noteIcon} aria-hidden>
+        <Info size={18} strokeWidth={1.9} />
+      </span>
+      <div>
+        <h2 className={s.noteTitle} id="acc-caveats">
+          Before you quote a number
+        </h2>
+        <ul className={s.noteList}>
+          {caveats.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
+      </div>
+    </Card>
+  );
+}
+
+export function AccuracySkeleton() {
+  return (
+    <div className="flex flex-col gap-4" data-loading-state="" aria-busy="true" aria-label="Loading the accuracy self-report">
+      <div className={s.skelBento}>
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+      </div>
+      <Skeleton className="h-[320px] rounded-w-card" />
+    </div>
+  );
+}
+
+export function AccuracyRoute({ series, corpus }: AccuracyRouteProps) {
   const [{ since, until }, setWindow] = useAccuracyWindowFilter();
-  const query = useAccuracy({ since: sinceIso(since), until: untilIso(until) });
+  // An inverted window (From after To) is never applied: WindowControl says why.
+  const inverted = since != null && until != null && since.getTime() > until.getTime();
+  const sinceArg = inverted ? null : sinceIso(since);
+  const untilArg = inverted ? null : untilIso(until);
+  const hasWindow = sinceArg != null || untilArg != null;
+  const query = useAccuracy({ since: sinceArg, until: untilArg });
+  const windowed = useMemo(() => (corpus && hasWindow ? windowedAccuracy(corpus, sinceArg, untilArg) : null), [corpus, hasWindow, sinceArg, untilArg]);
+
+  const pending = !windowed && query.isPending;
+  const failed = !windowed && query.isError;
+  const report: AccuracyReport | null = windowed ? windowed.report : pending || failed ? null : (query.data ?? null);
+  const view = windowed ? windowed.series : series;
+  // Live mode with a window: the API recomputes the report, but the three
+  // charts are still the all-time series.
+  const allTimeCharts = hasWindow && !windowed;
+  const head = report ? headline(report) : { title: "Witness grades itself", soft: "on this deployment's own runs." };
+  const dismiss = report ? proxy(report.precision_proxies.human_dismissal_rate) : null;
+  const label = windowLabel(since, until, inverted);
 
   return (
-    <div className="mx-auto flex max-w-[1280px] flex-col gap-8 px-4 py-8 md:px-8">
-      <header className="flex flex-col gap-2">
-        <p className="type-label text-text-dim">/ accuracy</p>
-        <h1 className="type-display-h3 text-text-primary">The accuracy self-report</h1>
-        <p className="type-small text-text-body">
-          Every metric the system publishes about itself, with its definition, its <code className="type-chip">n</code> and a Wilson 95% interval —
-          always visible, never a tooltip.
-        </p>
-      </header>
+    <Page className={s.root}>
+      <PageHeader
+        eyebrow="Accuracy"
+        title={head.title}
+        soft={head.soft}
+        description="Every rate on this page comes with its sample size and a 95% interval. It is computed from this deployment's own database, not an external benchmark."
+        actions={<WindowControl />}
+      />
 
-      <form
-        className="flex flex-wrap items-end gap-4"
-        onSubmit={(event) => event.preventDefault()}
-        aria-label="Accuracy report window"
-      >
-        <Field label="Since" hint="UTC calendar date.">
-          <Input
-            type="date"
-            mono
-            value={toDateInputValue(since)}
-            onChange={(event) => setWindow({ since: event.target.value ? new Date(`${event.target.value}T00:00:00.000Z`) : null })}
+      {pending ? (
+        <AccuracySkeleton />
+      ) : failed || !report ? (
+        <Card tone="surface">
+          <EmptyState
+            icon={TriangleAlert}
+            title="The self-report didn't load"
+            body={query.error?.message ?? "GET /v1/accuracy failed."}
+            action={
+              <Button variant="dark" size="sm" icon={RotateCcw} onClick={() => query.refetch()}>
+                Retry
+              </Button>
+            }
           />
-        </Field>
-        <Field label="Until" hint="UTC calendar date.">
-          <Input
-            type="date"
-            mono
-            value={toDateInputValue(until)}
-            onChange={(event) => setWindow({ until: event.target.value ? new Date(`${event.target.value}T00:00:00.000Z`) : null })}
-          />
-        </Field>
-        {since || until ? (
-          <Button type="button" variant="quiet" size="sm" onClick={() => setWindow({ since: null, until: null })}>
-            CLEAR
-          </Button>
-        ) : null}
-      </form>
-
-      {query.isPending ? (
-        <LoadingState rows={6} label="Loading the accuracy self-report." />
-      ) : query.isError ? (
-        <ErrorState error={query.error} onRetry={() => query.refetch()} />
+        </Card>
       ) : (
         <>
-          <p className="type-chip tabular text-text-dim">
-            {`GET /v1/accuracy → window: ${query.data.window.since ? formatCaptured(query.data.window.since) : "the full corpus"} … ${
-              query.data.window.until ? formatCaptured(query.data.window.until) : "now"
-            }`}
-          </p>
-
-          <MetricGrid report={query.data} />
-
-          {query.data.runs.total === 0 ? (
-            <EmptyState message="No completed runs in this window. The self-report has nothing to score yet." />
-          ) : null}
-
-          <ProofCompositionChart weekly={series.weekly} />
-          <DismissalByCategoryChart categories={series.dismissal_by_category} />
-          <CalibrationChart calibration={series.calibration} />
+          <WindowLine report={report} label={label} allTimeCharts={allTimeCharts} />
+          {(report.runs.total ?? 0) === 0 ? (
+            <Card tone="surface">
+              <EmptyState
+                icon={CalendarRange}
+                title="No completed runs in this window"
+                body="The self-report has nothing to grade yet. Widen the window or clear it."
+                action={
+                  since || until ? (
+                    <Button variant="dark" size="sm" onClick={() => setWindow({ since: null, until: null })}>
+                      Clear window
+                    </Button>
+                  ) : undefined
+                }
+              />
+            </Card>
+          ) : (
+            <>
+              <Rise delay={60}>
+                <div className="flex flex-col gap-7">
+                  <ProxyBento report={report} />
+                </div>
+              </Rise>
+              <Rise delay={120}>
+                <FlowSection report={report} />
+              </Rise>
+              {view.weekly.length ? (
+                <Rise delay={180}>
+                  <WeeklyProof weekly={view.weekly} allTime={allTimeCharts} />
+                </Rise>
+              ) : null}
+              {view.calibration.length || view.dismissal_by_category.length ? (
+                <Rise delay={240}>
+                  <SeverityEvidence series={view} overall={{ k: dismiss?.k ?? 0, n: dismiss?.n ?? 0 }} allTime={allTimeCharts} />
+                </Rise>
+              ) : null}
+            </>
+          )}
+          <Caveats caveats={report.caveats} />
         </>
       )}
-    </div>
+    </Page>
   );
 }

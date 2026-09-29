@@ -5,6 +5,8 @@
      3. shadcn.css        vendored data-state variants (T0)
      4. tokens            core.css then marketing.css (they wipe and replace Tailwind's scales)
      5. track stylesheets chrome (T1a) · ui + code (T1b) · motion (T3)
+     6. dashboard.css     the dashboard's light/dark system (scoped to <html data-dash-theme>)
+        dash-ui.css       the vendored primitives re-skinned for it
    Nothing else is imported globally. Do not run `shadcn add` / `shadcn init`
    here again: the CLI rewrites this file and re-adds light/dark palettes. */
 @import "tailwindcss";
@@ -16,6 +18,8 @@
 @import "../src/styles/ui.css";
 @import "../src/styles/code.css";
 @import "../src/styles/motion.css";
+@import "./tokens/dashboard.css";
+@import "../src/styles/dash-ui.css";
 
 @layer base {
   :root {

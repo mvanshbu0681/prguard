@@ -1,227 +1,329 @@
 "use client";
-// OWNER: d2 (wave 3). /findings' filter bar — every §6.5 filter, URL-first
-// (dashboard §2.6, brief: "a judge dropped into
-// /findings?severity_min=high&proof_status=proven&blocking=true must see
-// exactly the findings that matter"). Presentational: it takes `filters` and
-// `setFilters` as props rather than calling useFindingFilters() itself, so it
-// is testable without mounting the nuqs adapter or a router (see
-// tests/unit/routes/findings-list/filter-bar.test.tsx).
-import { useId, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Cross } from "@/components/icons";
-import { FINDING_STATUSES, PROOF_STATUSES, SEVERITY_BANDS, type FindingStatus, type ProofStatus, type SeverityBand } from "@/lib/contracts";
+// The inbox's controls, all pills: the status segments with live counts, a
+// search field, one dropdown pill per filter (the pill turns ink and carries
+// its value when set, with its own ×), a Blocking toggle, grouping and sort.
+// Deep-link identity filters (a run, a PR number, a fingerprint) that have no
+// control of their own show as removable dashed chips.
+//
+// Presentational: `view` / `setView` are props, so it is testable with a spy
+// setter and no nuqs adapter (tests/unit/routes/findings-list/filter-bar.test.tsx).
+import { DropdownMenu } from "radix-ui";
+import { ArrowUpDown, Check, ChevronDown, Search, Square, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { IconButton, Kbd, Segmented, TextField, bandColor, type SegmentedOption } from "@/components/dash/kit";
+import { humanize } from "@/components/dash/format";
+import { PROOF_STATUSES, type ProofStatus, type SeverityBand } from "@/lib/contracts";
+import { useKeyBinding } from "@/motion/keys";
 import { cn } from "@/lib/utils";
-import { activeFilterChips, shortFingerprint } from "./format";
-import type { FindingUrlFilters, SetFindingUrlFilters } from "./types";
+import { PROOF_LABEL, SEVERITY_FLOOR_LABEL, SORT_LABEL, STATUS_LABEL, activeFilterChips, clearFiltersPatch, type RepoLookupEntry } from "./format";
+import { SORTS, SPECIALISTS, type FindingsGroup, type FindingsSort, type FindingsView, type SetFindingsView, type Specialist, type StatusView } from "./types";
+import s from "./findings.module.css";
 
 export interface FilterBarProps {
-  filters: FindingUrlFilters;
-  setFilters: SetFindingUrlFilters;
-  /** totals.matched under the current filters. undefined while the first page is still loading. */
-  matched?: number;
-  /** The corpus total with no filters applied. undefined while loading. */
-  total?: number;
+  view: FindingsView;
+  setView: SetFindingsView;
+  /** Count per status segment under the other filters; undefined while loading. */
+  statusCounts?: Partial<Record<StatusView, number | undefined>>;
+  /** `owner/name` options for the Repository pill. */
+  repositories?: string[];
+  /** The review join, for the Pull request pill's options. */
+  lookup?: Map<string, RepoLookupEntry>;
   className?: string;
 }
 
-const BLOCKING_VALUE = { any: "any", blocking: "true", clear: "false" } as const;
-const STATUS_ANY = "__any__";
+const SEVERITY_DESC: readonly SeverityBand[] = ["critical", "high", "medium", "low", "info"];
+const STATUS_SEGMENTS: readonly StatusView[] = ["published", "disproven", "suppressed", "dropped", "all"];
+const SEARCH_COMMIT_MS = 280;
 
-/** A small labeled control: 11px mono-caps label above, the control below — the dashboard's instrument-panel-legend register (design §0.2). `wide`: takes the filter bar's full row width below the `sm` breakpoint, so a multi-item toggle group has something bounded to wrap inside instead of running off the 375px gutter. */
-function FilterField({ label, htmlFor, wide = false, children }: { label: string; htmlFor?: string; wide?: boolean; children: React.ReactNode }) {
-  return (
-    <div className={cn("flex flex-col gap-1", wide && "w-full sm:w-auto")}>
-      <span className="type-label text-text-dim" id={htmlFor ? `${htmlFor}-label` : undefined}>
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
+/* ------------------------------------------------------------------ pill */
 
-/** A free-text filter (repository, PR #, run id, fingerprint): local state so every keystroke doesn't replace the URL — committed on blur or Enter. */
-function TextFilter({
+function FilterPill({
   label,
   value,
-  placeholder,
-  mono = true,
-  inputMode,
-  onCommit,
+  onClear,
+  clearLabel,
+  children,
+  align = "start",
 }: {
   label: string;
-  value: string;
-  placeholder: string;
-  mono?: boolean;
-  inputMode?: "text" | "numeric";
-  onCommit: (next: string) => void;
+  /** The chosen value's display; null = unset (outline pill). */
+  value: ReactNode | null;
+  onClear?: () => void;
+  clearLabel?: string;
+  children: ReactNode;
+  align?: "start" | "end";
 }) {
-  const id = useId();
-  const [draft, setDraft] = useState(value);
-  // Adjusting state during render (React's own pattern for "reset local state
-  // when a prop changes"), not an effect: a filter cleared from outside (a
-  // chip's ×, "Clear filters") must overwrite an in-progress, uncommitted
-  // keystroke, and this runs before paint instead of one render late.
-  const [syncedValue, setSyncedValue] = useState(value);
-  if (value !== syncedValue) {
-    setSyncedValue(value);
-    setDraft(value);
-  }
-  function commit() {
-    if (draft !== value) onCommit(draft);
-  }
+  const active = value !== null;
   return (
-    <FilterField label={label} htmlFor={id}>
-      <Input
-        id={id}
-        mono={mono}
-        inputMode={inputMode}
-        value={draft}
-        placeholder={placeholder}
-        className="h-8 w-32"
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commit();
-            (e.target as HTMLInputElement).blur();
-          } else if (e.key === "Escape" && draft !== value) {
-            e.preventDefault();
-            setDraft(value);
-          }
-        }}
-      />
-    </FilterField>
+    <DropdownMenu.Root modal={false}>
+      <span className={s.pillWrap} data-active={active ? "" : undefined}>
+        <DropdownMenu.Trigger className={s.pill}>
+          {label}
+          {active ? <span className={s.pillValue}>{value}</span> : null}
+          <ChevronDown size={14} strokeWidth={2} aria-hidden />
+        </DropdownMenu.Trigger>
+        {active && onClear ? (
+          <button type="button" className={s.pillClear} onClick={onClear} aria-label={clearLabel ?? `Clear ${label.toLowerCase()} filter`}>
+            <X size={13} strokeWidth={2.2} aria-hidden />
+          </button>
+        ) : null}
+      </span>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content className={s.menu} align={align} sideOffset={8} collisionPadding={16}>
+          {children}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
   );
 }
 
-export function FilterBar({ filters, setFilters, matched, total, className }: FilterBarProps) {
-  const chips = activeFilterChips(filters);
+function RadioOption({ value, children, swatch }: { value: string; children: ReactNode; swatch?: string }) {
+  return (
+    <DropdownMenu.RadioItem value={value} className={s.option}>
+      {swatch ? <span className={s.swatch} style={{ background: swatch }} aria-hidden /> : null}
+      {children}
+      <DropdownMenu.ItemIndicator className={s.optionCheck}>
+        <Check size={15} strokeWidth={2.2} aria-hidden />
+      </DropdownMenu.ItemIndicator>
+    </DropdownMenu.RadioItem>
+  );
+}
+
+/* ------------------------------------------------------------------ search */
+
+function SearchField({ value, onCommit }: { value: string; onCommit: (next: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState(value);
+  // Reset the draft when the URL value changes from outside (a chip's ×, Clear all).
+  const [synced, setSynced] = useState(value);
+  if (value !== synced) {
+    setSynced(value);
+    setDraft(value);
+  }
+  // Commit a pause in typing to the URL, not every keystroke.
+  useEffect(() => {
+    if (draft === value) return;
+    const t = setTimeout(() => onCommit(draft), SEARCH_COMMIT_MS);
+    return () => clearTimeout(t);
+  }, [draft, value, onCommit]);
+  useKeyBinding("/", () => inputRef.current?.focus());
 
   return (
-    <div className={cn("flex flex-col gap-3 border-b border-rule-1 bg-ink-1 px-4 py-3", className)} data-slot="findings-filter-bar">
-      <div className="flex flex-wrap items-end gap-x-5 gap-y-3">
-        <FilterField label="severity ≥" wide>
-          <ToggleGroup
-            type="single"
+    <TextField
+      ref={inputRef}
+      wrapperClassName={s.search}
+      icon={Search}
+      size="sm"
+      type="search"
+      aria-label="Search findings"
+      placeholder="Search titles, files, rules"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onCommit(draft);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setDraft("");
+          onCommit("");
+          e.currentTarget.blur();
+        }
+      }}
+      trailing={
+        draft ? (
+          <IconButton
+            icon={X}
             size="sm"
-            className="w-full flex-wrap"
-            value={filters.severity_min ?? ""}
-            onValueChange={(v) => setFilters({ severity_min: (v || null) as SeverityBand | null })}
-            aria-label="Minimum severity"
-          >
-            {SEVERITY_BANDS.map((band) => (
-              <ToggleGroupItem key={band} value={band} className="type-label px-2">
-                {band}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </FilterField>
-
-        <FilterField label="proof" wide>
-          <ToggleGroup
-            type="multiple"
-            size="sm"
-            className="w-full flex-wrap"
-            value={[...(filters.proof_status ?? [])]}
-            onValueChange={(v) => setFilters({ proof_status: v.length ? (v as ProofStatus[]) : null })}
-            aria-label="Proof status"
-          >
-            {PROOF_STATUSES.map((status) => (
-              <ToggleGroupItem key={status} value={status} className="type-label px-2">
-                {status.replaceAll("_", " ")}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </FilterField>
-
-        <FilterField label="blocking" wide>
-          <ToggleGroup
-            type="single"
-            size="sm"
-            className="w-full flex-wrap"
-            value={filters.blocking === null || filters.blocking === undefined ? BLOCKING_VALUE.any : filters.blocking ? BLOCKING_VALUE.blocking : BLOCKING_VALUE.clear}
-            onValueChange={(v) => {
-              if (!v || v === BLOCKING_VALUE.any) setFilters({ blocking: null });
-              else setFilters({ blocking: v === BLOCKING_VALUE.blocking });
+            label="Clear search"
+            onClick={() => {
+              setDraft("");
+              onCommit("");
             }}
-            aria-label="Blocking"
-          >
-            <ToggleGroupItem value={BLOCKING_VALUE.any} className="type-label px-2">
-              any
-            </ToggleGroupItem>
-            <ToggleGroupItem value={BLOCKING_VALUE.blocking} className="type-label px-2">
-              blocking
-            </ToggleGroupItem>
-            <ToggleGroupItem value={BLOCKING_VALUE.clear} className="type-label px-2">
-              non-blocking
-            </ToggleGroupItem>
-          </ToggleGroup>
-        </FilterField>
+          />
+        ) : (
+          <Kbd className="mr-2">/</Kbd>
+        )
+      }
+    />
+  );
+}
 
-        <FilterField label="status">
-          <Select value={filters.status ?? STATUS_ANY} onValueChange={(v) => setFilters({ status: v === STATUS_ANY ? null : (v as FindingStatus) })}>
-            <SelectTrigger size="sm" className="h-8 w-36" aria-label="Finding status">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={STATUS_ANY}>any</SelectItem>
-              {FINDING_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status}
-                </SelectItem>
+/* ------------------------------------------------------------------ bar */
+
+export function FilterBar({ view, setView, statusCounts = {}, repositories = [], lookup, className }: FilterBarProps) {
+  const chips = activeFilterChips(view);
+  const chipOnly = chips.filter((c) => c.shownOn === "chip");
+
+  const segments: SegmentedOption<StatusView>[] = (view.status === "proposed" ? [...STATUS_SEGMENTS.slice(0, 4), "proposed", "all"] : STATUS_SEGMENTS).map((v) => ({
+    value: v as StatusView,
+    label: STATUS_LABEL[v as StatusView],
+    count: statusCounts[v as StatusView],
+  }));
+
+  const prOptions = view.repository && lookup ? prsOf(lookup, view.repository) : [];
+
+  return (
+    <div className={cn(s.toolbar, className)} data-slot="findings-filter-bar">
+      <div className={s.toolRow}>
+        <div className={s.segScroll}>
+          <Segmented label="Finding status" options={segments} value={view.status} onChange={(status) => setView({ status: status === "published" ? null : status })} />
+        </div>
+        <SearchField value={view.q ?? ""} onCommit={(q) => setView({ q: q.trim() ? q : null })} />
+      </div>
+
+      <div className={s.toolRow}>
+        <div className={s.pills} role="group" aria-label="Filters">
+          <FilterPill label="Severity" value={view.severity_min ? `≥ ${humanize(view.severity_min)}` : null} onClear={() => setView({ severity_min: null })}>
+            <p className={s.menuLabel}>Computed severity</p>
+            <DropdownMenu.RadioGroup value={view.severity_min ?? "any"} onValueChange={(v) => setView({ severity_min: v === "any" ? null : (v as SeverityBand) })}>
+              <RadioOption value="any">Any severity</RadioOption>
+              {SEVERITY_DESC.map((band) => (
+                <RadioOption key={band} value={band} swatch={bandColor(band)}>
+                  {SEVERITY_FLOOR_LABEL[band]}
+                </RadioOption>
               ))}
-            </SelectContent>
-          </Select>
-        </FilterField>
+            </DropdownMenu.RadioGroup>
+          </FilterPill>
 
-        <TextFilter label="repository" value={filters.repository ?? ""} placeholder="owner/name" onCommit={(v) => setFilters({ repository: v.trim() || null })} />
-        <TextFilter
-          label="PR #"
-          value={filters.pr_number != null ? String(filters.pr_number) : ""}
-          placeholder="42"
-          inputMode="numeric"
-          onCommit={(v) => {
-            const n = Number.parseInt(v, 10);
-            setFilters({ pr_number: v.trim() && Number.isFinite(n) ? n : null });
-          }}
-        />
-        <TextFilter label="run id" value={filters.review_id ?? ""} placeholder="4e8b1d0c…" onCommit={(v) => setFilters({ review_id: v.trim() || null })} />
-        <TextFilter label="fingerprint" value={filters.fingerprint ?? ""} placeholder="a91f3c2e…" onCommit={(v) => setFilters({ fingerprint: v.trim() || null })} />
+          <FilterPill
+            label="Proof"
+            value={view.proof_status.length === 0 ? null : view.proof_status.length === 1 ? PROOF_LABEL[view.proof_status[0]] : `${view.proof_status.length} states`}
+            onClear={() => setView({ proof_status: null })}
+          >
+            <p className={s.menuLabel}>Proof by execution</p>
+            {PROOF_STATUSES.map((status) => {
+              const checked = view.proof_status.includes(status);
+              return (
+                <DropdownMenu.CheckboxItem
+                  key={status}
+                  className={s.option}
+                  checked={checked}
+                  onSelect={(e) => e.preventDefault()}
+                  onCheckedChange={(next) => {
+                    const set = new Set<ProofStatus>(view.proof_status);
+                    if (next) set.add(status);
+                    else set.delete(status);
+                    const list = PROOF_STATUSES.filter((p) => set.has(p));
+                    setView({ proof_status: list.length ? list : null });
+                  }}
+                >
+                  <span className={s.optionBox} aria-hidden>
+                    {checked ? <Check size={11} strokeWidth={3} /> : null}
+                  </span>
+                  {PROOF_LABEL[status]}
+                </DropdownMenu.CheckboxItem>
+              );
+            })}
+          </FilterPill>
 
-        <div className="ml-auto flex items-center gap-3 self-center pt-4">
-          <span className="type-data tabular text-text-body" data-slot="findings-totals">
-            {matched === undefined || total === undefined ? "…" : `${matched.toLocaleString()} of ${total.toLocaleString()}`}
-          </span>
-          {chips.length > 0 ? (
-            <Button variant="ghost" size="sm" onClick={() => setFilters(null)}>
-              CLEAR FILTERS
-            </Button>
+          <FilterPill label="Specialist" value={view.specialist ? humanize(view.specialist) : null} onClear={() => setView({ specialist: null })}>
+            <p className={s.menuLabel}>Raised by</p>
+            <DropdownMenu.RadioGroup value={view.specialist ?? "any"} onValueChange={(v) => setView({ specialist: v === "any" ? null : (v as Specialist) })}>
+              <RadioOption value="any">Any specialist</RadioOption>
+              {SPECIALISTS.map((sp) => (
+                <RadioOption key={sp} value={sp}>
+                  {humanize(sp)}
+                </RadioOption>
+              ))}
+            </DropdownMenu.RadioGroup>
+          </FilterPill>
+
+          <FilterPill
+            label="Repository"
+            value={view.repository ? view.repository.split("/").pop() : null}
+            onClear={() => setView({ repository: null, pr_number: null })}
+          >
+            <p className={s.menuLabel}>Repository</p>
+            <DropdownMenu.RadioGroup value={view.repository ?? "any"} onValueChange={(v) => setView({ repository: v === "any" ? null : v, pr_number: null })}>
+              <RadioOption value="any">Every repository</RadioOption>
+              {repositories.map((repo) => (
+                <RadioOption key={repo} value={repo}>
+                  {repo}
+                </RadioOption>
+              ))}
+            </DropdownMenu.RadioGroup>
+          </FilterPill>
+
+          {view.repository && prOptions.length > 0 ? (
+            <FilterPill label="Pull request" value={view.pr_number !== null ? `#${view.pr_number}` : null} onClear={() => setView({ pr_number: null })}>
+              <p className={s.menuLabel}>{view.repository.split("/").pop()}</p>
+              <DropdownMenu.RadioGroup value={view.pr_number !== null ? String(view.pr_number) : "any"} onValueChange={(v) => setView({ pr_number: v === "any" ? null : Number(v) })}>
+                <RadioOption value="any">Every pull request</RadioOption>
+                {prOptions.map((pr) => (
+                  <RadioOption key={pr.number} value={String(pr.number)}>
+                    <span className="min-w-0 truncate">
+                      <span className="font-w-mono text-[12.5px]">#{pr.number}</span> {pr.title ?? ""}
+                    </span>
+                  </RadioOption>
+                ))}
+              </DropdownMenu.RadioGroup>
+            </FilterPill>
           ) : null}
+
+          <button
+            type="button"
+            className={cn(s.pill, s.toggle)}
+            aria-pressed={view.blocking === true}
+            onClick={() => setView({ blocking: view.blocking === true ? null : true })}
+          >
+            <Square size={11} strokeWidth={2.4} aria-hidden />
+            Blocking only
+          </button>
+        </div>
+
+        <div className={s.viewControls}>
+          <Segmented<FindingsGroup>
+            size="sm"
+            label="Group findings"
+            value={view.group}
+            onChange={(group) => setView({ group: group === "none" ? null : group })}
+            options={[
+              { value: "none", label: "List" },
+              { value: "pr", label: "By PR" },
+              { value: "file", label: "By file" },
+            ]}
+          />
+          <FilterPill label="Sort" value={view.sort === "newest" ? null : SORT_LABEL[view.sort]} onClear={() => setView({ sort: null })} clearLabel="Reset sort" align="end">
+            <p className={s.menuLabel}>Order</p>
+            <DropdownMenu.RadioGroup value={view.sort} onValueChange={(v) => setView({ sort: v === "newest" ? null : (v as FindingsSort) })}>
+              {SORTS.map((sort) => (
+                <RadioOption key={sort} value={sort}>
+                  <ArrowUpDown size={14} strokeWidth={1.9} aria-hidden className="text-w-subtle" />
+                  {SORT_LABEL[sort]}
+                </RadioOption>
+              ))}
+            </DropdownMenu.RadioGroup>
+          </FilterPill>
         </div>
       </div>
 
       {chips.length > 0 ? (
-        <ul className="flex flex-wrap items-center gap-2" aria-label="Active filters">
-          {chips.map((chip) => (
+        <ul className={s.chips} aria-label="Active filters">
+          {chipOnly.map((chip) => (
             <li key={chip.key}>
-              <Badge asChild variant="outline">
-                <button type="button" onClick={() => setFilters(chip.clear)} aria-label={`Clear filter: ${chip.text}`}>
-                  {chip.text}
-                  <Cross className="ml-1.5 -mr-0.5 text-[0.7em]" />
-                </button>
-              </Badge>
+              <button type="button" className={s.chip} onClick={() => setView(chip.clear)} aria-label={`Clear filter: ${chip.text}`}>
+                {chip.text}
+                <X size={12} strokeWidth={2.2} aria-hidden />
+              </button>
             </li>
           ))}
+          <li>
+            <button type="button" className={s.chip} onClick={() => setView(clearFiltersPatch())}>
+              Clear all filters
+            </button>
+          </li>
         </ul>
       ) : null}
     </div>
   );
 }
 
-// Re-exported so tests can assert the fingerprint chip text without duplicating the truncation rule.
-export { shortFingerprint };
+/** The PRs of one repository in the review join, newest number first. */
+function prsOf(lookup: Map<string, RepoLookupEntry>, repository: string): { number: number; title: string | null }[] {
+  const byNumber = new Map<number, string | null>();
+  for (const entry of lookup.values()) {
+    if (entry.repository === repository && !byNumber.has(entry.prNumber)) byNumber.set(entry.prNumber, entry.prTitle);
+  }
+  return [...byNumber.entries()].sort((a, b) => b[0] - a[0]).map(([number, title]) => ({ number, title }));
+}

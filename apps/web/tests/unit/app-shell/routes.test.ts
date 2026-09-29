@@ -5,19 +5,19 @@ import { describe, expect, it } from 'vitest';
 import { APP_NAV_ITEMS, breadcrumbsForPath, CHORD_MAP, isActiveNavItem, navItemsByGroup, shortSegment } from '@/components/app-shell/routes';
 
 describe('APP_NAV_ITEMS', () => {
-  it('has exactly the six navigable D2 routes (the other two, /runs/:id and /findings/:id, are row-reached)', () => {
-    expect(APP_NAV_ITEMS.map((item) => item.href)).toEqual(['/overview', '/findings', '/suppressions', '/audit', '/accuracy', '/settings/policy']);
+  it('has exactly the eight navigable routes (/runs/:id, /findings/:id and repo pages are row-reached)', () => {
+    expect(APP_NAV_ITEMS.map((item) => item.href)).toEqual(['/overview', '/repos', '/runs', '/findings', '/suppressions', '/audit', '/accuracy', '/settings/policy']);
   });
 
-  it('groups Reviews · Governance · Settings, in that order', () => {
-    expect(navItemsByGroup('Reviews').map((i) => i.label)).toEqual(['Overview', 'Findings']);
+  it('groups Workspace · Governance · Settings, in that order', () => {
+    expect(navItemsByGroup('Workspace').map((i) => i.label)).toEqual(['Overview', 'Repositories', 'Reviews', 'Findings']);
     expect(navItemsByGroup('Governance').map((i) => i.label)).toEqual(['Suppressions', 'Audit', 'Accuracy']);
     expect(navItemsByGroup('Settings').map((i) => i.label)).toEqual(['Policy']);
   });
 
-  it('every item is keyboard-reachable via a unique go-to chord (brief: g then o/f/s/a/c/p)', () => {
+  it('every item is keyboard-reachable via a unique go-to chord (g then o/r/v/f/s/a/c/p)', () => {
     const chords = APP_NAV_ITEMS.map((item) => item.chord);
-    expect(chords).toEqual(['o', 'f', 's', 'a', 'c', 'p']);
+    expect(chords).toEqual(['o', 'r', 'v', 'f', 's', 'a', 'c', 'p']);
     expect(new Set(chords).size).toBe(chords.length);
   });
 });
@@ -25,6 +25,8 @@ describe('APP_NAV_ITEMS', () => {
 describe('CHORD_MAP', () => {
   it('resolves every chord letter to its route', () => {
     expect(CHORD_MAP.get('o')?.href).toBe('/overview');
+    expect(CHORD_MAP.get('r')?.href).toBe('/repos');
+    expect(CHORD_MAP.get('v')?.href).toBe('/runs');
     expect(CHORD_MAP.get('f')?.href).toBe('/findings');
     expect(CHORD_MAP.get('s')?.href).toBe('/suppressions');
     expect(CHORD_MAP.get('a')?.href).toBe('/audit');
@@ -38,9 +40,10 @@ describe('CHORD_MAP', () => {
 });
 
 describe('isActiveNavItem', () => {
-  it('matches only the exact pathname', () => {
+  it('matches the item and the pages beneath it, never a prefix sibling', () => {
     expect(isActiveNavItem('/findings', '/findings')).toBe(true);
-    expect(isActiveNavItem('/findings/abc', '/findings')).toBe(false);
+    expect(isActiveNavItem('/findings/abc', '/findings')).toBe(true);
+    expect(isActiveNavItem('/findingsx', '/findings')).toBe(false);
   });
 });
 
@@ -63,9 +66,18 @@ describe('breadcrumbsForPath', () => {
   it('builds a crumb per segment, shortening a trailing id but keeping the full href', () => {
     const id = '4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41';
     expect(breadcrumbsForPath(`/runs/${id}`)).toEqual([
-      { label: 'Runs', href: '/runs' },
+      { label: 'Reviews', href: '/runs' },
       { label: '4e8b1d0c', href: `/runs/${id}` },
     ]);
+  });
+
+  it('collapses repository pages to Repositories › name › #number', () => {
+    expect(breadcrumbsForPath('/repos/acme/checkout-service/pulls/4821')).toEqual([
+      { label: 'Repositories', href: '/repos' },
+      { label: 'checkout-service', href: '/repos/acme/checkout-service' },
+      { label: '#4821', href: '/repos/acme/checkout-service/pulls/4821' },
+    ]);
+    expect(breadcrumbsForPath('/repos/acme/ledger')).toHaveLength(2);
   });
 
   it('is empty at the root', () => {

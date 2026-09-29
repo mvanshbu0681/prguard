@@ -1,7 +1,8 @@
-// OWNER: d4 (wave 3). /suppressions, end to end through the fixture resolver: URL
-// filters round-trip through the address bar (nuqs' testing adapter), and the revoke
-// flow — confirm dialog, DELETE /v1/suppressions/{id}, the row flips to revoked in
-// place without leaving the ledger (dashboard-blueprint §2.8: "revoke never deletes").
+// /suppressions, end to end through the fixture resolver: URL filters round-trip
+// through the address bar (nuqs' testing adapter), the ledger joins the finding each
+// suppression silenced, and the revoke flow — confirm dialog, DELETE
+// /v1/suppressions/{id}, the row flips to revoked in place without leaving the
+// ledger ("revoke never deletes").
 import "../../ui/dom-polyfills";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -16,12 +17,10 @@ import { testResolver } from "../../data/sample-corpus";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 
-let resolver: ReturnType<typeof testResolver>["resolver"];
 let onUrlUpdate: ReturnType<typeof vi.fn<OnUrlUpdateFunction>>;
 
 beforeEach(() => {
-  resolver = testResolver().resolver;
-  setTransportBase(resolver);
+  setTransportBase(testResolver().resolver);
   onUrlUpdate = vi.fn();
 });
 afterEach(() => setTransportBase(null));
@@ -40,46 +39,123 @@ function renderPage(searchParams = "") {
   return render(<SuppressionsPage />, { wrapper: Wrapper });
 }
 
+const lastUrl = () => (onUrlUpdate.mock.calls.at(-1)![0] as { searchParams: URLSearchParams }).searchParams;
+const ledger = () => screen.getByRole("list", { name: "The ledger" });
+const rowOf = (text: RegExp) => screen.getByText(text).closest("li")!;
+const stateGroup = () => screen.getByRole("group", { name: "Ledger state" });
+
+describe("/suppressions — posture", () => {
+  it("heads the page with the findings silenced and summarises the whole ledger", async () => {
+    renderPage();
+    // Sample ledger: suppressed_count 1 + 4 + 0 + 9.
+    await screen.findByRole("heading", { level: 1, name: /14 findings silenced to date/ });
+    // The two numbers can never read as a mismatch: the description says what each counts.
+    expect(screen.getByText("2 active suppressions still silence 10 of them; the other 4 fell under rules since expired or revoked.")).toBeInTheDocument();
+    expect(screen.getByText(/of those 14 findings/)).toBeInTheDocument();
+    expect(screen.getByText("Silenced right now")).toBeInTheDocument();
+    expect(screen.getByText("Why teams suppress")).toBeInTheDocument();
+    expect(screen.getByText("How far they reach")).toBeInTheDocument();
+  });
+
+  it("joins the finding each suppression silenced, with a link to it", async () => {
+    renderPage();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+    const row = rowOf(/vendored SDK/);
+    // F5 in the sample corpus carries suppression s1.
+    expect(within(row).getByRole("link", { name: /finding f5000000/ })).toHaveAttribute("href", "/findings/f5000000-0000-4000-8000-000000000005");
+  });
+});
+
 describe("/suppressions — URL filters", () => {
-  it("defaults to active-only (the API's own default) and lists the active sample rows", async () => {
+  it("defaults to active-only (the API's own default) and lists only the active rows", async () => {
     renderPage();
-    await waitFor(() => expect(screen.getAllByText("ACTIVE").length).toBeGreaterThan(0));
-    // The sample corpus (tests/unit/data → src/lib/fixture-sample.ts) ships 2 active, 1
-    // expired-by-flag and 1 revoked row; active-only should show exactly the 2 active ones.
-    expect(screen.queryByText(/CLI entrypoint/)).not.toBeInTheDocument(); // the expired row's reason
-    expect(screen.getByText(/vendored SDK/)).toBeInTheDocument();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+    expect(within(ledger()).getByText(/tracked in the issue tracker/)).toBeInTheDocument();
+    expect(within(ledger()).queryByText(/CLI entrypoint/)).not.toBeInTheDocument(); // the expired row
+    expect(within(stateGroup()).getByRole("button", { name: /^Active/ })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("the state toggle to 'ALL ROWS' pushes active=false into the URL and reveals the expired and revoked rows", async () => {
+  it("the state control to 'All' pushes active=false into the URL and reveals the expired and revoked rows", async () => {
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() => expect(screen.getByText(/vendored SDK/)).toBeInTheDocument());
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
 
-    await user.click(screen.getByRole("radio", { name: "ALL ROWS" }));
+    await user.click(within(stateGroup()).getByRole("button", { name: /^All/ }));
 
-    await waitFor(() => expect(screen.getByText(/CLI entrypoint/)).toBeInTheDocument());
-    expect(screen.getByText(/duplicate of s1/)).toBeInTheDocument(); // the revoked row
-    expect(onUrlUpdate).toHaveBeenCalled();
-    const lastCall = onUrlUpdate.mock.calls.at(-1)![0] as { searchParams: URLSearchParams };
-    expect(lastCall.searchParams.get("active")).toBe("false");
+    await waitFor(() => expect(within(ledger()).getByText(/CLI entrypoint/)).toBeInTheDocument());
+    expect(within(ledger()).getByText(/duplicate of s1/)).toBeInTheDocument(); // the revoked row
+    expect(lastUrl().get("active")).toBe("false");
   });
 
-  it("a repository filter typed into the URL-bound input is reflected in the querystring", async () => {
+  it("a row's state tag only appears when the list mixes states (never repeating the tab)", async () => {
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() => expect(screen.getByText(/vendored SDK/)).toBeInTheDocument());
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+    expect(within(ledger()).queryByText("Active", { selector: "span" })).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Repository"), "acme/checkout-service");
-
-    await waitFor(() => {
-      const lastCall = onUrlUpdate.mock.calls.at(-1)![0] as { searchParams: URLSearchParams };
-      expect(lastCall.searchParams.get("repository")).toBe("acme/checkout-service");
-    });
+    await user.click(within(stateGroup()).getByRole("button", { name: /^All/ }));
+    await waitFor(() => expect(within(rowOf(/vendored SDK/)).getByText("Active", { selector: "span" })).toBeInTheDocument());
+    expect(within(rowOf(/CLI entrypoint/)).getByText("Expired", { selector: "span" })).toBeInTheDocument();
   });
 
-  it("?fingerprint= arrives pre-filled from a deep link (findings → ledger)", async () => {
-    renderPage("?fingerprint=a91f3c2e00000000000000000000000000000000000000000000000000008b4d");
-    await waitFor(() => expect(screen.getByLabelText("Fingerprint")).toHaveValue("a91f3c2e00000000000000000000000000000000000000000000000000008b4d"));
+  it("'Revoked' narrows to revoked rows only, as ?state=revoked", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+
+    await user.click(within(stateGroup()).getByRole("button", { name: /^Revoked/ }));
+
+    await waitFor(() => expect(within(ledger()).getByText(/duplicate of s1/)).toBeInTheDocument());
+    expect(within(ledger()).queryByText(/vendored SDK/)).not.toBeInTheDocument();
+    expect(lastUrl().get("state")).toBe("revoked");
+    expect(lastUrl().get("active")).toBe("false");
+  });
+
+  it("a scope from the reach ladder filters server-side and lands in the URL", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+
+    const ladder = screen.getByRole("list", { name: /by scope/ });
+    await user.click(within(ladder).getByRole("button", { name: /Org/ }));
+
+    await waitFor(() => expect(within(ledger()).queryByText(/vendored SDK/)).not.toBeInTheDocument());
+    expect(within(ledger()).getByText(/tracked in the issue tracker/)).toBeInTheDocument(); // the tenant row
+    expect(lastUrl().get("scope")).toBe("tenant");
+  });
+
+  it("the repository menu writes ?repository=", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /Repository: all repositories/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "acme/api-gateway" }));
+
+    await waitFor(() => expect(lastUrl().get("repository")).toBe("acme/api-gateway"));
+  });
+
+  it("search refines the rows client-side and is kept in the URL as ?q=", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+
+    await user.type(screen.getByLabelText("Search the ledger"), "todo_comment");
+
+    await waitFor(() => expect(within(ledger()).queryByText(/vendored SDK/)).not.toBeInTheDocument());
+    expect(within(ledger()).getByText(/tracked in the issue tracker/)).toBeInTheDocument();
+    expect(lastUrl().get("q")).toBe("todo_comment");
+  });
+
+  it("?fingerprint= arrives from a finding's deep link as a removable chip", async () => {
+    const user = userEvent.setup();
+    const fp = "a91f3c2e00000000000000000000000000000000000000000000000000008b4d";
+    renderPage(`?fingerprint=${fp}`);
+    const chip = await screen.findByTitle(fp);
+    expect(within(chip).getByText("a91f3c2e…8b4d")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Remove the fingerprint filter" }));
+    await waitFor(() => expect(lastUrl().get("fingerprint")).toBeNull());
   });
 });
 
@@ -87,23 +163,36 @@ describe("/suppressions — revoke flow", () => {
   it("confirms in a dialog that says revoke never deletes, then flips the row to revoked in place", async () => {
     const user = userEvent.setup();
     renderPage();
-    await waitFor(() => expect(screen.getByText(/vendored SDK/)).toBeInTheDocument());
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
 
-    const row = screen.getByText(/vendored SDK/).closest("li")!;
-    await user.click(within(row).getByRole("button", { name: "REVOKE" }));
+    await user.click(within(rowOf(/vendored SDK/)).getByRole("button", { name: /^Revoke/ }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/does not delete this row/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/finding it silenced is raised again/)).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("button", { name: "REVOKE" }));
+    await user.click(within(dialog).getByRole("button", { name: "Revoke" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    // The row is still in the ledger (append-only), now struck through as revoked —
-    // active-only no longer matches it, so switch to ALL ROWS to see it in place.
-    await user.click(screen.getByRole("radio", { name: "ALL ROWS" }));
+    // Still in the ledger (append-only), now revoked — active-only no longer matches it.
+    await user.click(within(stateGroup()).getByRole("button", { name: /^All/ }));
     await waitFor(() => {
-      const revokedRow = screen.getByText(/vendored SDK/).closest("li")!;
-      expect(within(revokedRow).getByText("REVOKED")).toBeInTheDocument();
+      const row = rowOf(/vendored SDK/);
+      expect(row).toHaveAttribute("data-ledger-row", "revoked");
+      expect(within(row).getByText("Revoked", { selector: "span" })).toBeInTheDocument();
+      expect(within(row).queryByRole("button", { name: /^Revoke/ })).not.toBeInTheDocument();
     });
+  });
+
+  it("'Keep it' closes the dialog without revoking", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(within(ledger()).getByText(/vendored SDK/)).toBeInTheDocument());
+
+    await user.click(within(rowOf(/vendored SDK/)).getByRole("button", { name: /^Revoke/ }));
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Keep it" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(rowOf(/vendored SDK/)).toHaveAttribute("data-ledger-row", "active");
   });
 });

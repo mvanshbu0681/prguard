@@ -262,7 +262,7 @@ describe("Icon — lucide-react at Witness's weight", () => {
     expect(svg.getAttribute("aria-hidden")).toBeNull();
   });
 
-  it("refuses every §6.5 banned icon, aliases included", () => {
+  it("refuses every AI-cliché icon, aliases included", () => {
     const banned = [
       Lucide.Sparkles,
       Lucide.Sparkle,
@@ -271,27 +271,16 @@ describe("Icon — lucide-react at Witness's weight", () => {
       Lucide.BrainCircuit,
       Lucide.Bot,
       Lucide.BotMessageSquare,
-      Lucide.Shield,
-      Lucide.ShieldCheck,
       Lucide.Hexagon,
       Lucide.Network,
       Lucide.Wand,
       Lucide.WandSparkles,
-      Lucide.MessageSquare,
-      Lucide.MessagesSquare,
-      Lucide.Speech,
       Lucide.Globe,
       Lucide.Earth,
       Lucide.Orbit,
       Lucide.Smile,
       Lucide.Frown,
       Lucide.Laugh,
-      Lucide.LoaderCircle,
-      Lucide.Loader,
-      Lucide.CircleCheck,
-      Lucide.CheckCircle,
-      Lucide.BadgeCheck,
-      Lucide.SquareCheck,
     ];
     for (const icon of banned) {
       expect(icon, "a banned name that lucide no longer exports").toBeDefined();
@@ -301,7 +290,7 @@ describe("Icon — lucide-react at Witness's weight", () => {
   });
 
   it("lets ordinary utility chrome through", () => {
-    for (const icon of [Lucide.Search, Lucide.Copy, Lucide.Check, Lucide.X, Lucide.Download, Lucide.ExternalLink, Lucide.Shell, Lucide.BottleWine]) {
+    for (const icon of [Lucide.Search, Lucide.Copy, Lucide.Check, Lucide.X, Lucide.Download, Lucide.ExternalLink, Lucide.Shell, Lucide.BottleWine, Lucide.ShieldCheck, Lucide.MessageSquareText, Lucide.CircleCheck]) {
       expect(bannedIconReason(icon.displayName ?? ""), icon.displayName).toBeNull();
     }
   });

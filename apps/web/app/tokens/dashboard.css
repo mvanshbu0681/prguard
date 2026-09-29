@@ -1,0 +1,498 @@
+/* ==========================================================================
+   app/tokens/dashboard.css — the Witness dashboard on the landing-page system.
+
+   The dashboard now speaks the same visual language as the marketing page
+   (src/components/v2): a white/ink canvas, #cbf857 lime, sky blue, Plus
+   Jakarta Sans for display, Geist for UI text, Geist Mono uppercase labels,
+   20px cards on a 5% hairline, pill-shaped controls and photographic sky
+   imagery with glass on top of it. It ships a light and a dark theme.
+
+   HOW IT WORKS
+   1. The app layout writes data-dash-theme="light"|"dark" on <html> before
+      first paint (src/components/dash/theme.ts). The attribute exists only
+      while a dashboard route is mounted, so marketing pages are untouched.
+      It lives on <html> (not on the route wrapper) because Radix portals —
+      dialogs, menus, tooltips, the ⌘K palette, toasts — render into <body>.
+   2. New UI reads the --w-* tokens below, either in CSS modules
+      (var(--w-surface)) or through the Tailwind colours registered at the end
+      (bg-w-surface, text-w-muted, border-w-line, rounded-w-card …).
+   3. The legacy COLD LIGHT tokens (--ink-*, --text-*, --rule-*, --signal …)
+      are remapped per theme, so every reused legacy component (dialogs, the
+      palette, code windows, the proof bench) inherits the new palette too.
+      Derived legacy tokens are re-declared on the same theming roots core.css
+      layer B uses, so a nested [data-surface] cannot resurrect the old values.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   1. Shared, theme-independent values
+   -------------------------------------------------------------------------- */
+:root[data-dash-theme] {
+  /* Brand */
+  --w-lime: #cbf857;
+  --w-lime-hover: #d6fb77;
+  --w-lime-press: #bdee46;
+  --w-on-lime: #131313;
+  --w-ink: #131313;
+  --w-sky: #38bdf8;
+  --w-navy: #111827;
+
+  /* Radii — the landing's: 28px frame, 20px card, 16px inset card, pills for everything interactive */
+  --w-r-frame: 24px;
+  --w-r-card: 20px;
+  --w-r-tile: 16px;
+  --w-r-inner: 12px;
+  --w-r-sm: 8px;
+  --w-r-pill: 999px;
+
+  /* Type families (next/font variables are set on <html> by app/layout.tsx) */
+  --w-font-display: var(--font-v2-display), "Plus Jakarta Sans", system-ui, sans-serif;
+  --w-font-sans: var(--font-v2-sans), "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --w-font-mono: var(--font-v2-mono), "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Motion — landing curves. Colour transitions stay ≤ 240ms (motion lint). */
+  --w-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --w-ease-snap: cubic-bezier(0.2, 0, 0, 1);
+  --w-dur-fast: 160ms;
+  --w-dur: 220ms;
+  --w-dur-slow: 320ms;
+  --w-dur-enter: 700ms;
+
+  /* Layout */
+  --w-sidebar: 252px;
+  --w-sidebar-collapsed: 76px;
+  --w-topbar: 64px;
+  --w-page-max: 1320px;
+
+  /* Legacy font slots → the landing faces, so reused components change face too */
+  --font-gsc: var(--font-v2-mono);
+  --font-inter: var(--font-v2-sans);
+  --font-mono: var(--w-font-mono);
+  --font-sans: var(--w-font-sans);
+  --font-display: var(--w-font-display);
+  --font-heading: var(--w-font-display);
+  --font-settings: normal;
+}
+
+
+/* --------------------------------------------------------------------------
+   2. LIGHT — the default. White panel, grey cards, ink type.
+   -------------------------------------------------------------------------- */
+:root[data-dash-theme="light"],
+:root[data-dash-theme="light"] :is([data-surface], [data-contrast]) {
+  color-scheme: light;
+
+  /* Surfaces */
+  --w-canvas: #f3f3f5;        /* behind the frame: the sidebar sits here */
+  --w-panel: #ffffff;         /* the rounded content frame */
+  --w-surface: #f4f4f6;       /* a card on the panel (landing grey card #efeff1, one step lighter) */
+  --w-surface-2: #ffffff;     /* a card inside a card (the landing's white inset) */
+  --w-surface-3: #ebebef;     /* wells, tracks, skeletons */
+  --w-raised: #ffffff;        /* menus, popovers, dialogs */
+  --w-hover: rgba(19, 19, 19, 0.045);
+  --w-press: rgba(19, 19, 19, 0.08);
+  --w-selected: #ffffff;
+
+  /* Lines */
+  --w-line: rgba(0, 0, 0, 0.06);
+  --w-line-strong: rgba(0, 0, 0, 0.11);
+  --w-line-heavy: rgba(0, 0, 0, 0.2);
+
+  /* Type */
+  --w-text: #131313;
+  --w-text-2: #3a3b41;
+  --w-muted: #5b6472;         /* the landing's slate: 5.98:1 on white */
+  --w-subtle: #686e79;        /* tertiary: metadata, placeholders — 4.6:1 on the panel and cards (AA) */
+  --w-faint: #b4b8bf;
+
+  /* Inverse (ink card, dark button) */
+  --w-inverse: #131313;
+  --w-inverse-2: #1f1f23;
+  --w-on-inverse: #ffffff;
+  --w-on-inverse-muted: rgba(255, 255, 255, 0.62);
+
+  /* Accents */
+  --w-accent-text: #3f6212;   /* lime cannot be text on white: this olive is */
+  --w-lime-soft: #eefbd0;
+  --w-lime-line: rgba(132, 180, 20, 0.35);
+  --w-blue: #1e6fd9;
+  --w-blue-text: #1a5fc0;
+  --w-blue-soft: #e9f1fd;
+  --w-sky-soft: #e5f6fe;
+
+  /* Status */
+  --w-danger: #e5484d;
+  --w-danger-text: #c42a30;
+  --w-danger-soft: #fdeeee;
+  --w-danger-line: rgba(229, 72, 77, 0.28);
+  --w-warn: #f5a524;
+  --w-warn-text: #9a5b00;
+  --w-warn-soft: #fff4de;
+  --w-warn-line: rgba(245, 165, 36, 0.4);
+  --w-ok: #65a30d;
+  --w-ok-text: #3f6212;
+  --w-ok-soft: #eefbd0;
+  --w-info: #1e6fd9;
+  --w-info-soft: #e9f1fd;
+
+  /* Severity ramp (score bands) */
+  --w-sev-critical: #e5484d;
+  --w-sev-high: #f97316;
+  --w-sev-medium: #f5a524;
+  --w-sev-low: #a8a29e;
+  --w-sev-info: #b4b8bf;
+
+  /* Charts: ink leads, lime and blue support, greys fill */
+  --w-chart-1: #131313;
+  --w-chart-2: #cbf857;
+  --w-chart-3: #1e6fd9;
+  --w-chart-4: #38bdf8;
+  --w-chart-5: #94a3b8;
+  --w-chart-6: #d4d4d8;
+  --w-chart-grid: rgba(0, 0, 0, 0.06);
+  --w-chart-axis: #686e79;
+
+  /* Glass — over photographs, the sticky top bar, menus and the command palette */
+  --w-glass: rgba(255, 255, 255, 0.72);
+  --w-glass-strong: rgba(255, 255, 255, 0.86);
+  --w-glass-line: rgba(255, 255, 255, 0.7);
+  --w-glass-blur: 18px;
+  --w-glass-photo: linear-gradient(160deg, rgba(10, 31, 68, 0.62), rgba(12, 38, 82, 0.5));
+
+  /* Elevation — used sparingly: popovers, the active nav pill, floating docks */
+  --w-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --w-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04), 0 2px 8px rgba(16, 24, 40, 0.05);
+  --w-shadow-pop: 0 16px 40px -12px rgba(16, 24, 40, 0.22), 0 4px 12px rgba(16, 24, 40, 0.06);
+  --w-shadow-float: 0 24px 64px -20px rgba(16, 24, 40, 0.3), 0 8px 20px rgba(16, 24, 40, 0.08);
+  --w-focus: #1e6fd9;
+  --w-focus-ring: 0 0 0 2px var(--w-panel), 0 0 0 4px #1e6fd9;
+
+  /* ---- Legacy primitives, remapped (reused components follow the theme) ---- */
+  --ink-0: #f3f3f5;
+  --ink-1: #ffffff;
+  --ink-2: #f4f4f6;
+  --ink-3: #ececef;
+  --ink-4: #e4e4e8;
+  --ink-5: #d8d8de;
+  --ink-6: #c2c2ca;
+  --ink-7: #8b8f98;
+  --ink-8: #9a9ea6;
+  --text-primary: #131313;
+  --text-body: #33343a;
+  --text-dim: #5b6472;
+  --text-disabled: #a0a4ab;
+  --rule-hair: rgba(0, 0, 0, 0.05);
+  --rule-1: rgba(0, 0, 0, 0.07);
+  --rule-2: rgba(0, 0, 0, 0.12);
+  --rule-3: rgba(0, 0, 0, 0.2);
+  --inset-hi: rgba(255, 255, 255, 0.7);
+  --scrim: rgba(17, 17, 20, 0.34);
+  --registration: rgba(0, 0, 0, 0.1);
+  --registration-hover: rgba(0, 0, 0, 0.2);
+  --hc-rule-3: #6b7078;
+  --signal-text: #1a5fc0;
+  --signal-hi: #1e6fd9;
+  --signal: #1e6fd9;
+  --signal-lo: #1e6fd9;
+  --signal-tint: #e9f1fd;
+  --signal-tint-lo: #f2f7fe;
+  --alarm-text: #c42a30;
+  --alarm-hi: #d9363c;
+  --alarm: #e5484d;
+  --alarm-tint: #fdeeee;
+  --alarm-tint-hi: #fbe2e3;
+  --alarm-tint-lo: #fef5f5;
+  --alarm-tint-hover: #f9d7d8;
+  --marker-text: #9a5b00;
+  --marker: #f5a524;
+  --marker-tint: #fff4de;
+  --sev-info: #b4b8bf;
+  --sev-low: #a8a29e;
+  --sev-medium: #f5a524;
+  --sev-high: #f97316;
+  --sev-critical: #e5484d;
+  --diff-add-text: #1a7f37;
+  --diff-add: #2da44e;
+  --diff-add-bg: rgba(45, 164, 78, 0.1);
+  --diff-del-bg: rgba(229, 72, 77, 0.09);
+  --diff-del-text: #c42a30;
+  --diff-del: #e5484d;
+  --ansi-blue: #1e6fd9;
+  --chart-disproven: #94a3b8;
+  --grid: rgba(0, 0, 0, 0.035);
+  --grid-dash: rgba(0, 0, 0, 0.05);
+
+  /* ---- Legacy derived tokens that assumed a dark ground ---- */
+  --proof-proven-bg: var(--w-lime);
+  --proof-proven-fg: var(--w-on-lime);
+  --proof-disproven-fg: var(--w-muted);
+  --proof-disproven-border: var(--w-line-heavy);
+  --proof-inconclusive-bg: var(--w-warn-soft);
+  --proof-inconclusive-fg: var(--w-warn-text);
+  --proof-inconclusive-border: var(--w-warn);
+  --gate-failure-bg: var(--w-danger-soft);
+  --gate-failure-fg: var(--w-danger-text);
+  --gate-neutral-bg: var(--w-surface);
+  --gate-success-bg: var(--w-lime-soft);
+  --gate-success-fg: var(--w-accent-text);
+  --gate-success-border: var(--w-lime-line);
+  --chart-proven: var(--w-chart-1);
+  --chart-series: var(--w-chart-1);
+  --heartbeat-live: var(--w-ok);
+}
+
+
+/* --------------------------------------------------------------------------
+   3. DARK — the landing footer's ink, with lime as the live accent.
+   -------------------------------------------------------------------------- */
+:root[data-dash-theme="dark"],
+:root[data-dash-theme="dark"] :is([data-surface], [data-contrast]) {
+  color-scheme: dark;
+
+  --w-canvas: #09090b;
+  --w-panel: #111113;
+  --w-surface: #18181b;
+  --w-surface-2: #202024;
+  --w-surface-3: #26262b;
+  --w-raised: #1b1b1f;
+  --w-hover: rgba(255, 255, 255, 0.045);
+  --w-press: rgba(255, 255, 255, 0.08);
+  --w-selected: #202024;
+
+  --w-line: rgba(255, 255, 255, 0.07);
+  --w-line-strong: rgba(255, 255, 255, 0.12);
+  --w-line-heavy: rgba(255, 255, 255, 0.22);
+
+  --w-text: #f4f4f5;
+  --w-text-2: #d4d4d8;
+  --w-muted: #a1a1aa;
+  --w-subtle: #8f8f99;        /* 4.7:1 on the deepest dark well (AA) */
+  --w-faint: #52525b;
+
+  --w-inverse: #f4f4f5;
+  --w-inverse-2: #e4e4e7;
+  --w-on-inverse: #131313;
+  --w-on-inverse-muted: rgba(19, 19, 19, 0.6);
+
+  --w-accent-text: #cbf857;
+  --w-lime-soft: rgba(203, 248, 87, 0.12);
+  --w-lime-line: rgba(203, 248, 87, 0.32);
+  --w-blue: #4f8ff0;
+  --w-blue-text: #7cabf5;
+  --w-blue-soft: rgba(79, 143, 240, 0.14);
+  --w-sky-soft: rgba(56, 189, 248, 0.12);
+
+  --w-danger: #f2555a;
+  --w-danger-text: #ff8f92;
+  --w-danger-soft: rgba(242, 85, 90, 0.13);
+  --w-danger-line: rgba(242, 85, 90, 0.34);
+  --w-warn: #f5b041;
+  --w-warn-text: #fcc56b;
+  --w-warn-soft: rgba(245, 176, 65, 0.13);
+  --w-warn-line: rgba(245, 176, 65, 0.38);
+  --w-ok: #cbf857;
+  --w-ok-text: #cbf857;
+  --w-ok-soft: rgba(203, 248, 87, 0.12);
+  --w-info: #4f8ff0;
+  --w-info-soft: rgba(79, 143, 240, 0.14);
+
+  --w-sev-critical: #f2555a;
+  --w-sev-high: #fb8a3c;
+  --w-sev-medium: #f5b041;
+  --w-sev-low: #a8a29e;
+  --w-sev-info: #6b6b75;
+
+  --w-chart-1: #f4f4f5;
+  --w-chart-2: #cbf857;
+  --w-chart-3: #4f8ff0;
+  --w-chart-4: #38bdf8;
+  --w-chart-5: #71717a;
+  --w-chart-6: #3f3f46;
+  --w-chart-grid: rgba(255, 255, 255, 0.06);
+  --w-chart-axis: #8f8f99;
+
+  --w-glass: rgba(17, 17, 19, 0.7);
+  --w-glass-strong: rgba(24, 24, 27, 0.86);
+  --w-glass-line: rgba(255, 255, 255, 0.1);
+  --w-glass-blur: 18px;
+  --w-glass-photo: linear-gradient(160deg, rgba(8, 20, 44, 0.66), rgba(10, 26, 56, 0.56));
+
+  --w-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --w-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --w-shadow-pop: 0 16px 40px -12px rgba(0, 0, 0, 0.7), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --w-shadow-float: 0 24px 64px -20px rgba(0, 0, 0, 0.8), 0 8px 20px rgba(0, 0, 0, 0.45);
+  --w-focus: #cbf857;
+  --w-focus-ring: 0 0 0 2px var(--w-panel), 0 0 0 4px #cbf857;
+
+  --ink-0: #09090b;
+  --ink-1: #111113;
+  --ink-2: #18181b;
+  --ink-3: #202024;
+  --ink-4: #27272c;
+  --ink-5: #303036;
+  --ink-6: #3f3f46;
+  --ink-7: #5c5c66;
+  --ink-8: #6b6b75;
+  --text-primary: #f4f4f5;
+  --text-body: #d4d4d8;
+  --text-dim: #a1a1aa;
+  --text-disabled: #6b6b75;
+  --rule-hair: rgba(255, 255, 255, 0.05);
+  --rule-1: rgba(255, 255, 255, 0.08);
+  --rule-2: rgba(255, 255, 255, 0.13);
+  --rule-3: rgba(255, 255, 255, 0.22);
+  --inset-hi: rgba(255, 255, 255, 0.05);
+  --scrim: rgba(0, 0, 0, 0.62);
+  --registration: rgba(255, 255, 255, 0.1);
+  --registration-hover: rgba(255, 255, 255, 0.22);
+  --signal-text: #d9fb8f;
+  --signal-hi: #cbf857;
+  --signal: #cbf857;
+  --signal-lo: #a6d93e;
+  --signal-tint: rgba(203, 248, 87, 0.1);
+  --signal-tint-lo: rgba(203, 248, 87, 0.05);
+  --alarm-text: #ffb1b3;
+  --alarm-hi: #ff8f92;
+  --alarm: #f2555a;
+  --alarm-tint: rgba(242, 85, 90, 0.12);
+  --alarm-tint-hi: rgba(242, 85, 90, 0.17);
+  --alarm-tint-lo: rgba(242, 85, 90, 0.08);
+  --alarm-tint-hover: rgba(242, 85, 90, 0.22);
+  --marker-text: #fcc56b;
+  --marker: #f5b041;
+  --marker-tint: rgba(245, 176, 65, 0.12);
+  --sev-info: #6b6b75;
+  --sev-low: #a8a29e;
+  --sev-medium: #f5b041;
+  --sev-high: #fb8a3c;
+  --sev-critical: #f2555a;
+  --diff-add-text: #7ee2a8;
+  --diff-add: #3fb950;
+  --diff-add-bg: rgba(63, 185, 80, 0.1);
+  --diff-del-bg: rgba(242, 85, 90, 0.1);
+  --diff-del-text: #ffb1b3;
+  --diff-del: #f2555a;
+  --ansi-blue: #7cabf5;
+  --chart-disproven: #a1a1aa;
+  --grid: rgba(255, 255, 255, 0.03);
+  --grid-dash: rgba(255, 255, 255, 0.045);
+
+  --proof-proven-bg: var(--w-lime);
+  --proof-proven-fg: var(--w-on-lime);
+  --proof-disproven-fg: var(--w-muted);
+  --proof-disproven-border: var(--w-line-heavy);
+  --proof-inconclusive-bg: var(--w-warn-soft);
+  --proof-inconclusive-fg: var(--w-warn-text);
+  --proof-inconclusive-border: var(--w-warn);
+  --gate-failure-bg: var(--w-danger-soft);
+  --gate-failure-fg: var(--w-danger-text);
+  --gate-neutral-bg: var(--w-surface);
+  --gate-success-bg: var(--w-lime-soft);
+  --gate-success-fg: var(--w-accent-text);
+  --gate-success-border: var(--w-lime-line);
+  --chart-proven: var(--w-chart-2);
+  --chart-series: var(--w-chart-2);
+  --heartbeat-live: var(--w-lime);
+}
+
+
+/* --------------------------------------------------------------------------
+   4. Base — the page ground, type and focus inside the dashboard. In the base
+      layer so a component's own utilities still win.
+   -------------------------------------------------------------------------- */
+@layer base {
+  :root[data-dash-theme] {
+    background: var(--w-canvas);
+  }
+
+  :root[data-dash-theme] body {
+    background: var(--w-canvas);
+    color: var(--w-text);
+    font-family: var(--w-font-sans);
+    font-feature-settings: normal;
+    letter-spacing: -0.006em;
+  }
+
+  :root[data-dash-theme] [data-surface="app"] {
+    font-family: var(--w-font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: -0.006em;
+    color: var(--w-text);
+  }
+
+  :root[data-dash-theme] :focus-visible {
+    outline: 2px solid var(--w-focus);
+    outline-offset: 2px;
+  }
+
+  :root[data-dash-theme] ::selection {
+    background: var(--w-lime);
+    color: var(--w-on-lime);
+  }
+
+  /* Thin, quiet scrollbars that follow the theme */
+  :root[data-dash-theme] [data-surface="app"] * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--w-line-heavy) transparent;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   5. Tailwind registration — bg-w-surface, text-w-muted, border-w-line,
+      rounded-w-card, shadow-w-pop, font-w-display …
+   -------------------------------------------------------------------------- */
+@theme inline {
+  --color-w-canvas: var(--w-canvas);
+  --color-w-panel: var(--w-panel);
+  --color-w-surface: var(--w-surface);
+  --color-w-surface-2: var(--w-surface-2);
+  --color-w-surface-3: var(--w-surface-3);
+  --color-w-raised: var(--w-raised);
+  --color-w-hover: var(--w-hover);
+  --color-w-press: var(--w-press);
+  --color-w-line: var(--w-line);
+  --color-w-line-strong: var(--w-line-strong);
+  --color-w-line-heavy: var(--w-line-heavy);
+  --color-w-text: var(--w-text);
+  --color-w-text-2: var(--w-text-2);
+  --color-w-muted: var(--w-muted);
+  --color-w-subtle: var(--w-subtle);
+  --color-w-faint: var(--w-faint);
+  --color-w-inverse: var(--w-inverse);
+  --color-w-on-inverse: var(--w-on-inverse);
+  --color-w-lime: var(--w-lime);
+  --color-w-on-lime: var(--w-on-lime);
+  --color-w-lime-soft: var(--w-lime-soft);
+  --color-w-accent-text: var(--w-accent-text);
+  --color-w-blue: var(--w-blue);
+  --color-w-blue-text: var(--w-blue-text);
+  --color-w-blue-soft: var(--w-blue-soft);
+  --color-w-sky: var(--w-sky);
+  --color-w-danger: var(--w-danger);
+  --color-w-danger-text: var(--w-danger-text);
+  --color-w-danger-soft: var(--w-danger-soft);
+  --color-w-warn: var(--w-warn);
+  --color-w-warn-text: var(--w-warn-text);
+  --color-w-warn-soft: var(--w-warn-soft);
+  --color-w-ok: var(--w-ok);
+  --color-w-ok-text: var(--w-ok-text);
+  --color-w-ok-soft: var(--w-ok-soft);
+
+  --radius-w-frame: 24px;
+  --radius-w-card: 20px;
+  --radius-w-tile: 16px;
+  --radius-w-inner: 12px;
+  --radius-w-sm: 8px;
+  --radius-w-pill: 999px;
+
+  --shadow-w-xs: var(--w-shadow-xs);
+  --shadow-w-sm: var(--w-shadow-sm);
+  --shadow-w-pop: var(--w-shadow-pop);
+  --shadow-w-float: var(--w-shadow-float);
+
+  --font-w-display: var(--w-font-display);
+  --font-w-sans: var(--w-font-sans);
+  --font-w-mono: var(--w-font-mono);
+}

@@ -1,18 +1,17 @@
-// OWNER: t9a (wave 2). The (app) group's shared navigation boundary (dashboard
-// §2.0): a static skeleton, no shimmer, no spinner — a spinner appears nowhere
-// in this product. This fires only for the segment Next is still loading; the
-// shell around it (Sidebar, TopBar) stays mounted from app/(app)/layout.tsx,
-// so this file owns only the page-shaped placeholder, not the chrome.
+// Route-level loading for the dashboard: the page frame's rhythm (a header
+// block, then rows) so the swap to real content does not jump.
 import { LoadingState } from '@/components/app-shell';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Page, Skeleton } from '@/components/dash/kit';
 
 export default function Loading() {
   return (
-    <div className="px-4 py-8 md:px-8">
-      <Skeleton className="h-3 w-40" />
-      <div className="mt-6">
-        <LoadingState rows={8} />
+    <Page>
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-8 w-80 max-w-full" />
+        <Skeleton className="h-3.5 w-[26rem] max-w-full" />
       </div>
-    </div>
+      <LoadingState rows={6} label="Loading the page." />
+    </Page>
   );
 }

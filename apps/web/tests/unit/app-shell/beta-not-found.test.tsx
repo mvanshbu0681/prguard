@@ -9,7 +9,7 @@ import { APP_NAV_ITEMS } from "@/components/app-shell/routes";
 
 describe("BetaNotFound", () => {
   it('renders exactly the mono line "not built for the beta"', () => {
-    render(<BetaNotFound route="/runs" />);
+    render(<BetaNotFound route="/cost" />);
     expect(screen.getByText("not built for the beta")).toBeInTheDocument();
   });
 
@@ -28,7 +28,7 @@ describe("BetaNotFound", () => {
   });
 
   it("renders no registration marks — this is an ordinary panel, not an evidence frame", () => {
-    const { container } = render(<BetaNotFound route="/repos" />);
+    const { container } = render(<BetaNotFound route="/settings/members" />);
     expect(container.querySelectorAll("[data-registration-mark]")).toHaveLength(0);
   });
 });

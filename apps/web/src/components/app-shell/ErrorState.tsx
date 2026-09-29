@@ -1,13 +1,10 @@
 'use client';
-// OWNER: t9a (wave 2). The dashboard's one inline-error grammar (dashboard §2.0):
-// never a toast (sonner is reserved for write outcomes) — a 1px --alarm border,
-// the failing endpoint and status code, a request id with click-to-copy, and
-// [Retry]. Every read hook's `error` is an ApiError (src/api/errors.ts), so this
-// is the one component every wave-3 screen's error boundary renders.
-//
-//   <ErrorState error={query.error} onRetry={() => query.refetch()} />
+// A read failure, inline where the data would have been: status · endpoint ·
+// request id in mono, the message in plain words, and pill actions to retry or
+// copy the request id. Never a toast (dashboard §2.0).
+import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/dash/kit';
 import type { ApiError } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 
@@ -32,23 +29,32 @@ export function ErrorState({ error, onRetry, className }: ErrorStateProps) {
   }
 
   return (
-    <div role="alert" className={cn('flex flex-col gap-3 rounded-panel border border-alarm p-4', className)} data-error-state="">
-      <p className="type-data text-alarm-text">
-        {error.statusLabel} · {error.endpoint}
-        {error.requestId ? ` · ${error.requestId}` : ''}
-      </p>
-      <p className="type-body text-text-body">{error.message}</p>
-      <div className="flex flex-wrap gap-2">
-        {onRetry ? (
-          <Button variant="ghost" onClick={onRetry}>
-            RETRY
-          </Button>
-        ) : null}
-        {error.requestId ? (
-          <Button variant="quiet" onClick={copyRequestId}>
-            {copied ? 'COPIED' : 'COPY REQUEST ID'}
-          </Button>
-        ) : null}
+    <div
+      role="alert"
+      className={cn('flex items-start gap-4 rounded-w-card border border-[var(--w-danger-line)] bg-w-danger-soft p-5', className)}
+      data-error-state=""
+    >
+      <span className="grid size-10 flex-none place-items-center rounded-w-pill bg-w-danger text-white" aria-hidden>
+        <CircleAlert size={18} strokeWidth={2} />
+      </span>
+      <div className="flex min-w-0 flex-col gap-2">
+        <p className="font-w-mono text-[12px] break-all text-w-danger-text">
+          {error.statusLabel} · {error.endpoint}
+          {error.requestId ? ` · ${error.requestId}` : ''}
+        </p>
+        <p className="text-[15px] leading-relaxed text-w-text">{error.message}</p>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {onRetry ? (
+            <Button variant="dark" size="sm" onClick={onRetry}>
+              Retry
+            </Button>
+          ) : null}
+          {error.requestId ? (
+            <Button variant="ghost" size="sm" onClick={copyRequestId}>
+              {copied ? 'Copied' : 'Copy request id'}
+            </Button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

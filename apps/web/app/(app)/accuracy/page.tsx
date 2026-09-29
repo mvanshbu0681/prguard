@@ -3,20 +3,35 @@
 // server-only fixture loader and handed down; useAccuracy() itself is
 // client-side and reads the URL window filter, so the client route is
 // wrapped in <Suspense> (it calls useSearchParams by way of nuqs).
+//
+// Fixture mode also hands down the compact corpus (runs, findings, the ids of
+// published and break-glass audit events): the fixture resolver serves one
+// all-time report, so the route recomputes any since/until window from it
+// (src/components/routes/accuracy/corpus-window.ts) rather than ignoring it.
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { LoadingState } from "@/components/app-shell";
+import { Page } from "@/components/dash/kit";
 import { asAccuracySeriesExt } from "@/components/charts";
-import { AccuracyRoute } from "@/components/routes/accuracy";
-import { getAccuracySeries } from "@/lib/fixtures";
+import { AccuracyRoute, AccuracySkeleton, corpusFromFixtures } from "@/components/routes/accuracy";
+import { FIXTURES } from "@/lib/env";
+import { getAccuracy, getAccuracySeries, getAuditChain, getFindings, getReviewsIndex } from "@/lib/fixtures";
 
 export const metadata: Metadata = { title: "Accuracy" };
 
-export default function Page() {
+export default function AccuracyPage() {
   const series = asAccuracySeriesExt(getAccuracySeries());
+  const corpus = FIXTURES
+    ? corpusFromFixtures({ reviews: getReviewsIndex().items, findings: getFindings(), audit: getAuditChain().items, report: getAccuracy() })
+    : null;
   return (
-    <Suspense fallback={<LoadingState rows={6} className="mx-auto max-w-[1280px] px-4 py-8 md:px-8" />}>
-      <AccuracyRoute series={series} />
+    <Suspense
+      fallback={
+        <Page>
+          <AccuracySkeleton />
+        </Page>
+      }
+    >
+      <AccuracyRoute series={series} corpus={corpus} />
     </Suspense>
   );
 }

@@ -1,15 +1,22 @@
-// OWNER: d3 (wave 3). /findings/[id] — the finding detail (dashboard-blueprint
-// §2.7, "the most important screen"). Next 16: `params` is a Promise; this
-// stays a thin Server Component that awaits it and hands the id to the client
-// view, which owns every data hook (useFinding et al. read the URL/query
-// client-side, so the actual fetching, states and interactivity live in
-// src/components/routes/finding-detail/FindingDetailView.tsx).
+// /findings/[id] — the evidence page. Next 16: `params` is a Promise; this stays a
+// thin Server Component that awaits it and hands the id to the client view,
+// which owns every data hook. With the fixture corpus on, the tab title is the
+// finding's own claim (read server-side from the same corpus the API serves).
 import type { Metadata } from "next";
 import { FindingDetailView } from "@/components/routes/finding-detail";
+import { FIXTURES } from "@/lib/env";
+import { getFinding } from "@/lib/fixtures";
 
-export const metadata: Metadata = { title: "Finding" };
+type Props = { params: Promise<{ id: string }> };
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const finding = FIXTURES ? getFinding(id) : null;
+  if (!FIXTURES) return { title: "Finding" };
+  return { title: finding ? finding.title.replace(/`/g, "") : "Finding not found" };
+}
+
+export default async function Page({ params }: Props) {
   const { id } = await params;
   return <FindingDetailView id={id} />;
 }

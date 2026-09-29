@@ -1,119 +1,152 @@
-// OWNER: d2 (wave 3). <FilterBar> — the URL <-> filter state contract. It is
-// presentational (filters/setFilters as props, see FilterBar.tsx's own header),
-// so this exercises it against a spy setter with no nuqs adapter or router
-// needed — a faithful stand-in for what useFindingFilters() actually hands it
-// (src/lib/hooks/url-state.ts).
+// <FilterBar> — the URL <-> view contract. Presentational (view/setView are
+// props), so it runs against a spy setter with no nuqs adapter or router.
 import "../../ui/dom-polyfills";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { FilterBar } from "@/components/routes/findings-list/FilterBar";
-import type { FindingUrlFilters } from "@/components/routes/findings-list/types";
+import { clearFiltersPatch } from "@/components/routes/findings-list/format";
+import type { FindingsView } from "@/components/routes/findings-list/types";
 
-const NO_FILTERS: FindingUrlFilters = {
-  review_id: null,
+const VIEW: FindingsView = {
+  status: "published",
+  severity_min: null,
+  proof_status: [],
+  blocking: null,
   repository: null,
   pr_number: null,
+  review_id: null,
   fingerprint: null,
-  status: null,
-  severity_min: null,
-  blocking: null,
-  proof_status: [],
+  q: null,
+  specialist: null,
+  sort: "newest",
+  group: "none",
 };
 
-describe("FilterBar", () => {
-  it("sets severity_min when a band is clicked, and clears it (null) on a second click of the same band", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    render(<FilterBar filters={NO_FILTERS} setFilters={setFilters} matched={246} total={246} />);
-    await user.click(screen.getByRole("radio", { name: "high" }));
-    expect(setFilters).toHaveBeenCalledWith({ severity_min: "high" });
+function setup(view: Partial<FindingsView> = {}, props: Partial<Parameters<typeof FilterBar>[0]> = {}) {
+  const setView = vi.fn();
+  const user = userEvent.setup();
+  const utils = render(<FilterBar view={{ ...VIEW, ...view }} setView={setView} {...props} />);
+  return { ...utils, setView, user };
+}
 
-    setFilters.mockClear();
-    render(<FilterBar filters={{ ...NO_FILTERS, severity_min: "high" }} setFilters={setFilters} matched={15} total={246} />);
-    await user.click(screen.getAllByRole("radio", { name: "high" })[1]);
-    expect(setFilters).toHaveBeenCalledWith({ severity_min: null });
+describe("FilterBar — status segments", () => {
+  it("prints each segment's live count and writes the chosen status", async () => {
+    const { setView, user } = setup({}, { statusCounts: { published: 89, disproven: 5, suppressed: 27, dropped: 122, all: 246 } });
+    const group = screen.getByRole("group", { name: "Finding status" });
+    expect(group.textContent).toContain("Suppressed27");
+    await user.click(screen.getByRole("button", { name: /Suppressed/ }));
+    expect(setView).toHaveBeenCalledWith({ status: "suppressed" });
   });
 
-  it("proof_status is multi-select and empty selection clears the filter (not [])", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    render(<FilterBar filters={NO_FILTERS} setFilters={setFilters} />);
-    await user.click(screen.getByRole("button", { name: "proven" }));
-    expect(setFilters).toHaveBeenCalledWith({ proof_status: ["proven"] });
+  it("Published is the default, so choosing it clears the key from the URL", async () => {
+    const { setView, user } = setup({ status: "all" });
+    await user.click(screen.getByRole("button", { name: /Published/ }));
+    expect(setView).toHaveBeenCalledWith({ status: null });
+  });
+});
 
-    setFilters.mockClear();
-    render(<FilterBar filters={{ ...NO_FILTERS, proof_status: ["proven"] }} setFilters={setFilters} />);
-    await user.click(screen.getAllByRole("button", { name: "proven" })[1]);
-    expect(setFilters).toHaveBeenCalledWith({ proof_status: null });
+describe("FilterBar — filter pills", () => {
+  it("severity is a floor chosen from a menu", async () => {
+    const { setView, user } = setup();
+    await user.click(screen.getByRole("button", { name: /Severity/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "High and above" }));
+    expect(setView).toHaveBeenCalledWith({ severity_min: "high" });
   });
 
-  it("blocking is a tri-state single toggle: any / blocking / non-blocking", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    render(<FilterBar filters={NO_FILTERS} setFilters={setFilters} />);
-    await user.click(screen.getByRole("radio", { name: "blocking" }));
-    expect(setFilters).toHaveBeenCalledWith({ blocking: true });
-
-    setFilters.mockClear();
-    await user.click(screen.getByRole("radio", { name: "non-blocking" }));
-    expect(setFilters).toHaveBeenCalledWith({ blocking: false });
+  it("an active pill shows its value and its × clears exactly that filter", async () => {
+    const { setView, user } = setup({ severity_min: "high" });
+    expect(screen.getByRole("button", { name: /Severity/ }).textContent).toContain("≥ High");
+    await user.click(screen.getByRole("button", { name: "Clear severity filter" }));
+    expect(setView).toHaveBeenCalledWith({ severity_min: null });
   });
 
-  it("commits a text filter (repository) on blur, not on every keystroke", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    render(<FilterBar filters={NO_FILTERS} setFilters={setFilters} />);
-    const input = screen.getByPlaceholderText("owner/name");
-    await user.type(input, "acme/checkout-service");
-    expect(setFilters).not.toHaveBeenCalled();
-    await user.tab();
-    expect(setFilters).toHaveBeenCalledWith({ repository: "acme/checkout-service" });
+  it("proof is multi-select, and unchecking the last state clears the filter (null, not [])", async () => {
+    const first = setup();
+    await first.user.click(screen.getByRole("button", { name: /Proof/ }));
+    await first.user.click(await screen.findByRole("menuitemcheckbox", { name: "Proven" }));
+    expect(first.setView).toHaveBeenCalledWith({ proof_status: ["proven"] });
+    first.unmount();
+
+    const second = setup({ proof_status: ["proven"] });
+    await second.user.click(screen.getByRole("button", { name: /Proof/ }));
+    await second.user.click(await screen.findByRole("menuitemcheckbox", { name: "Proven" }));
+    expect(second.setView).toHaveBeenCalledWith({ proof_status: null });
   });
 
-  it("commits a text filter on Enter and blurs the field", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    render(<FilterBar filters={NO_FILTERS} setFilters={setFilters} />);
-    const input = screen.getByPlaceholderText("owner/name");
-    await user.type(input, "acme/ledger{Enter}");
-    expect(setFilters).toHaveBeenCalledWith({ repository: "acme/ledger" });
-    expect(input).not.toHaveFocus();
+  it("choosing a repository resets the PR number, and a repository unlocks the Pull request pill", async () => {
+    const lookup = new Map([["r1", { label: "acme/ledger#33", repository: "acme/ledger", name: "ledger", prNumber: 33, prTitle: "Round payouts" }]]);
+    const { setView, user, rerender } = setup({}, { repositories: ["acme/ledger"], lookup });
+    expect(screen.queryByRole("button", { name: /Pull request/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Repository/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "acme/ledger" }));
+    expect(setView).toHaveBeenCalledWith({ repository: "acme/ledger", pr_number: null });
+
+    rerender(<FilterBar view={{ ...VIEW, repository: "acme/ledger" }} setView={setView} repositories={["acme/ledger"]} lookup={lookup} />);
+    await user.click(screen.getByRole("button", { name: /Pull request/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: /#33 Round payouts/ }));
+    expect(setView).toHaveBeenCalledWith({ pr_number: 33 });
   });
 
-  it("clearing pr_number sends null, not NaN or an empty string", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    render(<FilterBar filters={{ ...NO_FILTERS, pr_number: 42 }} setFilters={setFilters} />);
-    const input = screen.getByPlaceholderText("42");
-    await user.clear(input);
-    await user.tab();
-    expect(setFilters).toHaveBeenCalledWith({ pr_number: null });
+  it("Blocking only is a toggle: on writes true, off clears the key", async () => {
+    const off = setup();
+    const toggle = screen.getByRole("button", { name: "Blocking only" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await off.user.click(toggle);
+    expect(off.setView).toHaveBeenCalledWith({ blocking: true });
+    off.unmount();
+
+    const on = setup({ blocking: true });
+    await on.user.click(screen.getByRole("button", { name: "Blocking only" }));
+    expect(on.setView).toHaveBeenCalledWith({ blocking: null });
+  });
+});
+
+describe("FilterBar — lenses", () => {
+  it("search commits on Enter and Escape clears it", async () => {
+    const { setView, user } = setup();
+    const input = screen.getByRole("searchbox", { name: "Search findings" });
+    await user.type(input, "charge{Enter}");
+    expect(setView).toHaveBeenLastCalledWith({ q: "charge" });
+    await user.keyboard("{Escape}");
+    expect(setView).toHaveBeenLastCalledWith({ q: null });
   });
 
-  it("renders one chip per active filter and clears exactly that filter on click", async () => {
-    const user = userEvent.setup();
-    const setFilters = vi.fn();
-    const filters: FindingUrlFilters = { ...NO_FILTERS, severity_min: "high", proof_status: ["proven"], blocking: true };
-    render(<FilterBar filters={filters} setFilters={setFilters} matched={15} total={246} />);
+  it("grouping writes pr / file and List clears it", async () => {
+    const { setView, user } = setup({ group: "file" });
+    await user.click(screen.getByRole("button", { name: "By PR" }));
+    expect(setView).toHaveBeenCalledWith({ group: "pr" });
+    await user.click(screen.getByRole("button", { name: "List" }));
+    expect(setView).toHaveBeenCalledWith({ group: null });
+  });
+
+  it("sort is chosen from a menu; Newest is the default and clears the key", async () => {
+    const { setView, user } = setup();
+    await user.click(screen.getByRole("button", { name: /Sort/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Most severe" }));
+    expect(setView).toHaveBeenCalledWith({ sort: "severity" });
+  });
+});
+
+describe("FilterBar — deep-link chips", () => {
+  it("shows a removable chip for identity filters that have no pill, and clears exactly that one", async () => {
+    const { setView, user } = setup({ review_id: "4e8b1d0c-7a2f-4c1e-9b3d-5f6a8c0e2d41", fingerprint: "70f2459184df78fc" });
     const list = screen.getByRole("list", { name: "Active filters" });
-    expect(list.children).toHaveLength(3);
-    await user.click(screen.getByRole("button", { name: /Clear filter: severity/ }));
-    expect(setFilters).toHaveBeenCalledWith({ severity_min: null });
+    expect(list.textContent).toContain("run 4e8b1d0c…");
+    expect(list.textContent).toContain("fingerprint 70f24591…");
+    await user.click(screen.getByRole("button", { name: /Clear filter: run/ }));
+    expect(setView).toHaveBeenCalledWith({ review_id: null });
   });
 
-  it("CLEAR FILTERS resets everything at once and is absent with no active filters", () => {
-    const setFilters = vi.fn();
-    const { rerender } = render(<FilterBar filters={NO_FILTERS} setFilters={setFilters} />);
-    expect(screen.queryByRole("button", { name: "CLEAR FILTERS" })).not.toBeInTheDocument();
-    rerender(<FilterBar filters={{ ...NO_FILTERS, blocking: true }} setFilters={setFilters} />);
-    expect(screen.getByRole("button", { name: "CLEAR FILTERS" })).toBeInTheDocument();
+  it("Clear all filters resets every filter and lens but keeps the status segment", async () => {
+    const { setView, user } = setup({ severity_min: "high", blocking: true });
+    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+    expect(setView).toHaveBeenCalledWith(clearFiltersPatch());
+    expect(clearFiltersPatch()).not.toHaveProperty("status");
   });
 
-  it("prints matched of total, tabular, and an ellipsis while either is still loading", () => {
-    const { rerender } = render(<FilterBar filters={NO_FILTERS} setFilters={vi.fn()} matched={15} total={246} />);
-    expect(screen.getByText("15 of 246")).toBeInTheDocument();
-    rerender(<FilterBar filters={NO_FILTERS} setFilters={vi.fn()} />);
-    expect(screen.getByText("…")).toBeInTheDocument();
+  it("renders no chip row with nothing active", () => {
+    setup();
+    expect(screen.queryByRole("list", { name: "Active filters" })).toBeNull();
   });
 });

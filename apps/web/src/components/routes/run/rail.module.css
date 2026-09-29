@@ -1,0 +1,491 @@
+/* The nine-stage rail (StageTimeline). --w-* tokens only. Motion: the line fill
+   and the pulses animate transform / opacity; nothing else moves. */
+
+/* Below ~1100px of viewport the rail wraps onto a second row (stages 6–9 and the
+   verdict), so the merge gate is always in view without scrolling sideways. */
+.host {
+  container-type: inline-size;
+}
+
+.rail {
+  display: flex;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+
+.stage {
+  display: flex;
+  min-width: 86px;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.track {
+  position: relative;
+  display: flex;
+  height: 64px;
+  align-items: center;
+}
+
+/* the fork needs room for its four lanes even when time is short */
+.stage[data-stage="specialists"] {
+  min-width: 142px;
+}
+
+/* ---- nodes ---- */
+
+.node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  border: 1.5px dashed var(--w-line-heavy);
+  border-radius: var(--w-r-pill);
+  background: var(--w-panel);
+  color: var(--w-subtle);
+}
+
+.stage[data-state="done"] .node {
+  border: 0;
+  background: var(--w-inverse);
+  color: var(--w-on-inverse);
+}
+
+.stage[data-state="running"] .node,
+.stage[data-state="degraded"] .node {
+  border: 0;
+  background: var(--w-blue);
+  color: #ffffff;
+}
+
+.stage[data-state="degraded"] .node {
+  background: var(--w-warn);
+  color: #131313;
+}
+
+.stage[data-state="failed"] .node {
+  border: 0;
+  background: var(--w-danger);
+  color: #ffffff;
+}
+
+/* a run cancelled by a newer push: it stopped, it did not fail */
+.stage[data-state="stopped"] .node {
+  border: 1.5px solid var(--w-line-heavy);
+  background: var(--w-surface-3);
+  color: var(--w-muted);
+}
+
+.stage[data-state="running"] .node::after,
+.stage[data-state="degraded"] .node::after {
+  position: absolute;
+  inset: -6px;
+  border: 2px solid currentColor;
+  border-radius: inherit;
+  content: "";
+  opacity: 0;
+  animation: ring 1800ms var(--w-ease) infinite;
+}
+
+.stage[data-state="running"] .node::after {
+  border-color: var(--w-blue);
+}
+
+.stage[data-state="degraded"] .node::after {
+  border-color: var(--w-warn);
+}
+
+@keyframes ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+
+/* ---- lines ---- */
+
+.line {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin: 0 6px;
+  overflow: hidden;
+  border-radius: var(--w-r-pill);
+  background-image: linear-gradient(90deg, var(--w-line-heavy) 55%, transparent 0);
+  background-size: 7px 2px;
+}
+
+.stage:is([data-state="done"], [data-state="running"], [data-state="degraded"]) .line {
+  background: var(--w-line-strong);
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--w-text);
+  transform: scaleX(var(--fill, 0));
+  transform-origin: left center;
+  transition: transform 1100ms linear;
+}
+
+.stage[data-state="running"] .fill {
+  background: var(--w-blue);
+}
+
+.stage[data-state="degraded"] .fill {
+  background: var(--w-warn);
+}
+
+/* ---- the specialists fork ---- */
+
+.fork {
+  position: relative;
+  flex: 1;
+  align-self: stretch;
+  margin: 0 6px;
+}
+
+.forkSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.lane {
+  fill: none;
+  stroke: var(--w-line-heavy);
+  stroke-dasharray: 3 4;
+  stroke-linecap: round;
+  stroke-width: 1.5;
+}
+
+.stage[data-state="done"] .lane {
+  stroke: var(--w-blue);
+  stroke-dasharray: none;
+  opacity: 0.6;
+}
+
+.stage[data-state="running"] .lane,
+.stage[data-state="degraded"] .lane {
+  stroke: var(--w-blue);
+  stroke-dasharray: none;
+  animation: laneBreath 1600ms ease-in-out infinite;
+  animation-delay: calc(var(--i) * 180ms);
+}
+
+@keyframes laneBreath {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.laneChip {
+  position: absolute;
+  left: 50%;
+  display: grid;
+  height: 17px;
+  min-width: 26px;
+  padding: 0 5px;
+  place-items: center;
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-pill);
+  background: var(--w-panel);
+  color: var(--w-muted);
+  font-family: var(--w-font-mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+}
+
+.stage[data-state="done"] .laneChip {
+  border-color: transparent;
+  background: var(--w-inverse);
+  color: var(--w-on-inverse);
+}
+
+.stage[data-state="running"] .laneChip {
+  border-color: var(--w-blue);
+  color: var(--w-blue-text);
+  animation: chipBob 1600ms ease-in-out infinite;
+  animation-delay: calc(var(--i) * 180ms);
+}
+
+@keyframes chipBob {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+/* ---- captions ---- */
+
+.caption {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 6px;
+}
+
+.nameRow {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.idx {
+  flex: none;
+  color: var(--w-subtle);
+}
+
+.idx::after {
+  margin: 0 5px;
+  color: var(--w-faint);
+  content: "·";
+}
+
+.name {
+  overflow: hidden;
+  color: var(--w-text);
+  font-family: var(--w-font-display);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage[data-state="pending"] .name {
+  color: var(--w-muted);
+  font-weight: 500;
+}
+
+.parallel {
+  display: none;
+  color: var(--w-subtle);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ms {
+  overflow: hidden;
+  color: var(--w-muted);
+  font-family: var(--w-font-mono);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.approx {
+  margin-right: 1px;
+  color: var(--w-subtle);
+}
+
+.msLive {
+  color: var(--w-blue-text);
+}
+
+.msFailed {
+  color: var(--w-danger-text);
+}
+
+.stage[data-state="stopped"] .msFailed {
+  color: var(--w-muted);
+}
+
+.durBar {
+  display: none;
+}
+
+/* ---- the end cap: the verdict ---- */
+
+.end {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 2px;
+}
+
+.endTrack {
+  display: flex;
+  height: 64px;
+  align-items: center;
+}
+
+.noVerdict {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px dashed var(--w-line-heavy);
+  border-radius: var(--w-r-pill);
+  color: var(--w-muted);
+  font-family: var(--w-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ---- below ~1100px of viewport: two rows, the verdict always in view ---- */
+
+@container (max-width: 940px) {
+  .rail {
+    flex-wrap: wrap;
+    row-gap: 22px;
+  }
+  /* 18% each: five stages fill the first row, the sixth (identity) starts the second */
+  .stage {
+    flex-basis: 18%;
+  }
+}
+
+/* ---- phone: the rail stands up ---- */
+
+@media (max-width: 760px) {
+  .rail {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    row-gap: 0;
+  }
+
+  .stage {
+    flex-basis: auto;
+  }
+
+  .stage,
+  .end {
+    display: grid;
+    min-width: 0;
+    flex: none;
+    grid-template-columns: 34px minmax(0, 1fr);
+    column-gap: 14px;
+  }
+
+  .stage,
+  .stage[data-stage="specialists"] {
+    min-width: 0;
+    min-height: 60px;
+  }
+
+  .track {
+    height: auto;
+    flex-direction: column;
+    align-self: stretch;
+  }
+
+  .line,
+  .fork {
+    width: 2px;
+    height: auto;
+    flex: 1;
+    margin: 5px 0;
+    background-image: linear-gradient(180deg, var(--w-line-heavy) 55%, transparent 0);
+    background-size: 2px 7px;
+  }
+
+  .fork {
+    border-radius: var(--w-r-pill);
+  }
+
+  .stage:is([data-state="done"], [data-state="running"], [data-state="degraded"]) .fork {
+    background: var(--w-blue);
+    opacity: 0.6;
+  }
+
+  .forkSvg,
+  .laneChip {
+    display: none;
+  }
+
+  .fill {
+    transform: scaleY(var(--fill, 0));
+    transform-origin: center top;
+  }
+
+  .caption {
+    display: grid;
+    align-content: start;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 7px;
+    padding: 8px 0 14px;
+  }
+
+  .parallel {
+    display: inline;
+  }
+
+  .durBar {
+    position: relative;
+    display: block;
+    height: 4px;
+    grid-column: 1 / -1;
+    overflow: hidden;
+    border-radius: var(--w-r-pill);
+    background: var(--w-surface-3);
+  }
+
+  .durBar > i {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(var(--share, 0) * 100%);
+    min-width: 4px;
+    border-radius: inherit;
+    background: var(--w-line-heavy);
+  }
+
+  .stage[data-state="done"] .durBar > i {
+    background: var(--w-text);
+  }
+
+  .stage[data-state="running"] .durBar > i {
+    background: var(--w-blue);
+  }
+
+  .end .endTrack {
+    height: auto;
+    grid-column: 1 / -1;
+  }
+
+  .end .caption {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage .node::after,
+  .lane,
+  .laneChip {
+    animation: none !important;
+  }
+  .fill {
+    transition: none;
+  }
+}

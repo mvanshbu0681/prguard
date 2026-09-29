@@ -1,51 +1,45 @@
 'use client';
-// OWNER: t9a (wave 2). The 48px sticky header (dashboard §1.3, brief bullet 3):
-// breadcrumbs derived from the route, the FIXTURES / LIVE badge, the ⌘K
-// trigger, the projector-contrast toggle and the compact-rows toggle. One of
-// exactly two backdrop-filter surfaces in the product (the palette is the
-// other) — --ink-1 at 92% behind blur(16px), a 1px --rule-1 bottom edge.
-//
-// Breadcrumbs here are plain links derived from the pathname (routes.ts),
-// simpler than the blueprint's per-segment combobox (design §1.3's "every
-// breadcrumb segment is a combobox, keyboard-reachable and typeable"): that
-// pattern exists to let a reviewer retarget the repo/PR/run scope inline, and
-// this track owns no data source for "every repo, every PR" to populate it
-// from. Flagged under `raised`.
-import { ContrastIcon, Rows3Icon, SearchIcon } from 'lucide-react';
+// The top bar: the one glass surface in the frame — content scrolls under a
+// blurred, 76%-opaque panel, and a hairline appears once it has. Breadcrumbs
+// (workspace › section › item), the ⌘K search pill, the data-mode chip, the
+// theme flip and the viewer. Below 768px a menu button opens the rail as a
+// drawer (AppShell owns it).
+import { Bell, ChevronRight, Menu, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Icon } from '@/components/icons';
-import { Kbd, KbdGroup } from '@/components/ui/kbd';
+import { Avatar, Dot, IconButton, Kbd } from '@/components/dash/kit';
 import { API_BASE, FIXTURES } from '@/lib/env';
-import { cn } from '@/lib/utils';
-import { useCompactRowsToggle, useContrastToggle } from './prefs';
 import { breadcrumbsForPath } from './routes';
-import { useIsMobile } from './useIsMobile';
+import s from './shell.module.css';
 
 export interface TopBarProps {
   onOpenPalette: () => void;
+  onOpenMenu?: () => void;
+  menuOpen?: boolean;
+  scrolled?: boolean;
+  org?: string;
 }
 
-function Breadcrumbs() {
+function Breadcrumbs({ org }: { org: string }) {
   const pathname = usePathname();
   const crumbs = breadcrumbsForPath(pathname);
-  if (crumbs.length === 0) return <span className="type-data text-text-dim">/</span>;
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
-      <ol className="flex min-w-0 items-center gap-1.5 type-data text-text-dim">
+      <ol className={s.crumbs}>
+        <li className={s.crumbLead}>
+          <Link href="/overview">{org}</Link>
+        </li>
         {crumbs.map((crumb, i) => {
           const last = i === crumbs.length - 1;
           return (
-            <li key={crumb.href} className="flex min-w-0 items-center gap-1.5">
-              {i > 0 ? <span aria-hidden="true">▸</span> : null}
+            <li key={crumb.href} className={last ? undefined : s.crumbLead}>
+              <ChevronRight size={14} strokeWidth={1.8} className={s.crumbSep} aria-hidden />
               {last ? (
-                <span className="truncate text-text-primary" aria-current="page">
+                <span className={s.crumbCurrent} aria-current="page">
                   {crumb.label}
                 </span>
               ) : (
-                <Link href={crumb.href} className="truncate link-draw text-text-dim hover:text-text-body">
-                  {crumb.label}
-                </Link>
+                <Link href={crumb.href}>{crumb.label}</Link>
               )}
             </li>
           );
@@ -57,68 +51,41 @@ function Breadcrumbs() {
 
 function ModeChip() {
   if (FIXTURES) {
-    return <span className="type-label text-marker">FIXTURES</span>;
+    return (
+      <span className={s.mode} title="The dashboard is reading the bundled demo corpus">
+        <Dot color="var(--w-warn)" />
+        Demo data
+      </span>
+    );
   }
-  return <span className="type-label text-signal-text">{`LIVE · ${API_BASE}`}</span>;
+  return (
+    <span className={s.mode} title={API_BASE}>
+      <Dot pulse />
+      Live
+    </span>
+  );
 }
 
-export function TopBar({ onOpenPalette }: TopBarProps) {
-  const [contrastOn, setContrast] = useContrastToggle();
-  const [compactOn, setCompact] = useCompactRowsToggle();
-  const isMobile = useIsMobile();
-
+export function TopBar({ onOpenPalette, onOpenMenu, menuOpen, scrolled, org = 'acme' }: TopBarProps) {
   return (
-    <header
-      data-app-topbar=""
-      className="sticky top-0 z-30 flex h-12 items-center gap-4 border-b border-rule-1 bg-ink-1/92 px-4 backdrop-blur-[16px]"
-    >
+    <header data-app-topbar="" data-scrolled={scrolled ? '' : undefined} className={s.topbar}>
+      <IconButton icon={Menu} label="Open navigation" className={s.mobileOnly} onClick={onOpenMenu} aria-expanded={menuOpen ?? false} aria-haspopup="dialog" />
       <div className="min-w-0 flex-1">
-        <Breadcrumbs />
+        <Breadcrumbs org={org} />
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <ModeChip />
+      <button type="button" onClick={onOpenPalette} className={s.search} aria-label="Search and jump (⌘K)">
+        <Search size={16} strokeWidth={1.9} aria-hidden />
+        <span className={s.searchText}>Search findings, runs, repos…</span>
+        <span className={`${s.searchKbd} flex gap-1`} aria-hidden>
+          <Kbd>⌘</Kbd>
+          <Kbd>K</Kbd>
+        </span>
+      </button>
 
-        <button
-          type="button"
-          onClick={() => setContrast()}
-          aria-pressed={contrastOn}
-          title="Projector contrast"
-          className={cn(
-            'hover-quiet flex h-7 w-7 items-center justify-center rounded-data',
-            contrastOn ? 'text-signal' : 'text-text-dim',
-          )}
-        >
-          <Icon icon={ContrastIcon} size={14} label="Toggle projector contrast" />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setCompact()}
-          aria-pressed={compactOn}
-          title="Compact rows"
-          className={cn(
-            'hover-quiet flex h-7 w-7 items-center justify-center rounded-data',
-            compactOn ? 'text-signal' : 'text-text-dim',
-          )}
-        >
-          <Icon icon={Rows3Icon} size={14} label="Toggle compact rows" />
-        </button>
-
-        {isMobile ? null : (
-          <button
-            type="button"
-            onClick={onOpenPalette}
-            className="hover-quiet flex h-7 items-center gap-1.5 rounded-data px-2 text-text-dim"
-          >
-            <Icon icon={SearchIcon} size={14} />
-            <KbdGroup>
-              <Kbd>⌘</Kbd>
-              <Kbd>K</Kbd>
-            </KbdGroup>
-          </button>
-        )}
-      </div>
+      <ModeChip />
+      <IconButton icon={Bell} label="Notifications" badge className={s.hideXs} />
+      <Avatar name="Witness Admin" size={34} title="Signed in as workspace admin" />
     </header>
   );
 }

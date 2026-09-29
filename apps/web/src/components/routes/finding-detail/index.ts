@@ -1,15 +1,19 @@
-// OWNER: d3 (wave 3). Public surface of the finding-detail route
-// (app/(app)/findings/[id]/page.tsx is the only intended caller).
+// Public surface of the finding-detail route (app/(app)/findings/[id]/page.tsx is the only intended caller).
 export { FindingDetailView } from "./FindingDetailView";
 export { ClaimMarkdown } from "./ClaimMarkdown";
 export { splitTitleSegments, TitleWithCode } from "./TitleWithCode";
 export {
   deliveredExactLine,
+  deliveredWithinRange,
+  deliveryCommentUrl,
   formatDurationMs,
   formatRelativeAge,
+  githubBlobUrl,
   githubCommentUrl,
   hasSuppressFormErrors,
   locationRangeLabel,
+  proofVerdict,
+  runOutcome,
   suppressRequestFrom,
   validateSuppressForm,
   type SuppressFormErrors,

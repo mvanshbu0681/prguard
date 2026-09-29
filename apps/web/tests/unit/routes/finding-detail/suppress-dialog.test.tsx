@@ -28,7 +28,7 @@ describe("SuppressDialog — form validation", () => {
     const onOpenChange = vi.fn();
     render(<SuppressDialog finding={F3} open onOpenChange={onOpenChange} />, { wrapper: Wrapper });
 
-    await user.click(screen.getByRole("button", { name: "SUPPRESS" }));
+    await user.click(screen.getByRole("button", { name: "Suppress" }));
 
     expect(await screen.findByText("A reason is required.")).toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalled();
@@ -42,7 +42,7 @@ describe("SuppressDialog — form validation", () => {
 
     await user.click(screen.getByRole("radio", { name: "pattern" }));
     await user.type(screen.getByLabelText("Reason"), "vendor code, tracked in ENG-4102");
-    await user.click(screen.getByRole("button", { name: "SUPPRESS" }));
+    await user.click(screen.getByRole("button", { name: "Suppress" }));
 
     expect(await screen.findByText("A match path is required for scope=pattern.")).toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalled();
@@ -59,9 +59,25 @@ describe("SuppressDialog — form validation", () => {
     await user.click(screen.getByRole("radio", { name: "pattern" }));
     await user.type(screen.getByLabelText("Match path"), "src/api/**");
     await user.type(screen.getByLabelText("Reason"), "vendor code, tracked in ENG-4102");
-    await user.click(screen.getByRole("button", { name: "SUPPRESS" }));
+    await user.click(screen.getByRole("button", { name: "Suppress" }));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+});
+
+describe("SuppressDialog — expiry", () => {
+  it("defaults to Never and offers quick picks; Pick a date reveals a date field", async () => {
+    const user = userEvent.setup();
+    const { Wrapper } = queryWrapper();
+    render(<SuppressDialog finding={F3} open onOpenChange={vi.fn()} />, { wrapper: Wrapper });
+    const group = screen.getByRole("radiogroup", { name: "Expires" });
+    expect(screen.getByRole("radio", { name: "Never" })).toHaveAttribute("aria-checked", "true");
+    expect(group.textContent).toContain("30 days");
+    expect(screen.queryByLabelText("Expiry date")).toBeNull();
+    await user.click(screen.getByRole("radio", { name: "30 days" }));
+    expect(screen.getByText(/^Lifts on /)).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Pick a date" }));
+    expect(screen.getByLabelText("Expiry date")).toHaveAttribute("type", "date");
   });
 });
 
@@ -95,7 +111,7 @@ describe("SuppressDialog — optimistic update and rollback", () => {
     render(<SuppressDialog finding={F3} open onOpenChange={onOpenChange} />, { wrapper: Wrapper });
 
     await user.type(screen.getByLabelText("Reason"), "accepted risk, tracked in ENG-9001");
-    await user.click(screen.getByRole("button", { name: "SUPPRESS" }));
+    await user.click(screen.getByRole("button", { name: "Suppress" }));
 
     await waitFor(() => expect(findingHook.result.current.data?.status).toBe("suppressed"));
     expect(findingHook.result.current.data?.suppression?.suppression_id).toMatch(/^pending:/);
@@ -119,7 +135,7 @@ describe("SuppressDialog — optimistic update and rollback", () => {
     render(<SuppressDialog finding={F3} open onOpenChange={onOpenChange} />, { wrapper: Wrapper });
 
     await user.type(screen.getByLabelText("Reason"), "accepted risk, tracked in ENG-9001");
-    await user.click(screen.getByRole("button", { name: "SUPPRESS" }));
+    await user.click(screen.getByRole("button", { name: "Suppress" }));
 
     await waitFor(() => expect(findingHook.result.current.data?.status).toBe("suppressed"));
 
