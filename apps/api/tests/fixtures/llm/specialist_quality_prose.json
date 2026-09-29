@@ -1,9 +1,0 @@
-{
-  "name": "specialist_quality_prose",
-  "kind": "prose",
-  "valid": false,
-  "model": "claude-sonnet-5",
-  "prompt_key": "specialist:quality:pr_42",
-  "notes": "\u00a73 Tier 3: structured output, never prose. A prose answer must be rejected, not regex-scraped into findings. Pairs with tests/llm/test_structured.py::test_prose_response_is_rejected.",
-  "response_text": "I took a look at this pull request and overall it seems reasonable! The discount refactor is clean, though I'd gently suggest adding a test for the None case. Let me know if you'd like me to draft one.\n\n(No JSON here \u2014 the model ignored the schema entirely.)"
-}
