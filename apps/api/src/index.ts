@@ -15,6 +15,7 @@ import "./commands/run.ts";
 import "./commands/answer.ts";
 import "./commands/fix.ts";
 import "./commands/ignore.ts";
+import "./commands/replies.ts";
 
 async function main(): Promise<void> {
   migrateDb();
