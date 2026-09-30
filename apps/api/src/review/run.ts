@@ -144,7 +144,9 @@ async function pipeline(run: Run): Promise<void> {
   // queued for the newest push may already be cancelled: unless another open review covers the live
   // head, this one takes it over instead of leaving the newest push unreviewed.
   if (live.head.sha !== review.headSha) {
-    const covered = reviewsRepo.listOpenForPull(pr.id).some((o) => o.id !== review.id && o.headSha === live.head.sha);
+    const covered =
+      pr.lastReviewedSha === live.head.sha ||
+      reviewsRepo.listOpenForPull(pr.id).some((o) => o.id !== review.id && o.headSha === live.head.sha);
     if (covered) throw new CancelledError();
     if (review.checkRunId) {
       await finishCheckRun(gh, r, review.checkRunId, "cancelled", "Superseded", "A newer push is being reviewed.");
