@@ -1,5 +1,12 @@
+import { asc, eq } from "drizzle-orm";
 import { db } from "../client.ts";
 import { llmCalls } from "../schema.ts";
+
+export type LlmCallRow = typeof llmCalls.$inferSelect;
+
+export function listForReview(reviewId: number): LlmCallRow[] {
+  return db.select().from(llmCalls).where(eq(llmCalls.reviewId, reviewId)).orderBy(asc(llmCalls.id)).all();
+}
 
 export type LlmCallInput = {
   reviewId: number | null;

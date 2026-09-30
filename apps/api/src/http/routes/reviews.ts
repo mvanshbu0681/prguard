@@ -1,6 +1,8 @@
 import { Hono, type Context } from "hono";
 import type { FindingItem, ReviewDetail } from "../../contracts.ts";
 import * as findingsRepo from "../../db/repos/findings.ts";
+import * as llmCallsRepo from "../../db/repos/llm-calls.ts";
+import { agentPrompt } from "../../review/agent-prompt.ts";
 import * as pullsRepo from "../../db/repos/pulls.ts";
 import * as reviewsRepo from "../../db/repos/reviews.ts";
 import type { Priority, ReviewStatus } from "../../db/schema.ts";
@@ -59,6 +61,12 @@ reviews.get("/:id", (c) => {
       placement: f.placement,
       url: lineUrl(repo.fullName, review.headSha, f.path, f.line, f.startLine),
       fingerprint: f.fingerprint,
+      verified: f.verified,
+      evidence: f.evidence,
+      details: f.details ?? null,
+      status: "open" as const,
+      agentPrompt: agentPrompt(f),
+      commentUrl: null,
     }));
   const body: ReviewDetail = {
     ...item,
@@ -74,6 +82,19 @@ reviews.get("/:id", (c) => {
     findings,
     usage: { tokensIn: review.tokensIn, tokensOut: review.tokensOut, calls: review.llmCalls },
     githubReviewUrl: review.githubReviewUrl,
+    trace: review.trace,
+    triage: review.triage,
+    impact: review.impact.map(({ filePaths: _, ...rest }) => rest),
+    calls: llmCallsRepo.listForReview(review.id).map((call) => ({
+      purpose: call.purpose,
+      model: call.model,
+      tokensIn: call.tokensIn,
+      tokensOut: call.tokensOut,
+      ms: call.ms,
+      ok: call.ok,
+      tools: [],
+    })),
+    since: null,
   };
   return c.json(body);
 });

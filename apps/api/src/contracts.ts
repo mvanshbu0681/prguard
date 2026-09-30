@@ -114,7 +114,39 @@ export type FindingItem = {
   url: string;
   /** Stable id used in links from GitHub: `/reviews/<id>#f-<fingerprint>`. */
   fingerprint: string;
+  /** Confirmed by the verification pass; `evidence` cites the code. */
+  verified: boolean;
+  evidence: string | null;
+  /** A folded extra section, e.g. suggested tests or what Socket found. */
+  details: { title: string; body: string } | null;
+  status: FindingStatus;
+  /** Copy-ready instruction for a coding agent, same text as on GitHub. */
+  agentPrompt: string;
+  /** The finding's line comment on GitHub, when it has one. */
+  commentUrl: string | null;
 };
+
+export type TraceStepKey = "fetch" | "triage" | "impact" | "review" | "checks" | "verify" | "learnings" | "fixes" | "publish";
+
+export type TraceStep = { key: TraceStepKey; label: string; status: "ok" | "skipped" | "failed"; ms: number; detail: string };
+
+/** How a review ran. Empty `steps` for reviews from before the trace existed. */
+export type ReviewTrace = {
+  steps: TraceStep[];
+  reviewers?: { id: string; files: number; chunks: number; findings: number; failed: number; skipped: number }[];
+  funnel?: { raw: number; anchored: number; confident: number; unique: number; fresh: number; suppressed: number; rejected: number; posted: number };
+  rejected?: { title: string; path: string; reason: string }[];
+  suppressed?: { title: string; path: string; learningId: number }[];
+};
+
+export type TriageFileItem = { path: string; risk: RiskLevel; reviewers: string[] };
+
+export type ImpactItem = { name: string; path: string; line: number; refs: number; files: number; samples: { path: string; line: number; text: string }[] };
+
+/** One model call of the review; `purpose` is e.g. `reviewer:security`, `triage`, `verify`. */
+export type CallItem = { purpose: string; model: string; tokensIn: number; tokensOut: number; ms: number; ok: boolean; tools: string[] };
+
+export type SinceLast = { fixed: number; new: number; open: number };
 
 export type ReviewDetail = ReviewListItem & {
   baseSha: string | null;
@@ -131,6 +163,56 @@ export type ReviewDetail = ReviewListItem & {
   findings: FindingItem[];
   usage: { tokensIn: number; tokensOut: number; calls: number };
   githubReviewUrl: string | null;
+  trace: ReviewTrace;
+  triage: TriageFileItem[];
+  impact: ImpactItem[];
+  calls: CallItem[];
+  /** Findings fixed by this push, new in this review, and open on the PR after it. Null on a first review. */
+  since: SinceLast | null;
 };
 
 export type InstallationPatch = { rules: string };
+
+/** An open, non-draft pull request in the Queue. */
+export type QueueItem = {
+  repository: { id: number; fullName: string };
+  pr: { number: number; title: string; url: string; authorLogin: string; authorAvatar: string | null; createdAt: number };
+  /** Null until the PR's first review completes (the Waiting group). */
+  priority: Priority | null;
+  priorityReason: string | null;
+  risk: RiskLevel | null;
+  riskReasons: string[];
+  /** Open findings on the PR by severity. */
+  open: SeverityCounts;
+  fixed: number;
+  latestReview: { id: number; status: ReviewStatus } | null;
+};
+
+export type ReviewerInsight = { id: string; name: string; badge: string; posted: number; fixed: number; dismissed: number; open: number };
+
+export type Insights = {
+  days: number;
+  reviews: number;
+  /** Median minutes from a review being queued to it finishing. */
+  medianMinutes: number | null;
+  medianTokens: number | null;
+  byReviewer: ReviewerInsight[];
+  bySeverity: SeverityCounts;
+  verification: { confirmed: number; rejected: number; unverified: number };
+};
+
+export type LearningSource = "command" | "reaction" | "reply" | "manual";
+
+export type Learning = {
+  id: number;
+  text: string;
+  source: LearningSource;
+  author: string | null;
+  /** The GitHub comment it came from. */
+  url: string | null;
+  enabled: boolean;
+  createdAt: number;
+};
+
+export type LearningCreate = { text: string };
+export type LearningPatch = { enabled?: boolean; text?: string };
