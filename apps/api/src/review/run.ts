@@ -26,7 +26,7 @@ import { config } from "../config.ts";
 import { addedLines, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
 import { filesFor, runReviewers } from "./engine.ts";
 import { hasTestFiles } from "./tools.ts";
-import { impact, renderImpact } from "./impact.ts";
+import { impact, outsideCallers, renderImpact } from "./impact.ts";
 import { Tracer } from "./trace.ts";
 import { triage } from "./triage.ts";
 import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
@@ -267,6 +267,8 @@ async function pipeline(run: Run): Promise<void> {
           trace.add("impact", "Impact", null, "No snapshot", "skipped");
         }
         const impactText = renderImpact(symbols);
+        // Breaking change only runs when something outside this PR uses what it changed.
+        const hasOutsideCallers = outsideCallers(symbols, new Set(files.map((f) => f.path))).length > 0;
         // Test gap has nothing to compare against in a repository without tests.
         const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
         const outcome = await trace.step(
@@ -274,7 +276,9 @@ async function pipeline(run: Run): Promise<void> {
           "Reviewers",
           () =>
             runReviewers({
-              reviewers: models.filter((r) => !r.needs?.testsInRepo || testsInRepo),
+              reviewers: models.filter(
+                (r) => (!r.needs?.testsInRepo || testsInRepo) && (r.needs?.impact !== "required" || hasOutsideCallers),
+              ),
               files: codeFiles,
               routes: routing?.routes,
               focus,
