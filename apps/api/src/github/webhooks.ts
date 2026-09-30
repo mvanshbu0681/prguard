@@ -3,6 +3,7 @@ import * as deliveriesRepo from "../db/repos/deliveries.ts";
 import * as installationsRepo from "../db/repos/installations.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
 import { errMessage, log } from "../log.ts";
+import { queueBrief } from "../brief/index-repo.ts";
 import { cancelRepoWork } from "../review/lifecycle.ts";
 import { githubApp } from "./app.ts";
 import { saveInstallation, saveRepos, type GitHubInstallation, type GitHubRepo } from "./reconcile.ts";
@@ -54,7 +55,9 @@ on("installation", (payload) => {
   switch (payload.action) {
     case "created": {
       saveInstallation(installation);
-      saveRepos(installation.id, (payload.repositories ?? []) as GitHubRepo[]);
+      const repos = (payload.repositories ?? []) as GitHubRepo[];
+      saveRepos(installation.id, repos);
+      for (const repo of repos) queueBrief(repo.id);
       break;
     }
     case "deleted": {
@@ -78,7 +81,10 @@ on("installation_repositories", (payload) => {
   if (!installationsRepo.get(installationId)) saveInstallation(payload.installation as GitHubInstallation);
   const added = (payload.repositories_added ?? []) as GitHubRepo[];
   const removed = (payload.repositories_removed ?? []) as GitHubRepo[];
-  if (added.length) saveRepos(installationId, added);
+  if (added.length) {
+    saveRepos(installationId, added);
+    for (const repo of added) queueBrief(repo.id);
+  }
   if (removed.length) {
     repositoriesRepo.markRemoved(removed.map((r) => r.id));
     return cancelRepoWork(

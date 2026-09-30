@@ -16,6 +16,7 @@ import {
 } from "../github/pr.ts";
 import { errMessage, log } from "../log.ts";
 import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
+import { queueBrief } from "../brief/index-repo.ts";
 import { buildContext } from "./context.ts";
 import { config } from "../config.ts";
 import { addedLines, packChunks, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
@@ -135,7 +136,8 @@ async function pipeline(run: Run): Promise<void> {
     return;
   }
 
-  const context = buildContext(pr);
+  if (repoNow.briefStatus === "none") queueBrief(repoNow.id);
+  const context = buildContext(pr, repoNow);
   const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
 
   const active = enabledReviewers(run.repo.disabledReviewers);

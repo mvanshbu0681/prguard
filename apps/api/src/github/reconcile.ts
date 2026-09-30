@@ -1,3 +1,4 @@
+import { queueBrief } from "../brief/index-repo.ts";
 import * as installationsRepo from "../db/repos/installations.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
 import { log } from "../log.ts";
@@ -60,4 +61,8 @@ export async function reconcile(): Promise<void> {
   }
   const gone = installationsRepo.markDeletedExcept(seen);
   for (const id of gone) repositoriesRepo.markRemovedForInstallation(id);
+
+  const missing = repositoriesRepo.listActive().filter((r) => r.briefStatus === "none" || r.briefStatus === "failed");
+  for (const repo of missing) queueBrief(repo.id);
+  if (missing.length) log.info({ repos: missing.length }, "queued repository briefs");
 }

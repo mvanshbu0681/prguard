@@ -6,6 +6,7 @@ import { startRelay } from "./github/relay.ts";
 import { createServer } from "./http/server.ts";
 import { errMessage, log } from "./log.ts";
 import { startWorkers } from "./queue/worker.ts";
+import "./brief/index-repo.ts";
 import "./review/events.ts";
 import "./review/run.ts";
 
