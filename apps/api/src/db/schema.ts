@@ -68,6 +68,17 @@ export const pullRequests = sqliteTable(
 
 export type TriageFile = { path: string; risk: "low" | "medium" | "high"; reviewers: string[] };
 
+/** A symbol the change touches and the code that references it. */
+export type ImpactSymbol = {
+  name: string;
+  path: string;
+  line: number;
+  refs: number;
+  files: number;
+  filePaths: string[];
+  samples: { path: string; line: number; text: string }[];
+};
+
 export type TraceStep = {
   key: "fetch" | "triage" | "impact" | "review" | "checks" | "verify" | "learnings" | "fixes" | "publish";
   label: string;
@@ -107,6 +118,7 @@ export const reviews = sqliteTable(
     /** Mermaid flowchart of the change, shown folded in the review body. */
     flow: text("flow"),
     triage: text("triage", { mode: "json" }).$type<TriageFile[]>().notNull().default([]),
+    impact: text("impact", { mode: "json" }).$type<ImpactSymbol[]>().notNull().default([]),
     trace: text("trace", { mode: "json" }).$type<ReviewTrace>().notNull().default({ steps: [] }),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),

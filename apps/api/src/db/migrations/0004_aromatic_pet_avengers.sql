@@ -1,0 +1,1 @@
+ALTER TABLE `reviews` ADD `impact` text DEFAULT '[]' NOT NULL;

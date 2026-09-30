@@ -1,7 +1,7 @@
 import * as pullsRepo from "../db/repos/pulls.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
-import type { PullRequest, Repository, Review } from "../db/schema.ts";
+import type { ImpactSymbol, PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName, type GitHub } from "../github/app.ts";
 import {
   compare,
@@ -26,6 +26,7 @@ import { config } from "../config.ts";
 import { addedLines, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
 import { filesFor, runReviewers } from "./engine.ts";
 import { hasTestFiles } from "./tools.ts";
+import { impact, renderImpact } from "./impact.ts";
 import { Tracer } from "./trace.ts";
 import { triage } from "./triage.ts";
 import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
@@ -249,6 +250,23 @@ async function pipeline(run: Run): Promise<void> {
         ]);
         if (routing) reviewsRepo.update(review.id, { triage: routing.files });
         ctx.checkCancelled();
+
+        const impactStarted = Date.now();
+        let symbols: ImpactSymbol[] = [];
+        if (snapshot) {
+          try {
+            symbols = impact(codeFiles, snapshot);
+            reviewsRepo.update(review.id, { impact: symbols });
+            const refs = symbols.reduce((n, s) => n + s.refs, 0);
+            trace.add("impact", "Impact", impactStarted, `${symbols.length} symbols, ${refs} references`);
+          } catch (err) {
+            log.warn({ review: review.id, err: errMessage(err) }, "impact analysis failed");
+            trace.add("impact", "Impact", impactStarted, "Failed", "failed");
+          }
+        } else {
+          trace.add("impact", "Impact", null, "No snapshot", "skipped");
+        }
+        const impactText = renderImpact(symbols);
         // Test gap has nothing to compare against in a repository without tests.
         const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
         const outcome = await trace.step(
@@ -260,7 +278,10 @@ async function pipeline(run: Run): Promise<void> {
               files: codeFiles,
               routes: routing?.routes,
               focus,
-              contextFor: (r) => (r.needs?.rules ? rulesContext : baseContext),
+              contextFor: (r) => {
+                const base = r.needs?.rules ? rulesContext : baseContext;
+                return r.needs?.impact && impactText ? `${base}\n\n${impactText}` : base;
+              },
               snapshot,
               baseline,
               ctx,
