@@ -225,8 +225,11 @@ function overlaps(a: Finding, b: Finding): boolean {
  * with a similar title, or overlapping lines that name the same subject (reviewers word the same bug
  * differently). A second real occurrence elsewhere in the file is kept.
  */
-export function isDuplicate(a: Finding, b: Finding): boolean {
+export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boolean {
   if (a.path !== b.path) return false;
+  // Two check findings are exact (a package, a secret): only the very same one is a duplicate.
+  const fromCheck = (f: Finding) => Boolean(checkIds?.size) && f.reviewer.split("+").some((id) => checkIds!.has(id));
+  if (fromCheck(a) && fromCheck(b)) return a.fingerprint === b.fingerprint && a.line === b.line;
   if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
   if (!near(a, b)) return false;
   const wa = titleWords(a.title);
@@ -276,6 +279,7 @@ export function processFindings(
   files: FileDiff[],
   previous: Previous[] = [],
   focus?: Map<string, Set<number>>,
+  checkIds?: Set<string>,
 ): Processed {
   const byPath = new Map(files.map((f) => [f.path, f]));
   const valid = raw.map((r) => anchor(r, byPath)).filter((f): f is Finding => f !== null);
@@ -288,7 +292,7 @@ export function processFindings(
 
   const kept: Finding[] = [];
   for (const f of rank(confident)) {
-    const dup = kept.find((k) => isDuplicate(k, f));
+    const dup = kept.find((k) => isDuplicate(k, f, checkIds));
     if (dup) {
       if (!dup.reviewer.split("+").includes(f.reviewer)) dup.reviewer = `${dup.reviewer}+${f.reviewer}`;
       continue;

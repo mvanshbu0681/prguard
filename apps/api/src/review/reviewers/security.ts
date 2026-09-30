@@ -15,5 +15,5 @@ export default defineReviewer({
 - injection: SQL, shell, template, path traversal; SSRF; open redirects; unsafe deserialization; unescaped output (XSS)
 - sensitive data written to logs or returned in responses; weak or home-made crypto; insecure defaults (CORS \`*\`, debug on, TLS checks off)
 - trusting values the client controls: prices, roles, user ids, totals
-Hard-coded secrets are covered by a separate check: do not report them.`,
+Hard-coded secrets and dependencies (new or changed packages) are covered by separate checks: do not report them.`,
 });

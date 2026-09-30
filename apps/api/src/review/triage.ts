@@ -10,8 +10,13 @@ const schema = z.object({
   files: z.array(z.object({ path: z.string(), risk: z.string(), reviewers: z.array(z.string()) })),
 });
 
-/** Kept on every source file they apply to, whatever triage says. */
+/** Kept on every source file, whatever triage says. */
 const ALWAYS = new Set(["general", "rules"]);
+/** Also kept on every source file that is not low risk: triage only prunes these on trivial files. */
+const CORE = new Set(["security", "reliability", "slop", "performance"]);
+/** New configuration surface in added lines: env vars, flags, routes. Docs drift always looks at these. */
+const CONFIG_SURFACE =
+  /process\.env\.|os\.environ|os\.getenv|os\.Getenv|System\.getenv|getenv\(|flag\.(String|Int|Bool|Duration)|add_argument\(|\.(get|post|put|delete|patch)\(\s*["'`]\/|@(app|router)\.(get|post|put|delete|patch)\(/;
 const RISKS = new Set(["low", "medium", "high"]);
 
 const SYSTEM = `You triage a pull request for PR Guard, an automated code reviewer, before specialist reviewers run.
@@ -71,8 +76,14 @@ export async function triage(opts: {
     }
     const allowed = candidates.get(file.path)!.map((r) => r.id);
     const chosen = new Set(got.reviewers.map((r) => r.trim().toLowerCase()).filter((r) => allowed.includes(r)));
-    for (const id of allowed) if (ALWAYS.has(id) && fileKind(file.path) === "source") chosen.add(id);
     const risk = RISKS.has(got.risk.trim().toLowerCase()) ? (got.risk.trim().toLowerCase() as TriageFile["risk"]) : "medium";
+    const source = fileKind(file.path) === "source";
+    const addsConfig = file.hunks.some((h) => h.lines.some((l) => l.kind === "add" && CONFIG_SURFACE.test(l.text)));
+    for (const id of allowed) {
+      if (source && ALWAYS.has(id)) chosen.add(id);
+      if (source && risk !== "low" && CORE.has(id)) chosen.add(id);
+      if (id === "docs" && addsConfig) chosen.add(id);
+    }
     return { path: file.path, risk, reviewers: allowed.filter((id) => chosen.has(id)) };
   });
   return { files, routes: new Map(files.map((f) => [f.path, f.reviewers])), fallback: answer === null || missing > 0 };

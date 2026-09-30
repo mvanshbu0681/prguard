@@ -332,8 +332,18 @@ async function pipeline(run: Run): Promise<void> {
           trace.add("impact", "Impact", null, "No snapshot", "skipped");
         }
         const impactText = renderImpact(symbols);
-        // Breaking change only runs when something outside this PR uses what it changed.
-        const hasOutsideCallers = outsideCallers(symbols, new Set(files.map((f) => f.path))).length > 0;
+        // Breaking change only runs when something outside this PR uses what it changed, and only on
+        // the files that define those symbols.
+        const outside = outsideCallers(symbols, new Set(files.map((f) => f.path)));
+        const hasOutsideCallers = outside.length > 0;
+        if (routing) {
+          const definers = new Set(outside.map((s) => s.path));
+          for (const [path, ids] of routing.routes) {
+            const next = ids.filter((id) => id !== "breaking");
+            if (definers.has(path)) next.push("breaking");
+            routing.routes.set(path, next);
+          }
+        }
         // Test gap has nothing to compare against in a repository without tests.
         const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
         const outcome = await trace.step(
@@ -402,7 +412,7 @@ async function pipeline(run: Run): Promise<void> {
   ctx.checkCancelled();
 
   const previous = findingsRepo.listPostedForPull(pr.id);
-  const processed = processFindings(raw.concat(checkRaw), anchorFiles, previous, focus);
+  const processed = processFindings(raw.concat(checkRaw), anchorFiles, previous, focus, checkIds);
   let candidates = processed.findings.map((f) => (f.reviewer.split("+").some((id) => checkIds.has(id)) ? { ...f, fromCheck: true } : f));
 
   // What the team already dismissed is not posted again.
