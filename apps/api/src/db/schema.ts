@@ -124,6 +124,25 @@ export const jobs = sqliteTable(
   (t) => [index("jobs_claim_idx").on(t.status, t.runAfter), index("jobs_key_idx").on(t.key)],
 );
 
+export const llmCalls = sqliteTable(
+  "llm_calls",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    reviewId: integer("review_id"),
+    repositoryId: integer("repository_id"),
+    purpose: text("purpose").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    tokensIn: integer("tokens_in").notNull().default(0),
+    tokensOut: integer("tokens_out").notNull().default(0),
+    ms: integer("ms").notNull(),
+    ok: integer("ok", { mode: "boolean" }).notNull(),
+    error: text("error"),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("llm_calls_review_idx").on(t.reviewId)],
+);
+
 export type Installation = typeof installations.$inferSelect;
 export type Repository = typeof repositories.$inferSelect;
 export type PullRequest = typeof pullRequests.$inferSelect;
