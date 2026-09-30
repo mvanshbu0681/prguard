@@ -1,14 +1,14 @@
 import { randomBytes } from "node:crypto";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { Octokit } from "octokit";
+import { queueBrief } from "../../brief/index-repo.ts";
 import { config } from "../../config.ts";
 import * as installationsRepo from "../../db/repos/installations.ts";
+import * as repositoriesRepo from "../../db/repos/repositories.ts";
 import * as usersRepo from "../../db/repos/users.ts";
 import { githubApp, installationClient } from "../../github/app.ts";
 import { saveInstallation, syncInstallation, type GitHubInstallation } from "../../github/reconcile.ts";
-import { queueBrief } from "../../brief/index-repo.ts";
-import * as repositoriesRepo from "../../db/repos/repositories.ts";
 import { errMessage, log } from "../../log.ts";
 import { isHttps, SESSION_COOKIE } from "../session.ts";
 
@@ -16,15 +16,21 @@ const STATE_COOKIE = "pg_oauth_state";
 
 export const auth = new Hono();
 
-function startSession(c: Parameters<typeof setCookie>[0], userId: number, secure: boolean): void {
+function startSession(c: Context, userId: number): void {
   const session = usersRepo.createSession(userId, config.sessionDays);
   setCookie(c, SESSION_COOKIE, session.id, {
     httpOnly: true,
     sameSite: "Lax",
-    secure,
+    secure: isHttps(c),
     path: "/",
     maxAge: config.sessionDays * 86_400,
   });
+}
+
+function newState(c: Context): string {
+  const state = randomBytes(16).toString("hex");
+  setCookie(c, STATE_COOKIE, state, { httpOnly: true, sameSite: "Lax", secure: isHttps(c), path: "/", maxAge: 900 });
+  return state;
 }
 
 /** Makes sure a newly seen installation and its repos are stored, and briefs are on their way. */
@@ -36,26 +42,53 @@ async function adoptInstallation(installation: GitHubInstallation): Promise<void
   for (const id of repoIds) if (repositoriesRepo.get(id)?.briefStatus === "none") queueBrief(id);
 }
 
+/** What GitHub says this user can see: installations (admin for org admins and owners) and repos. */
+async function readAccess(userClient: Octokit, login: string, installs: GitHubInstallation[]): Promise<usersRepo.Access> {
+  const access: usersRepo.Access = { installations: [], repositories: [] };
+  for (const installation of installs) {
+    const account = installation.account?.login ?? "";
+    let admin = account.toLowerCase() === login.toLowerCase();
+    if (!admin && installation.account?.type === "Organization") {
+      const membership = await userClient.rest.orgs.getMembershipForAuthenticatedUser({ org: account }).catch(() => null);
+      admin = membership?.data.state === "active" && membership.data.role === "admin";
+    }
+    access.installations.push({ installationId: installation.id, admin });
+    const repos = await userClient.paginate(userClient.rest.apps.listInstallationReposForAuthenticatedUser, {
+      installation_id: installation.id,
+      per_page: 100,
+    });
+    for (const repo of repos as { id: number; permissions?: { admin?: boolean; maintain?: boolean } }[]) {
+      access.repositories.push({ repositoryId: Number(repo.id), admin: Boolean(repo.permissions?.admin || repo.permissions?.maintain) });
+    }
+  }
+  return access;
+}
+
 auth.get("/login", (c) => {
-  const state = randomBytes(16).toString("hex");
-  setCookie(c, STATE_COOKIE, state, { httpOnly: true, sameSite: "Lax", secure: isHttps(c), path: "/", maxAge: 600 });
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", config.github.clientId);
-  url.searchParams.set("state", state);
+  url.searchParams.set("state", newState(c));
+  return c.redirect(url.toString());
+});
+
+/** Installing (or changing repositories) starts here so the callback can prove we started it. */
+auth.get("/install", (c) => {
+  const url = new URL(`https://github.com/apps/${config.github.slug}/installations/new`);
+  url.searchParams.set("state", newState(c));
   return c.redirect(url.toString());
 });
 
 auth.get("/callback", async (c) => {
-  const { code, state, installation_id: installationId, setup_action: setupAction } = c.req.query();
+  const { code, state, setup_action: setupAction } = c.req.query();
   const expected = getCookie(c, STATE_COOKIE);
   deleteCookie(c, STATE_COOKIE, { path: "/" });
-  const fail = (reason: string) => {
-    log.warn({ reason }, "sign-in failed");
+  // An install started on github.com carries no state of ours: its data arrives by webhook, and the
+  // user signs in normally. Signing in on an unverified callback would allow login CSRF.
+  if (!state && setupAction) return c.redirect(`${config.dashboardUrl}/login`);
+  if (!code || !state || state !== expected) {
+    log.warn({ hasCode: Boolean(code), hasState: Boolean(state) }, "sign-in rejected");
     return c.redirect(`${config.dashboardUrl}/login?error=1`);
-  };
-  if (!code) return fail("no code");
-  // GitHub's install flow starts on github.com, so it carries no state; a sign-in we started must match ours.
-  if (state ? state !== expected : !installationId) return fail("state mismatch");
+  }
 
   try {
     const { authentication } = await githubApp.oauth.createToken({ code });
@@ -63,18 +96,18 @@ auth.get("/callback", async (c) => {
     const { data: me } = await userClient.rest.users.getAuthenticated();
     const user = usersRepo.upsert({ githubId: me.id, login: me.login, name: me.name ?? null, avatarUrl: me.avatar_url });
 
-    const installs = (await userClient.paginate(userClient.rest.apps.listInstallationsForAuthenticatedUser, { per_page: 100 })) as unknown as GitHubInstallation[];
+    const installs = (await userClient.paginate(userClient.rest.apps.listInstallationsForAuthenticatedUser, {
+      per_page: 100,
+    })) as unknown as GitHubInstallation[];
     for (const installation of installs) await adoptInstallation(installation);
-    usersRepo.setInstallations(
-      user.id,
-      installs.map((i) => i.id),
-    );
+    usersRepo.setAccess(user.id, await readAccess(userClient, me.login, installs));
 
-    startSession(c, user.id, isHttps(c));
+    startSession(c, user.id);
     log.info({ user: me.login, installations: installs.length, setupAction }, "signed in");
-    return c.redirect(`${config.dashboardUrl}/${setupAction === "install" || setupAction === "update" ? "repos" : "reviews"}`);
+    return c.redirect(`${config.dashboardUrl}/${setupAction ? "repos" : "reviews"}`);
   } catch (err) {
-    return fail(errMessage(err));
+    log.warn({ err: errMessage(err) }, "sign-in failed");
+    return c.redirect(`${config.dashboardUrl}/login?error=1`);
   }
 });
 
@@ -95,10 +128,10 @@ auth.get("/dev", async (c) => {
   const client = await installationClient(installs[0]!.id);
   const { data: gh } = await client.rest.users.getByUsername({ username: login });
   const user = usersRepo.upsert({ githubId: Number(gh.id), login: gh.login, name: gh.name ?? null, avatarUrl: gh.avatar_url });
-  usersRepo.setInstallations(
-    user.id,
-    installationsRepo.listActive().map((i) => i.id),
-  );
-  startSession(c, user.id, isHttps(c));
+  usersRepo.setAccess(user.id, {
+    installations: installs.map((i) => ({ installationId: i.id, admin: true })),
+    repositories: [],
+  });
+  startSession(c, user.id);
   return c.redirect(`${config.dashboardUrl}/reviews`);
 });

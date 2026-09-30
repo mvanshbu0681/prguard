@@ -84,6 +84,7 @@ function RepoRow({ repo }: { repo: RepoListItem }) {
           checked={repo.enabled}
           onChange={(enabled) => patch.mutate({ enabled })}
           label={`Enable reviews for ${repo.fullName}`}
+          disabled={!repo.canEdit}
         />
       </span>
     </div>

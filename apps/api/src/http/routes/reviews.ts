@@ -2,14 +2,13 @@ import { Hono, type Context } from "hono";
 import type { FindingItem, ReviewDetail } from "../../contracts.ts";
 import * as findingsRepo from "../../db/repos/findings.ts";
 import * as pullsRepo from "../../db/repos/pulls.ts";
-import * as repositoriesRepo from "../../db/repos/repositories.ts";
 import * as reviewsRepo from "../../db/repos/reviews.ts";
 import type { ReviewStatus } from "../../db/schema.ts";
 import { installationClient, splitFullName } from "../../github/app.ts";
 import { getPull } from "../../github/pr.ts";
 import { triggerReview } from "../../review/lifecycle.ts";
 import { reviewItems } from "../serialize.ts";
-import { accessibleRepo, requireUser, type AuthEnv } from "../session.ts";
+import { accessibleRepo, requireUser, visibleRepos, type AuthEnv } from "../session.ts";
 
 const STATUS_FILTERS: Record<string, ReviewStatus[]> = {
   active: ["queued", "running"],
@@ -91,7 +90,7 @@ reviews.post("/:id/rerun", async (c) => {
 });
 
 reviews.get("/", (c) => {
-  const visible = repositoriesRepo.listActive(c.get("installationIds")).map((r) => r.id);
+  const visible = visibleRepos(c).map((r) => r.id);
   const repo = Number(c.req.query("repo"));
   const repositoryIds = repo ? visible.filter((id) => id === repo) : visible;
   const limit = Math.min(Math.max(Number(c.req.query("limit")) || 50, 1), 200);

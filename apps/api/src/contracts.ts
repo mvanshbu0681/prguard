@@ -22,6 +22,8 @@ export type InstallationSummary = {
   rules: string;
   repoCount: number;
   settingsUrl: string;
+  /** Whether this user may change the org rules. */
+  canEdit: boolean;
 };
 
 export type SeverityCounts = Record<Severity, number>;
@@ -36,6 +38,8 @@ export type RepoListItem = {
   briefStatus: BriefStatus;
   briefUpdatedAt: number | null;
   lastReview: { id: number; status: ReviewStatus; createdAt: number } | null;
+  /** Whether this user may change the repository's settings. */
+  canEdit: boolean;
 };
 
 export type ReviewerInfo = { id: string; name: string; description: string };

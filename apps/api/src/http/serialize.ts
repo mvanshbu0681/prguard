@@ -43,7 +43,7 @@ export function reviewItems(list: Review[]): ReviewListItem[] {
   });
 }
 
-export function repoItems(repos: Repository[]): RepoListItem[] {
+export function repoItems(repos: Repository[], editable: Set<number>): RepoListItem[] {
   const latest = reviewsRepo.latestByRepos(repos.map((r) => r.id));
   const accounts = new Map(installationsRepo.listActive().map((i) => [i.id, i.accountLogin]));
   return repos.map((repo) => {
@@ -58,13 +58,14 @@ export function repoItems(repos: Repository[]): RepoListItem[] {
       briefStatus: repo.briefStatus,
       briefUpdatedAt: repo.briefUpdatedAt,
       lastReview: last ? { id: last.id, status: last.status, createdAt: last.createdAt } : null,
+      canEdit: editable.has(repo.id),
     };
   });
 }
 
-export function repoDetail(repo: Repository): RepoDetail {
+export function repoDetail(repo: Repository, editable: Set<number>): RepoDetail {
   return {
-    ...repoItems([repo])[0]!,
+    ...repoItems([repo], editable)[0]!,
     defaultBranch: repo.defaultBranch,
     brief: repo.brief,
     rules: repo.rules,

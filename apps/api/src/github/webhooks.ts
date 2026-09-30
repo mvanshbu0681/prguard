@@ -61,7 +61,7 @@ on("installation", (payload) => {
       for (const repo of repos) queueBrief(repo.id);
       // Whoever installed it can see it straight away, even before their next sign-in.
       const installer = payload.sender?.id ? usersRepo.getByGithubId(payload.sender.id) : undefined;
-      if (installer) usersRepo.addInstallation(installer.id, installation.id);
+      if (installer) usersRepo.addInstallation(installer.id, installation.id, true);
       break;
     }
     case "deleted": {

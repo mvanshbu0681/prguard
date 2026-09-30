@@ -191,8 +191,21 @@ export const userInstallations = sqliteTable(
   {
     userId: integer("user_id").notNull(),
     installationId: integer("installation_id").notNull(),
+    /** Org admin (or the account owner): sees and edits every repo of the installation. */
+    admin: integer("admin", { mode: "boolean" }).notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.userId, t.installationId] })],
+);
+
+/** Repositories a user can see on GitHub, captured at sign-in. */
+export const userRepositories = sqliteTable(
+  "user_repositories",
+  {
+    userId: integer("user_id").notNull(),
+    repositoryId: integer("repository_id").notNull(),
+    admin: integer("admin", { mode: "boolean" }).notNull().default(false),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.repositoryId] })],
 );
 
 export type User = typeof users.$inferSelect;

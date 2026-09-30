@@ -61,7 +61,7 @@ export function RulesPanel({ repo }: { repo: RepoDetail }) {
             )
           )}
         </span>
-        <Button variant="primary" size="sm" onClick={save} disabled={!dirty || patch.isPending}>
+        <Button variant="primary" size="sm" onClick={save} disabled={!repo.canEdit || !dirty || patch.isPending}>
           Save
         </Button>
       </PanelFooter>

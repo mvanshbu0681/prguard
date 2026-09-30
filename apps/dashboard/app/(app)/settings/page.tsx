@@ -126,7 +126,7 @@ function InstallationPanel({ installation }: { installation: InstallationSummary
             )
           )}
         </span>
-        <Button variant="primary" size="sm" onClick={submit} disabled={!dirty || save.isPending}>
+        <Button variant="primary" size="sm" onClick={submit} disabled={!installation.canEdit || !dirty || save.isPending}>
           Save
         </Button>
       </PanelFooter>

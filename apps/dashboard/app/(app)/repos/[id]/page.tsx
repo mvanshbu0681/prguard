@@ -86,7 +86,7 @@ function Repo({ repo }: { repo: RepoDetail }) {
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <label className="flex h-8 cursor-pointer items-center gap-3 rounded-md border border-line-2 bg-surface-1 pl-3 pr-2.5 text-sm text-body shadow-hi">
             Enabled
-            <Switch checked={repo.enabled} onChange={(enabled) => patch.mutate({ enabled })} label="Enabled" />
+            <Switch checked={repo.enabled} onChange={(enabled) => patch.mutate({ enabled })} label="Enabled" disabled={!repo.canEdit} />
           </label>
           {patch.isError && <InlineError message="Couldn't update." />}
         </div>

@@ -37,7 +37,7 @@ const schema = z.object({
   REVIEW_TOKEN_BUDGET: num(200000),
 
   DEV_LOGIN: optional,
-  SESSION_DAYS: num(30),
+  SESSION_DAYS: num(7),
 });
 
 function fromRoot(path: string): string {

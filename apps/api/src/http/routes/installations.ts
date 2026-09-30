@@ -11,7 +11,9 @@ installations.use("*", requireUser);
 
 installations.patch("/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  if (!c.get("installationIds").includes(id)) return c.json({ error: "Organization not found." }, 404);
+  const scope = c.get("scope");
+  if (!scope.installationIds.includes(id)) return c.json({ error: "Organization not found." }, 404);
+  if (!scope.adminInstallationIds.includes(id)) return c.json({ error: "Only organization admins can change this." }, 403);
   const parsed = patchSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid request." }, 400);
   installationsRepo.setRules(id, parsed.data.rules);

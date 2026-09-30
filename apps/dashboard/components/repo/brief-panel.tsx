@@ -46,12 +46,12 @@ export function BriefPanel({ repo }: { repo: RepoDetail }) {
         actions={
           !editing && (
             <>
-              <Button variant="ghost" size="sm" onClick={() => rescan.mutate()} disabled={busy}>
+              <Button variant="ghost" size="sm" onClick={() => rescan.mutate()} disabled={busy || !repo.canEdit}>
                 <RefreshCw aria-hidden="true" />
                 Rescan
               </Button>
               {brief && (
-                <Button variant="ghost" size="sm" onClick={() => setDraft(repo.brief ?? "")} disabled={busy}>
+                <Button variant="ghost" size="sm" onClick={() => setDraft(repo.brief ?? "")} disabled={busy || !repo.canEdit}>
                   <Pencil aria-hidden="true" />
                   Edit
                 </Button>
@@ -97,7 +97,7 @@ export function BriefPanel({ repo }: { repo: RepoDetail }) {
       ) : (
         <div className="flex flex-col items-center gap-3 px-6 py-14 text-center">
           <p className="text-sm text-dim">No brief yet.</p>
-          <Button size="sm" onClick={() => rescan.mutate()} disabled={busy}>
+          <Button size="sm" onClick={() => rescan.mutate()} disabled={busy || !repo.canEdit}>
             <RefreshCw aria-hidden="true" />
             Rescan
           </Button>

@@ -42,7 +42,7 @@ export function ReviewersPanel({ repo }: { repo: RepoDetail }) {
                   </div>
                   <div className="mt-0.5 text-xs leading-[18px] text-dim">{reviewer.description}</div>
                 </div>
-                <Switch checked={on} onChange={(v) => toggle(reviewer.id, v)} label={reviewer.name} />
+                <Switch checked={on} onChange={(v) => toggle(reviewer.id, v)} label={reviewer.name} disabled={!repo.canEdit} />
               </li>
             );
           })}
