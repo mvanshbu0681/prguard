@@ -5,9 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Check, CircleAlert, Info, RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { Fragment, useEffect, type ReactNode } from "react";
 import { FindingsList } from "@/components/reviews/findings-list";
 import { ReviewProgress } from "@/components/reviews/review-progress";
+import { Trace } from "@/components/reviews/trace";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/collapsible";
@@ -73,6 +74,17 @@ function Review({ review }: { review: ReviewDetail }) {
   const tokens = review.usage.tokensIn + review.usage.tokensOut;
   const finished = review.finishedAt !== null && review.startedAt !== null;
   const findingCount = review.findings.length;
+  const since = review.since;
+  const sinceParts = since
+    ? ([
+        [since.fixed, "fixed"],
+        [since.new, "new"],
+        [since.open, "open"],
+      ] as const)
+        .filter(([n]) => n > 0)
+        .map(([n, label]) => `${n} ${label}`)
+    : [];
+  const showTrace = review.trace.steps.length > 0;
   const riskWhy = review.riskReasons.join(", ");
   const why = [review.priorityReason, riskWhy && `${riskWhy.charAt(0).toUpperCase()}${riskWhy.slice(1)}.`].filter(Boolean).join(" ");
 
@@ -150,6 +162,16 @@ function Review({ review }: { review: ReviewDetail }) {
             {compactNumber(tokens)} tokens <span className="text-faint">·</span> {plural(review.usage.calls, "call")}
           </Meta>
         )}
+        {sinceParts.length > 0 && (
+          <Meta label="Since last">
+            {sinceParts.map((part, i) => (
+              <Fragment key={part}>
+                {i > 0 && <span className="text-faint"> · </span>}
+                {part}
+              </Fragment>
+            ))}
+          </Meta>
+        )}
       </dl>
 
       <div className="mt-6 space-y-8">
@@ -218,7 +240,7 @@ function Review({ review }: { review: ReviewDetail }) {
           </Section>
         )}
 
-        {(review.walkthrough.length > 0 || review.filesSkipped.length > 0) && (
+        {(review.walkthrough.length > 0 || review.filesSkipped.length > 0 || showTrace) && (
           <div className="space-y-2">
             {review.walkthrough.length > 0 && (
               <Collapsible title="Walkthrough" count={review.walkthrough.length}>
@@ -254,6 +276,7 @@ function Review({ review }: { review: ReviewDetail }) {
                 </ul>
               </Collapsible>
             )}
+            {showTrace && <Trace review={review} />}
           </div>
         )}
       </div>
