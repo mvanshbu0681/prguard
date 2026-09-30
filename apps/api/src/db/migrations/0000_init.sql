@@ -118,6 +118,8 @@ CREATE TABLE `reviews` (
 	`status` text DEFAULT 'queued' NOT NULL,
 	`stage` text DEFAULT 'queued' NOT NULL,
 	`summary` text,
+	`note` text,
+	`reviewed` integer DEFAULT true NOT NULL,
 	`walkthrough` text DEFAULT '[]' NOT NULL,
 	`files_reviewed` integer DEFAULT 0 NOT NULL,
 	`files_skipped` text DEFAULT '[]' NOT NULL,
@@ -148,7 +150,15 @@ CREATE TABLE `sessions` (
 CREATE TABLE `user_installations` (
 	`user_id` integer NOT NULL,
 	`installation_id` integer NOT NULL,
+	`admin` integer DEFAULT false NOT NULL,
 	PRIMARY KEY(`user_id`, `installation_id`)
+);
+--> statement-breakpoint
+CREATE TABLE `user_repositories` (
+	`user_id` integer NOT NULL,
+	`repository_id` integer NOT NULL,
+	`admin` integer DEFAULT false NOT NULL,
+	PRIMARY KEY(`user_id`, `repository_id`)
 );
 --> statement-breakpoint
 CREATE TABLE `users` (

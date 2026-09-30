@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2bfde463-ac6e-474c-9437-96da2e2e82fb",
+  "id": "cb8caeb1-3efe-498e-a936-618384f18a20",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "findings": {
@@ -800,6 +800,21 @@
           "notNull": false,
           "autoincrement": false
         },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "reviewed": {
+          "name": "reviewed",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "walkthrough": {
           "name": "walkthrough",
           "type": "text",
@@ -997,6 +1012,14 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
+        },
+        "admin": {
+          "name": "admin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
         }
       },
       "indexes": {},
@@ -1008,6 +1031,46 @@
             "installation_id"
           ],
           "name": "user_installations_user_id_installation_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "user_repositories": {
+      "name": "user_repositories",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "repository_id": {
+          "name": "repository_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "admin": {
+          "name": "admin",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "user_repositories_user_id_repository_id_pk": {
+          "columns": [
+            "user_id",
+            "repository_id"
+          ],
+          "name": "user_repositories_user_id_repository_id_pk"
         }
       },
       "uniqueConstraints": {},
