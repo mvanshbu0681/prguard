@@ -8,6 +8,7 @@ import { accessibleRepo, requireUser, type AuthEnv } from "../session.ts";
 const patchSchema = z.object({
   enabled: z.boolean().optional(),
   brief: z.string().max(40_000).optional(),
+  rules: z.string().max(10_000).optional(),
 });
 
 export const repos = new Hono<AuthEnv>();

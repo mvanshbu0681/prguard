@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { GitHubIcon } from "@/components/brand";
 import { BriefPanel } from "@/components/repo/brief-panel";
+import { RulesPanel } from "@/components/repo/rules-panel";
 import { ReviewTable } from "@/components/reviews/review-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState, InlineError } from "@/components/ui/error-state";
@@ -92,7 +93,9 @@ function Repo({ repo }: { repo: RepoDetail }) {
 
       <div className="mt-7 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <BriefPanel repo={repo} />
-        <div className="space-y-4" />
+        <div className="space-y-4">
+          <RulesPanel key={`rules-${repo.id}`} repo={repo} />
+        </div>
       </div>
 
       <section className="mt-10">
