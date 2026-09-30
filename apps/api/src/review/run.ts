@@ -34,9 +34,10 @@ import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { place, processFindings, type RawFinding } from "./findings.ts";
 import { verifyFindings } from "./verify.ts";
+import { redactSecrets } from "./checks/secrets.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
-import { enabledPlugins, modelReviewers } from "./reviewers/index.ts";
+import { applies, checks, enabledPlugins, modelReviewers } from "./reviewers/index.ts";
 import { summarize } from "./summarize.ts";
 import type { Finding } from "./types.ts";
 
@@ -205,6 +206,10 @@ async function pipeline(run: Run): Promise<void> {
   const models = modelReviewers(plugins).filter((r) => !r.needs?.rules || hasRules);
   const codeFiles = docsOnly ? [] : reviewable.filter((f) => fileKind(f.path) !== "docs");
   const deep = models.some((r) => filesFor(r, codeFiles).length > 0);
+  const checkPlugins = checks(plugins).filter((c) => reviewable.some((f) => applies(c, f.path)));
+  const checkIds = new Set(checkPlugins.map((c) => c.id));
+  // A review counts as reviewed when any reviewer or check looked at the code.
+  const reviewedAny = deep || checkPlugins.length > 0;
 
   let summary: string | null = null;
   let walkthrough: { path: string; change: string }[] = [];
@@ -233,14 +238,17 @@ async function pipeline(run: Run): Promise<void> {
         })
     : Promise.resolve();
 
+  const snapshotTask: Promise<string | null> = reviewedAny
+    ? getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
+        log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
+        return null;
+      })
+    : Promise.resolve(null);
   let snapshot: string | null = null;
   const reviewTask = deep
     ? (async () => {
         const [snap, routing] = await Promise.all([
-          getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
-            log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
-            return null;
-          }),
+          snapshotTask,
           config.features.triage
             ? trace.step(
                 "triage",
@@ -304,12 +312,39 @@ async function pipeline(run: Run): Promise<void> {
       })()
     : Promise.resolve();
 
-  await Promise.all([summaryTask, reviewTask]);
+  // Checks are code, not models: they run beside the reviewers on every file they apply to.
+  let checkRaw: RawFinding[] = [];
+  const checksTask = checkPlugins.length
+    ? (async () => {
+        const snap = await snapshotTask;
+        const checksStarted = Date.now();
+        const results = await Promise.all(
+          checkPlugins.map(async (check) => {
+            try {
+              const out = await check.run({
+                files: reviewable.filter((f) => applies(check, f.path)),
+                snapshot: snap,
+                repo: repoNow,
+                signal: run.signal,
+              });
+              return { check, out };
+            } catch (err) {
+              log.warn({ review: review.id, check: check.id, err: errMessage(err) }, "check failed");
+              return { check, out: { findings: [] as RawFinding[], detail: "Failed" } };
+            }
+          }),
+        );
+        checkRaw = results.flatMap((x) => x.out.findings);
+        trace.add("checks", "Checks", checksStarted, results.map((x) => `${x.check.name}: ${x.out.detail}`).join("; "));
+      })()
+    : (trace.add("checks", "Checks", null, "None apply", "skipped"), Promise.resolve());
+
+  await Promise.all([summaryTask, reviewTask, checksTask]);
   ctx.checkCancelled();
 
   const previous = findingsRepo.listPostedForPull(pr.id);
-  const processed = processFindings(raw, anchorFiles, previous, focus);
-  let candidates = processed.findings;
+  const processed = processFindings(raw.concat(checkRaw), anchorFiles, previous, focus);
+  let candidates = processed.findings.map((f) => (f.reviewer.split("+").some((id) => checkIds.has(id)) ? { ...f, fromCheck: true } : f));
 
   // Model findings of medium severity and above are re-checked against the code before posting.
   let rejectedCount = 0;
@@ -346,12 +381,13 @@ async function pipeline(run: Run): Promise<void> {
   const terms = codeTerms(files);
   let findings: Finding[] = place(candidates).map((f) => ({
     ...f,
-    title: codify(f.title, terms),
-    body: codify(f.body, terms),
-    evidence: f.evidence ? codify(f.evidence, terms) : f.evidence,
+    title: redactSecrets(codify(f.title, terms)),
+    body: redactSecrets(codify(f.body, terms)),
+    evidence: f.evidence ? redactSecrets(codify(f.evidence, terms)) : f.evidence,
+    suggestion: f.suggestion === null ? null : redactSecrets(f.suggestion),
   }));
-  if (summary) summary = codify(summary, terms);
-  walkthrough = walkthrough.map((w) => ({ ...w, change: codify(w.change, terms) }));
+  if (summary) summary = redactSecrets(codify(summary, terms));
+  walkthrough = walkthrough.map((w) => ({ ...w, change: redactSecrets(codify(w.change, terms)) }));
   trace.data.funnel = {
     raw: raw.length,
     anchored: raw.length - processed.dropped,
@@ -384,7 +420,7 @@ async function pipeline(run: Run): Promise<void> {
       ? "Nothing to review: only deleted, binary, generated or lock files changed."
       : docsOnly
         ? "Documentation only, so this is a summary without a code review."
-        : !deep
+        : !reviewedAny
           ? "Reviewers are off for this repository, so this is a summary only."
           : limits.length
             ? limits.join(" ")
@@ -402,7 +438,7 @@ async function pipeline(run: Run): Promise<void> {
       walkthrough,
       flow,
       note: "No new issues in these commits.",
-      reviewed: deep,
+      reviewed: reviewedAny,
       filesReviewed: reviewable.length,
       finishedAt: Date.now(),
     });
@@ -425,7 +461,7 @@ async function pipeline(run: Run): Promise<void> {
     note,
     reviewUrl: reviewUrl(review.id),
     blobUrl: `https://github.com/${run.repo.fullName}/blob/${review.headSha}`,
-    reviewed: deep,
+    reviewed: reviewedAny,
   });
   const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));
 
@@ -460,13 +496,13 @@ async function pipeline(run: Run): Promise<void> {
     walkthrough,
     flow,
     note,
-    reviewed: deep,
+    reviewed: reviewedAny,
     filesReviewed: reviewable.length - notReviewed.length,
     finishedAt: Date.now(),
   });
   pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
 
-  const check = checkTitle(findings, deep);
+  const check = checkTitle(findings, reviewedAny);
   await completeCheck(gh, r, review, check.conclusion, check.title, checkSummary(inputFor(findings)));
   if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
   const inline = findings.filter((f) => f.placement === "inline").length;

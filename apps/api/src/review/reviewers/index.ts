@@ -1,3 +1,4 @@
+import secrets from "../checks/secrets.ts";
 import type { Check, ModelReviewer, Plugin } from "./define.ts";
 import breaking from "./breaking.ts";
 import data from "./data.ts";
@@ -11,7 +12,7 @@ import slop from "./slop.ts";
 import tests from "./tests.ts";
 
 /** Every reviewer and check, in the order they are listed in the dashboard. */
-export const reviewers: Plugin[] = [general, security, reliability, breaking, performance, data, slop, rules, docs, tests];
+export const reviewers: Plugin[] = [general, security, reliability, breaking, performance, data, slop, rules, docs, tests, secrets];
 
 export function enabledPlugins(disabled: string[]): Plugin[] {
   return reviewers.filter((r) => !disabled.includes(r.id));
