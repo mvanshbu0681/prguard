@@ -35,6 +35,8 @@ import { getSnapshot } from "../github/snapshot.ts";
 import { place, processFindings, type RawFinding } from "./findings.ts";
 import { verifyFindings } from "./verify.ts";
 import { redactSecrets } from "./checks/secrets.ts";
+import { dependencies, isManifest } from "./checks/manifests.ts";
+import { assessRisk, type RiskLevel } from "./risk.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
 import { applies, checks, enabledPlugins, modelReviewers } from "./reviewers/index.ts";
@@ -61,6 +63,8 @@ function describeSkipped(skipped: { path: string; reason: string }[]): string {
 }
 
 const SEVERITY_ORDER = ["critical", "high", "medium", "low", "nit"];
+
+const RISK_LABEL: Record<RiskLevel, string> = { low: "Low risk", medium: "Medium risk", high: "High risk" };
 
 /** Test gap reports one finding per review: its most severe, most confident one. */
 function oneTestGap(raw: RawFinding[]): RawFinding[] {
@@ -428,6 +432,19 @@ async function pipeline(run: Run): Promise<void> {
               ? "No new issues since the last review."
               : null;
 
+  // Risk from code signals: the whole PR, what uses it, new dependencies and what is still open on it.
+  const manifests = reviewable.filter((f) => isManifest(f.path));
+  const risk = assessRisk({
+    prFiles: files,
+    impact: reviewsRepo.get(review.id)!.impact,
+    newDependencies: manifests.length ? dependencies(manifests, snapshot).length : 0,
+    malware: findings.some((f) => f.reviewer.split("+").includes("supply-chain") && f.severity === "critical"),
+    openFindings: [...findings.filter((f) => f.placement !== "hidden"), ...previous],
+  });
+  reviewsRepo.update(review.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
+  pullsRepo.update(pr.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
+  const reasons = risk.reasons.length ? `**${RISK_LABEL[risk.level]}:** ${risk.reasons.join(", ")}.` : null;
+
   // A push that brings nothing new to say gets no review, only a check run.
   const silent = kind === "incremental" && findings.length === 0 && !partial;
   if (silent) {
@@ -462,6 +479,8 @@ async function pipeline(run: Run): Promise<void> {
     reviewUrl: reviewUrl(review.id),
     blobUrl: `https://github.com/${run.repo.fullName}/blob/${review.headSha}`,
     reviewed: reviewedAny,
+    risk: risk.level,
+    reasons,
   });
   const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));
 

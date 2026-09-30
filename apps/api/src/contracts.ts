@@ -88,6 +88,8 @@ export type ReviewListItem = {
   /** False when no reviewer ran (docs only, nothing to review, reviewers off, no new changes). */
   reviewed: boolean;
   partial: boolean;
+  /** Null for reviews from before ranking existed. */
+  risk: RiskLevel | null;
   error: string | null;
   createdAt: number;
   startedAt: number | null;
@@ -115,6 +117,8 @@ export type FindingItem = {
 
 export type ReviewDetail = ReviewListItem & {
   baseSha: string | null;
+  /** Up to three short reasons for the risk level. */
+  riskReasons: string[];
   summary: string | null;
   /** One line explaining a limited review (docs only, partial, reviewers off…), or null. */
   note: string | null;

@@ -16,6 +16,7 @@ import { ErrorState, InlineError } from "@/components/ui/error-state";
 import { InlineCode } from "@/components/ui/inline-code";
 import { Markdown } from "@/components/ui/markdown";
 import { Panel } from "@/components/ui/panel";
+import { RiskPill } from "@/components/ui/pills";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { reviewState, StatusBadge } from "@/components/ui/status";
 import { RelativeTime } from "@/components/ui/time";
@@ -97,6 +98,7 @@ function Review({ review }: { review: ReviewDetail }) {
             </span>
             <Sep />
             <StatusBadge tone={state.tone} label={state.label} />
+            {review.risk && <RiskPill risk={review.risk} />}
           </div>
 
           <div className="-my-1 flex shrink-0 items-center gap-1">
@@ -117,6 +119,12 @@ function Review({ review }: { review: ReviewDetail }) {
           </div>
         </div>
       </header>
+
+      {review.riskReasons.length > 0 && (
+        <p className="mt-2 text-sm text-dim">
+          <InlineCode text={review.riskReasons.join(", ")} />
+        </p>
+      )}
 
       {rerun.isError && (
         <div className="mt-2 flex justify-end">

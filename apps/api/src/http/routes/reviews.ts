@@ -63,6 +63,7 @@ reviews.get("/:id", (c) => {
   const body: ReviewDetail = {
     ...item,
     baseSha: review.baseSha,
+    riskReasons: review.riskReasons,
     summary: review.summary,
     note: review.note,
     walkthrough: review.walkthrough,

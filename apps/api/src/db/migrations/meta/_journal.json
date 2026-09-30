@@ -43,6 +43,13 @@
       "when": 1790808046437,
       "tag": "0005_demonic_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790808655900,
+      "tag": "0006_amusing_white_queen",
+      "breakpoints": true
     }
   ]
 }
