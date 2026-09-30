@@ -49,7 +49,8 @@ on("pull_request", async (payload) => {
     }
     // A late or repeated push event for a commit that is already reviewed, or being reviewed, adds nothing.
     const head: string = p.head.sha;
-    if (action === "synchronize" && pr.lastReviewedSha === head) return;
+    // Reopening or marking ready on an already-reviewed commit keeps that review's result.
+    if (action !== "opened" && pr.lastReviewedSha === head) return;
     if (reviewsRepo.listOpenForPull(pr.id).some((r) => r.headSha === head)) return;
     await triggerReview(repo, pr, action);
     return;

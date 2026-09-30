@@ -58,9 +58,13 @@ async function readAccess(userClient: Octokit, login: string, installs: GitHubIn
     access.repositories.push(...mine);
 
     const owner = (installation.account?.login ?? "").toLowerCase() === login.toLowerCase();
-    const covered = new Set(mine.filter((r) => r.admin).map((r) => r.repositoryId));
+    // Only an installation covering every org repo says anything about the org: admin on all of
+    // those is what org owners have. Maintain access does not count here.
+    const adminOnly = new Set(
+      (repos as { id: number; permissions?: { admin?: boolean } }[]).filter((r) => r.permissions?.admin).map((r) => Number(r.id)),
+    );
     const all = repositoriesRepo.listActive([installation.id]);
-    const adminOfAll = all.length > 0 && all.every((r) => covered.has(r.id));
+    const adminOfAll = installation.repository_selection === "all" && all.length > 0 && all.every((r) => adminOnly.has(r.id));
     access.installations.push({ installationId: installation.id, admin: owner || adminOfAll });
   }
   return access;
