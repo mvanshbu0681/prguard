@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+/* Only these colours exist. Resetting the default palette keeps stray
+   `bg-zinc-900`-style classes from compiling at all. */
+@theme {
+  --color-*: initial;
+
+  /* Surfaces, darkest to lightest */
+  --color-surface-0: #080a0d; /* page */
+  --color-surface-1: #0f1114; /* panel */
+  --color-surface-2: #16191c; /* raised / card */
+  --color-surface-3: #1e2125; /* hover */
+  --color-surface-4: #272b2e; /* selected / pressed */
+
+  /* Hairlines */
+  --color-line: rgba(255, 255, 255, 0.09);
+  --color-line-2: rgba(255, 255, 255, 0.14);
+  --color-line-3: rgba(255, 255, 255, 0.22);
+  --color-hair: rgba(255, 255, 255, 0.055);
+
+  /* Text */
+  --color-primary: #eef0f3;
+  --color-body: #cdd1d6;
+  --color-dim: #8d9399;
+  --color-faint: #646a70;
+
+  /* Accent */
+  --color-accent: #2ecedd;
+  --color-accent-hover: #5ad8e4;
+  --color-accent-text: #7aecf8;
+
+  /* Severity */
+  --color-sev-critical: #f64f47;
+  --color-sev-high: #f18336;
+  --color-sev-medium: #cfa25a;
+  --color-sev-low: #a39879;
+  --color-sev-nit: #83878b;
+
+  /* Status */
+  --color-ok: #58d8ae;
+  --color-ok-text: #77e9c0;
+  --color-err: #f64f47;
+  --color-err-text: #e2817b;
+  --color-warn: #cfa25a;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Type scale: 12 / 13 (tables, meta) / 14 (body) / 16 / 20 (page titles) */
+  --text-2xs: 11px;
+  --text-2xs--line-height: 14px;
+  --text-xs: 12px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 18px;
+  --text-base: 14px;
+  --text-base--line-height: 22px;
+  --text-lg: 16px;
+  --text-lg--line-height: 24px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+  --shadow-hi: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-hi-strong: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-hi-accent: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+
+  --animate-pulse-dot: pulse-dot 1.6s ease-out infinite;
+  --animate-shimmer: shimmer 1.4s ease-in-out infinite;
+  --animate-fade-in: fade-in 160ms ease-out;
+  --animate-progress: progress 1.4s ease-in-out infinite;
+
+  @keyframes pulse-dot {
+    0% {
+      box-shadow: 0 0 0 0 rgba(46, 206, 221, 0.55);
+    }
+    70% {
+      box-shadow: 0 0 0 5px rgba(46, 206, 221, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(46, 206, 221, 0);
+    }
+  }
+  @keyframes shimmer {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(-2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(250%);
+    }
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    background: var(--color-surface-0);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    background: var(--color-surface-0);
+    color: var(--color-body);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Code reads literally: `===` must not collapse into a ligature glyph. */
+  code,
+  pre,
+  kbd,
+  samp,
+  .font-mono {
+    font-variant-ligatures: none;
+    font-feature-settings: "liga" 0, "calt" 0;
+  }
+
+  ::selection {
+    background: rgba(46, 206, 221, 0.28);
+    color: var(--color-primary);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-faint);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  }
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
