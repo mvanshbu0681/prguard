@@ -18,5 +18,22 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
   merge (the ownership bug was posted twice, by Security and Team rules).
 - **fact** Groq still intermittently rejects the forced final tool call ("Tool choice is required");
   the existing retry covers it at the cost of one extra call.
+- **decision** To build in parallel, the remaining dashboard work (finding cards, trace, Queue, Insights,
+  Learnings panel, nav) went to one agent working only in `apps/dashboard` against contract types
+  committed first (`954b6a2`), while the backend slices continued. So slices 23, 25 and 32 to 35 landed
+  as an API commit plus a dashboard commit instead of one commit each.
+- **fact** Stage 4 to 6 checkpoint (acme-store#4 to #6, acme-billing#4): F5 flagged the secret (never
+  echoed), the NOT NULL column, the dropped column and float money; F6 flagged `toga-ai` as malware.
+  Triage hurt recall: it skipped AI slop and Docs drift on F3, and sent Performance and Breaking
+  change to the wrong files on F4.
+- **decision** Triage now only prunes reviewers on low-risk files: Bug, Team rules, Security,
+  Reliability, AI slop and Performance always run on other source files; Docs drift is forced on
+  files that add env vars, flags or routes; Breaking change goes exactly to the files that define a
+  symbol with callers outside the PR (from impact analysis). Triage still sets risk and decides
+  Test gap.
+- **fact** Dedupe merged `toga-ai` and `@whalent/agent` (adjacent lines, both "known malware"), so one
+  malware package was never posted. Two findings from checks now merge only when identical.
+- **decision** Security no longer reports new dependencies (the Supply chain check does), and Test gap
+  titles read "No test covers <behavior>" so it stops reporting bugs.
 - **fact** The session's app worktree moved to `frontend-build-module-error-a40f13`; work continues in
   `staging-work` on branch `manaskhandelwal/deep-review`, cut from `manaskhandelwal/staging-work`.
