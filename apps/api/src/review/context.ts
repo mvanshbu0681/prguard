@@ -1,4 +1,5 @@
 import * as installationsRepo from "../db/repos/installations.ts";
+import { learningsSection } from "../learnings/apply.ts";
 import type { PullRequest, Repository } from "../db/schema.ts";
 
 function cap(text: string, maxTokens: number): string {
@@ -22,6 +23,8 @@ export function buildContext(pr: PullRequest, repo: Repository, opts: { rules?: 
   if (repo.brief?.trim()) parts.push(`## Repository brief (${repo.fullName})\n${cap(repo.brief.trim(), 3000)}`);
   const rules = opts.rules ? teamRules(repo) : "";
   if (rules) parts.push(`## Team rules (enforce these; report violations with category "rules")\n${rules}`);
+  const learned = learningsSection(repo.id);
+  if (learned) parts.push(learned);
   parts.push(`## Pull request\nTitle: ${pr.title}\n${pr.body?.trim() ? `Description:\n${cap(pr.body.trim(), 1000)}` : "Description: (none)"}`);
   return parts.join("\n\n");
 }

@@ -237,6 +237,32 @@ export const findings = sqliteTable(
   (t) => [index("findings_review_idx").on(t.reviewId), index("findings_pr_idx").on(t.pullRequestId)],
 );
 
+/** Something a team told PR Guard not to flag, applied to later reviews of the repository. */
+export const learnings = sqliteTable(
+  "learnings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    repositoryId: integer("repository_id").notNull(),
+    text: text("text").notNull(),
+    source: text("source").$type<"command" | "reaction" | "reply" | "manual">().notNull(),
+    /** The finding it came from, for matching similar findings later. */
+    path: text("path"),
+    category: text("category"),
+    fingerprint: text("fingerprint"),
+    title: text("title"),
+    findingId: integer("finding_id"),
+    /** Applies to any file of the repository, not only `path`. */
+    repoWide: integer("repo_wide", { mode: "boolean" }).notNull().default(false),
+    author: text("author"),
+    url: text("url"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("learnings_repo_idx").on(t.repositoryId)],
+);
+
+export type LearningRow = typeof learnings.$inferSelect;
+
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   githubId: integer("github_id").notNull().unique(),

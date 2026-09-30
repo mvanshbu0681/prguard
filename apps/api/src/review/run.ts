@@ -39,6 +39,7 @@ import { dependencies, isManifest } from "./checks/manifests.ts";
 import { assessRisk, type RiskLevel } from "./risk.ts";
 import { decidePriority, type Priority } from "./priority.ts";
 import { detectFixes, markFixed, recordCommentIds, snippetOf } from "./tracking.ts";
+import { learningsSection, suppress } from "../learnings/apply.ts";
 import type { FindingRow } from "../db/repos/findings.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, openCheckTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
@@ -249,8 +250,8 @@ async function pipeline(run: Run): Promise<void> {
   const rulesContext = buildContext(pr, repoNow, { rules: true });
 
   const plugins = enabledPlugins(run.repo.disabledReviewers);
-  // Team rules has nothing to enforce without rules or a brief.
-  const hasRules = Boolean(teamRules(repoNow) || repoNow.brief?.trim());
+  // Team rules has nothing to enforce without rules, learnings or a brief.
+  const hasRules = Boolean(teamRules(repoNow) || repoNow.brief?.trim() || learningsSection(repoNow.id));
   const models = modelReviewers(plugins).filter((r) => !r.needs?.rules || hasRules);
   const codeFiles = docsOnly ? [] : reviewable.filter((f) => fileKind(f.path) !== "docs");
   const deep = models.some((r) => filesFor(r, codeFiles).length > 0);
@@ -401,6 +402,12 @@ async function pipeline(run: Run): Promise<void> {
   const processed = processFindings(raw.concat(checkRaw), anchorFiles, previous, focus);
   let candidates = processed.findings.map((f) => (f.reviewer.split("+").some((id) => checkIds.has(id)) ? { ...f, fromCheck: true } : f));
 
+  // What the team already dismissed is not posted again.
+  const learned = suppress(candidates, run.repo.id);
+  candidates = learned.kept;
+  trace.data.suppressed = learned.suppressed.map((x) => ({ title: x.finding.title, path: x.finding.path, learningId: x.learningId }));
+  trace.add("learnings", "Learnings", null, learned.suppressed.length ? `${learned.suppressed.length} suppressed` : "Nothing suppressed");
+
   // Model findings of medium severity and above are re-checked against the code before posting.
   let rejectedCount = 0;
   if (config.features.verify && candidates.some((f) => !f.fromCheck)) {
@@ -449,7 +456,7 @@ async function pipeline(run: Run): Promise<void> {
     confident: raw.length - processed.dropped - processed.lowConfidence,
     unique: processed.unique,
     fresh: processed.findings.length,
-    suppressed: 0,
+    suppressed: learned.suppressed.length,
     rejected: rejectedCount,
     posted: findings.filter((f) => f.placement !== "hidden").length,
   };
