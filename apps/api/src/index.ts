@@ -5,15 +5,21 @@ import { reconcile } from "./github/reconcile.ts";
 import { startRelay } from "./github/relay.ts";
 import { createServer } from "./http/server.ts";
 import { errMessage, log } from "./log.ts";
+import { startWorkers } from "./queue/worker.ts";
+import "./review/events.ts";
+import "./review/run.ts";
 
 async function main(): Promise<void> {
   migrateDb();
 
-  const app = createServer();
-  serve({ fetch: app.fetch, port: config.port }, (info) => log.info({ port: info.port, role: config.role }, "api listening"));
+  if (config.role !== "worker") {
+    const app = createServer();
+    serve({ fetch: app.fetch, port: config.port }, (info) => log.info({ port: info.port, role: config.role }, "api listening"));
+    startRelay().catch((err) => log.error({ err: errMessage(err) }, "webhook relay failed"));
+    reconcile().catch((err) => log.error({ err: errMessage(err) }, "reconcile failed"));
+  }
 
-  startRelay().catch((err) => log.error({ err: errMessage(err) }, "webhook relay failed"));
-  reconcile().catch((err) => log.error({ err: errMessage(err) }, "reconcile failed"));
+  if (config.role !== "api") startWorkers(config.workerConcurrency);
 }
 
 main().catch((err) => {
