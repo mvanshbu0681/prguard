@@ -28,6 +28,7 @@ Each finding:
 - category: one word, e.g. bug, security, performance, error-handling, concurrency, naming, style, rules.
 - title: at most 10 words, specific.
 - body: 1 to 3 short sentences: what is wrong, why it matters, how to fix it. Friendly and direct, no preamble.
+- In title and body, put identifiers, file paths, commands, config keys and literal values in single backticks, e.g. \`create_refund\`, \`app/models.py\`, \`None\`.
 - suggestion: only when the fix is small and certain, the exact replacement code for lines line..end_line (whole lines, same indentation). Otherwise null.
 - confidence: 0 to 1, how sure you are that this is a real problem.
 

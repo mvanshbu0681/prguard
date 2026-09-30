@@ -15,6 +15,7 @@ Rules:
 - summary: 2 to 4 plain sentences, at most 80 words. Say what the change does and why it matters. No praise, no filler, do not restate the title, do not list files.
 - walkthrough: one entry per changed file (at most 25, most important first). "change" is at most 15 words, starts with a verb, and is specific.
 - Reviewing is done elsewhere: do not point out bugs here.
+- Put identifiers, file paths, commands, config keys and literal values in single backticks.
 Answer only with JSON matching the schema.`;
 
 const DIFF_BUDGET = 24_000;

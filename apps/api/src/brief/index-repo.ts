@@ -17,7 +17,7 @@ Write markdown with exactly these sections:
 ## Structure
 ## Conventions
 ## Watch out for
-Rules: be specific and factual, name real paths, frameworks and patterns you can see. Under "Structure", list the main folders and what lives there. Under "Conventions", state the house rules a reviewer should enforce (error handling, logging, data access, naming, validation, tests). Under "Watch out for", list risky or subtle areas. At most 600 words. Do not invent anything the files do not support. No preamble.`;
+Rules: be specific and factual, name real paths, frameworks and patterns you can see. Under "Structure", list the main folders and what lives there. Under "Conventions", state the house rules a reviewer should enforce (error handling, logging, data access, naming, validation, tests). Under "Watch out for", list risky or subtle areas. At most 600 words. Do not invent anything the files do not support. No preamble. Put identifiers, file paths, commands, config keys and literal values in single backticks.`;
 
 const AREA_SYSTEM = `You summarise one area of a codebase for a repository brief. In at most 120 words: what this area does, key files, and patterns or conventions visible in the code. Plain markdown bullets, no preamble.`;
 

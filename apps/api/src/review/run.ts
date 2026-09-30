@@ -19,6 +19,7 @@ import {
 import { errMessage, log } from "../log.ts";
 import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
 import { queueBrief } from "../brief/index-repo.ts";
+import { codeTerms, codify } from "./codify.ts";
 import { buildContext } from "./context.ts";
 import { config } from "../config.ts";
 import { addedLines, packChunks, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
@@ -274,7 +275,10 @@ async function pipeline(run: Run): Promise<void> {
 
   const previous = findingsRepo.listPostedForPull(pr.id);
   const processed = processFindings(raw, anchorFiles, previous, focus);
-  let findings: Finding[] = processed.findings;
+  const terms = codeTerms(files);
+  let findings: Finding[] = processed.findings.map((f) => ({ ...f, title: codify(f.title, terms), body: codify(f.body, terms) }));
+  if (summary) summary = codify(summary, terms);
+  walkthrough = walkthrough.map((w) => ({ ...w, change: codify(w.change, terms) }));
   const partial = failedChunks > 0 || notReviewed.length > 0;
   reviewsRepo.update(review.id, { partial, notReviewed });
   if (processed.dropped) log.info({ review: review.id, dropped: processed.dropped }, "findings dropped");

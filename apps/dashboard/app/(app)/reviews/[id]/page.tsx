@@ -218,7 +218,9 @@ function Review({ review }: { review: ReviewDetail }) {
                         <td className="w-[38%] px-4 py-2.5 align-top font-mono text-xs leading-5 text-primary">
                           <span className="break-all">{row.path}</span>
                         </td>
-                        <td className="py-2.5 pr-4 align-top text-body">{row.change}</td>
+                        <td className="py-2.5 pr-4 align-top text-body">
+                          <InlineCode text={row.change} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
