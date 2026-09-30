@@ -97,6 +97,18 @@ export function countsByReview(reviewIds: number[]): Map<number, Record<FindingR
   return out;
 }
 
+/** Visible findings of completed reviews per PR, by status and severity (for the Queue). */
+export function statusCountsByPull(pullRequestIds: number[]): { pullRequestId: number; status: FindingRow["status"]; severity: FindingRow["severity"]; n: number }[] {
+  if (pullRequestIds.length === 0) return [];
+  return db
+    .select({ pullRequestId: findings.pullRequestId, status: findings.status, severity: findings.severity, n: sql<number>`count(*)` })
+    .from(findings)
+    .innerJoin(reviews, eq(reviews.id, findings.reviewId))
+    .where(and(inArray(findings.pullRequestId, pullRequestIds), eq(reviews.status, "completed"), inArray(findings.placement, ["inline", "body"])))
+    .groupBy(findings.pullRequestId, findings.status, findings.severity)
+    .all();
+}
+
 /** Findings already shown on GitHub for a PR, by completed reviews. */
 export function listPostedForPull(pullRequestId: number): FindingRow[] {
   return db

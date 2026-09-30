@@ -54,6 +54,16 @@ export function getByNumber(repositoryId: number, number: number): PullRequest |
     .get();
 }
 
+/** Open, non-draft pull requests of these repositories. */
+export function listOpen(repositoryIds: number[]): PullRequest[] {
+  if (repositoryIds.length === 0) return [];
+  return db
+    .select()
+    .from(pullRequests)
+    .where(and(inArray(pullRequests.repositoryId, repositoryIds), eq(pullRequests.state, "open"), eq(pullRequests.draft, false)))
+    .all();
+}
+
 export function update(id: number, patch: Partial<Omit<PullRequest, "id" | "repositoryId" | "number" | "createdAt">>): void {
   db.update(pullRequests).set({ ...patch, updatedAt: Date.now() }).where(eq(pullRequests.id, id)).run();
 }
