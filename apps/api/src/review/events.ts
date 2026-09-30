@@ -8,7 +8,7 @@ import type { PullRequest, Repository } from "../db/schema.ts";
 import { saveRepos } from "../github/reconcile.ts";
 import { on } from "../github/webhooks.ts";
 import { log } from "../log.ts";
-import { cancelKey, reviewKey } from "../queue/queue.ts";
+import { cancelKey, enqueue, reviewKey } from "../queue/queue.ts";
 import { closeReview, triggerReview } from "./lifecycle.ts";
 import { rerankFromLabels } from "./rank.ts";
 
@@ -66,6 +66,9 @@ on("pull_request", async (payload) => {
     await triggerReview(repo, pr, action);
     return;
   }
+
+  // Closing a PR is the last chance to read 👎 on PR Guard's comments.
+  if (action === "closed") enqueue("sweep_reactions", `sweep:${repo.id}:${pr.number}`, { repositoryId: repo.id, number: pr.number });
 
   if (action === "closed" || action === "converted_to_draft") {
     // Events can arrive out of order: only stop reviews if the PR really is closed or a draft now.

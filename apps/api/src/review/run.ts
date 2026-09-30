@@ -40,6 +40,7 @@ import { assessRisk, type RiskLevel } from "./risk.ts";
 import { decidePriority, type Priority } from "./priority.ts";
 import { detectFixes, markFixed, recordCommentIds, snippetOf } from "./tracking.ts";
 import { learningsSection, suppress } from "../learnings/apply.ts";
+import { sweepReactions } from "../commands/reactions.ts";
 import type { FindingRow } from "../db/repos/findings.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, openCheckTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
@@ -222,6 +223,8 @@ async function pipeline(run: Run): Promise<void> {
   const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
   // Findings still open from earlier reviews: every later push checks whether they were fixed.
   const hadEarlier = Boolean(pr.lastReviewedSha);
+  // A 👎 since the last review becomes a learning before this review runs, so it applies right away.
+  if (hadEarlier) await sweepReactions(gh, r, pr);
   const earlierOpen = config.features.trackFixes && hadEarlier ? findingsRepo.listOpenCommentedForPull(pr.id) : [];
 
   if (kind === "incremental" && reviewable.length === 0) {
