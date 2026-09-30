@@ -26,6 +26,8 @@ import { config } from "../config.ts";
 import { addedLines, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
 import { filesFor, runReviewers } from "./engine.ts";
 import { hasTestFiles } from "./tools.ts";
+import { Tracer } from "./trace.ts";
+import { triage } from "./triage.ts";
 import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
@@ -77,6 +79,7 @@ type Run = {
   r: Repo;
   ctx: JobContext;
   signal: AbortSignal;
+  trace: Tracer;
 };
 
 /** Completes the review's check run, or creates a completed one when it has none (a takeover). */
@@ -124,8 +127,9 @@ async function resolveScope(run: Run, pr: PullRequest, files: FileDiff[]): Promi
 }
 
 async function pipeline(run: Run): Promise<void> {
-  const { gh, r, ctx } = run;
+  const { gh, r, ctx, trace } = run;
   let { pr, review } = run;
+  const started = Date.now();
 
   run.ctx.checkCancelled();
   const repoNow = repositoriesRepo.get(run.repo.id);
@@ -171,6 +175,7 @@ async function pipeline(run: Run): Promise<void> {
   const { reviewable, skipped, docsOnly } = classify(scope.files);
   const anchorFiles = classify(files).reviewable;
   reviewsRepo.update(review.id, { kind, baseSha: live.base.sha, filesSkipped: skipped });
+  trace.add("fetch", "Fetch", started, `${scope.files.length} files, ${reviewable.length} reviewable`);
   ctx.checkCancelled();
 
   if (kind === "incremental" && reviewable.length === 0) {
@@ -228,23 +233,42 @@ async function pipeline(run: Run): Promise<void> {
 
   const reviewTask = deep
     ? (async () => {
-        const snapshot = await getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
-          log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
-          return null;
-        });
+        const [snapshot, routing] = await Promise.all([
+          getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
+            log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
+            return null;
+          }),
+          config.features.triage
+            ? trace.step(
+                "triage",
+                "Triage",
+                () => triage({ files: codeFiles, reviewers: models, context: baseContext, meta }),
+                (t) => `${t.files.length} files${t.fallback ? ", fell back to every reviewer" : ""}`,
+              )
+            : (trace.add("triage", "Triage", null, "Off", "skipped"), null),
+        ]);
+        if (routing) reviewsRepo.update(review.id, { triage: routing.files });
         ctx.checkCancelled();
         // Test gap has nothing to compare against in a repository without tests.
         const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
-        const outcome = await runReviewers({
-          reviewers: models.filter((r) => !r.needs?.testsInRepo || testsInRepo),
-          files: codeFiles,
-          focus,
-          contextFor: (r) => (r.needs?.rules ? rulesContext : baseContext),
-          snapshot,
-          baseline,
-          ctx,
-          meta,
-        });
+        const outcome = await trace.step(
+          "review",
+          "Reviewers",
+          () =>
+            runReviewers({
+              reviewers: models.filter((r) => !r.needs?.testsInRepo || testsInRepo),
+              files: codeFiles,
+              routes: routing?.routes,
+              focus,
+              contextFor: (r) => (r.needs?.rules ? rulesContext : baseContext),
+              snapshot,
+              baseline,
+              ctx,
+              meta,
+            }),
+          (o) => `${o.stats.filter((s) => s.chunks > 0).length} reviewers, ${o.raw.length} findings before filtering`,
+        );
+        trace.data.reviewers = outcome.stats;
         raw = oneTestGap(outcome.raw);
         failedChunks = outcome.failedChunks;
         notReviewed = outcome.notReviewed;
@@ -261,6 +285,16 @@ async function pipeline(run: Run): Promise<void> {
   let findings: Finding[] = processed.findings.map((f) => ({ ...f, title: codify(f.title, terms), body: codify(f.body, terms) }));
   if (summary) summary = codify(summary, terms);
   walkthrough = walkthrough.map((w) => ({ ...w, change: codify(w.change, terms) }));
+  trace.data.funnel = {
+    raw: raw.length,
+    anchored: raw.length - processed.dropped,
+    confident: raw.length - processed.dropped - processed.lowConfidence,
+    unique: processed.unique,
+    fresh: processed.findings.length,
+    suppressed: 0,
+    rejected: 0,
+    posted: findings.filter((f) => f.placement !== "hidden").length,
+  };
   const partial = failedChunks > 0 || notReviewed.length > 0;
   reviewsRepo.update(review.id, { partial, notReviewed });
   if (processed.dropped) log.info({ review: review.id, dropped: processed.dropped }, "findings dropped");
@@ -329,6 +363,7 @@ async function pipeline(run: Run): Promise<void> {
   const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));
 
   // A retry after a crash must not post twice: reuse a review already on GitHub for this run.
+  const publishStarted = Date.now();
   const current = reviewsRepo.get(review.id)!;
   let posted: { id: number; url: string } | null = current.githubReviewId
     ? { id: current.githubReviewId, url: current.githubReviewUrl ?? "" }
@@ -367,6 +402,8 @@ async function pipeline(run: Run): Promise<void> {
   const check = checkTitle(findings, deep);
   await completeCheck(gh, r, review, check.conclusion, check.title, checkSummary(inputFor(findings)));
   if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+  const inline = findings.filter((f) => f.placement === "inline").length;
+  trace.add("publish", "Publish", publishStarted, `${inline} line comment${inline === 1 ? "" : "s"}, check run "${check.title}"`);
 }
 
 async function runReview(payload: Record<string, unknown>, ctx: JobContext): Promise<void> {
@@ -389,9 +426,10 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
     }
   }, 2000);
 
+  const trace = new Tracer();
   try {
     const gh = await installationClient(repo.installationId);
-    await pipeline({ review, pr, repo, gh, r, ctx, signal: abort.signal });
+    await pipeline({ review, pr, repo, gh, r, ctx, signal: abort.signal, trace });
     reviewLog.info({ ms: Date.now() - started }, "review completed");
   } catch (err) {
     if (abort.signal.aborted && !(err instanceof CancelledError)) err = new CancelledError();
@@ -408,6 +446,7 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
     await failReview(reviewId);
     throw new FatalError(errMessage(err));
   } finally {
+    trace.save(reviewId);
     clearInterval(watch);
     // Anything still running for this review (e.g. reviewer calls after a failed summary) stops here.
     abort.abort();

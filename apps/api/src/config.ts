@@ -41,7 +41,15 @@ const schema = z.object({
 
   /** Where badge images are served from. Empty posts text labels instead of images. */
   ASSET_BASE_URL: z.string().optional(),
+
+  // Switches for the review steps: "off" turns one off.
+  TRIAGE: optional,
+  VERIFY: optional,
+  TRACK_FIXES: optional,
+  COMMANDS: optional,
 });
+
+const on = (value: string | undefined) => !["off", "0", "false", "no"].includes((value ?? "").trim().toLowerCase());
 
 const DEFAULT_ASSET_BASE_URL = "https://cdn.jsdelivr.net/gh/prguard-sandbox/prguard-assets@v1/img";
 
@@ -89,6 +97,12 @@ function load() {
     devLogin: env.DEV_LOGIN === "1" && env.NODE_ENV !== "production",
     sessionDays: env.SESSION_DAYS,
     assetBaseUrl: (env.ASSET_BASE_URL ?? DEFAULT_ASSET_BASE_URL).trim().replace(/\/$/, ""),
+    features: {
+      triage: on(env.TRIAGE),
+      verify: on(env.VERIFY),
+      trackFixes: on(env.TRACK_FIXES),
+      commands: on(env.COMMANDS),
+    },
   };
 }
 

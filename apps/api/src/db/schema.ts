@@ -66,6 +66,25 @@ export const pullRequests = sqliteTable(
   (t) => [uniqueIndex("pull_requests_repo_number_idx").on(t.repositoryId, t.number)],
 );
 
+export type TriageFile = { path: string; risk: "low" | "medium" | "high"; reviewers: string[] };
+
+export type TraceStep = {
+  key: "fetch" | "triage" | "impact" | "review" | "checks" | "verify" | "learnings" | "fixes" | "publish";
+  label: string;
+  status: "ok" | "skipped" | "failed";
+  ms: number;
+  detail: string;
+};
+
+/** How a review ran, for the dashboard's trace. */
+export type ReviewTrace = {
+  steps: TraceStep[];
+  reviewers?: { id: string; files: number; chunks: number; findings: number; failed: number; skipped: number }[];
+  funnel?: { raw: number; anchored: number; confident: number; unique: number; fresh: number; suppressed: number; rejected: number; posted: number };
+  rejected?: { title: string; path: string; reason: string }[];
+  suppressed?: { title: string; path: string; learningId: number }[];
+};
+
 export type ReviewStatus = "queued" | "running" | "completed" | "failed" | "cancelled" | "skipped";
 export type ReviewStage = "queued" | "fetching" | "summarizing" | "reviewing" | "publishing" | "done";
 
@@ -87,6 +106,8 @@ export const reviews = sqliteTable(
     walkthrough: text("walkthrough", { mode: "json" }).$type<{ path: string; change: string }[]>().notNull().default([]),
     /** Mermaid flowchart of the change, shown folded in the review body. */
     flow: text("flow"),
+    triage: text("triage", { mode: "json" }).$type<TriageFile[]>().notNull().default([]),
+    trace: text("trace", { mode: "json" }).$type<ReviewTrace>().notNull().default({ steps: [] }),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),
     notReviewed: text("not_reviewed", { mode: "json" }).$type<string[]>().notNull().default([]),

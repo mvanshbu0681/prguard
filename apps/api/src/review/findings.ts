@@ -238,7 +238,7 @@ export function rank(findings: Finding[]): Finding[] {
   );
 }
 
-export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number; dropped: number };
+export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number; dropped: number; unique: number };
 
 /**
  * Anchors, filters, dedupes, ranks and places findings. `previous` holds findings already shown on
@@ -287,5 +287,5 @@ export function processFindings(
     if (inline >= MAX_INLINE) f.placement = "body";
     else inline++;
   }
-  return { findings: fresh, repeats, lowConfidence, dropped };
+  return { findings: fresh, repeats, lowConfidence, dropped, unique: kept.length };
 }
