@@ -1,10 +1,11 @@
 import type { Check, ModelReviewer, Plugin } from "./define.ts";
 import general from "./general.ts";
+import reliability from "./reliability.ts";
 import rules from "./rules.ts";
 import security from "./security.ts";
 
 /** Every reviewer and check, in the order they are listed in the dashboard. */
-export const reviewers: Plugin[] = [general, security, rules];
+export const reviewers: Plugin[] = [general, security, reliability, rules];
 
 export function enabledPlugins(disabled: string[]): Plugin[] {
   return reviewers.filter((r) => !disabled.includes(r.id));
