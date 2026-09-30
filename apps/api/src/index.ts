@@ -13,6 +13,7 @@ import "./review/run.ts";
 import "./commands/events.ts";
 import "./commands/run.ts";
 import "./commands/answer.ts";
+import "./commands/fix.ts";
 
 async function main(): Promise<void> {
   migrateDb();

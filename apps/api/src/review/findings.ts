@@ -160,6 +160,20 @@ function fitSuggestion(
   return { suggestion: fitted, last: widenTo };
 }
 
+/**
+ * A replacement for exactly lines `start..last` of a file in the PR diff, fitted like review
+ * suggestions (indentation, no-op check), or null when it cannot be committed safely there. The range
+ * never widens: a reply's suggestion applies to its thread's lines.
+ */
+export function fitReplacement(file: FileDiff, start: number, last: number, code: string): string | null {
+  const lines = commentableLines(file);
+  const hunk = lines.get(last);
+  if (hunk === undefined) return null;
+  for (let l = start; l <= last; l++) if (lines.get(l) !== hunk) return null;
+  const fitted = fitSuggestion(file, lines, hunk, start, last, code.replace(/\r/g, ""));
+  return fitted.last === last ? fitted.suggestion : null;
+}
+
 /** Models often drop leading indentation; restore it from the first line being replaced. */
 function reindent(sug: string[], firstLine: string): string[] {
   const target = /^\s*/.exec(firstLine)![0];
