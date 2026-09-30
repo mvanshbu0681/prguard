@@ -41,6 +41,8 @@ const schema = z.object({
 
   /** Where badge images are served from. Empty posts text labels instead of images. */
   ASSET_BASE_URL: z.string().optional(),
+  /** Socket API key for the supply-chain check; without it the check is skipped. */
+  SOCKET_DEV_API_KEY: optional,
 
   // Switches for the review steps: "off" turns one off.
   TRIAGE: optional,
@@ -97,6 +99,7 @@ function load() {
     devLogin: env.DEV_LOGIN === "1" && env.NODE_ENV !== "production",
     sessionDays: env.SESSION_DAYS,
     assetBaseUrl: (env.ASSET_BASE_URL ?? DEFAULT_ASSET_BASE_URL).trim().replace(/\/$/, ""),
+    socketApiKey: env.SOCKET_DEV_API_KEY,
     features: {
       triage: on(env.TRIAGE),
       verify: on(env.VERIFY),
