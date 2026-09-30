@@ -20,6 +20,7 @@ import { errMessage, log } from "../log.ts";
 import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
 import { queueBrief } from "../brief/index-repo.ts";
 import { codeTerms, codify } from "./codify.ts";
+import { flowMermaid } from "./flow.ts";
 import { buildContext } from "./context.ts";
 import { config } from "../config.ts";
 import { addedLines, packChunks, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
@@ -201,6 +202,7 @@ async function pipeline(run: Run): Promise<void> {
 
   let summary: string | null = null;
   let walkthrough: { path: string; change: string }[] = [];
+  let flow: string | null = null;
   let raw: RawFinding[] = [];
   let failedChunks = 0;
   let notReviewed: string[] = [];
@@ -217,6 +219,7 @@ async function pipeline(run: Run): Promise<void> {
         .then((s) => {
           summary = s.summary;
           walkthrough = s.walkthrough;
+          flow = flowMermaid(s.flow);
         })
         .catch((err) => {
           if (run.signal.aborted) throw err;
@@ -317,6 +320,7 @@ async function pipeline(run: Run): Promise<void> {
       stage: "done",
       summary,
       walkthrough,
+      flow,
       note: "No new issues in these commits.",
       reviewed: deep,
       filesReviewed: reviewable.length,
@@ -331,6 +335,7 @@ async function pipeline(run: Run): Promise<void> {
   const inputFor = (items: Finding[]): BodyInput => ({
     summary,
     walkthrough,
+    flow,
     kind,
     range,
     findings: items,
@@ -372,6 +377,7 @@ async function pipeline(run: Run): Promise<void> {
     stage: "done",
     summary,
     walkthrough,
+    flow,
     note,
     reviewed: deep,
     filesReviewed: reviewable.length - notReviewed.length,

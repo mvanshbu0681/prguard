@@ -3,17 +3,25 @@ import { structured, type CallMeta } from "../llm/call.ts";
 import { estimateTokens, renderFile, type FileDiff } from "./diff.ts";
 import { fileKind, KIND_PRIORITY } from "./noise.ts";
 
+const flowSchema = z.object({
+  nodes: z.array(z.object({ id: z.string(), label: z.string() })),
+  edges: z.array(z.object({ from: z.string(), to: z.string(), label: z.string() })),
+});
+
 const schema = z.object({
   summary: z.string(),
   walkthrough: z.array(z.object({ path: z.string(), change: z.string() })),
+  flow: flowSchema,
 });
 
+export type Flow = z.infer<typeof flowSchema>;
 export type Summary = z.infer<typeof schema>;
 
 const SYSTEM = `You write the summary for PR Guard, an automated pull-request reviewer.
 Rules:
 - summary: 2 to 4 plain sentences, at most 80 words. Say what the change does and why it matters. No praise, no filler, do not restate the title, do not list files.
 - walkthrough: one entry per changed file (at most 25, most important first). "change" is at most 15 words, starts with a verb, and is specific.
+- flow: the main path this change adds or alters, as 2 to 8 steps (a request, a function, a table, a job, a response). nodes: short ids and labels of at most 5 words; edges: from, to, and a label of at most 3 words or "". Empty lists when the change has no such path (docs, config, renames).
 - Reviewing is done elsewhere: do not point out bugs here.
 - Put identifiers, file paths, commands, config keys and literal values in single backticks.
 Answer only with JSON matching the schema.`;
@@ -62,5 +70,5 @@ export async function summarize(opts: {
     byPath.set(w.path, [...(byPath.get(w.path) ?? []), change]);
   }
   const walkthrough = [...byPath].map(([path, changes]) => ({ path, change: changes.join("; ") })).slice(0, 25);
-  return { summary: result.summary.trim(), walkthrough };
+  return { summary: result.summary.trim(), walkthrough, flow: result.flow };
 }

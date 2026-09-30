@@ -85,6 +85,8 @@ export const reviews = sqliteTable(
     note: text("note"),
     reviewed: integer("reviewed", { mode: "boolean" }).notNull().default(true),
     walkthrough: text("walkthrough", { mode: "json" }).$type<{ path: string; change: string }[]>().notNull().default([]),
+    /** Mermaid flowchart of the change, shown folded in the review body. */
+    flow: text("flow"),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),
     notReviewed: text("not_reviewed", { mode: "json" }).$type<string[]>().notNull().default([]),
