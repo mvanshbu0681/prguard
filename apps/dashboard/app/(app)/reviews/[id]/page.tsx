@@ -2,7 +2,7 @@
 
 import type { ReviewDetail } from "@contracts";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowUpRight, Check, CircleAlert, RotateCw, TriangleAlert } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, CircleAlert, Info, RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -180,7 +180,14 @@ function Review({ review }: { review: ReviewDetail }) {
           </Section>
         )}
 
-        {(review.findings.length > 0 || review.status === "completed") && (
+        {review.note && !review.partial && review.status === "completed" && (
+          <p className="flex items-center gap-2 text-sm text-dim">
+            <Info className="size-3.5 shrink-0" aria-hidden="true" />
+            {review.note}
+          </p>
+        )}
+
+        {(review.findings.length > 0 || (review.status === "completed" && review.reviewed)) && (
           <Section title="Findings" count={review.findings.length || undefined}>
             {review.findings.length > 0 ? (
               <FindingsList findings={review.findings} />

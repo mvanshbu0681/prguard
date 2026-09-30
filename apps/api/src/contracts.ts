@@ -68,6 +68,8 @@ export type ReviewListItem = {
   headSha: string;
   counts: SeverityCounts;
   findingsTotal: number;
+  /** False when no reviewer ran (docs only, nothing to review, reviewers off, no new changes). */
+  reviewed: boolean;
   partial: boolean;
   error: string | null;
   createdAt: number;
@@ -93,6 +95,8 @@ export type FindingItem = {
 export type ReviewDetail = ReviewListItem & {
   baseSha: string | null;
   summary: string | null;
+  /** One line explaining a limited review (docs only, partial, reviewers off…), or null. */
+  note: string | null;
   walkthrough: { path: string; change: string }[];
   filesReviewed: number;
   filesSkipped: { path: string; reason: string }[];

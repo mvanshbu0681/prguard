@@ -4,7 +4,7 @@ import { SEVERITIES, SeverityPill } from "@/components/ui/severity";
 
 const MAX_PILLS = 3;
 
-export function FindingsCell({ review }: { review: Pick<ReviewListItem, "counts" | "status"> }) {
+export function FindingsCell({ review }: { review: Pick<ReviewListItem, "counts" | "status" | "reviewed"> }) {
   const present = SEVERITIES.filter((s) => review.counts[s] > 0);
 
   if (present.length > 0) {
@@ -19,6 +19,8 @@ export function FindingsCell({ review }: { review: Pick<ReviewListItem, "counts"
       </span>
     );
   }
+
+  if (review.status === "completed" && !review.reviewed) return <span className="text-dim">Summary</span>;
 
   if (review.status === "completed") {
     return (

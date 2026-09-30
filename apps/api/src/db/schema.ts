@@ -82,6 +82,8 @@ export const reviews = sqliteTable(
     status: text("status").$type<ReviewStatus>().notNull().default("queued"),
     stage: text("stage").$type<ReviewStage>().notNull().default("queued"),
     summary: text("summary"),
+    note: text("note"),
+    reviewed: integer("reviewed", { mode: "boolean" }).notNull().default(true),
     walkthrough: text("walkthrough", { mode: "json" }).$type<{ path: string; change: string }[]>().notNull().default([]),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),

@@ -62,6 +62,7 @@ reviews.get("/:id", (c) => {
     ...item,
     baseSha: review.baseSha,
     summary: review.summary,
+    note: review.note,
     walkthrough: review.walkthrough,
     filesReviewed: review.filesReviewed,
     filesSkipped: review.filesSkipped,

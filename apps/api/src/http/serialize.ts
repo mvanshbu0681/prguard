@@ -32,6 +32,7 @@ export function reviewItems(list: Review[]): ReviewListItem[] {
         headSha: review.headSha,
         counts: c,
         findingsTotal: c.critical + c.high + c.medium + c.low + c.nit,
+        reviewed: review.reviewed,
         partial: review.partial,
         error: review.error,
         createdAt: review.createdAt,

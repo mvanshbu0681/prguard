@@ -129,7 +129,13 @@ async function pipeline(run: Run): Promise<void> {
   ctx.checkCancelled();
 
   if (kind === "incremental" && reviewable.length === 0) {
-    reviewsRepo.update(review.id, { status: "completed", stage: "done", summary: "No new changes to review.", finishedAt: Date.now() });
+    reviewsRepo.update(review.id, {
+      status: "completed",
+      stage: "done",
+      note: "No new changes to review since the last review.",
+      reviewed: false,
+      finishedAt: Date.now(),
+    });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
     if (review.checkRunId) await finishCheckRun(gh, r, review.checkRunId, "success", "No new changes", "Nothing new to review since the last review.");
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
@@ -236,7 +242,16 @@ async function pipeline(run: Run): Promise<void> {
   // A push that brings nothing new to say gets no review, only a check run.
   const silent = kind === "incremental" && findings.length === 0 && !partial;
   if (silent) {
-    reviewsRepo.update(review.id, { status: "completed", stage: "done", summary, walkthrough, filesReviewed: reviewable.length, finishedAt: Date.now() });
+    reviewsRepo.update(review.id, {
+      status: "completed",
+      stage: "done",
+      summary,
+      walkthrough,
+      note: "No new issues in these commits.",
+      reviewed: deep,
+      filesReviewed: reviewable.length,
+      finishedAt: Date.now(),
+    });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
     if (review.checkRunId) {
       await finishCheckRun(gh, r, review.checkRunId, "success", "No new issues", `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
@@ -288,6 +303,8 @@ async function pipeline(run: Run): Promise<void> {
     stage: "done",
     summary,
     walkthrough,
+    note,
+    reviewed: deep,
     filesReviewed: reviewable.length - notReviewed.length,
     finishedAt: Date.now(),
   });
