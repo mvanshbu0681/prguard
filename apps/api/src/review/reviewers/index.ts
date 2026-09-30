@@ -7,9 +7,10 @@ import reliability from "./reliability.ts";
 import rules from "./rules.ts";
 import security from "./security.ts";
 import slop from "./slop.ts";
+import tests from "./tests.ts";
 
 /** Every reviewer and check, in the order they are listed in the dashboard. */
-export const reviewers: Plugin[] = [general, security, reliability, performance, data, slop, rules, docs];
+export const reviewers: Plugin[] = [general, security, reliability, performance, data, slop, rules, docs, tests];
 
 export function enabledPlugins(disabled: string[]): Plugin[] {
   return reviewers.filter((r) => !disabled.includes(r.id));

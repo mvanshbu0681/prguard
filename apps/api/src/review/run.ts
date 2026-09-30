@@ -25,6 +25,7 @@ import { buildContext, teamRules } from "./context.ts";
 import { config } from "../config.ts";
 import { addedLines, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
 import { filesFor, runReviewers } from "./engine.ts";
+import { hasTestFiles } from "./tools.ts";
 import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
@@ -52,6 +53,20 @@ function describeSkipped(skipped: { path: string; reason: string }[]): string {
     return `${label[reason] ?? reason} (${shown}${paths.length > 5 ? ` and ${paths.length - 5} more` : ""})`;
   });
   return `This pull request changes only ${parts.join("; ")}.`;
+}
+
+const SEVERITY_ORDER = ["critical", "high", "medium", "low", "nit"];
+
+/** Test gap reports one finding per review: its most severe, most confident one. */
+function oneTestGap(raw: RawFinding[]): RawFinding[] {
+  const gaps = raw.filter((f) => f.reviewer === "tests");
+  if (gaps.length <= 1) return raw;
+  const rank = (f: RawFinding) => {
+    const i = SEVERITY_ORDER.indexOf(f.severity.toLowerCase());
+    return (i < 0 ? 2 : i) - (f.confidence ?? 0.7);
+  };
+  const keep = [...gaps].sort((a, b) => rank(a) - rank(b))[0];
+  return raw.filter((f) => f.reviewer !== "tests" || f === keep);
 }
 
 type Run = {
@@ -218,8 +233,10 @@ async function pipeline(run: Run): Promise<void> {
           return null;
         });
         ctx.checkCancelled();
+        // Test gap has nothing to compare against in a repository without tests.
+        const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
         const outcome = await runReviewers({
-          reviewers: models,
+          reviewers: models.filter((r) => !r.needs?.testsInRepo || testsInRepo),
           files: codeFiles,
           focus,
           contextFor: (r) => (r.needs?.rules ? rulesContext : baseContext),
@@ -228,7 +245,7 @@ async function pipeline(run: Run): Promise<void> {
           ctx,
           meta,
         });
-        raw = outcome.raw;
+        raw = oneTestGap(outcome.raw);
         failedChunks = outcome.failedChunks;
         notReviewed = outcome.notReviewed;
         budgetHit = outcome.budgetHit;
