@@ -87,6 +87,31 @@ export async function finishCheckRun(
   }
 }
 
+export async function createCompletedCheckRun(
+  gh: GitHub,
+  r: Repo,
+  headSha: string,
+  detailsUrl: string,
+  conclusion: CheckConclusion,
+  title: string,
+  summary: string,
+): Promise<void> {
+  const base = {
+    ...r,
+    name: "PR Guard",
+    head_sha: headSha,
+    status: "completed" as const,
+    conclusion,
+    completed_at: new Date().toISOString(),
+    output: { title, summary },
+  };
+  try {
+    await gh.rest.checks.create({ ...base, details_url: detailsUrl });
+  } catch {
+    await gh.rest.checks.create(base).catch((err) => log.warn({ ...r, err: errMessage(err) }, "could not create check run"));
+  }
+}
+
 export async function getPull(gh: GitHub, r: Repo, number: number) {
   const { data } = await gh.rest.pulls.get({ ...r, pull_number: number });
   return data;

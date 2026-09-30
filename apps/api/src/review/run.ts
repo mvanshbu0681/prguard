@@ -11,7 +11,8 @@ import {
   listFiles,
   postReview,
   removeReaction,
-  startCheckRun,
+  createCompletedCheckRun,
+  type CheckConclusion,
   type PrFile,
   type Repo,
 } from "../github/pr.ts";
@@ -80,6 +81,12 @@ type Run = {
   ctx: JobContext;
   signal: AbortSignal;
 };
+
+/** Completes the review's check run, or creates a completed one when it has none (a takeover). */
+async function completeCheck(gh: GitHub, r: Repo, review: Review, conclusion: CheckConclusion, title: string, summary: string): Promise<void> {
+  if (review.checkRunId) await finishCheckRun(gh, r, review.checkRunId, conclusion, title, summary);
+  else await createCompletedCheckRun(gh, r, review.headSha, reviewUrl(review.id), conclusion, title, summary);
+}
 
 function stage(reviewId: number, s: Review["stage"]): void {
   reviewsRepo.update(reviewId, { stage: s });
@@ -151,8 +158,9 @@ async function pipeline(run: Run): Promise<void> {
     if (review.checkRunId) {
       await finishCheckRun(gh, r, review.checkRunId, "cancelled", "Superseded", "A newer push is being reviewed.");
     }
-    const checkRunId = await startCheckRun(gh, r, live.head.sha, reviewUrl(review.id));
-    reviewsRepo.update(review.id, { headSha: live.head.sha, baseSha: live.base.sha, checkRunId });
+    // No check run yet: one is created when this review publishes, so a takeover that is itself
+    // superseded leaves nothing behind on the newer commit.
+    reviewsRepo.update(review.id, { headSha: live.head.sha, baseSha: live.base.sha, checkRunId: null });
     review = reviewsRepo.get(review.id)!;
     log.info({ review: review.id, head: live.head.sha }, "review moved to the latest push");
   }
@@ -174,7 +182,7 @@ async function pipeline(run: Run): Promise<void> {
       finishedAt: Date.now(),
     });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
-    if (review.checkRunId) await finishCheckRun(gh, r, review.checkRunId, "success", "No new changes", "Nothing new to review since the last review.");
+    await completeCheck(gh, r, review, "success", "No new changes", "Nothing new to review since the last review.");
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
     return;
   }
@@ -306,9 +314,7 @@ async function pipeline(run: Run): Promise<void> {
       finishedAt: Date.now(),
     });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
-    if (review.checkRunId) {
-      await finishCheckRun(gh, r, review.checkRunId, "success", "No new issues", `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
-    }
+    await completeCheck(gh, r, review, "success", "No new issues", `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
     return;
   }
@@ -364,9 +370,7 @@ async function pipeline(run: Run): Promise<void> {
   pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
 
   const check = checkTitle(findings, deep);
-  if (review.checkRunId) {
-    await finishCheckRun(gh, r, review.checkRunId, check.conclusion, check.title, `${summary ?? note ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
-  }
+  await completeCheck(gh, r, review, check.conclusion, check.title, `${summary ?? note ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
   if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
 }
 
