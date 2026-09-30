@@ -1,4 +1,4 @@
-import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const installations = sqliteTable("installations", {
   id: integer("id").primaryKey(),
@@ -167,6 +167,33 @@ export const findings = sqliteTable(
   (t) => [index("findings_review_idx").on(t.reviewId), index("findings_pr_idx").on(t.pullRequestId)],
 );
 
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  githubId: integer("github_id").notNull().unique(),
+  login: text("login").notNull(),
+  name: text("name"),
+  avatarUrl: text("avatar_url"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
+export const sessions = sqliteTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
+export const userInstallations = sqliteTable(
+  "user_installations",
+  {
+    userId: integer("user_id").notNull(),
+    installationId: integer("installation_id").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.installationId] })],
+);
+
+export type User = typeof users.$inferSelect;
 export type Installation = typeof installations.$inferSelect;
 export type Repository = typeof repositories.$inferSelect;
 export type PullRequest = typeof pullRequests.$inferSelect;

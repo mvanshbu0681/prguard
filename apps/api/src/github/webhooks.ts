@@ -2,6 +2,7 @@ import type { Hono } from "hono";
 import * as deliveriesRepo from "../db/repos/deliveries.ts";
 import * as installationsRepo from "../db/repos/installations.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
+import * as usersRepo from "../db/repos/users.ts";
 import { errMessage, log } from "../log.ts";
 import { queueBrief } from "../brief/index-repo.ts";
 import { cancelRepoWork } from "../review/lifecycle.ts";
@@ -58,6 +59,9 @@ on("installation", (payload) => {
       const repos = (payload.repositories ?? []) as GitHubRepo[];
       saveRepos(installation.id, repos);
       for (const repo of repos) queueBrief(repo.id);
+      // Whoever installed it can see it straight away, even before their next sign-in.
+      const installer = payload.sender?.id ? usersRepo.getByGithubId(payload.sender.id) : undefined;
+      if (installer) usersRepo.addInstallation(installer.id, installation.id);
       break;
     }
     case "deleted": {
