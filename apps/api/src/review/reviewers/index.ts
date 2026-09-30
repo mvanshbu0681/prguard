@@ -1,5 +1,6 @@
 import type { Check, ModelReviewer, Plugin } from "./define.ts";
 import data from "./data.ts";
+import docs from "./docs.ts";
 import general from "./general.ts";
 import performance from "./performance.ts";
 import reliability from "./reliability.ts";
@@ -8,7 +9,7 @@ import security from "./security.ts";
 import slop from "./slop.ts";
 
 /** Every reviewer and check, in the order they are listed in the dashboard. */
-export const reviewers: Plugin[] = [general, security, reliability, performance, data, slop, rules];
+export const reviewers: Plugin[] = [general, security, reliability, performance, data, slop, rules, docs];
 
 export function enabledPlugins(disabled: string[]): Plugin[] {
   return reviewers.filter((r) => !disabled.includes(r.id));
