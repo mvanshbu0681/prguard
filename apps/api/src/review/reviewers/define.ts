@@ -50,7 +50,8 @@ export type CheckInput = {
 /** A check is code, not a model: it reads the diff (and snapshot) and returns findings. */
 export type Check = Base & {
   kind: "check";
-  run(input: CheckInput): Promise<{ findings: RawFinding[]; detail: string }>;
+  /** `sensitive`: exact values found (secrets) that must be scrubbed from everything written or stored. */
+  run(input: CheckInput): Promise<{ findings: RawFinding[]; detail: string; sensitive?: string[] }>;
 };
 
 export type Plugin = ModelReviewer | Check;

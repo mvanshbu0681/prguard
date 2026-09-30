@@ -378,6 +378,8 @@ async function pipeline(run: Run): Promise<void> {
 
   // Checks are code, not models: they run beside the reviewers on every file they apply to.
   let checkRaw: RawFinding[] = [];
+  // Exact secret values the Secrets check found: scrubbed from everything written or stored below.
+  let sensitive: string[] = [];
   const checksTask = checkPlugins.length
     ? (async () => {
         const snap = await snapshotTask;
@@ -399,6 +401,7 @@ async function pipeline(run: Run): Promise<void> {
           }),
         );
         checkRaw = results.flatMap((x) => x.out.findings);
+        sensitive = results.flatMap((x) => ("sensitive" in x.out ? (x.out.sensitive ?? []) : []));
         trace.add("checks", "Checks", checksStarted, results.map((x) => `${x.check.name}: ${x.out.detail}`).join("; "));
       })()
     : (trace.add("checks", "Checks", null, "None apply", "skipped"), Promise.resolve());
@@ -410,6 +413,7 @@ async function pipeline(run: Run): Promise<void> {
 
   await Promise.all([summaryTask, reviewTask, checksTask, fixesTask]);
   ctx.checkCancelled();
+  const scrub = (text: string) => redactSecrets(text, sensitive);
 
   const previous = findingsRepo.listPostedForPull(pr.id);
   const processed = processFindings(raw.concat(checkRaw), anchorFiles, previous, focus, checkIds);
@@ -418,7 +422,7 @@ async function pipeline(run: Run): Promise<void> {
   // What the team already dismissed is not posted again.
   const learned = suppress(candidates, run.repo.id);
   candidates = learned.kept;
-  trace.data.suppressed = learned.suppressed.map((x) => ({ title: x.finding.title, path: x.finding.path, learningId: x.learningId }));
+  trace.data.suppressed = learned.suppressed.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, learningId: x.learningId }));
   trace.add("learnings", "Learnings", null, learned.suppressed.length ? `${learned.suppressed.length} suppressed` : "Nothing suppressed");
 
   // Model findings of medium severity and above are re-checked against the code before posting.
@@ -439,7 +443,7 @@ async function pipeline(run: Run): Promise<void> {
     });
     candidates = verification.findings;
     rejectedCount = verification.rejected.length;
-    trace.data.rejected = verification.rejected.map((x) => ({ title: x.finding.title, path: x.finding.path, reason: x.reason }));
+    trace.data.rejected = verification.rejected.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, reason: scrub(x.reason) }));
     trace.add(
       "verify",
       "Verification",
@@ -456,13 +460,15 @@ async function pipeline(run: Run): Promise<void> {
   const terms = codeTerms(files);
   let findings: Finding[] = place(candidates).map((f) => ({
     ...f,
-    title: redactSecrets(codify(f.title, terms)),
-    body: redactSecrets(codify(f.body, terms)),
-    evidence: f.evidence ? redactSecrets(codify(f.evidence, terms)) : f.evidence,
-    suggestion: f.suggestion === null ? null : redactSecrets(f.suggestion),
+    title: scrub(codify(f.title, terms)),
+    body: scrub(codify(f.body, terms)),
+    evidence: f.evidence ? scrub(codify(f.evidence, terms)) : f.evidence,
+    suggestion: f.suggestion === null ? null : scrub(f.suggestion),
+    details: f.details ? { title: scrub(f.details.title), body: scrub(codify(f.details.body, terms)) } : f.details,
   }));
-  if (summary) summary = redactSecrets(codify(summary, terms));
-  walkthrough = walkthrough.map((w) => ({ ...w, change: redactSecrets(codify(w.change, terms)) }));
+  if (summary) summary = scrub(codify(summary, terms));
+  walkthrough = walkthrough.map((w) => ({ ...w, change: scrub(codify(w.change, terms)) }));
+  if (flow) flow = scrub(flow);
   trace.data.funnel = {
     raw: raw.length,
     anchored: raw.length - processed.dropped,
@@ -527,7 +533,7 @@ async function pipeline(run: Run): Promise<void> {
     previous: pr.priority ?? null,
     incremental: kind === "incremental",
   });
-  const priorityReason = ranked.reason ? redactSecrets(codify(ranked.reason, terms)) : null;
+  const priorityReason = ranked.reason ? scrub(codify(ranked.reason, terms)) : null;
   reviewsRepo.update(review.id, { priority: ranked.priority, priorityReason, signals });
   pullsRepo.update(pr.id, { priority: ranked.priority, priorityReason });
   const reasons =
@@ -601,7 +607,11 @@ async function pipeline(run: Run): Promise<void> {
     reviewsRepo.update(review.id, { githubReviewId: posted.id, githubReviewUrl: posted.url });
   }
   if (!alreadyPosted || findingsRepo.listForReview(review.id).length === 0) {
-    const withSnippets = findings.map((f) => ({ ...f, snippet: snippetOf(f, anchorFiles) }));
+    // A check finding's lines are the problem itself (a secret): never stored.
+    const withSnippets = findings.map((f) => {
+      const snippet = f.fromCheck ? null : snippetOf(f, anchorFiles);
+      return { ...f, snippet: snippet === null ? null : scrub(snippet) };
+    });
     findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, withSnippets);
   }
   await recordCommentIds(gh, r, pr.number, posted.id, review.id);

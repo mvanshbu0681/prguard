@@ -15,6 +15,7 @@ import { config } from "../config.ts";
 import * as llmCallsRepo from "../db/repos/llm-calls.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import { errMessage, log } from "../log.ts";
+import { redactSecrets } from "../review/checks/secrets.ts";
 import { resolveRole, type ResolvedModel, type Role } from "./models.ts";
 
 export type CallMeta = {
@@ -144,7 +145,7 @@ function toolsUsed(steps: Step[], answerName: string): string[] {
     .map((c) => {
       const input = (c.input ?? {}) as Record<string, unknown>;
       const first = Object.values(input).find((v) => typeof v === "string") as string | undefined;
-      return first ? `${c.toolName} ${first.slice(0, 80)}` : c.toolName;
+      return first ? `${c.toolName} ${redactSecrets(first).slice(0, 80)}` : c.toolName;
     });
 }
 

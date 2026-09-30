@@ -3,6 +3,7 @@ import * as learningsRepo from "../db/repos/learnings.ts";
 import type { LearningRow } from "../db/schema.ts";
 import { structured } from "../llm/call.ts";
 import { errMessage, log } from "../log.ts";
+import { redactSecrets } from "../review/checks/secrets.ts";
 
 const schema = z.object({ rule: z.string(), scope: z.string() });
 
@@ -43,7 +44,7 @@ export async function learnFrom(input: LearnInput): Promise<LearningRow> {
   }
   return learningsRepo.create({
     repositoryId: input.repositoryId,
-    text,
+    text: redactSecrets(text),
     source: input.source,
     path: f.path,
     category: f.category,

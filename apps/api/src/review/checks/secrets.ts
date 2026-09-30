@@ -36,20 +36,24 @@ function looksReal(value: string): boolean {
   return !PLACEHOLDER.test(value) && !REPEATED.test(value) && entropy(value) >= 3.5;
 }
 
-/** The kind of secret on a line, or null. Never returns the value itself. */
-export function secretKind(line: string): string | null {
+/** The kind of secret on a line and its value, or null. The value is only used to scrub it elsewhere. */
+export function findSecret(line: string): { kind: string; value: string } | null {
   for (const p of PROVIDERS) {
     const m = p.re.exec(line);
-    if (m && !PLACEHOLDER.test(m[0])) return p.kind;
+    if (m && !PLACEHOLDER.test(m[0])) return { kind: p.kind, value: m[0] };
   }
   const assigned = ASSIGNED.exec(line);
-  if (assigned && looksReal(assigned[1]!)) return "secret";
+  if (assigned && looksReal(assigned[1]!)) return { kind: "secret", value: assigned[1]! };
   return null;
 }
 
-/** Replaces any secret value in text written by a model, so it is never posted or stored. */
-export function redactSecrets(text: string): string {
+/**
+ * Removes secrets from text a model wrote or PR Guard stores: the exact values the Secrets check
+ * found in this change, plus anything shaped like a known key or a `secret = "value"` assignment.
+ */
+export function redactSecrets(text: string, exact: Iterable<string> = []): string {
   let out = text;
+  for (const value of exact) if (value.length >= 8) out = out.split(value).join("[redacted]");
   for (const p of PROVIDERS) out = out.replace(new RegExp(p.re.source, "g"), (m) => (PLACEHOLDER.test(m) ? m : "[redacted]"));
   return out.replace(new RegExp(ASSIGNED.source, "gi"), (m, value: string) => (looksReal(value) ? m.replace(value, "[redacted]") : m));
 }
@@ -62,12 +66,15 @@ export default defineCheck({
   appliesTo: (path) => !SKIP.test(path),
   async run({ files }) {
     const findings: RawFinding[] = [];
+    const sensitive: string[] = [];
     for (const file of files) {
       for (const hunk of file.hunks) {
         for (const line of hunk.lines) {
           if (line.kind !== "add" || line.newNo === null) continue;
-          const kind = secretKind(line.text);
-          if (!kind) continue;
+          const found = findSecret(line.text);
+          if (!found) continue;
+          const kind = found.kind;
+          sensitive.push(found.value);
           findings.push({
             reviewer: "secrets",
             path: file.path,
@@ -82,6 +89,6 @@ export default defineCheck({
         }
       }
     }
-    return { findings, detail: `${findings.length} found` };
+    return { findings, detail: `${findings.length} found`, sensitive };
   },
 });
