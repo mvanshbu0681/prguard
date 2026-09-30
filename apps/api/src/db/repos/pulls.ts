@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../client.ts";
 import { pullRequests, type PullRequest } from "../schema.ts";
 
@@ -31,6 +31,18 @@ export function upsert(input: PullInput): PullRequest {
 
 export function get(id: number): PullRequest | undefined {
   return db.select().from(pullRequests).where(eq(pullRequests.id, id)).get();
+}
+
+export function getMany(ids: number[]): Map<number, PullRequest> {
+  if (ids.length === 0) return new Map();
+  return new Map(
+    db
+      .select()
+      .from(pullRequests)
+      .where(inArray(pullRequests.id, ids))
+      .all()
+      .map((p) => [p.id, p]),
+  );
 }
 
 export function getByNumber(repositoryId: number, number: number): PullRequest | undefined {

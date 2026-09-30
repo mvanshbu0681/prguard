@@ -3,6 +3,7 @@ import { registerWebhookRoute } from "../github/webhooks.ts";
 import { log } from "../log.ts";
 import { auth } from "./routes/auth.ts";
 import { me } from "./routes/me.ts";
+import { repos } from "./routes/repos.ts";
 
 export function createServer(): Hono {
   const app = new Hono();
@@ -11,6 +12,7 @@ export function createServer(): Hono {
   registerWebhookRoute(app);
   app.route("/api/auth", auth);
   app.route("/api/me", me);
+  app.route("/api/repos", repos);
 
   app.onError((err, c) => {
     log.error({ err, path: c.req.path }, "request failed");
