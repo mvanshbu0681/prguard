@@ -7,17 +7,38 @@ import { finishCheckRun, getPull, listFiles, postReview, removeReaction, type Re
 import { errMessage, log } from "../log.ts";
 import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
 import { buildContext } from "./context.ts";
-import { toFileDiffs, type FileDiff } from "./diff.ts";
+import { config } from "../config.ts";
+import { packChunks, toFileDiffs, type FileDiff } from "./diff.ts";
 import { cancelReason, closeReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { processFindings, type RawFinding } from "./findings.ts";
-import { classify, fileKind } from "./noise.ts";
+import { classify, fileKind, KIND_PRIORITY } from "./noise.ts";
 import { checkTitle, reviewBody, toComments, withInlineInBody } from "./publish.ts";
 import { enabledReviewers } from "./reviewers/index.ts";
 import { reviewChunk } from "./reviewing.ts";
 import { summarize } from "./summarize.ts";
 import type { Finding } from "./types.ts";
+
+const REVIEW_PARALLELISM = 3;
+
+/** Runs `fn` over items with at most `limit` in flight; the first error stops new work and is rethrown. */
+async function runPool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  let failure: unknown = null;
+  const worker = async () => {
+    while (next < items.length && failure === null) {
+      const item = items[next++]!;
+      try {
+        await fn(item);
+      } catch (err) {
+        failure ??= err;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  if (failure !== null) throw failure;
+}
 
 type Run = {
   review: Review;
@@ -67,6 +88,9 @@ async function pipeline(run: Run): Promise<void> {
   let walkthrough: { path: string; change: string }[] = [];
   let raw: RawFinding[] = [];
   let failedChunks = 0;
+  let notReviewed: string[] = [];
+  let budgetHit = false;
+  let reserved = 0;
   stage(review.id, deep ? "reviewing" : "summarizing");
 
   const summaryTask = reviewable.length
@@ -83,21 +107,41 @@ async function pipeline(run: Run): Promise<void> {
           return null;
         });
         ctx.checkCancelled();
-        const chunks = [codeFiles];
-        const tasks = chunks.flatMap((chunk, index) => active.map((reviewer) => ({ reviewer, chunk, index })));
-        const results = await Promise.all(
-          tasks.map((task) =>
-            reviewChunk({ task, chunkCount: chunks.length, otherFiles: [], context, snapshot, meta }).catch((err) => {
+        const ordered = [...codeFiles].sort(
+          (a, b) => KIND_PRIORITY[fileKind(a.path)] - KIND_PRIORITY[fileKind(b.path)] || a.path.localeCompare(b.path),
+        );
+        const packed = packChunks(ordered, { chunkTokens: config.review.chunkTokens, maxChunks: config.review.maxChunks });
+        notReviewed = packed.notReviewed;
+        const chunks = packed.chunks;
+        const tasks = chunks.flatMap((chunk, index) => active.map((reviewer) => ({ reviewer, chunk: chunk.files, index, tokens: chunk.tokens })));
+        const allPaths = [...new Set(codeFiles.map((f) => f.path))];
+
+        await runPool(tasks, REVIEW_PARALLELISM, async (task) => {
+          ctx.checkCancelled();
+          const spent = reviewsRepo.get(review.id)!;
+          const steps = task.reviewer.tools && snapshot ? (task.reviewer.maxSteps ?? 4) : 1;
+          const estimate = (task.tokens + 2500) * steps;
+          if (spent.tokensIn + spent.tokensOut + reserved + estimate > config.review.tokenBudget) {
+            budgetHit = true;
+            for (const f of task.chunk) if (!notReviewed.includes(f.path)) notReviewed.push(f.path);
+            return;
+          }
+          reserved += estimate;
+          const inChunk = new Set(task.chunk.map((f) => f.path));
+          const otherFiles = allPaths.filter((p) => !inChunk.has(p)).slice(0, 60);
+          const found = await reviewChunk({ task, chunkCount: chunks.length, otherFiles, context, snapshot, meta })
+            .catch((err) => {
               if (err instanceof CancelledError) throw err;
               log.warn({ review: review.id, reviewer: task.reviewer.id, err: errMessage(err) }, "reviewer failed");
               return null;
-            }),
-          ),
-        );
-        for (const r of results) {
-          if (r) raw = raw.concat(r);
+            })
+            .finally(() => {
+              reserved -= estimate;
+            });
+          if (found) raw = raw.concat(found);
           else failedChunks++;
-        }
+        });
+        log.info({ review: review.id, chunks: chunks.length, tasks: tasks.length, notReviewed: notReviewed.length }, "reviewers finished");
       })()
     : Promise.resolve();
 
@@ -106,7 +150,8 @@ async function pipeline(run: Run): Promise<void> {
 
   const processed = processFindings(raw, reviewable);
   let findings: Finding[] = processed.findings;
-  if (failedChunks) reviewsRepo.update(review.id, { partial: true });
+  const partial = failedChunks > 0 || notReviewed.length > 0;
+  reviewsRepo.update(review.id, { partial, notReviewed });
 
   stage(review.id, "publishing");
   const note =
@@ -116,7 +161,12 @@ async function pipeline(run: Run): Promise<void> {
         ? "Documentation only, so this is a summary without a code review."
         : failedChunks
           ? "Part of this pull request could not be reviewed. Re-run to try again."
-          : null;
+          : notReviewed.length
+            ? `Reviewed part of this pull request${budgetHit ? " (review budget reached)" : " (size limit reached)"}. Not reviewed: ${notReviewed
+                .slice(0, 10)
+                .map((p) => `\`${p}\``)
+                .join(", ")}${notReviewed.length > 10 ? ` and ${notReviewed.length - 10} more` : ""}.`
+            : null;
 
   const bodyFor = (items: Finding[]) =>
     reviewBody({
@@ -126,8 +176,8 @@ async function pipeline(run: Run): Promise<void> {
       range: null,
       findings: items,
       skipped,
-      notReviewed: [],
-      filesReviewed: reviewable.length,
+      notReviewed,
+      filesReviewed: reviewable.length - notReviewed.length,
       note,
       reviewUrl: reviewUrl(review.id),
     });
@@ -150,7 +200,7 @@ async function pipeline(run: Run): Promise<void> {
     stage: "done",
     summary,
     walkthrough,
-    filesReviewed: reviewable.length,
+    filesReviewed: reviewable.length - notReviewed.length,
     ...(posted ? { githubReviewId: posted.id, githubReviewUrl: posted.url } : {}),
     finishedAt: Date.now(),
   });

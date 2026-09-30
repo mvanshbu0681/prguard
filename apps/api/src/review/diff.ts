@@ -73,6 +73,67 @@ export function addedLines(file: FileDiff): Set<number> {
   return lines;
 }
 
+export type Chunk = { files: FileDiff[]; tokens: number };
+
+function splitByHunks(file: FileDiff, maxTokens: number, focus?: Set<number>): FileDiff[] {
+  const pieces: FileDiff[] = [];
+  let hunks: Hunk[] = [];
+  let tokens = 0;
+  for (const hunk of file.hunks) {
+    let h = hunk;
+    let t = estimateTokens(renderFile({ ...file, hunks: [h] }, { focus }));
+    if (t > maxTokens) {
+      const keep = Math.max(20, Math.floor((h.lines.length * maxTokens) / t));
+      h = { ...h, lines: h.lines.slice(0, keep) };
+      t = maxTokens;
+    }
+    if (tokens + t > maxTokens && hunks.length) {
+      pieces.push({ ...file, hunks });
+      hunks = [];
+      tokens = 0;
+    }
+    hunks.push(h);
+    tokens += t;
+  }
+  if (hunks.length) pieces.push({ ...file, hunks });
+  return pieces;
+}
+
+/**
+ * Packs files into chunks of at most `chunkTokens`, in the order given (callers sort by priority).
+ * Files larger than a chunk are split at hunk boundaries. Files past `maxChunks` are returned as
+ * not reviewed.
+ */
+export function packChunks(
+  files: FileDiff[],
+  opts: { chunkTokens: number; maxChunks: number; focus?: Map<string, Set<number>> },
+): { chunks: Chunk[]; notReviewed: string[] } {
+  const chunks: Chunk[] = [];
+  const notReviewed: string[] = [];
+  let current: Chunk = { files: [], tokens: 0 };
+
+  for (const file of files) {
+    const focus = opts.focus?.get(file.path);
+    const whole = estimateTokens(renderFile(file, { focus }));
+    const pieces = whole > opts.chunkTokens ? splitByHunks(file, opts.chunkTokens, focus) : [file];
+    for (const piece of pieces) {
+      const t = pieces.length === 1 ? whole : estimateTokens(renderFile(piece, { focus }));
+      if (current.tokens + t > opts.chunkTokens && current.files.length) {
+        chunks.push(current);
+        current = { files: [], tokens: 0 };
+      }
+      if (chunks.length >= opts.maxChunks) {
+        if (!notReviewed.includes(file.path)) notReviewed.push(file.path);
+        continue;
+      }
+      current.files.push(piece);
+      current.tokens += t;
+    }
+  }
+  if (current.files.length && chunks.length < opts.maxChunks) chunks.push(current);
+  return { chunks, notReviewed };
+}
+
 export function estimateTokens(text: string): number {
   return Math.ceil(text.length / 3.5);
 }

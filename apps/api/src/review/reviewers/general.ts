@@ -6,7 +6,7 @@ export default defineReviewer({
   description: "Bugs, security holes, error handling, edge cases and unclear code.",
   role: "smart",
   tools: true,
-  maxSteps: 6,
+  maxSteps: 4,
   instructions: `Find the problems a careful senior engineer would block or question in this change:
 - logic bugs, off-by-one errors, wrong conditions, null or undefined access, broken error paths
 - security issues: injection, missing authorization, secrets, unsafe input handling
