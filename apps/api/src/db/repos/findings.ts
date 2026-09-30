@@ -1,4 +1,4 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "../client.ts";
 import { findings, reviews } from "../schema.ts";
 import type { Finding } from "../../review/types.ts";
@@ -27,10 +27,34 @@ export function insertMany(ids: { reviewId: number; pullRequestId: number; repos
         details: f.details ?? null,
         verified: f.verified ?? false,
         evidence: f.evidence ?? null,
+        snippet: f.snippet ?? null,
         createdAt: now,
       })),
     )
     .run();
+}
+
+export function update(id: number, patch: Partial<Omit<FindingRow, "id" | "reviewId" | "pullRequestId" | "repositoryId" | "createdAt">>): void {
+  db.update(findings).set(patch).where(eq(findings.id, id)).run();
+}
+
+export function get(id: number): FindingRow | undefined {
+  return db.select().from(findings).where(eq(findings.id, id)).get();
+}
+
+export function getByCommentId(commentId: number): FindingRow | undefined {
+  return db.select().from(findings).where(eq(findings.githubCommentId, commentId)).get();
+}
+
+/** Open findings on a PR that have a line comment on GitHub, from completed reviews. */
+export function listOpenCommentedForPull(pullRequestId: number): FindingRow[] {
+  return db
+    .select({ f: findings })
+    .from(findings)
+    .innerJoin(reviews, eq(reviews.id, findings.reviewId))
+    .where(and(eq(findings.pullRequestId, pullRequestId), eq(reviews.status, "completed"), eq(findings.status, "open"), isNotNull(findings.githubCommentId)))
+    .all()
+    .map((r) => r.f);
 }
 
 export function listForReview(reviewId: number): FindingRow[] {

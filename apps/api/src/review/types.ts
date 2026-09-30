@@ -25,6 +25,8 @@ export type Finding = {
   evidence?: string | null;
   /** From a check (code, not a model): certain, so never verified or suppressed like model findings. */
   fromCheck?: boolean;
+  /** The finding's lines at publish time. */
+  snippet?: string | null;
 };
 
 export function countBySeverity(findings: Pick<Finding, "severity">[]): Record<Severity, number> {

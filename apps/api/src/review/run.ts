@@ -38,6 +38,7 @@ import { redactSecrets } from "./checks/secrets.ts";
 import { dependencies, isManifest } from "./checks/manifests.ts";
 import { assessRisk, type RiskLevel } from "./risk.ts";
 import { decidePriority, type Priority } from "./priority.ts";
+import { recordCommentIds, snippetOf } from "./tracking.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
 import { applies, checks, enabledPlugins, modelReviewers } from "./reviewers/index.ts";
@@ -528,8 +529,10 @@ async function pipeline(run: Run): Promise<void> {
     reviewsRepo.update(review.id, { githubReviewId: posted.id, githubReviewUrl: posted.url });
   }
   if (!alreadyPosted || findingsRepo.listForReview(review.id).length === 0) {
-    findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, findings);
+    const withSnippets = findings.map((f) => ({ ...f, snippet: snippetOf(f, anchorFiles) }));
+    findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, withSnippets);
   }
+  await recordCommentIds(gh, r, pr.number, posted.id, review.id);
 
   reviewsRepo.update(review.id, {
     status: "completed",

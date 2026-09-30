@@ -140,6 +140,121 @@ export async function findPostedReview(gh: GitHub, r: Repo, number: number, url:
   return hit ? { id: hit.id, url: hit.html_url } : null;
 }
 
+export type PostedComment = { id: number; nodeId: string; path: string; body: string; url: string };
+
+/** The line comments of one posted review. */
+export async function listReviewCommentsOf(gh: GitHub, r: Repo, number: number, reviewId: number): Promise<PostedComment[]> {
+  const comments = await gh.paginate(gh.rest.pulls.listCommentsForReview, { ...r, pull_number: number, review_id: reviewId, per_page: 100 });
+  return comments.map((c) => ({ id: c.id, nodeId: c.node_id, path: c.path, body: c.body, url: c.html_url }));
+}
+
+export type PullComment = {
+  id: number;
+  nodeId: string;
+  inReplyTo: number | null;
+  authorLogin: string;
+  authorType: string;
+  thumbsDown: number;
+  body: string;
+};
+
+/** Every line comment on a PR, with its thumbs-down count. */
+export async function listPullComments(gh: GitHub, r: Repo, number: number): Promise<PullComment[]> {
+  const comments = await gh.paginate(gh.rest.pulls.listReviewComments, { ...r, pull_number: number, per_page: 100 });
+  return comments.map((c) => ({
+    id: c.id,
+    nodeId: c.node_id,
+    inReplyTo: c.in_reply_to_id ?? null,
+    authorLogin: c.user?.login ?? "",
+    authorType: c.user?.type ?? "",
+    thumbsDown: c.reactions?.["-1"] ?? 0,
+    body: c.body,
+  }));
+}
+
+export async function updateReviewComment(gh: GitHub, r: Repo, commentId: number, body: string): Promise<void> {
+  await gh.rest.pulls.updateReviewComment({ ...r, comment_id: commentId, body });
+}
+
+/** Reply inside a line-comment thread. */
+export async function replyInThread(gh: GitHub, r: Repo, number: number, commentId: number, body: string): Promise<{ id: number; url: string }> {
+  const { data } = await gh.rest.pulls.createReplyForReviewComment({ ...r, pull_number: number, comment_id: commentId, body });
+  return { id: data.id, url: data.html_url };
+}
+
+/** A comment in the PR conversation. */
+export async function createIssueComment(gh: GitHub, r: Repo, number: number, body: string): Promise<{ id: number; url: string }> {
+  const { data } = await gh.rest.issues.createComment({ ...r, issue_number: number, body });
+  return { id: data.id, url: data.html_url };
+}
+
+export type CommentKind = "issue" | "review";
+
+/** Reacts to a conversation comment or a line comment; returns the reaction id or null. */
+export async function reactToComment(gh: GitHub, r: Repo, kind: CommentKind, commentId: number, content: "eyes" | "+1" | "rocket"): Promise<number | null> {
+  try {
+    const { data } =
+      kind === "issue"
+        ? await gh.rest.reactions.createForIssueComment({ ...r, comment_id: commentId, content })
+        : await gh.rest.reactions.createForPullRequestReviewComment({ ...r, comment_id: commentId, content });
+    return data.id;
+  } catch (err) {
+    log.warn({ ...r, commentId, err: errMessage(err) }, "could not react to comment");
+    return null;
+  }
+}
+
+export async function removeCommentReaction(gh: GitHub, r: Repo, kind: CommentKind, commentId: number, reactionId: number): Promise<void> {
+  try {
+    if (kind === "issue") await gh.rest.reactions.deleteForIssueComment({ ...r, comment_id: commentId, reaction_id: reactionId });
+    else await gh.rest.reactions.deleteForPullRequestComment({ ...r, comment_id: commentId, reaction_id: reactionId });
+  } catch (err) {
+    log.warn({ ...r, commentId, err: errMessage(err) }, "could not remove reaction");
+  }
+}
+
+/** Whether each line-comment thread is outdated (its lines changed since), keyed by the first comment's id. */
+export async function threadsOutdated(gh: GitHub, r: Repo, number: number): Promise<Map<number, boolean>> {
+  const out = new Map<number, boolean>();
+  let cursor: string | null = null;
+  for (let page = 0; page < 10; page++) {
+    const res: {
+      repository: {
+        pullRequest: {
+          reviewThreads: { pageInfo: { hasNextPage: boolean; endCursor: string | null }; nodes: { isOutdated: boolean; comments: { nodes: { databaseId: number }[] } }[] };
+        };
+      };
+    } = await gh.graphql(
+      `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $number) {
+            reviewThreads(first: 100, after: $cursor) {
+              pageInfo { hasNextPage endCursor }
+              nodes { isOutdated comments(first: 1) { nodes { databaseId } } }
+            }
+          }
+        }
+      }`,
+      { owner: r.owner, repo: r.repo, number, cursor },
+    );
+    const threads = res.repository.pullRequest.reviewThreads;
+    for (const t of threads.nodes) {
+      const first = t.comments.nodes[0]?.databaseId;
+      if (first) out.set(first, t.isOutdated);
+    }
+    if (!threads.pageInfo.hasNextPage) break;
+    cursor = threads.pageInfo.endCursor;
+  }
+  return out;
+}
+
+/** Collapses a comment as resolved. Works on the App's own comments with its current permissions. */
+export async function minimizeComment(gh: GitHub, nodeId: string): Promise<void> {
+  await gh.graphql(`mutation($id: ID!) { minimizeComment(input: { subjectId: $id, classifier: RESOLVED }) { minimizedComment { isMinimized } } }`, {
+    id: nodeId,
+  });
+}
+
 export async function postReview(
   gh: GitHub,
   r: Repo,

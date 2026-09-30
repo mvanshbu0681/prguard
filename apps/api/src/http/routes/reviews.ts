@@ -64,9 +64,9 @@ reviews.get("/:id", (c) => {
       verified: f.verified,
       evidence: f.evidence,
       details: f.details ?? null,
-      status: "open" as const,
+      status: f.status,
       agentPrompt: agentPrompt(f),
-      commentUrl: null,
+      commentUrl: f.githubCommentUrl,
     }));
   const body: ReviewDetail = {
     ...item,
