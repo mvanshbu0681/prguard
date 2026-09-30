@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { commentableLines, type FileDiff } from "./diff.ts";
-import type { Finding, Severity } from "./types.ts";
+import { commentableLines, newLineText, type FileDiff } from "./diff.ts";
+import { SEVERITY_RANK, type Finding, type Severity } from "./types.ts";
 
 export const rawFindingSchema = z.object({
   path: z.string(),
@@ -98,7 +98,16 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
       }
     }
     const rangeKept = !end || end === line || startLine !== null;
-    return { ...base, line: last, startLine, suggestion: rangeKept ? suggestion : null, placement: "inline" };
+    let finalSuggestion = rangeKept ? suggestion : null;
+    if (finalSuggestion !== null) {
+      const fitted = fitSuggestion(file, lines, hunk!, startLine ?? line, last, finalSuggestion);
+      finalSuggestion = fitted.suggestion;
+      if (fitted.last !== last) {
+        startLine = startLine ?? line;
+        last = fitted.last;
+      }
+    }
+    return { ...base, line: last, startLine, suggestion: finalSuggestion, placement: "inline" };
   }
 
   for (let d = 1; d <= 3; d++) {
@@ -109,7 +118,117 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
   return { ...base, line: line > 0 ? line : null, startLine: null, suggestion: null, placement: "body" };
 }
 
-export function processFindings(raw: RawFinding[], files: FileDiff[]): Finding[] {
+/**
+ * Models often write a suggestion that also repeats the lines right after the range they cited.
+ * When the extra trailing lines match the file, the range is widened so applying it is correct.
+ * A suggestion identical to the current code is dropped.
+ */
+function fitSuggestion(
+  file: FileDiff,
+  lines: Map<number, number>,
+  hunk: number,
+  start: number,
+  last: number,
+  suggestion: string,
+): { suggestion: string | null; last: number } {
+  const text = newLineText(file);
+  const sug = suggestion.replace(/\n$/, "").split("\n");
+  const current = [];
+  for (let l = start; l <= last; l++) current.push(text.get(l) ?? "");
+  if (sug.join("\n").trim() === current.join("\n").trim()) return { suggestion: null, last };
+
+  const extra = sug.length - current.length;
+  if (extra > 0 && extra <= 5) {
+    let matches = true;
+    for (let i = 1; i <= extra; i++) {
+      const fileLine = text.get(last + i);
+      if (fileLine === undefined || lines.get(last + i) !== hunk || fileLine.trim() !== sug[sug.length - extra + i - 1]!.trim()) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return { suggestion, last: last + extra };
+  }
+  return { suggestion, last };
+}
+
+const MIN_CONFIDENCE = 0.5;
+const MAX_INLINE = 15;
+const MAX_NITS = 3;
+
+function jaccard(a: string[], b: string[]): number {
+  if (!a.length || !b.length) return 0;
+  const setB = new Set(b);
+  const inter = a.filter((w) => setB.has(w)).length;
+  return inter / (a.length + b.length - inter);
+}
+
+function near(a: Finding, b: Finding): boolean {
+  if (a.path !== b.path) return false;
+  if (a.line === null || b.line === null) return true;
+  const aStart = a.startLine ?? a.line;
+  const bStart = b.startLine ?? b.line;
+  return aStart <= b.line + 2 && bStart <= a.line + 2;
+}
+
+/** The same problem reported twice: same place and a similar title, or the same fingerprint. */
+export function isDuplicate(a: Finding, b: Finding): boolean {
+  if (a.fingerprint === b.fingerprint) return true;
+  if (!near(a, b)) return false;
+  const wa = titleWords(a.title);
+  const wb = titleWords(b.title);
+  const shared = wa.filter((w) => wb.includes(w)).length;
+  return jaccard(wa, wb) >= 0.34 || shared >= 2 || a.category === b.category;
+}
+
+export function rank(findings: Finding[]): Finding[] {
+  return [...findings].sort(
+    (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || b.confidence - a.confidence || a.path.localeCompare(b.path),
+  );
+}
+
+export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number };
+
+/**
+ * Anchors, filters, dedupes, ranks and places findings. `previous` holds findings already shown on
+ * this PR; anything matching one of them is dropped so a push never repeats a comment.
+ */
+export function processFindings(raw: RawFinding[], files: FileDiff[], previous: Pick<Finding, "path" | "title" | "fingerprint">[] = []): Processed {
   const byPath = new Map(files.map((f) => [f.path, f]));
-  return raw.map((r) => anchor(r, byPath)).filter((f): f is Finding => f !== null);
+  const anchored = raw.map((r) => anchor(r, byPath)).filter((f): f is Finding => f !== null);
+
+  const confident = anchored.filter((f) => f.confidence >= MIN_CONFIDENCE);
+  const lowConfidence = anchored.length - confident.length;
+
+  const kept: Finding[] = [];
+  for (const f of rank(confident)) {
+    const dup = kept.find((k) => isDuplicate(k, f));
+    if (dup) {
+      if (!dup.reviewer.split("+").includes(f.reviewer)) dup.reviewer = `${dup.reviewer}+${f.reviewer}`;
+      continue;
+    }
+    kept.push({ ...f });
+  }
+
+  const fresh = kept.filter(
+    (f) => !previous.some((p) => p.fingerprint === f.fingerprint || (p.path === f.path && jaccard(titleWords(p.title), titleWords(f.title)) >= 0.6)),
+  );
+  const repeats = kept.length - fresh.length;
+
+  let inline = 0;
+  let nits = 0;
+  for (const f of fresh) {
+    if (f.placement !== "inline") continue;
+    if (f.severity === "nit") {
+      if (nits >= MAX_NITS || inline >= MAX_INLINE) f.placement = "hidden";
+      else {
+        nits++;
+        inline++;
+      }
+      continue;
+    }
+    if (inline >= MAX_INLINE) f.placement = "body";
+    else inline++;
+  }
+  return { findings: fresh, repeats, lowConfidence };
 }

@@ -13,7 +13,7 @@ import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { processFindings, type RawFinding } from "./findings.ts";
 import { classify, fileKind } from "./noise.ts";
-import { checkTitle, reviewBody, toComments } from "./publish.ts";
+import { checkTitle, reviewBody, toComments, withInlineInBody } from "./publish.ts";
 import { enabledReviewers } from "./reviewers/index.ts";
 import { reviewChunk } from "./reviewing.ts";
 import { summarize } from "./summarize.ts";
@@ -104,8 +104,8 @@ async function pipeline(run: Run): Promise<void> {
   await Promise.all([summaryTask, reviewTask]);
   ctx.checkCancelled();
 
-  const findings: Finding[] = processFindings(raw, reviewable);
-  findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, findings);
+  const processed = processFindings(raw, reviewable);
+  let findings: Finding[] = processed.findings;
   if (failedChunks) reviewsRepo.update(review.id, { partial: true });
 
   stage(review.id, "publishing");
@@ -118,21 +118,32 @@ async function pipeline(run: Run): Promise<void> {
           ? "Part of this pull request could not be reviewed. Re-run to try again."
           : null;
 
-  const body = reviewBody({
-    summary,
-    walkthrough,
-    kind: "full",
-    range: null,
-    findings,
-    skipped,
-    notReviewed: [],
-    filesReviewed: reviewable.length,
-    note,
-    reviewUrl: reviewUrl(review.id),
-  });
+  const bodyFor = (items: Finding[]) =>
+    reviewBody({
+      summary,
+      walkthrough,
+      kind: "full",
+      range: null,
+      findings: items,
+      skipped,
+      notReviewed: [],
+      filesReviewed: reviewable.length,
+      note,
+      reviewUrl: reviewUrl(review.id),
+    });
 
   let posted: { id: number; url: string } | null = null;
-  if (!review.githubReviewId) posted = await postReview(gh, r, pr.number, review.headSha, body, toComments(findings));
+  if (!review.githubReviewId) {
+    try {
+      posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), toComments(findings));
+    } catch (err) {
+      if ((err as { status?: number }).status !== 422) throw err;
+      log.warn({ review: review.id, err: errMessage(err) }, "line comments rejected, posting findings in the body");
+      findings = withInlineInBody(findings);
+      posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), []);
+    }
+  }
+  findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, findings);
 
   reviewsRepo.update(review.id, {
     status: "completed",

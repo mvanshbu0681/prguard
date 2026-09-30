@@ -60,6 +60,13 @@ export function commentableLines(file: FileDiff): Map<number, number> {
   return lines;
 }
 
+/** Text of each new-file line visible in the diff. */
+export function newLineText(file: FileDiff): Map<number, string> {
+  const text = new Map<number, string>();
+  for (const hunk of file.hunks) for (const line of hunk.lines) if (line.newNo !== null) text.set(line.newNo, line.text);
+  return text;
+}
+
 export function addedLines(file: FileDiff): Set<number> {
   const lines = new Set<number>();
   for (const hunk of file.hunks) for (const line of hunk.lines) if (line.kind === "add" && line.newNo !== null) lines.add(line.newNo);
