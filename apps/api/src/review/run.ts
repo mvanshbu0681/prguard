@@ -21,21 +21,19 @@ import { CancelledError, FatalError, registerJob, type JobContext } from "../que
 import { queueBrief } from "../brief/index-repo.ts";
 import { codeTerms, codify } from "./codify.ts";
 import { flowMermaid } from "./flow.ts";
-import { buildContext } from "./context.ts";
+import { buildContext, teamRules } from "./context.ts";
 import { config } from "../config.ts";
-import { addedLines, packChunks, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
+import { addedLines, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
+import { filesFor, runReviewers } from "./engine.ts";
 import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { processFindings, type RawFinding } from "./findings.ts";
-import { classify, fileKind, KIND_PRIORITY } from "./noise.ts";
+import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
-import { enabledReviewers } from "./reviewers/index.ts";
-import { reviewChunk } from "./reviewing.ts";
+import { enabledPlugins, modelReviewers } from "./reviewers/index.ts";
 import { summarize } from "./summarize.ts";
 import type { Finding } from "./types.ts";
-
-const REVIEW_PARALLELISM = 3;
 
 function describeSkipped(skipped: { path: string; reason: string }[]): string {
   const byReason = new Map<string, string[]>();
@@ -54,24 +52,6 @@ function describeSkipped(skipped: { path: string; reason: string }[]): string {
     return `${label[reason] ?? reason} (${shown}${paths.length > 5 ? ` and ${paths.length - 5} more` : ""})`;
   });
   return `This pull request changes only ${parts.join("; ")}.`;
-}
-
-/** Runs `fn` over items with at most `limit` in flight; the first error stops new work and is rethrown. */
-async function runPool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
-  let next = 0;
-  let failure: unknown = null;
-  const worker = async () => {
-    while (next < items.length && failure === null) {
-      const item = items[next++]!;
-      try {
-        await fn(item);
-      } catch (err) {
-        failure ??= err;
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  if (failure !== null) throw failure;
 }
 
 type Run = {
@@ -193,12 +173,16 @@ async function pipeline(run: Run): Promise<void> {
   }
 
   if (repoNow.briefStatus === "none") queueBrief(repoNow.id);
-  const context = buildContext(pr, repoNow);
+  const baseContext = buildContext(pr, repoNow);
+  const rulesContext = buildContext(pr, repoNow, { rules: true });
   const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
 
-  const active = enabledReviewers(run.repo.disabledReviewers);
+  const plugins = enabledPlugins(run.repo.disabledReviewers);
+  // Team rules has nothing to enforce without rules or a brief.
+  const hasRules = Boolean(teamRules(repoNow) || repoNow.brief?.trim());
+  const models = modelReviewers(plugins).filter((r) => !r.needs?.rules || hasRules);
   const codeFiles = docsOnly ? [] : reviewable.filter((f) => fileKind(f.path) !== "docs");
-  const deep = codeFiles.length > 0 && active.length > 0;
+  const deep = models.some((r) => filesFor(r, codeFiles).length > 0);
 
   let summary: string | null = null;
   let walkthrough: { path: string; change: string }[] = [];
@@ -207,7 +191,6 @@ async function pipeline(run: Run): Promise<void> {
   let failedChunks = 0;
   let notReviewed: string[] = [];
   let budgetHit = false;
-  let reserved = 0;
   // Usage from an earlier, interrupted attempt does not count against this attempt's budget.
   const baseline = review.tokensIn + review.tokensOut;
   stage(review.id, deep ? "reviewing" : "summarizing");
@@ -215,7 +198,7 @@ async function pipeline(run: Run): Promise<void> {
   // A failed summary must not throw away the findings: the review goes out without one.
   let summaryFailed = false;
   const summaryTask = reviewable.length
-    ? summarize({ context, files: reviewable, incremental: kind === "incremental", focus, meta })
+    ? summarize({ context: baseContext, files: reviewable, incremental: kind === "incremental", focus, meta })
         .then((s) => {
           summary = s.summary;
           walkthrough = s.walkthrough;
@@ -235,41 +218,20 @@ async function pipeline(run: Run): Promise<void> {
           return null;
         });
         ctx.checkCancelled();
-        const ordered = [...codeFiles].sort(
-          (a, b) => KIND_PRIORITY[fileKind(a.path)] - KIND_PRIORITY[fileKind(b.path)] || a.path.localeCompare(b.path),
-        );
-        const packed = packChunks(ordered, { chunkTokens: config.review.chunkTokens, maxChunks: config.review.maxChunks, focus });
-        notReviewed = packed.notReviewed;
-        const chunks = packed.chunks;
-        const tasks = chunks.flatMap((chunk, index) => active.map((reviewer) => ({ reviewer, chunk: chunk.files, index, tokens: chunk.tokens })));
-        const allPaths = [...new Set(codeFiles.map((f) => f.path))];
-
-        await runPool(tasks, REVIEW_PARALLELISM, async (task) => {
-          ctx.checkCancelled();
-          const spent = reviewsRepo.get(review.id)!;
-          const steps = task.reviewer.tools && snapshot ? (task.reviewer.maxSteps ?? 4) : 1;
-          const estimate = (task.tokens + 2500) * steps;
-          if (spent.tokensIn + spent.tokensOut - baseline + reserved + estimate > config.review.tokenBudget) {
-            budgetHit = true;
-            for (const f of task.chunk) if (!notReviewed.includes(f.path)) notReviewed.push(f.path);
-            return;
-          }
-          reserved += estimate;
-          const inChunk = new Set(task.chunk.map((f) => f.path));
-          const otherFiles = allPaths.filter((p) => !inChunk.has(p)).slice(0, 60);
-          const found = await reviewChunk({ task, chunkCount: chunks.length, otherFiles, context, snapshot, focus, meta })
-            .catch((err) => {
-              if (err instanceof CancelledError) throw err;
-              log.warn({ review: review.id, reviewer: task.reviewer.id, err: errMessage(err) }, "reviewer failed");
-              return null;
-            })
-            .finally(() => {
-              reserved -= estimate;
-            });
-          if (found) raw = raw.concat(found);
-          else failedChunks++;
+        const outcome = await runReviewers({
+          reviewers: models,
+          files: codeFiles,
+          focus,
+          contextFor: (r) => (r.needs?.rules ? rulesContext : baseContext),
+          snapshot,
+          baseline,
+          ctx,
+          meta,
         });
-        log.info({ review: review.id, chunks: chunks.length, tasks: tasks.length, notReviewed: notReviewed.length }, "reviewers finished");
+        raw = outcome.raw;
+        failedChunks = outcome.failedChunks;
+        notReviewed = outcome.notReviewed;
+        budgetHit = outcome.budgetHit;
       })()
     : Promise.resolve();
 

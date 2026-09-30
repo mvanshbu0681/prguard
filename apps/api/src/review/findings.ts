@@ -13,6 +13,7 @@ export const rawFindingSchema = z.object({
   body: z.string(),
   suggestion: z.string().nullish(),
   confidence: z.number().nullish(),
+  details: z.object({ title: z.string(), body: z.string() }).nullish(),
 });
 
 export const submitSchema = z.object({ findings: z.array(rawFindingSchema) });
@@ -69,7 +70,8 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
   const category = (raw.category ?? "bug").trim().toLowerCase().split(/\s+/)[0] || "bug";
   const file = resolvePath(raw.path, files);
   const path = file?.path ?? raw.path.trim().replace(/^\.?\//, "");
-  const base = { reviewer: raw.reviewer, path, severity, category, title, body, confidence, fingerprint: fingerprint(path, title) };
+  const details = raw.details?.title.trim() && raw.details.body.trim() ? { title: raw.details.title.trim(), body: raw.details.body.trim() } : null;
+  const base = { reviewer: raw.reviewer, path, severity, category, title, body, confidence, fingerprint: fingerprint(path, title), details };
 
   // A file outside this diff (seen through the repo tools) cannot carry a line comment.
   if (!file) return { ...base, line: null, startLine: null, suggestion: null, placement: "body" };

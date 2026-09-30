@@ -166,6 +166,7 @@ export const findings = sqliteTable(
     confidence: real("confidence").notNull(),
     fingerprint: text("fingerprint").notNull(),
     placement: text("placement").$type<"inline" | "body" | "hidden">().notNull(),
+    details: text("details", { mode: "json" }).$type<{ title: string; body: string } | null>(),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("findings_review_idx").on(t.reviewId), index("findings_pr_idx").on(t.pullRequestId)],

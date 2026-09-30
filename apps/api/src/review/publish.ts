@@ -1,13 +1,14 @@
 import type { ReviewComment } from "../github/pr.ts";
 import { agentPrompt } from "./agent-prompt.ts";
 import { badge, button, priorityBadge, reviewerBadges, riskBadge, row, sevBadge, statusBadge, type Priority, type RiskLevel } from "./badges.ts";
+import { badgeFor } from "./reviewers/index.ts";
 import { countBySeverity, SEVERITIES, type Finding } from "./types.ts";
 
 const MAX_BODY = 60_000;
 
 /** Badge ids of a finding's reviewers (`general+security` merges two). */
 function reviewerBadgeIds(reviewer: string): string[] {
-  return reviewer.split("+");
+  return [...new Set(reviewer.split("+").map(badgeFor))];
 }
 
 function fold(title: string, body: string): string {

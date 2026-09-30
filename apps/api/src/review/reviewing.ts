@@ -31,7 +31,9 @@ Each finding:
 - In title and body, put identifiers, file paths, commands, config keys and literal values in single backticks, e.g. \`create_refund\`, \`app/models.py\`, \`None\`.
 - suggestion: only when the fix is small and certain, the exact replacement code for lines line..end_line (whole lines, same indentation). Otherwise null.
 - confidence: 0 to 1, how sure you are that this is a real problem.
+- details: null, unless your instructions ask for a folded extra section; then { title, body }.
 
+Stay inside your focus above: other reviewers cover everything else, so reporting it here only adds noise.
 Report only real, specific problems in the added code. Report each problem once, not on every line it appears. Do not praise, do not summarise the change, and skip what a formatter would fix unless the team rules require it.`;
 }
 

@@ -34,7 +34,7 @@ const schema = z.object({
   LLM_CONCURRENCY: num(6),
   CHUNK_TOKENS: num(12000),
   MAX_CHUNKS: num(8),
-  REVIEW_TOKEN_BUDGET: num(200000),
+  REVIEW_TOKEN_BUDGET: num(400000),
 
   DEV_LOGIN: optional,
   SESSION_DAYS: num(7),
