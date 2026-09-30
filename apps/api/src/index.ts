@@ -1,14 +1,17 @@
 import { serve } from "@hono/node-server";
 import { config } from "./config.ts";
 import { migrateDb } from "./db/client.ts";
+import { reconcile } from "./github/reconcile.ts";
 import { createServer } from "./http/server.ts";
-import { log } from "./log.ts";
+import { errMessage, log } from "./log.ts";
 
 async function main(): Promise<void> {
   migrateDb();
 
   const app = createServer();
   serve({ fetch: app.fetch, port: config.port }, (info) => log.info({ port: info.port, role: config.role }, "api listening"));
+
+  reconcile().catch((err) => log.error({ err: errMessage(err) }, "reconcile failed"));
 }
 
 main().catch((err) => {
