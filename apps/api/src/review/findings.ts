@@ -55,6 +55,19 @@ function resolvePath(raw: string, files: Map<string, FileDiff>): FileDiff | unde
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+const DIFF_PREFIX = /^[+\- ]?\s*\d+\s\|\s?/;
+
+/**
+ * Models sometimes copy the diff's `+    82 | ` prefix into code. When every line carries it, it is
+ * removed; committing it would break the file.
+ */
+export function stripDiffPrefix(code: string): string {
+  const lines = code.split("\n");
+  const filled = lines.filter((l) => l.trim());
+  if (filled.length === 0 || !filled.every((l) => DIFF_PREFIX.test(l))) return code;
+  return lines.map((l) => l.replace(DIFF_PREFIX, "")).join("\n");
+}
+
 /**
  * Validates a model finding against the PR diff. The line must be commentable (inside a hunk): an
  * exact hit keeps a multi-line range and suggestion; a near miss snaps to the closest diff line in
@@ -79,7 +92,7 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
   const lines = commentableLines(file);
   const line = Math.round(raw.line);
   const end = raw.end_line ? Math.round(raw.end_line) : null;
-  const suggestion = raw.suggestion && raw.suggestion.trim() ? raw.suggestion.replace(/\r/g, "") : null;
+  const suggestion = raw.suggestion && raw.suggestion.trim() ? stripDiffPrefix(raw.suggestion.replace(/\r/g, "")) : null;
 
   if (lines.has(line)) {
     const hunk = lines.get(line);
@@ -170,7 +183,7 @@ export function fitReplacement(file: FileDiff, start: number, last: number, code
   const hunk = lines.get(last);
   if (hunk === undefined) return null;
   for (let l = start; l <= last; l++) if (lines.get(l) !== hunk) return null;
-  const fitted = fitSuggestion(file, lines, hunk, start, last, code.replace(/\r/g, ""));
+  const fitted = fitSuggestion(file, lines, hunk, start, last, stripDiffPrefix(code.replace(/\r/g, "")));
   return fitted.last === last ? fitted.suggestion : null;
 }
 

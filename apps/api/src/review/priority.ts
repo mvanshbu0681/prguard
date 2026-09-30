@@ -58,8 +58,8 @@ export function decidePriority(input: PriorityInput): { priority: Priority; reas
     priority = "p0";
     notes.push(malware ? "adds a malicious package" : "commits a secret");
   } else if (critical) {
+    // Raised, but not repeated in the reason: the risk reasons already count findings.
     priority = raise(priority, "p1");
-    notes.push(`${critical} critical finding${critical === 1 ? "" : "s"}`);
   }
 
   const area = s?.impactArea?.trim();
