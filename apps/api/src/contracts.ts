@@ -94,6 +94,8 @@ export type FindingItem = {
   suggestion: string | null;
   placement: Placement;
   url: string;
+  /** Stable id used in links from GitHub: `/reviews/<id>#f-<fingerprint>`. */
+  fingerprint: string;
 };
 
 export type ReviewDetail = ReviewListItem & {

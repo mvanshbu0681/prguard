@@ -349,7 +349,7 @@ async function pipeline(run: Run): Promise<void> {
   const alreadyPosted = posted !== null;
   if (!posted) {
     try {
-      posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), toComments(findings));
+      posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), toComments(findings, reviewUrl(review.id)));
     } catch (err) {
       if ((err as { status?: number }).status !== 422) throw err;
       log.warn({ review: review.id, err: errMessage(err) }, "line comments rejected, posting findings in the body");

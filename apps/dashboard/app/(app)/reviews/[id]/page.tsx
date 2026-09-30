@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Check, CircleAlert, Info, RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { FindingsList } from "@/components/reviews/findings-list";
 import { ReviewProgress } from "@/components/reviews/review-progress";
 import { Avatar } from "@/components/ui/avatar";
@@ -71,6 +71,13 @@ function Review({ review }: { review: ReviewDetail }) {
 
   const tokens = review.usage.tokensIn + review.usage.tokensOut;
   const finished = review.finishedAt !== null && review.startedAt !== null;
+  const findingCount = review.findings.length;
+
+  // Links from GitHub land on `#f-<fingerprint>`; the card exists only once the findings render.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith("#f-")) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+  }, [findingCount]);
 
   return (
     <article>

@@ -18,6 +18,11 @@ export type Finding = {
   confidence: number;
   fingerprint: string;
   placement: "inline" | "body" | "hidden";
+  /** A folded extra section, e.g. suggested tests or what Socket found. */
+  details?: { title: string; body: string } | null;
+  /** Confirmed by the verification pass, with the code that shows it. */
+  verified?: boolean;
+  evidence?: string | null;
 };
 
 export function countBySeverity(findings: Pick<Finding, "severity">[]): Record<Severity, number> {

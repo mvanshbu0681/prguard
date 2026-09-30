@@ -15,7 +15,10 @@ function location(finding: FindingItem): string {
 
 export function FindingCard({ finding }: { finding: FindingItem }) {
   return (
-    <article className="overflow-hidden rounded-lg border border-line bg-surface-1 shadow-hi">
+    <article
+      id={`f-${finding.fingerprint}`}
+      className="scroll-mt-16 overflow-hidden rounded-lg border border-line bg-surface-1 shadow-hi target:border-line-3"
+    >
       <header className="flex h-10 items-center gap-3 border-b border-line bg-surface-2/50 px-4">
         <SeverityPill severity={finding.severity} />
         <a

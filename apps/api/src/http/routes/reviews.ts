@@ -56,6 +56,7 @@ reviews.get("/:id", (c) => {
       suggestion: f.suggestion,
       placement: f.placement,
       url: lineUrl(repo.fullName, review.headSha, f.path, f.line, f.startLine),
+      fingerprint: f.fingerprint,
     }));
   const body: ReviewDetail = {
     ...item,

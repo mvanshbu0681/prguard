@@ -38,7 +38,12 @@ const schema = z.object({
 
   DEV_LOGIN: optional,
   SESSION_DAYS: num(7),
+
+  /** Where badge images are served from. Empty posts text labels instead of images. */
+  ASSET_BASE_URL: z.string().optional(),
 });
+
+const DEFAULT_ASSET_BASE_URL = "https://cdn.jsdelivr.net/gh/prguard-sandbox/prguard-assets@v1/img";
 
 function fromRoot(path: string): string {
   return isAbsolute(path) ? path : resolve(ROOT, path);
@@ -83,6 +88,7 @@ function load() {
     workerConcurrency: env.WORKER_CONCURRENCY,
     devLogin: env.DEV_LOGIN === "1" && env.NODE_ENV !== "production",
     sessionDays: env.SESSION_DAYS,
+    assetBaseUrl: (env.ASSET_BASE_URL ?? DEFAULT_ASSET_BASE_URL).trim().replace(/\/$/, ""),
   };
 }
 

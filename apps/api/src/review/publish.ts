@@ -1,15 +1,22 @@
 import type { ReviewComment } from "../github/pr.ts";
-import { countBySeverity, SEVERITIES, type Finding, type Severity } from "./types.ts";
-
-const LABEL: Record<Severity, string> = {
-  critical: "🛑 Critical",
-  high: "🔴 High",
-  medium: "🟠 Medium",
-  low: "🟡 Low",
-  nit: "💬 Nit",
-};
+import { agentPrompt } from "./agent-prompt.ts";
+import { badge, button, reviewerBadges, row, sevBadge } from "./badges.ts";
+import { countBySeverity, SEVERITIES, type Finding } from "./types.ts";
 
 const MAX_BODY = 60_000;
+
+/** Badge ids of a finding's reviewers (`general+security` merges two). */
+function reviewerBadgeIds(reviewer: string): string[] {
+  return reviewer.split("+");
+}
+
+function fold(title: string, body: string): string {
+  return `<details><summary>${title}</summary>\n\n${body.trim()}\n\n</details>`;
+}
+
+export function findingUrl(reviewUrl: string, f: Pick<Finding, "fingerprint">): string {
+  return `${reviewUrl}#f-${f.fingerprint}`;
+}
 
 export type BodyInput = {
   summary: string | null;
@@ -39,13 +46,22 @@ function location(f: Finding): string {
   return f.startLine && f.startLine !== f.line ? `\`${f.path}:${f.startLine}-${f.line}\`` : `\`${f.path}:${f.line}\``;
 }
 
-export function commentBody(f: Finding): string {
-  const parts = [`**${LABEL[f.severity]}** · ${f.category} — **${f.title}**`, "", f.body.trim()];
+/**
+ * One line comment: badges, title, body, suggestion, folded evidence and extras, a prompt for coding
+ * agents, and a button into the dashboard at this finding.
+ */
+export function commentBody(f: Finding, reviewUrl: string): string {
+  const badges = row([sevBadge(f.severity), ...reviewerBadges(reviewerBadgeIds(f.reviewer)), f.verified ? badge("verified") : ""]);
+  const parts = [badges, "", `**${f.title}**`, "", f.body.trim()];
   if (f.suggestion !== null) parts.push("", "```suggestion", f.suggestion.replace(/\n$/, ""), "```");
+  if (f.evidence) parts.push("", fold("Evidence", f.evidence));
+  if (f.details) parts.push("", fold(f.details.title, f.details.body));
+  parts.push("", fold("Prompt for AI agents", `\`\`\`\`text\n${agentPrompt(f)}\n\`\`\`\``));
+  parts.push("", button("button-finding", findingUrl(reviewUrl, f)));
   return parts.join("\n");
 }
 
-export function toComments(findings: Finding[]): ReviewComment[] {
+export function toComments(findings: Finding[], reviewUrl: string): ReviewComment[] {
   return findings
     .filter((f) => f.placement === "inline" && f.line !== null)
     .map((f) => ({
@@ -53,7 +69,7 @@ export function toComments(findings: Finding[]): ReviewComment[] {
       line: f.line!,
       side: "RIGHT" as const,
       ...(f.startLine && f.startLine < f.line! ? { start_line: f.startLine, start_side: "RIGHT" as const } : {}),
-      body: commentBody(f),
+      body: commentBody(f, reviewUrl),
     }));
 }
 
@@ -71,7 +87,7 @@ export function reviewBody(input: BodyInput): string {
   const inBody = input.findings.filter((f) => f.placement === "body");
   if (inBody.length) {
     out.push(`<details open><summary>Findings not attached to a line (${inBody.length})</summary>`, "");
-    for (const f of inBody) out.push(`- **${LABEL[f.severity]}** ${location(f)} — **${f.title}**. ${f.body.trim().replace(/\n+/g, " ")}`);
+    for (const f of inBody) out.push(`- ${sevBadge(f.severity)} ${location(f)}: **${f.title}**. ${f.body.trim().replace(/\n+/g, " ")}`);
     out.push("", "</details>", "");
   }
 
