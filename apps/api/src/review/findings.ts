@@ -215,6 +215,11 @@ const GENERIC_WORDS = new Set([
   "should", "using", "instead", "without", "could", "never", "always", "handling", "handle", "possible", "potential",
 ]);
 
+/** Plural and singular count as one word when comparing titles (`amounts`, `amount`). */
+function stem(words: string[]): string[] {
+  return words.map((w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w));
+}
+
 function overlaps(a: Finding, b: Finding): boolean {
   if (a.line === null || b.line === null) return false;
   return (a.startLine ?? a.line) <= b.line && (b.startLine ?? b.line) <= a.line;
@@ -231,9 +236,11 @@ export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boo
   const fromCheck = (f: Finding) => Boolean(checkIds?.size) && f.reviewer.split("+").some((id) => checkIds!.has(id));
   if (fromCheck(a) && fromCheck(b)) return a.fingerprint === b.fingerprint && a.line === b.line;
   if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
+  const wa = stem(titleWords(a.title));
+  const wb = stem(titleWords(b.title));
+  // The same issue worded almost the same way is one finding, even when reviewers anchor it apart.
+  if (jaccard(wa, wb) >= 0.7) return true;
   if (!near(a, b)) return false;
-  const wa = titleWords(a.title);
-  const wb = titleWords(b.title);
   const shared = wa.filter((w) => wb.includes(w));
   if (jaccard(wa, wb) >= 0.34 || shared.length >= 2) return true;
   return overlaps(a, b) && shared.some((w) => w.length >= 5 && !GENERIC_WORDS.has(w));
