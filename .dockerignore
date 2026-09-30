@@ -1,0 +1,11 @@
+**/node_modules
+**/.next
+**/*.tsbuildinfo
+data
+apps/web
+.git
+.claude
+.prguard
+.env
+.env.*
+*.pem
