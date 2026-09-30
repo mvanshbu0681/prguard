@@ -47,6 +47,21 @@ See [GAPS.md](GAPS.md). The main ones: the queue serializes jobs per PR, increme
 touch new lines, the reviewer tool loop answers through a `submit_findings` tool, the repo detail
 page was committed panel by panel, and publishing is idempotent across crashes.
 
+## After verification
+
+The first verification pass was BLOCKED on B1 (the newest push could be left unreviewed when
+webhooks arrived out of order) with 17 warnings. Fix commits after `9ecbe47` close B1 and the
+relevant warnings: takeover of the live head, per-repository access with admin gating, OAuth state
+on installs, non-fatal summary failures, closing abandoned reviews, safer suggestions and dedupe,
+streamed snapshot size cap, per-rule-set caps, delivery pruning, and one initial migration. B1 was
+re-tested live in Docker: two pushes about a second apart leave the newest commit reviewed with a
+single check run. The second pass found B2 (org admin needed a permission the App lacks); admin is
+now derived from repository permissions and was checked with a real GitHub sign-in. Suggestions keep
+their indentation, and one that shortens a range is posted only when it is a pure deletion; on a fresh
+refunds PR all five suggestions committed to valid Python. Widening a range can still take in a line
+the suggestion rewrites (a docstring, in one case). Details in [GAPS.md](GAPS.md) and
+[VERIFICATION.md](VERIFICATION.md).
+
 ## Not closed
 
 - AC-16 is closed by configuration only: the Google provider resolves, but no Gemini key was
