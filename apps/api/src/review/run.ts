@@ -3,7 +3,17 @@ import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import type { PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName, type GitHub } from "../github/app.ts";
-import { compare, finishCheckRun, getPull, listFiles, postReview, removeReaction, type PrFile, type Repo } from "../github/pr.ts";
+import {
+  compare,
+  findPostedReview,
+  finishCheckRun,
+  getPull,
+  listFiles,
+  postReview,
+  removeReaction,
+  type PrFile,
+  type Repo,
+} from "../github/pr.ts";
 import { errMessage, log } from "../log.ts";
 import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
 import { buildContext } from "./context.ts";
@@ -245,8 +255,15 @@ async function pipeline(run: Run): Promise<void> {
       reviewUrl: reviewUrl(review.id),
     });
 
-  let posted: { id: number; url: string } | null = null;
-  if (!review.githubReviewId) {
+  // A retry after a crash must not post twice: reuse a review already on GitHub for this run.
+  const current = reviewsRepo.get(review.id)!;
+  let posted: { id: number; url: string } | null = current.githubReviewId
+    ? { id: current.githubReviewId, url: current.githubReviewUrl ?? "" }
+    : ctx.job.attempts > 1
+      ? await findPostedReview(gh, r, pr.number, `/reviews/${review.id})`)
+      : null;
+  const alreadyPosted = posted !== null;
+  if (!posted) {
     try {
       posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), toComments(findings));
     } catch (err) {
@@ -255,8 +272,11 @@ async function pipeline(run: Run): Promise<void> {
       findings = withInlineInBody(findings);
       posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), []);
     }
+    reviewsRepo.update(review.id, { githubReviewId: posted.id, githubReviewUrl: posted.url });
   }
-  findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, findings);
+  if (!alreadyPosted || findingsRepo.listForReview(review.id).length === 0) {
+    findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, findings);
+  }
 
   reviewsRepo.update(review.id, {
     status: "completed",
@@ -264,7 +284,6 @@ async function pipeline(run: Run): Promise<void> {
     summary,
     walkthrough,
     filesReviewed: reviewable.length - notReviewed.length,
-    ...(posted ? { githubReviewId: posted.id, githubReviewUrl: posted.url } : {}),
     finishedAt: Date.now(),
   });
   pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });

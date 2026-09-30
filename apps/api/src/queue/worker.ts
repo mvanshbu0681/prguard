@@ -1,7 +1,7 @@
 import * as jobsRepo from "../db/repos/jobs.ts";
 import type { Job } from "../db/schema.ts";
 import { errMessage, log } from "../log.ts";
-import { waitForWork, type JobType } from "./queue.ts";
+import { waitForWork, wake, type JobType } from "./queue.ts";
 
 export class CancelledError extends Error {
   constructor() {
@@ -23,6 +23,7 @@ type Handler = (payload: Record<string, unknown>, ctx: JobContext) => Promise<vo
 
 const handlers = new Map<string, Handler>();
 let running = false;
+const STALE_MS = 30_000;
 
 export function registerJob(type: JobType, handler: Handler): void {
   handlers.set(type, handler);
@@ -31,12 +32,14 @@ export function registerJob(type: JobType, handler: Handler): void {
 export function startWorkers(count: number): void {
   if (running) return;
   running = true;
-  const recovered = jobsRepo.recoverStale(60_000);
+  // Heartbeats land every 10s, so a running job silent for 30s belongs to a worker that died.
+  const recovered = jobsRepo.recoverStale(STALE_MS);
   if (recovered.length) log.warn({ jobs: recovered.map((j) => j.id) }, "recovered interrupted jobs");
   setInterval(() => {
-    const stale = jobsRepo.recoverStale(60_000);
+    const stale = jobsRepo.recoverStale(STALE_MS);
     if (stale.length) log.warn({ jobs: stale.map((j) => j.id) }, "recovered stalled jobs");
-  }, 30_000).unref();
+    if (stale.length) wake();
+  }, 10_000).unref();
   for (let i = 0; i < count; i++) void loop(i);
   log.info({ workers: count }, "workers started");
 }
@@ -83,5 +86,7 @@ async function run(job: Job, slot: number): Promise<void> {
     }
   } finally {
     clearInterval(beat);
+    // A job for the same PR may have been waiting on this one.
+    wake();
   }
 }

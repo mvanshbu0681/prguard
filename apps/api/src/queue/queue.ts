@@ -13,6 +13,10 @@ export function enqueue(type: JobType, key: string, payload: Record<string, unkn
   return result;
 }
 
+export function wake(): void {
+  bus.emit("job");
+}
+
 export function cancelKey(key: string, prefix = false): Job[] {
   return jobsRepo.cancelByKey(key, prefix);
 }

@@ -106,6 +106,13 @@ export async function compare(gh: GitHub, r: Repo, base: string, head: string) {
   }
 }
 
+/** A review this app already posted on the PR whose body contains `marker` (used after a crash). */
+export async function findPostedReview(gh: GitHub, r: Repo, number: number, marker: string): Promise<{ id: number; url: string } | null> {
+  const reviews = await gh.paginate(gh.rest.pulls.listReviews, { ...r, pull_number: number, per_page: 100 });
+  const hit = reviews.find((rv) => rv.user?.type === "Bot" && (rv.body ?? "").includes(marker));
+  return hit ? { id: hit.id, url: hit.html_url } : null;
+}
+
 export async function postReview(
   gh: GitHub,
   r: Repo,
