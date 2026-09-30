@@ -34,6 +34,7 @@ import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { place, processFindings, type RawFinding } from "./findings.ts";
 import { verifyFindings } from "./verify.ts";
+import { withSuggestedTests } from "./test-plan.ts";
 import { redactSecrets } from "./checks/secrets.ts";
 import { dependencies, isManifest } from "./checks/manifests.ts";
 import { assessRisk, type RiskLevel } from "./risk.ts";
@@ -369,7 +370,7 @@ async function pipeline(run: Run): Promise<void> {
           (o) => `${o.stats.filter((s) => s.chunks > 0).length} reviewers, ${o.raw.length} findings before filtering`,
         );
         trace.data.reviewers = outcome.stats;
-        raw = oneTestGap(outcome.raw);
+        raw = await withSuggestedTests(oneTestGap(outcome.raw), codeFiles, meta);
         failedChunks = outcome.failedChunks;
         notReviewed = outcome.notReviewed;
         budgetHit = outcome.budgetHit;
