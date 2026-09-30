@@ -60,6 +60,30 @@ export function commentableLines(file: FileDiff): Map<number, number> {
   return lines;
 }
 
+/** Cuts hunks down to windows of `radius` lines around the focus lines (for incremental reviews). */
+export function windowHunks(hunks: Hunk[], focus: Set<number>, radius = 6): Hunk[] {
+  const out: Hunk[] = [];
+  for (const hunk of hunks) {
+    const hits = hunk.lines.map((l, i) => (l.kind === "add" && l.newNo !== null && focus.has(l.newNo) ? i : -1)).filter((i) => i >= 0);
+    if (!hits.length) continue;
+    const keep = hunk.lines.map((_, i) => hits.some((h) => Math.abs(h - i) <= radius));
+    let start = -1;
+    for (let i = 0; i <= hunk.lines.length; i++) {
+      if (i < hunk.lines.length && keep[i]) {
+        if (start < 0) start = i;
+        continue;
+      }
+      if (start >= 0) {
+        const lines = hunk.lines.slice(start, i);
+        const first = lines.find((l) => l.newNo !== null)?.newNo ?? hunk.newStart;
+        out.push({ header: `@@ excerpt from line ${first} @@`, oldStart: hunk.oldStart, newStart: first, lines });
+        start = -1;
+      }
+    }
+  }
+  return out;
+}
+
 /** Text of each new-file line visible in the diff. */
 export function newLineText(file: FileDiff): Map<number, string> {
   const text = new Map<number, string>();

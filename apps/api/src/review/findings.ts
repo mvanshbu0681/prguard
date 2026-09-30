@@ -181,6 +181,29 @@ export function isDuplicate(a: Finding, b: Finding): boolean {
   return jaccard(wa, wb) >= 0.34 || shared >= 2 || a.category === b.category;
 }
 
+type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category">;
+
+/** A finding already shown on this PR by an earlier review (lines may have shifted a little). */
+function isRepeat(p: Previous, f: Finding): boolean {
+  if (p.fingerprint === f.fingerprint) return true;
+  if (p.path !== f.path) return false;
+  const wp = titleWords(p.title);
+  const wf = titleWords(f.title);
+  const sim = jaccard(wp, wf);
+  if (sim >= 0.6) return true;
+  const shared = wp.filter((w) => wf.includes(w)).length;
+  const close = p.line === null || f.line === null || Math.abs((p.startLine ?? p.line) - (f.startLine ?? f.line)) <= 4;
+  return close && (sim >= 0.34 || shared >= 2 || p.category === f.category);
+}
+
+/** In an incremental review, a finding must touch a line the new commits added. */
+function touchesFocus(f: Finding, focus: Map<string, Set<number>>): boolean {
+  const lines = focus.get(f.path);
+  if (!lines || f.line === null) return false;
+  for (let l = (f.startLine ?? f.line) - 2; l <= f.line + 2; l++) if (lines.has(l)) return true;
+  return false;
+}
+
 export function rank(findings: Finding[]): Finding[] {
   return [...findings].sort(
     (a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] || b.confidence - a.confidence || a.path.localeCompare(b.path),
@@ -193,9 +216,17 @@ export type Processed = { findings: Finding[]; repeats: number; lowConfidence: n
  * Anchors, filters, dedupes, ranks and places findings. `previous` holds findings already shown on
  * this PR; anything matching one of them is dropped so a push never repeats a comment.
  */
-export function processFindings(raw: RawFinding[], files: FileDiff[], previous: Pick<Finding, "path" | "title" | "fingerprint">[] = []): Processed {
+export function processFindings(
+  raw: RawFinding[],
+  files: FileDiff[],
+  previous: Previous[] = [],
+  focus?: Map<string, Set<number>>,
+): Processed {
   const byPath = new Map(files.map((f) => [f.path, f]));
-  const anchored = raw.map((r) => anchor(r, byPath)).filter((f): f is Finding => f !== null);
+  const anchored = raw
+    .map((r) => anchor(r, byPath))
+    .filter((f): f is Finding => f !== null)
+    .filter((f) => !focus || touchesFocus(f, focus));
 
   const confident = anchored.filter((f) => f.confidence >= MIN_CONFIDENCE);
   const lowConfidence = anchored.length - confident.length;
@@ -210,9 +241,7 @@ export function processFindings(raw: RawFinding[], files: FileDiff[], previous: 
     kept.push({ ...f });
   }
 
-  const fresh = kept.filter(
-    (f) => !previous.some((p) => p.fingerprint === f.fingerprint || (p.path === f.path && jaccard(titleWords(p.title), titleWords(f.title)) >= 0.6)),
-  );
+  const fresh = kept.filter((f) => !previous.some((p) => isRepeat(p, f)));
   const repeats = kept.length - fresh.length;
 
   let inline = 0;

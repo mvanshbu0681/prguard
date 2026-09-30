@@ -3,12 +3,12 @@ import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import type { PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName, type GitHub } from "../github/app.ts";
-import { finishCheckRun, getPull, listFiles, postReview, removeReaction, type Repo } from "../github/pr.ts";
+import { compare, finishCheckRun, getPull, listFiles, postReview, removeReaction, type PrFile, type Repo } from "../github/pr.ts";
 import { errMessage, log } from "../log.ts";
 import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
 import { buildContext } from "./context.ts";
 import { config } from "../config.ts";
-import { packChunks, toFileDiffs, type FileDiff } from "./diff.ts";
+import { addedLines, packChunks, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
 import { cancelReason, closeReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
@@ -53,6 +53,40 @@ function stage(reviewId: number, s: Review["stage"]): void {
   reviewsRepo.update(reviewId, { stage: s });
 }
 
+type Scope = {
+  kind: "full" | "incremental";
+  files: FileDiff[];
+  focus: Map<string, Set<number>> | undefined;
+  range: { from: string; to: string } | null;
+};
+
+/**
+ * What this review covers. After a previous review, only the new commits: lines added both in the
+ * compare from the last reviewed commit and in the PR diff (so merges from the base branch add
+ * nothing). A force-push or an unavailable compare falls back to the whole PR.
+ */
+async function resolveScope(run: Run, pr: PullRequest, files: FileDiff[]): Promise<Scope> {
+  const full: Scope = { kind: "full", files, focus: undefined, range: null };
+  const last = pr.lastReviewedSha;
+  if (!last || run.review.trigger === "manual") return full;
+  if (last === run.review.headSha) return { kind: "incremental", files: [], focus: new Map(), range: { from: last, to: last } };
+
+  const cmp = await compare(run.gh, run.r, last, run.review.headSha);
+  if (!cmp || cmp.status !== "ahead") return full;
+
+  const newFiles = toFileDiffs((cmp.files ?? []) as PrFile[]);
+  const focus = new Map<string, Set<number>>();
+  for (const nf of newFiles) {
+    const prFile = files.find((f) => f.path === nf.path);
+    if (!prFile) continue;
+    const inPr = addedLines(prFile);
+    const both = [...addedLines(nf)].filter((l) => inPr.has(l));
+    if (both.length) focus.set(nf.path, new Set(both));
+  }
+  const scoped = files.filter((f) => focus.has(f.path)).map((f) => ({ ...f, hunks: windowHunks(f.hunks, focus.get(f.path)!) }));
+  return { kind: "incremental", files: scoped, focus, range: { from: last, to: run.review.headSha } };
+}
+
 async function pipeline(run: Run): Promise<void> {
   const { review, gh, r, ctx } = run;
   let { pr } = run;
@@ -73,9 +107,20 @@ async function pipeline(run: Run): Promise<void> {
   if (live.head.sha !== review.headSha || pr.state !== "open" || pr.draft) throw new CancelledError();
 
   const files: FileDiff[] = toFileDiffs(await listFiles(gh, r, pr.number));
-  const { reviewable, skipped, docsOnly } = classify(files);
-  reviewsRepo.update(review.id, { kind: "full", baseSha: live.base.sha, filesSkipped: skipped });
+  const scope = await resolveScope(run, pr, files);
+  const { kind, focus, range } = scope;
+  const { reviewable, skipped, docsOnly } = classify(scope.files);
+  const anchorFiles = classify(files).reviewable;
+  reviewsRepo.update(review.id, { kind, baseSha: live.base.sha, filesSkipped: skipped });
   ctx.checkCancelled();
+
+  if (kind === "incremental" && reviewable.length === 0) {
+    reviewsRepo.update(review.id, { status: "completed", stage: "done", summary: "No new changes to review.", finishedAt: Date.now() });
+    pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
+    if (review.checkRunId) await finishCheckRun(gh, r, review.checkRunId, "success", "No new changes", "Nothing new to review since the last review.");
+    if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+    return;
+  }
 
   const context = buildContext(pr);
   const meta = { reviewId: review.id, repositoryId: run.repo.id };
@@ -94,7 +139,7 @@ async function pipeline(run: Run): Promise<void> {
   stage(review.id, deep ? "reviewing" : "summarizing");
 
   const summaryTask = reviewable.length
-    ? summarize({ context, files: reviewable, incremental: false, meta }).then((s) => {
+    ? summarize({ context, files: reviewable, incremental: kind === "incremental", focus, meta }).then((s) => {
         summary = s.summary;
         walkthrough = s.walkthrough;
       })
@@ -110,7 +155,7 @@ async function pipeline(run: Run): Promise<void> {
         const ordered = [...codeFiles].sort(
           (a, b) => KIND_PRIORITY[fileKind(a.path)] - KIND_PRIORITY[fileKind(b.path)] || a.path.localeCompare(b.path),
         );
-        const packed = packChunks(ordered, { chunkTokens: config.review.chunkTokens, maxChunks: config.review.maxChunks });
+        const packed = packChunks(ordered, { chunkTokens: config.review.chunkTokens, maxChunks: config.review.maxChunks, focus });
         notReviewed = packed.notReviewed;
         const chunks = packed.chunks;
         const tasks = chunks.flatMap((chunk, index) => active.map((reviewer) => ({ reviewer, chunk: chunk.files, index, tokens: chunk.tokens })));
@@ -129,7 +174,7 @@ async function pipeline(run: Run): Promise<void> {
           reserved += estimate;
           const inChunk = new Set(task.chunk.map((f) => f.path));
           const otherFiles = allPaths.filter((p) => !inChunk.has(p)).slice(0, 60);
-          const found = await reviewChunk({ task, chunkCount: chunks.length, otherFiles, context, snapshot, meta })
+          const found = await reviewChunk({ task, chunkCount: chunks.length, otherFiles, context, snapshot, focus, meta })
             .catch((err) => {
               if (err instanceof CancelledError) throw err;
               log.warn({ review: review.id, reviewer: task.reviewer.id, err: errMessage(err) }, "reviewer failed");
@@ -148,7 +193,8 @@ async function pipeline(run: Run): Promise<void> {
   await Promise.all([summaryTask, reviewTask]);
   ctx.checkCancelled();
 
-  const processed = processFindings(raw, reviewable);
+  const previous = findingsRepo.listPostedForPull(pr.id);
+  const processed = processFindings(raw, anchorFiles, previous, focus);
   let findings: Finding[] = processed.findings;
   const partial = failedChunks > 0 || notReviewed.length > 0;
   reviewsRepo.update(review.id, { partial, notReviewed });
@@ -166,14 +212,28 @@ async function pipeline(run: Run): Promise<void> {
                 .slice(0, 10)
                 .map((p) => `\`${p}\``)
                 .join(", ")}${notReviewed.length > 10 ? ` and ${notReviewed.length - 10} more` : ""}.`
-            : null;
+            : processed.repeats && findings.length === 0
+              ? "No new issues since the last review."
+              : null;
+
+  // A push that brings nothing new to say gets no review, only a check run.
+  const silent = kind === "incremental" && findings.length === 0 && !partial;
+  if (silent) {
+    reviewsRepo.update(review.id, { status: "completed", stage: "done", summary, walkthrough, filesReviewed: reviewable.length, finishedAt: Date.now() });
+    pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
+    if (review.checkRunId) {
+      await finishCheckRun(gh, r, review.checkRunId, "success", "No new issues", `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
+    }
+    if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+    return;
+  }
 
   const bodyFor = (items: Finding[]) =>
     reviewBody({
       summary,
       walkthrough,
-      kind: "full",
-      range: null,
+      kind,
+      range,
       findings: items,
       skipped,
       notReviewed,
