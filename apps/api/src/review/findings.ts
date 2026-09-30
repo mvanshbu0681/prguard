@@ -271,21 +271,29 @@ export function processFindings(
 
   const fresh = kept.filter((f) => !previous.some((p) => isRepeat(p, f)));
   const repeats = kept.length - fresh.length;
+  return { findings: fresh, repeats, lowConfidence, dropped, unique: kept.length };
+}
 
+/**
+ * Caps line comments: at most `MAX_INLINE`, nits at most `MAX_NITS`. Overflow goes to the review
+ * body, extra nits are hidden. Runs last, after verification and learnings have removed findings.
+ */
+export function place(findings: Finding[]): Finding[] {
   let inline = 0;
   let nits = 0;
-  for (const f of fresh) {
-    if (f.placement !== "inline") continue;
+  return rank(findings).map((original) => {
+    const f = { ...original };
+    if (f.placement !== "inline") return f;
     if (f.severity === "nit") {
       if (nits >= MAX_NITS || inline >= MAX_INLINE) f.placement = "hidden";
       else {
         nits++;
         inline++;
       }
-      continue;
+      return f;
     }
     if (inline >= MAX_INLINE) f.placement = "body";
     else inline++;
-  }
-  return { findings: fresh, repeats, lowConfidence, dropped, unique: kept.length };
+    return f;
+  });
 }

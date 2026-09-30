@@ -200,6 +200,8 @@ export const findings = sqliteTable(
     fingerprint: text("fingerprint").notNull(),
     placement: text("placement").$type<"inline" | "body" | "hidden">().notNull(),
     details: text("details", { mode: "json" }).$type<{ title: string; body: string } | null>(),
+    verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+    evidence: text("evidence"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("findings_review_idx").on(t.reviewId), index("findings_pr_idx").on(t.pullRequestId)],

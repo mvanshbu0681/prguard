@@ -23,6 +23,8 @@ export type Finding = {
   /** Confirmed by the verification pass, with the code that shows it. */
   verified?: boolean;
   evidence?: string | null;
+  /** From a check (code, not a model): certain, so never verified or suppressed like model findings. */
+  fromCheck?: boolean;
 };
 
 export function countBySeverity(findings: Pick<Finding, "severity">[]): Record<Severity, number> {

@@ -25,6 +25,8 @@ export function insertMany(ids: { reviewId: number; pullRequestId: number; repos
         fingerprint: f.fingerprint,
         placement: f.placement,
         details: f.details ?? null,
+        verified: f.verified ?? false,
+        evidence: f.evidence ?? null,
         createdAt: now,
       })),
     )

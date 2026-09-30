@@ -32,7 +32,8 @@ import { triage } from "./triage.ts";
 import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
-import { processFindings, type RawFinding } from "./findings.ts";
+import { place, processFindings, type RawFinding } from "./findings.ts";
+import { verifyFindings } from "./verify.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
 import { enabledPlugins, modelReviewers } from "./reviewers/index.ts";
@@ -232,9 +233,10 @@ async function pipeline(run: Run): Promise<void> {
         })
     : Promise.resolve();
 
+  let snapshot: string | null = null;
   const reviewTask = deep
     ? (async () => {
-        const [snapshot, routing] = await Promise.all([
+        const [snap, routing] = await Promise.all([
           getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
             log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
             return null;
@@ -248,6 +250,7 @@ async function pipeline(run: Run): Promise<void> {
               )
             : (trace.add("triage", "Triage", null, "Off", "skipped"), null),
         ]);
+        snapshot = snap;
         if (routing) reviewsRepo.update(review.id, { triage: routing.files });
         ctx.checkCancelled();
 
@@ -306,8 +309,47 @@ async function pipeline(run: Run): Promise<void> {
 
   const previous = findingsRepo.listPostedForPull(pr.id);
   const processed = processFindings(raw, anchorFiles, previous, focus);
+  let candidates = processed.findings;
+
+  // Model findings of medium severity and above are re-checked against the code before posting.
+  let rejectedCount = 0;
+  if (config.features.verify && candidates.some((f) => !f.fromCheck)) {
+    const verifyStarted = Date.now();
+    const spent = () => {
+      const now = reviewsRepo.get(review.id)!;
+      return now.tokensIn + now.tokensOut - baseline;
+    };
+    const verification = await verifyFindings({
+      findings: candidates,
+      files: anchorFiles,
+      snapshot,
+      context: baseContext,
+      budgetLeft: () => config.review.tokenBudget - spent(),
+      meta,
+    });
+    candidates = verification.findings;
+    rejectedCount = verification.rejected.length;
+    trace.data.rejected = verification.rejected.map((x) => ({ title: x.finding.title, path: x.finding.path, reason: x.reason }));
+    trace.add(
+      "verify",
+      "Verification",
+      verifyStarted,
+      verification.skipped && verification.checked === 0
+        ? "Skipped, review budget reached"
+        : `${verification.checked} checked, ${verification.confirmed} confirmed, ${verification.rejected.length} rejected`,
+    );
+  } else {
+    trace.add("verify", "Verification", null, config.features.verify ? "Nothing to verify" : "Off", "skipped");
+  }
+  ctx.checkCancelled();
+
   const terms = codeTerms(files);
-  let findings: Finding[] = processed.findings.map((f) => ({ ...f, title: codify(f.title, terms), body: codify(f.body, terms) }));
+  let findings: Finding[] = place(candidates).map((f) => ({
+    ...f,
+    title: codify(f.title, terms),
+    body: codify(f.body, terms),
+    evidence: f.evidence ? codify(f.evidence, terms) : f.evidence,
+  }));
   if (summary) summary = codify(summary, terms);
   walkthrough = walkthrough.map((w) => ({ ...w, change: codify(w.change, terms) }));
   trace.data.funnel = {
@@ -317,7 +359,7 @@ async function pipeline(run: Run): Promise<void> {
     unique: processed.unique,
     fresh: processed.findings.length,
     suppressed: 0,
-    rejected: 0,
+    rejected: rejectedCount,
     posted: findings.filter((f) => f.placement !== "hidden").length,
   };
   const partial = failedChunks > 0 || notReviewed.length > 0;
