@@ -11,6 +11,7 @@ import {
   listFiles,
   postReview,
   removeReaction,
+  startCheckRun,
   type PrFile,
   type Repo,
 } from "../github/pr.ts";
@@ -20,7 +21,7 @@ import { queueBrief } from "../brief/index-repo.ts";
 import { buildContext } from "./context.ts";
 import { config } from "../config.ts";
 import { addedLines, packChunks, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
-import { cancelReason, closeReview, reviewUrl } from "./lifecycle.ts";
+import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
 import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { processFindings, type RawFinding } from "./findings.ts";
@@ -32,6 +33,25 @@ import { summarize } from "./summarize.ts";
 import type { Finding } from "./types.ts";
 
 const REVIEW_PARALLELISM = 3;
+
+function describeSkipped(skipped: { path: string; reason: string }[]): string {
+  const byReason = new Map<string, string[]>();
+  for (const s of skipped) byReason.set(s.reason, [...(byReason.get(s.reason) ?? []), s.path]);
+  const label: Record<string, string> = {
+    lockfile: "lock files",
+    generated: "generated files",
+    binary: "binary files",
+    deleted: "deleted files",
+    "diff too large": "files too large to diff",
+    "no changes": "renamed files",
+    "only deletions": "files with only removed lines",
+  };
+  const parts = [...byReason].map(([reason, paths]) => {
+    const shown = paths.slice(0, 5).map((p) => `\`${p}\``).join(", ");
+    return `${label[reason] ?? reason} (${shown}${paths.length > 5 ? ` and ${paths.length - 5} more` : ""})`;
+  });
+  return `This pull request changes only ${parts.join("; ")}.`;
+}
 
 /** Runs `fn` over items with at most `limit` in flight; the first error stops new work and is rethrown. */
 async function runPool<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
@@ -100,8 +120,8 @@ async function resolveScope(run: Run, pr: PullRequest, files: FileDiff[]): Promi
 }
 
 async function pipeline(run: Run): Promise<void> {
-  const { review, gh, r, ctx } = run;
-  let { pr } = run;
+  const { gh, r, ctx } = run;
+  let { pr, review } = run;
 
   run.ctx.checkCancelled();
   const repoNow = repositoriesRepo.get(run.repo.id);
@@ -118,10 +138,25 @@ async function pipeline(run: Run): Promise<void> {
     state: live.merged ? "merged" : (live.state as "open" | "closed"),
   });
   pr = pullsRepo.get(pr.id)!;
-  if (live.head.sha !== review.headSha || pr.state !== "open" || pr.draft) throw new CancelledError();
+  if (pr.state !== "open" || pr.draft) throw new CancelledError();
+
+  // The PR moved on since this review was queued. Webhooks can arrive out of order, so the review
+  // queued for the newest push may already be cancelled: unless another open review covers the live
+  // head, this one takes it over instead of leaving the newest push unreviewed.
+  if (live.head.sha !== review.headSha) {
+    const covered = reviewsRepo.listOpenForPull(pr.id).some((o) => o.id !== review.id && o.headSha === live.head.sha);
+    if (covered) throw new CancelledError();
+    if (review.checkRunId) {
+      await finishCheckRun(gh, r, review.checkRunId, "cancelled", "Superseded", "A newer push is being reviewed.");
+    }
+    const checkRunId = await startCheckRun(gh, r, live.head.sha, reviewUrl(review.id));
+    reviewsRepo.update(review.id, { headSha: live.head.sha, baseSha: live.base.sha, checkRunId });
+    review = reviewsRepo.get(review.id)!;
+    log.info({ review: review.id, head: live.head.sha }, "review moved to the latest push");
+  }
 
   const files: FileDiff[] = toFileDiffs(await listFiles(gh, r, pr.number));
-  const scope = await resolveScope(run, pr, files);
+  const scope = await resolveScope({ ...run, review }, pr, files);
   const { kind, focus, range } = scope;
   const { reviewable, skipped, docsOnly } = classify(scope.files);
   const anchorFiles = classify(files).reviewable;
@@ -157,13 +192,23 @@ async function pipeline(run: Run): Promise<void> {
   let notReviewed: string[] = [];
   let budgetHit = false;
   let reserved = 0;
+  // Usage from an earlier, interrupted attempt does not count against this attempt's budget.
+  const baseline = review.tokensIn + review.tokensOut;
   stage(review.id, deep ? "reviewing" : "summarizing");
 
+  // A failed summary must not throw away the findings: the review goes out without one.
+  let summaryFailed = false;
   const summaryTask = reviewable.length
-    ? summarize({ context, files: reviewable, incremental: kind === "incremental", focus, meta }).then((s) => {
-        summary = s.summary;
-        walkthrough = s.walkthrough;
-      })
+    ? summarize({ context, files: reviewable, incremental: kind === "incremental", focus, meta })
+        .then((s) => {
+          summary = s.summary;
+          walkthrough = s.walkthrough;
+        })
+        .catch((err) => {
+          if (run.signal.aborted) throw err;
+          summaryFailed = true;
+          log.warn({ review: review.id, err: errMessage(err) }, "summary failed, publishing without it");
+        })
     : Promise.resolve();
 
   const reviewTask = deep
@@ -187,7 +232,7 @@ async function pipeline(run: Run): Promise<void> {
           const spent = reviewsRepo.get(review.id)!;
           const steps = task.reviewer.tools && snapshot ? (task.reviewer.maxSteps ?? 4) : 1;
           const estimate = (task.tokens + 2500) * steps;
-          if (spent.tokensIn + spent.tokensOut + reserved + estimate > config.review.tokenBudget) {
+          if (spent.tokensIn + spent.tokensOut - baseline + reserved + estimate > config.review.tokenBudget) {
             budgetHit = true;
             for (const f of task.chunk) if (!notReviewed.includes(f.path)) notReviewed.push(f.path);
             return;
@@ -219,6 +264,10 @@ async function pipeline(run: Run): Promise<void> {
   let findings: Finding[] = processed.findings;
   const partial = failedChunks > 0 || notReviewed.length > 0;
   reviewsRepo.update(review.id, { partial, notReviewed });
+  if (processed.dropped) log.info({ review: review.id, dropped: processed.dropped }, "findings dropped");
+
+  // Nothing the models could read (lock files, generated or binary files): describe it plainly.
+  if (reviewable.length === 0 && skipped.length) summary = describeSkipped(skipped);
 
   stage(review.id, "publishing");
   const note =
@@ -228,6 +277,8 @@ async function pipeline(run: Run): Promise<void> {
         ? "Documentation only, so this is a summary without a code review."
         : !deep
           ? "Reviewers are off for this repository, so this is a summary only."
+          : summaryFailed
+          ? "The summary could not be written this time."
           : failedChunks
           ? "Part of this pull request could not be reviewed. Re-run to try again."
           : notReviewed.length
@@ -323,7 +374,6 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
   if (!review || !["queued", "running"].includes(review.status)) return;
   const pr = pullsRepo.get(review.pullRequestId)!;
   const repo = repositoriesRepo.get(review.repositoryId)!;
-  const gh = await installationClient(repo.installationId);
   const r = splitFullName(repo.fullName);
   const reviewLog = log.child({ review: reviewId, repo: repo.fullName, pr: pr.number });
   const started = Date.now();
@@ -339,6 +389,7 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
   }, 2000);
 
   try {
+    const gh = await installationClient(repo.installationId);
     await pipeline({ review, pr, repo, gh, r, ctx, signal: abort.signal });
     reviewLog.info({ ms: Date.now() - started }, "review completed");
   } catch (err) {
@@ -353,15 +404,13 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
       throw err;
     }
     reviewLog.error({ err: errMessage(err) }, "review failed");
-    reviewsRepo.update(reviewId, { status: "failed", stage: "done", error: "Review failed.", finishedAt: Date.now() });
-    if (review.checkRunId) {
-      await finishCheckRun(gh, r, review.checkRunId, "neutral", "Review failed", "Something went wrong. Re-run it from the dashboard.");
-    }
-    if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+    await failReview(reviewId);
     throw new FatalError(errMessage(err));
   } finally {
     clearInterval(watch);
+    // Anything still running for this review (e.g. reviewer calls after a failed summary) stops here.
+    abort.abort();
   }
 }
 
-registerJob("review_pr", runReview);
+registerJob("review_pr", runReview, (payload) => failReview(Number(payload.reviewId)));

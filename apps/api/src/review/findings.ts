@@ -60,8 +60,6 @@ function resolvePath(raw: string, files: Map<string, FileDiff>): FileDiff | unde
  * the same hunk and drops the suggestion; anything else is kept for the review body.
  */
 export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding | null {
-  const file = resolvePath(raw.path, files);
-  if (!file) return null;
   const title = raw.title.trim().replace(/\.$/, "");
   const body = raw.body.trim();
   if (!title || !body) return null;
@@ -69,16 +67,12 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
   const severity = SEVERITY_ALIASES[raw.severity.trim().toLowerCase()] ?? "medium";
   const confidence = Math.min(1, Math.max(0, raw.confidence ?? 0.7));
   const category = (raw.category ?? "bug").trim().toLowerCase().split(/\s+/)[0] || "bug";
-  const base = {
-    reviewer: raw.reviewer,
-    path: file.path,
-    severity,
-    category,
-    title,
-    body,
-    confidence,
-    fingerprint: fingerprint(file.path, title),
-  };
+  const file = resolvePath(raw.path, files);
+  const path = file?.path ?? raw.path.trim().replace(/^\.?\//, "");
+  const base = { reviewer: raw.reviewer, path, severity, category, title, body, confidence, fingerprint: fingerprint(path, title) };
+
+  // A file outside this diff (seen through the repo tools) cannot carry a line comment.
+  if (!file) return { ...base, line: null, startLine: null, suggestion: null, placement: "body" };
 
   const lines = commentableLines(file);
   const line = Math.round(raw.line);
@@ -119,9 +113,10 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
 }
 
 /**
- * Models often write a suggestion that also repeats the lines right after the range they cited.
- * When the extra trailing lines match the file, the range is widened so applying it is correct.
- * A suggestion identical to the current code is dropped.
+ * Models often cite one line but write a suggestion that rewrites the lines after it too. If lines
+ * that follow the range reappear in the suggestion, the range is widened to cover them, so that
+ * committing the suggestion does not leave them duplicated; when the range cannot be widened within
+ * the diff, the suggestion is dropped (the comment stays). A suggestion equal to the code is dropped.
  */
 function fitSuggestion(
   file: FileDiff,
@@ -138,18 +133,20 @@ function fitSuggestion(
   if (sug.join("\n").trim() === current.join("\n").trim()) return { suggestion: null, last };
 
   const extra = sug.length - current.length;
-  if (extra > 0 && extra <= 5) {
-    let matches = true;
-    for (let i = 1; i <= extra; i++) {
-      const fileLine = text.get(last + i);
-      if (fileLine === undefined || lines.get(last + i) !== hunk || fileLine.trim() !== sug[sug.length - extra + i - 1]!.trim()) {
-        matches = false;
-        break;
-      }
+  if (extra <= 0) return { suggestion, last };
+  const inSuggestion = new Set(sug.map((s) => s.trim()).filter(Boolean));
+  let widenTo = last;
+  for (let k = 1; k <= Math.min(extra, 12); k++) {
+    const fileLine = text.get(last + k);
+    if (fileLine === undefined) {
+      if (widenTo === last) break;
+      return { suggestion: null, last };
     }
-    if (matches) return { suggestion, last: last + extra };
+    if (fileLine.trim() && inSuggestion.has(fileLine.trim())) widenTo = last + k;
   }
-  return { suggestion, last };
+  if (widenTo === last) return { suggestion, last };
+  for (let l = last + 1; l <= widenTo; l++) if (lines.get(l) !== hunk) return { suggestion: null, last };
+  return { suggestion, last: widenTo };
 }
 
 const MIN_CONFIDENCE = 0.5;
@@ -171,29 +168,38 @@ function near(a: Finding, b: Finding): boolean {
   return aStart <= b.line + 2 && bStart <= a.line + 2;
 }
 
-/** The same problem reported twice: same place and a similar title, or the same fingerprint. */
+function distance(a: Pick<Finding, "line" | "startLine">, b: Pick<Finding, "line" | "startLine">): number {
+  if (a.line === null || b.line === null) return 0;
+  return Math.abs((a.startLine ?? a.line) - (b.startLine ?? b.line));
+}
+
+/**
+ * The same problem reported twice in one review: the same fingerprint close by, or overlapping lines
+ * with a similar title. A second real occurrence elsewhere in the file is kept.
+ */
 export function isDuplicate(a: Finding, b: Finding): boolean {
-  if (a.fingerprint === b.fingerprint) return true;
+  if (a.path !== b.path) return false;
+  if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
   if (!near(a, b)) return false;
   const wa = titleWords(a.title);
   const wb = titleWords(b.title);
   const shared = wa.filter((w) => wb.includes(w)).length;
-  return jaccard(wa, wb) >= 0.34 || shared >= 2 || a.category === b.category;
+  return jaccard(wa, wb) >= 0.34 || shared >= 2;
 }
 
 type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category">;
 
-/** A finding already shown on this PR by an earlier review (lines may have shifted a little). */
+/** A finding already shown on this PR by an earlier review (lines may have shifted since). */
 function isRepeat(p: Previous, f: Finding): boolean {
-  if (p.fingerprint === f.fingerprint) return true;
   if (p.path !== f.path) return false;
+  const gap = distance(p, f);
+  if (p.fingerprint === f.fingerprint && gap <= 40) return true;
   const wp = titleWords(p.title);
   const wf = titleWords(f.title);
   const sim = jaccard(wp, wf);
-  if (sim >= 0.6) return true;
+  if (sim >= 0.6 && gap <= 40) return true;
   const shared = wp.filter((w) => wf.includes(w)).length;
-  const close = p.line === null || f.line === null || Math.abs((p.startLine ?? p.line) - (f.startLine ?? f.line)) <= 4;
-  return close && (sim >= 0.34 || shared >= 2 || p.category === f.category);
+  return gap <= 4 && (sim >= 0.34 || shared >= 2);
 }
 
 /** In an incremental review, a finding must touch a line the new commits added. */
@@ -210,7 +216,7 @@ export function rank(findings: Finding[]): Finding[] {
   );
 }
 
-export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number };
+export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number; dropped: number };
 
 /**
  * Anchors, filters, dedupes, ranks and places findings. `previous` holds findings already shown on
@@ -223,10 +229,10 @@ export function processFindings(
   focus?: Map<string, Set<number>>,
 ): Processed {
   const byPath = new Map(files.map((f) => [f.path, f]));
-  const anchored = raw
-    .map((r) => anchor(r, byPath))
-    .filter((f): f is Finding => f !== null)
-    .filter((f) => !focus || touchesFocus(f, focus));
+  const valid = raw.map((r) => anchor(r, byPath)).filter((f): f is Finding => f !== null);
+  // In an incremental review only findings on the new lines count; older code was reviewed before.
+  const anchored = focus ? valid.filter((f) => touchesFocus(f, focus)) : valid;
+  const dropped = raw.length - anchored.length;
 
   const confident = anchored.filter((f) => f.confidence >= MIN_CONFIDENCE);
   const lowConfidence = anchored.length - confident.length;
@@ -259,5 +265,5 @@ export function processFindings(
     if (inline >= MAX_INLINE) f.placement = "body";
     else inline++;
   }
-  return { findings: fresh, repeats, lowConfidence };
+  return { findings: fresh, repeats, lowConfidence, dropped };
 }

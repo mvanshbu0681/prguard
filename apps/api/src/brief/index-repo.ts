@@ -93,4 +93,6 @@ async function indexRepo(payload: Record<string, unknown>, ctx: JobContext): Pro
   }
 }
 
-registerJob("index_repo", indexRepo);
+registerJob("index_repo", indexRepo, async (payload) => {
+  repositoriesRepo.update(Number(payload.repositoryId), { briefStatus: "failed" });
+});

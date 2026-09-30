@@ -97,15 +97,14 @@ export function cancelByKey(key: string, prefix = false): Job[] {
 }
 
 /** Running jobs whose worker stopped heartbeating go back to the queue (or fail when out of attempts). */
-export function recoverStale(staleMs: number): Job[] {
+export function recoverStale(staleMs: number): { job: Job; outcome: "retry" | "failed" }[] {
   const cutoff = Date.now() - staleMs;
   const stale = db
     .select()
     .from(jobs)
     .where(and(eq(jobs.status, "running"), or(lt(jobs.heartbeatAt, cutoff), sql`${jobs.heartbeatAt} is null`)))
     .all();
-  for (const job of stale) fail(job, "Interrupted", 0);
-  return stale;
+  return stale.map((job) => ({ job, outcome: fail(job, "Interrupted", 0) }));
 }
 
 export function countByStatus(statuses: Job["status"][]): number {

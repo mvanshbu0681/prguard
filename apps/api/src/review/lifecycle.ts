@@ -5,7 +5,7 @@ import * as reviewsRepo from "../db/repos/reviews.ts";
 import type { PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName } from "../github/app.ts";
 import { addEyes, finishCheckRun, removeReaction, startCheckRun } from "../github/pr.ts";
-import { log } from "../log.ts";
+import { errMessage, log } from "../log.ts";
 import { briefKey, cancelKey, enqueue, reviewKey } from "../queue/queue.ts";
 
 export type CloseReason = "superseded" | "closed" | "draft" | "disabled" | "removed";
@@ -31,14 +31,18 @@ export async function triggerReview(repo: Repository, pr: PullRequest, trigger: 
     baseSha: pr.baseSha,
     trigger,
   });
-  const gh = await installationClient(repo.installationId);
-  const r = splitFullName(repo.fullName);
-  const [reactionId, checkRunId] = await Promise.all([
-    addEyes(gh, r, pr.number),
-    startCheckRun(gh, r, pr.headSha, reviewUrl(review.id)),
-  ]);
-  reviewsRepo.update(review.id, { reactionId, checkRunId });
-  log.info({ review: review.id, repo: repo.fullName, pr: pr.number, trigger }, "review acknowledged");
+  let reactionId: number | null = null;
+  let checkRunId: number | null = null;
+  try {
+    const gh = await installationClient(repo.installationId);
+    const r = splitFullName(repo.fullName);
+    [reactionId, checkRunId] = await Promise.all([addEyes(gh, r, pr.number), startCheckRun(gh, r, pr.headSha, reviewUrl(review.id))]);
+    reviewsRepo.update(review.id, { reactionId, checkRunId });
+    log.info({ review: review.id, repo: repo.fullName, pr: pr.number, trigger }, "review acknowledged");
+  } catch (err) {
+    // The review still runs; it just goes without the instant signal.
+    log.warn({ review: review.id, err: errMessage(err) }, "could not acknowledge the pull request");
+  }
 
   const { cancelled } = enqueue("review_pr", reviewKey(repo.id, pr.number), { reviewId: review.id });
   for (const job of cancelled) await closeReview(Number(job.payload.reviewId), "superseded");
@@ -65,6 +69,26 @@ export async function closeReview(reviewId: number, reason: CloseReason, repoOve
     await finishCheckRun(gh, r, review.checkRunId, reason === "disabled" ? "skipped" : "cancelled", title, summary);
   }
   if (review.reactionId && reason !== "superseded") await removeReaction(gh, r, pr.number, review.reactionId);
+}
+
+/** Marks a review failed and closes it out on GitHub (neutral check run, 👀 removed). Never throws. */
+export async function failReview(reviewId: number): Promise<void> {
+  const review = reviewsRepo.get(reviewId);
+  if (!review || !["queued", "running"].includes(review.status)) return;
+  reviewsRepo.update(reviewId, { status: "failed", stage: "done", error: "Review failed.", finishedAt: Date.now() });
+  const pr = pullsRepo.get(review.pullRequestId);
+  const repo = repositoriesRepo.get(review.repositoryId);
+  if (!pr || !repo) return;
+  try {
+    const gh = await installationClient(repo.installationId);
+    const r = splitFullName(repo.fullName);
+    if (review.checkRunId) {
+      await finishCheckRun(gh, r, review.checkRunId, "neutral", "Review failed", "Something went wrong. Re-run it from the dashboard.");
+    }
+    if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+  } catch (err) {
+    log.warn({ review: reviewId, err: errMessage(err) }, "could not close a failed review on GitHub");
+  }
 }
 
 /** Stops all pending work for repositories PR Guard lost access to or that were switched off. */

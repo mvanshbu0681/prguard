@@ -20,26 +20,35 @@ export type JobContext = {
 };
 
 type Handler = (payload: Record<string, unknown>, ctx: JobContext) => Promise<void>;
+type AbandonHandler = (payload: Record<string, unknown>) => Promise<void>;
 
 const handlers = new Map<string, Handler>();
+const abandonHandlers = new Map<string, AbandonHandler>();
 let running = false;
 const STALE_MS = 30_000;
 
-export function registerJob(type: JobType, handler: Handler): void {
+/** `onAbandon` runs when a job is given up for good outside its handler (e.g. its worker died on the last attempt). */
+export function registerJob(type: JobType, handler: Handler, onAbandon?: AbandonHandler): void {
   handlers.set(type, handler);
+  if (onAbandon) abandonHandlers.set(type, onAbandon);
+}
+
+function recover(): void {
+  const stale = jobsRepo.recoverStale(STALE_MS);
+  if (!stale.length) return;
+  log.warn({ jobs: stale.map((s) => s.job.id) }, "recovered interrupted jobs");
+  for (const { job, outcome } of stale) {
+    if (outcome === "failed") void abandonHandlers.get(job.type)?.(job.payload).catch(() => {});
+  }
+  wake();
 }
 
 export function startWorkers(count: number): void {
   if (running) return;
   running = true;
   // Heartbeats land every 10s, so a running job silent for 30s belongs to a worker that died.
-  const recovered = jobsRepo.recoverStale(STALE_MS);
-  if (recovered.length) log.warn({ jobs: recovered.map((j) => j.id) }, "recovered interrupted jobs");
-  setInterval(() => {
-    const stale = jobsRepo.recoverStale(STALE_MS);
-    if (stale.length) log.warn({ jobs: stale.map((j) => j.id) }, "recovered stalled jobs");
-    if (stale.length) wake();
-  }, 10_000).unref();
+  recover();
+  setInterval(recover, 10_000).unref();
   for (let i = 0; i < count; i++) void loop(i);
   log.info({ workers: count }, "workers started");
 }

@@ -99,7 +99,7 @@ export function addedLines(file: FileDiff): Set<number> {
 
 export type Chunk = { files: FileDiff[]; tokens: number };
 
-function splitByHunks(file: FileDiff, maxTokens: number, focus?: Set<number>): FileDiff[] {
+function splitByHunks(file: FileDiff, maxTokens: number, focus: Set<number> | undefined, onCut: () => void): FileDiff[] {
   const pieces: FileDiff[] = [];
   let hunks: Hunk[] = [];
   let tokens = 0;
@@ -107,9 +107,11 @@ function splitByHunks(file: FileDiff, maxTokens: number, focus?: Set<number>): F
     let h = hunk;
     let t = estimateTokens(renderFile({ ...file, hunks: [h] }, { focus }));
     if (t > maxTokens) {
+      // One hunk bigger than a whole chunk: review its start and report the file as partly unreviewed.
       const keep = Math.max(20, Math.floor((h.lines.length * maxTokens) / t));
       h = { ...h, lines: h.lines.slice(0, keep) };
       t = maxTokens;
+      onCut();
     }
     if (tokens + t > maxTokens && hunks.length) {
       pieces.push({ ...file, hunks });
@@ -139,7 +141,10 @@ export function packChunks(
   for (const file of files) {
     const focus = opts.focus?.get(file.path);
     const whole = estimateTokens(renderFile(file, { focus }));
-    const pieces = whole > opts.chunkTokens ? splitByHunks(file, opts.chunkTokens, focus) : [file];
+    const cut = () => {
+      if (!notReviewed.includes(file.path)) notReviewed.push(file.path);
+    };
+    const pieces = whole > opts.chunkTokens ? splitByHunks(file, opts.chunkTokens, focus, cut) : [file];
     for (const piece of pieces) {
       const t = pieces.length === 1 ? whole : estimateTokens(renderFile(piece, { focus }));
       if (current.tokens + t > opts.chunkTokens && current.files.length) {
