@@ -35,5 +35,25 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
   malware package was never posted. Two findings from checks now merge only when identical.
 - **decision** Security no longer reports new dependencies (the Supply chain check does), and Test gap
   titles read "No test covers <behavior>" so it stops reporting bugs.
+- **fact** Re-run after the triage change: F3 (acme-store#7) posted AI slop on the placeholder
+  `return true` and the `formatCents` duplicate, Test gap "No test covers redeem error handling", and
+  Docs drift on `GIFT_CARD_PROVIDER_URL` (anchored on `README.md`, so it went to the review body);
+  F4 (acme-store#8) posted the N+1 query and a Breaking change finding naming `src/routes/orders.ts`
+  (body, since that file is not in the diff); F6 posted both npm malware packages, the Go malware
+  module and the `requests` CVEs; F7 (Go) 4 of 4 planted bugs; F8 (Java) 3 of 4 (missed
+  `BigDecimal.equals`); F9 ranked P0 from its `hotfix` label; F2 posted the swallowed error, under
+  the Security badge rather than Reliability.
+- **decision** Docs drift no longer applies to dependency manifests (it attached itself to Socket
+  findings), and every reviewer is told never to post a finding that says nothing is wrong (Docs
+  drift posted "No new environment variables needed").
+- **decision** Dedupe treats plural and singular title words as one and merges near-identical titles
+  anywhere in a file (the float-money issue was posted three times on the refunds PR).
+- **fact** Team rules copied the diff's `82 | ` prefix into a suggestion; committing it would break
+  the file. Suggestions (and `@prguard fix`) now drop that prefix when every line carries it.
+- **fact** Commands on acme-billing#6: `help` in 4 s, `explain` and a question answered with
+  `path:line` citations, `fix` a clean suggestion, `ignore` saved a learning and collapsed the comment,
+  `explain` outside a thread got the usage reply, a plain "this is on purpose" reply saved a learning.
+- **gap** The Grammarly browser extension triggers a Next.js hydration warning in dev (attributes it
+  adds to `<body>`); not an app bug.
 - **fact** The session's app worktree moved to `frontend-build-module-error-a40f13`; work continues in
   `staging-work` on branch `manaskhandelwal/deep-review`, cut from `manaskhandelwal/staging-work`.
