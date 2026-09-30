@@ -119,7 +119,7 @@ type Scope = {
 async function resolveScope(run: Run, pr: PullRequest, files: FileDiff[]): Promise<Scope> {
   const full: Scope = { kind: "full", files, focus: undefined, range: null };
   const last = pr.lastReviewedSha;
-  if (!last || run.review.trigger === "manual") return full;
+  if (!last || run.review.trigger === "manual" || run.review.trigger === "command") return full;
   if (last === run.review.headSha) return { kind: "incremental", files: [], focus: new Map(), range: { from: last, to: last } };
 
   const cmp = await compare(run.gh, run.r, last, run.review.headSha);

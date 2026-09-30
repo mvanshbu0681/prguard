@@ -4,7 +4,7 @@ import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import { installationClient, splitFullName } from "../github/app.ts";
 import { getPull } from "../github/pr.ts";
-import type { Repository } from "../db/schema.ts";
+import type { PullRequest, Repository } from "../db/schema.ts";
 import { saveRepos } from "../github/reconcile.ts";
 import { on } from "../github/webhooks.ts";
 import { log } from "../log.ts";
@@ -14,17 +14,15 @@ import { rerankFromLabels } from "./rank.ts";
 
 const REVIEW_ACTIONS = new Set(["opened", "reopened", "ready_for_review", "synchronize"]);
 
-function ensureRepo(payload: any): Repository | undefined {
+export function ensureRepo(payload: any): Repository | undefined {
   const id: number = payload.repository.id;
   if (!repositoriesRepo.get(id)) saveRepos(payload.installation.id, [payload.repository]);
   return repositoriesRepo.get(id);
 }
 
-on("pull_request", async (payload) => {
-  const repo = ensureRepo(payload);
-  if (!repo) return;
-  const p = payload.pull_request;
-  const pr = pullsRepo.upsert({
+/** Stores a pull request from a webhook payload or the REST API (same shape). */
+export function savePull(repo: Repository, p: any): PullRequest {
+  return pullsRepo.upsert({
     repositoryId: repo.id,
     number: p.number,
     title: p.title,
@@ -40,6 +38,13 @@ on("pull_request", async (payload) => {
     headRef: p.head?.ref ?? null,
     labels: ((p.labels ?? []) as { name?: string }[]).map((l) => l.name ?? "").filter(Boolean),
   });
+}
+
+on("pull_request", async (payload) => {
+  const repo = ensureRepo(payload);
+  if (!repo) return;
+  const p = payload.pull_request;
+  const pr = savePull(repo, p);
 
   const action: string = payload.action;
   if (action === "labeled" || action === "unlabeled") {

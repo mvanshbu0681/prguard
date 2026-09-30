@@ -28,6 +28,11 @@ export function enqueue(type: string, key: string, payload: Record<string, unkno
   });
 }
 
+/** Whether any job ever used this key (commands are keyed by comment id, so each runs once). */
+export function hasKey(key: string): boolean {
+  return db.select({ id: jobs.id }).from(jobs).where(eq(jobs.key, key)).limit(1).get() !== undefined;
+}
+
 /** Atomically takes the oldest runnable job, never one whose key (PR or repo) already has a job running. */
 export function claim(): Job | undefined {
   const now = Date.now();
