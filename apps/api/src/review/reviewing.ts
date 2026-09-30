@@ -34,6 +34,7 @@ Each finding:
 - details: null, unless your instructions ask for a folded extra section; then { title, body }.
 
 Stay inside your focus above: other reviewers cover everything else, so reporting it here only adds noise.
+Never report that something is fine, needs no change, or has nothing to fix: submit an empty list instead.
 Report only real, specific problems in the added code. Report each problem once, not on every line it appears. Do not praise, do not summarise the change, and skip what a formatter would fix unless the team rules require it.`;
 }
 
