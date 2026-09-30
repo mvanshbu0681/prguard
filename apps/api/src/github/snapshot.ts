@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readdir, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { x as extract } from "tar";
 import { config } from "../config.ts";
@@ -48,9 +48,18 @@ async function fetchSnapshot(gh: GitHub, repositoryId: number, fullName: string,
 
   const tmp = `${dir}.tmp-${process.pid}-${Date.now()}`;
   await mkdir(tmp, { recursive: true });
+  // GitHub streams tarballs without a length, so the size cap is enforced while downloading.
+  let received = 0;
+  const capped = new Transform({
+    transform(chunk: Buffer, _enc, done) {
+      received += chunk.length;
+      done(received > MAX_TARBALL_BYTES ? new TooLarge() : null, chunk);
+    },
+  });
   try {
     await pipeline(
       Readable.fromWeb(res.body as import("node:stream/web").ReadableStream),
+      capped,
       extract({
         cwd: tmp,
         strip: 1,
@@ -69,11 +78,17 @@ async function fetchSnapshot(gh: GitHub, repositoryId: number, fullName: string,
     }
   } catch (err) {
     await rm(tmp, { recursive: true, force: true });
+    if (err instanceof TooLarge) {
+      log.warn({ repo: fullName }, "repository too large to snapshot");
+      return null;
+    }
     throw err;
   }
   void prune(repoDir, sha);
   return dir;
 }
+
+class TooLarge extends Error {}
 
 async function prune(repoDir: string, keep: string): Promise<void> {
   try {

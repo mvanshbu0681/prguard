@@ -1,4 +1,4 @@
-import { lt } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { db } from "../client.ts";
 import { webhookDeliveries } from "../schema.ts";
 
@@ -10,6 +10,11 @@ export function record(id: string, event: string, action: string | null): boolea
     .onConflictDoNothing()
     .run();
   return result.changes > 0;
+}
+
+/** Forgets a delivery so GitHub's redelivery of it is processed again. */
+export function forget(id: string): void {
+  db.delete(webhookDeliveries).where(eq(webhookDeliveries.id, id)).run();
 }
 
 export function prune(olderThanMs: number): void {

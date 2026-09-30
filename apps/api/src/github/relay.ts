@@ -13,5 +13,5 @@ export async function startRelay(): Promise<void> {
     logger: { info: () => {}, error: (...args: unknown[]) => relayLog.warn(args.map(String).join(" ")) },
   });
   await smee.start();
-  relayLog.info({ source }, "webhook relay connected");
+  relayLog.info("webhook relay connected");
 }

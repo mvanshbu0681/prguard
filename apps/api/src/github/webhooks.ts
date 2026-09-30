@@ -41,9 +41,11 @@ export function registerWebhookRoute(app: Hono): void {
     const handler = handlers.get(event);
     if (handler) {
       setImmediate(() => {
-        Promise.resolve(handler(payload)).catch((err) =>
-          log.error({ event, action, delivery, err: errMessage(err) }, "webhook handler failed"),
-        );
+        Promise.resolve(handler(payload)).catch((err) => {
+          log.error({ event, action, delivery, err: errMessage(err) }, "webhook handler failed");
+          // Let a redelivery from GitHub try again.
+          if (delivery) deliveriesRepo.forget(delivery);
+        });
       });
     }
     log.info({ event, action, delivery, handled: Boolean(handler) }, "webhook received");
