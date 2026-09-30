@@ -38,9 +38,13 @@ function window(file: FileDiff | undefined, snapshot: string | null, path: strin
   return `${path} (changed lines only)\n${out.join("\n")}`;
 }
 
-/** Cited code: a `path:line` or a code span. A rejection without one is treated as unsure. */
+/**
+ * A rejection must explain itself: a sentence (8+ words) that cites code, as a `path:line` or a code
+ * span. Anything thinner is treated as unsure, so a real bug is never dropped on a bare reference.
+ */
 function citesCode(evidence: string): boolean {
-  return /:\d+/.test(evidence) || /`[^`]+`/.test(evidence);
+  const cites = /:\d+/.test(evidence) || /`[^`]+`/.test(evidence);
+  return cites && evidence.trim().split(/\s+/).length >= 8;
 }
 
 /**

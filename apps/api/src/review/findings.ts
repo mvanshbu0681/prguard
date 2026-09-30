@@ -195,9 +195,21 @@ function distance(a: Pick<Finding, "line" | "startLine">, b: Pick<Finding, "line
   return Math.abs((a.startLine ?? a.line) - (b.startLine ?? b.line));
 }
 
+/** Title words too common to say two findings are about the same thing. */
+const GENERIC_WORDS = new Set([
+  "missing", "check", "checks", "error", "errors", "value", "values", "invalid", "unused", "before", "after",
+  "should", "using", "instead", "without", "could", "never", "always", "handling", "handle", "possible", "potential",
+]);
+
+function overlaps(a: Finding, b: Finding): boolean {
+  if (a.line === null || b.line === null) return false;
+  return (a.startLine ?? a.line) <= b.line && (b.startLine ?? b.line) <= a.line;
+}
+
 /**
- * The same problem reported twice in one review: the same fingerprint close by, or overlapping lines
- * with a similar title. A second real occurrence elsewhere in the file is kept.
+ * The same problem reported twice in one review: the same fingerprint close by, overlapping lines
+ * with a similar title, or overlapping lines that name the same subject (reviewers word the same bug
+ * differently). A second real occurrence elsewhere in the file is kept.
  */
 export function isDuplicate(a: Finding, b: Finding): boolean {
   if (a.path !== b.path) return false;
@@ -205,8 +217,9 @@ export function isDuplicate(a: Finding, b: Finding): boolean {
   if (!near(a, b)) return false;
   const wa = titleWords(a.title);
   const wb = titleWords(b.title);
-  const shared = wa.filter((w) => wb.includes(w)).length;
-  return jaccard(wa, wb) >= 0.34 || shared >= 2;
+  const shared = wa.filter((w) => wb.includes(w));
+  if (jaccard(wa, wb) >= 0.34 || shared.length >= 2) return true;
+  return overlaps(a, b) && shared.some((w) => w.length >= 5 && !GENERIC_WORDS.has(w));
 }
 
 type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category">;
