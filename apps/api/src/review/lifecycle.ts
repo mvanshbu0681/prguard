@@ -6,7 +6,7 @@ import type { PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName } from "../github/app.ts";
 import { addEyes, finishCheckRun, removeReaction, startCheckRun } from "../github/pr.ts";
 import { log } from "../log.ts";
-import { enqueue, reviewKey } from "../queue/queue.ts";
+import { briefKey, cancelKey, enqueue, reviewKey } from "../queue/queue.ts";
 
 export type CloseReason = "superseded" | "closed" | "draft" | "disabled" | "removed";
 
@@ -65,6 +65,15 @@ export async function closeReview(reviewId: number, reason: CloseReason, repoOve
     await finishCheckRun(gh, r, review.checkRunId, reason === "disabled" ? "skipped" : "cancelled", title, summary);
   }
   if (review.reactionId && reason !== "superseded") await removeReaction(gh, r, pr.number, review.reactionId);
+}
+
+/** Stops all pending work for repositories PR Guard lost access to or that were switched off. */
+export async function cancelRepoWork(repositoryIds: number[], reason: CloseReason): Promise<void> {
+  for (const id of repositoryIds) {
+    const cancelled = [...cancelKey(`pr:${id}:`, true), ...cancelKey(briefKey(id))];
+    for (const job of cancelled) if (job.type === "review_pr") await closeReview(Number(job.payload.reviewId), reason);
+    if (reason === "removed") for (const review of reviewsRepo.listOpenForRepos([id])) await closeReview(review.id, reason);
+  }
 }
 
 /** Why a running review was asked to stop, judged from the PR's current state. */

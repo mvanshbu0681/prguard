@@ -28,7 +28,7 @@ export function enqueue(type: string, key: string, payload: Record<string, unkno
   });
 }
 
-/** Atomically takes the oldest runnable job. */
+/** Atomically takes the oldest runnable job, never one whose key (PR or repo) already has a job running. */
 export function claim(): Job | undefined {
   const now = Date.now();
   return db
@@ -37,7 +37,9 @@ export function claim(): Job | undefined {
     .where(
       eq(
         jobs.id,
-        sql`(select ${jobs.id} from ${jobs} where ${jobs.status} = 'queued' and ${jobs.runAfter} <= ${now} order by ${jobs.id} limit 1)`,
+        sql`(select q.id from ${jobs} q where q.status = 'queued' and q.run_after <= ${now}
+              and not exists (select 1 from ${jobs} r where r.key = q.key and r.status = 'running')
+              order by q.id limit 1)`,
       ),
     )
     .returning()

@@ -43,7 +43,7 @@ export async function reviewChunk(opts: {
   context: string;
   snapshot: string | null;
   focus?: Map<string, Set<number>>;
-  meta: { reviewId: number; repositoryId: number };
+  meta: { reviewId: number; repositoryId: number; signal?: AbortSignal };
 }): Promise<RawFinding[] | null> {
   const { reviewer, chunk, index } = opts.task;
   const withTools = reviewer.tools && opts.snapshot !== null;
@@ -64,6 +64,7 @@ export async function reviewChunk(opts: {
     role: reviewer.role,
     reviewId: opts.meta.reviewId,
     repositoryId: opts.meta.repositoryId,
+    signal: opts.meta.signal,
     system: systemFor(reviewer, withTools, maxSteps),
     prompt,
     tools: withTools ? repoTools(opts.snapshot!) : {},

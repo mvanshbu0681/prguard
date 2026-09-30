@@ -3,6 +3,7 @@ import * as deliveriesRepo from "../db/repos/deliveries.ts";
 import * as installationsRepo from "../db/repos/installations.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
 import { errMessage, log } from "../log.ts";
+import { cancelRepoWork } from "../review/lifecycle.ts";
 import { githubApp } from "./app.ts";
 import { saveInstallation, saveRepos, type GitHubInstallation, type GitHubRepo } from "./reconcile.ts";
 
@@ -58,8 +59,8 @@ on("installation", (payload) => {
     }
     case "deleted": {
       installationsRepo.markDeleted(installation.id);
-      repositoriesRepo.markRemovedForInstallation(installation.id);
-      break;
+      const removed = repositoriesRepo.markRemovedForInstallation(installation.id);
+      return cancelRepoWork(removed, "removed");
     }
     case "suspend":
       installationsRepo.setSuspended(installation.id, true);
@@ -78,5 +79,11 @@ on("installation_repositories", (payload) => {
   const added = (payload.repositories_added ?? []) as GitHubRepo[];
   const removed = (payload.repositories_removed ?? []) as GitHubRepo[];
   if (added.length) saveRepos(installationId, added);
-  if (removed.length) repositoriesRepo.markRemoved(removed.map((r) => r.id));
+  if (removed.length) {
+    repositoriesRepo.markRemoved(removed.map((r) => r.id));
+    return cancelRepoWork(
+      removed.map((r) => r.id),
+      "removed",
+    );
+  }
 });

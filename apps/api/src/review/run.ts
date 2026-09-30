@@ -47,6 +47,7 @@ type Run = {
   gh: GitHub;
   r: Repo;
   ctx: JobContext;
+  signal: AbortSignal;
 };
 
 function stage(reviewId: number, s: Review["stage"]): void {
@@ -92,6 +93,8 @@ async function pipeline(run: Run): Promise<void> {
   let { pr } = run;
 
   run.ctx.checkCancelled();
+  const repoNow = repositoriesRepo.get(run.repo.id);
+  if (!repoNow || repoNow.removedAt || !repoNow.enabled) throw new CancelledError();
   reviewsRepo.update(review.id, { status: "running", stage: "fetching", startedAt: Date.now(), error: null });
 
   const live = await getPull(gh, r, pr.number);
@@ -123,7 +126,7 @@ async function pipeline(run: Run): Promise<void> {
   }
 
   const context = buildContext(pr);
-  const meta = { reviewId: review.id, repositoryId: run.repo.id };
+  const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
 
   const active = enabledReviewers(run.repo.disabledReviewers);
   const codeFiles = docsOnly ? [] : reviewable.filter((f) => fileKind(f.path) !== "docs");
@@ -284,10 +287,21 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
   const reviewLog = log.child({ review: reviewId, repo: repo.fullName, pr: pr.number });
   const started = Date.now();
 
+  // Poll for cancellation so in-flight model calls stop as soon as a newer push arrives.
+  const abort = new AbortController();
+  const watch = setInterval(() => {
+    try {
+      ctx.checkCancelled();
+    } catch {
+      abort.abort();
+    }
+  }, 2000);
+
   try {
-    await pipeline({ review, pr, repo, gh, r, ctx });
+    await pipeline({ review, pr, repo, gh, r, ctx, signal: abort.signal });
     reviewLog.info({ ms: Date.now() - started }, "review completed");
   } catch (err) {
+    if (abort.signal.aborted && !(err instanceof CancelledError)) err = new CancelledError();
     if (err instanceof CancelledError) {
       await closeReview(reviewId, cancelReason(pullsRepo.get(pr.id), repositoriesRepo.get(repo.id)));
       throw err;
@@ -304,6 +318,8 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
     }
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
     throw new FatalError(errMessage(err));
+  } finally {
+    clearInterval(watch);
   }
 }
 
