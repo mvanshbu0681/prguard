@@ -3,7 +3,7 @@ import type { FindingItem, ReviewDetail } from "../../contracts.ts";
 import * as findingsRepo from "../../db/repos/findings.ts";
 import * as pullsRepo from "../../db/repos/pulls.ts";
 import * as reviewsRepo from "../../db/repos/reviews.ts";
-import type { ReviewStatus } from "../../db/schema.ts";
+import type { Priority, ReviewStatus } from "../../db/schema.ts";
 import { installationClient, splitFullName } from "../../github/app.ts";
 import { getPull } from "../../github/pr.ts";
 import { triggerReview } from "../../review/lifecycle.ts";
@@ -64,6 +64,7 @@ reviews.get("/:id", (c) => {
     ...item,
     baseSha: review.baseSha,
     riskReasons: review.riskReasons,
+    priorityReason: review.priorityReason,
     summary: review.summary,
     note: review.note,
     walkthrough: review.walkthrough,
@@ -99,5 +100,7 @@ reviews.get("/", (c) => {
   const repositoryIds = repo ? visible.filter((id) => id === repo) : visible;
   const limit = Math.min(Math.max(Number(c.req.query("limit")) || 50, 1), 200);
   const statuses = STATUS_FILTERS[c.req.query("status") ?? ""];
-  return c.json(reviewItems(reviewsRepo.list({ repositoryIds, statuses, limit })));
+  const priority = c.req.query("priority");
+  const priorities = priority && ["p0", "p1", "p2", "p3"].includes(priority) ? [priority as Priority] : undefined;
+  return c.json(reviewItems(reviewsRepo.list({ repositoryIds, statuses, priorities, limit })));
 });

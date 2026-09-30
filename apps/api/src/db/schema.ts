@@ -64,6 +64,9 @@ export const pullRequests = sqliteTable(
     risk: text("risk").$type<"low" | "medium" | "high">(),
     riskScore: integer("risk_score"),
     riskReasons: text("risk_reasons", { mode: "json" }).$type<string[]>().notNull().default([]),
+    priority: text("priority").$type<"p0" | "p1" | "p2" | "p3">(),
+    priorityReason: text("priority_reason"),
+    labels: text("labels", { mode: "json" }).$type<string[]>().notNull().default([]),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
@@ -71,6 +74,10 @@ export const pullRequests = sqliteTable(
 );
 
 export type TriageFile = { path: string; risk: "low" | "medium" | "high"; reviewers: string[] };
+
+/** What the summary said about business impact; kept so labels can re-rank a PR without a model call. */
+export type PrioritySignals = { changeType: string | null; businessImpact: string | null; impactArea: string | null };
+export type Priority = "p0" | "p1" | "p2" | "p3";
 
 /** A symbol the change touches and the code that references it. */
 export type ImpactSymbol = {
@@ -126,6 +133,9 @@ export const reviews = sqliteTable(
     risk: text("risk").$type<"low" | "medium" | "high">(),
     riskScore: integer("risk_score"),
     riskReasons: text("risk_reasons", { mode: "json" }).$type<string[]>().notNull().default([]),
+    priority: text("priority").$type<Priority>(),
+    priorityReason: text("priority_reason"),
+    signals: text("signals", { mode: "json" }).$type<PrioritySignals | null>(),
     trace: text("trace", { mode: "json" }).$type<ReviewTrace>().notNull().default({ steps: [] }),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),

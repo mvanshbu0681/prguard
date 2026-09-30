@@ -1,7 +1,7 @@
 import * as pullsRepo from "../db/repos/pulls.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
-import type { ImpactSymbol, PullRequest, Repository, Review } from "../db/schema.ts";
+import type { ImpactSymbol, PrioritySignals, PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName, type GitHub } from "../github/app.ts";
 import {
   compare,
@@ -37,6 +37,7 @@ import { verifyFindings } from "./verify.ts";
 import { redactSecrets } from "./checks/secrets.ts";
 import { dependencies, isManifest } from "./checks/manifests.ts";
 import { assessRisk, type RiskLevel } from "./risk.ts";
+import { decidePriority, type Priority } from "./priority.ts";
 import { classify, fileKind } from "./noise.ts";
 import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
 import { applies, checks, enabledPlugins, modelReviewers } from "./reviewers/index.ts";
@@ -65,6 +66,7 @@ function describeSkipped(skipped: { path: string; reason: string }[]): string {
 const SEVERITY_ORDER = ["critical", "high", "medium", "low", "nit"];
 
 const RISK_LABEL: Record<RiskLevel, string> = { low: "Low risk", medium: "Medium risk", high: "High risk" };
+const PRIORITY_LABEL: Record<Priority, string> = { p0: "Urgent", p1: "High priority", p2: "Normal priority", p3: "Low priority" };
 
 /** Test gap reports one finding per review: its most severe, most confident one. */
 function oneTestGap(raw: RawFinding[]): RawFinding[] {
@@ -151,6 +153,7 @@ async function pipeline(run: Run): Promise<void> {
     baseSha: live.base.sha,
     draft: Boolean(live.draft),
     state: live.merged ? "merged" : (live.state as "open" | "closed"),
+    labels: (live.labels ?? []).map((l) => l.name).filter((n): n is string => Boolean(n)),
   });
   pr = pullsRepo.get(pr.id)!;
   if (pr.state !== "open" || pr.draft) throw new CancelledError();
@@ -218,6 +221,7 @@ async function pipeline(run: Run): Promise<void> {
   let summary: string | null = null;
   let walkthrough: { path: string; change: string }[] = [];
   let flow: string | null = null;
+  let signals: PrioritySignals | null = null;
   let raw: RawFinding[] = [];
   let failedChunks = 0;
   let notReviewed: string[] = [];
@@ -234,6 +238,7 @@ async function pipeline(run: Run): Promise<void> {
           summary = s.summary;
           walkthrough = s.walkthrough;
           flow = flowMermaid(s.flow);
+          signals = s.signals;
         })
         .catch((err) => {
           if (run.signal.aborted) throw err;
@@ -443,7 +448,24 @@ async function pipeline(run: Run): Promise<void> {
   });
   reviewsRepo.update(review.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
   pullsRepo.update(pr.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
-  const reasons = risk.reasons.length ? `**${RISK_LABEL[risk.level]}:** ${risk.reasons.join(", ")}.` : null;
+  // Priority: business impact from the summary, raised by labels and severe findings.
+  const ranked = decidePriority({
+    signals,
+    labels: pr.labels,
+    findings,
+    previous: pr.priority ?? null,
+    incremental: kind === "incremental",
+  });
+  const priorityReason = ranked.reason ? redactSecrets(codify(ranked.reason, terms)) : null;
+  reviewsRepo.update(review.id, { priority: ranked.priority, priorityReason, signals });
+  pullsRepo.update(pr.id, { priority: ranked.priority, priorityReason });
+  const reasons =
+    [
+      priorityReason && `**${PRIORITY_LABEL[ranked.priority]}:** ${priorityReason}`,
+      risk.reasons.length && `**${RISK_LABEL[risk.level]}:** ${risk.reasons.join(", ")}.`,
+    ]
+      .filter(Boolean)
+      .join(" ") || null;
 
   // A push that brings nothing new to say gets no review, only a check run.
   const silent = kind === "incremental" && findings.length === 0 && !partial;
@@ -480,6 +502,7 @@ async function pipeline(run: Run): Promise<void> {
     blobUrl: `https://github.com/${run.repo.fullName}/blob/${review.headSha}`,
     reviewed: reviewedAny,
     risk: risk.level,
+    priority: ranked.priority,
     reasons,
   });
   const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));

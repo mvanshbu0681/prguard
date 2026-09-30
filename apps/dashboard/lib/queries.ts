@@ -1,6 +1,6 @@
 "use client";
 
-import type { BriefStatus, RepoDetail, RepoListItem, ReviewDetail, ReviewListItem, ReviewStatus } from "@contracts";
+import type { BriefStatus, Priority, RepoDetail, RepoListItem, ReviewDetail, ReviewListItem, ReviewStatus } from "@contracts";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
 
@@ -14,7 +14,7 @@ export const keys = {
 };
 
 export type ReviewFilter = "active" | "completed" | "failed";
-export type ReviewFilters = { repo: number | null; status: ReviewFilter | null };
+export type ReviewFilters = { repo: number | null; status: ReviewFilter | null; priority: Priority | null };
 
 export function isActive(status: ReviewStatus | undefined): boolean {
   return status === "queued" || status === "running";
@@ -31,6 +31,7 @@ export function useReviews(filters: ReviewFilters) {
       const params = new URLSearchParams();
       if (filters.repo !== null) params.set("repo", String(filters.repo));
       if (filters.status) params.set("status", filters.status);
+      if (filters.priority) params.set("priority", filters.priority);
       params.set("limit", "50");
       return api<ReviewListItem[]>(`/reviews?${params}`);
     },

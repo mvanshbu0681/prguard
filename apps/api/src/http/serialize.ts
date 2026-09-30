@@ -35,6 +35,7 @@ export function reviewItems(list: Review[]): ReviewListItem[] {
         reviewed: review.reviewed,
         partial: review.partial,
         risk: review.risk ?? null,
+        priority: review.priority ?? null,
         error: review.error,
         createdAt: review.createdAt,
         startedAt: review.startedAt,

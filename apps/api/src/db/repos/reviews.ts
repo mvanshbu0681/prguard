@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../client.ts";
-import { reviews, type Review, type ReviewStatus } from "../schema.ts";
+import { reviews, type Priority, type Review, type ReviewStatus } from "../schema.ts";
 
 export type NewReview = Pick<Review, "pullRequestId" | "repositoryId" | "headSha" | "baseSha" | "trigger">;
 
@@ -31,10 +31,11 @@ export function addUsage(id: number, tokensIn: number, tokensOut: number): void 
     .run();
 }
 
-export function list(filter: { repositoryIds: number[]; statuses?: ReviewStatus[]; limit: number }): Review[] {
+export function list(filter: { repositoryIds: number[]; statuses?: ReviewStatus[]; priorities?: Priority[]; limit: number }): Review[] {
   if (filter.repositoryIds.length === 0) return [];
   const conditions = [inArray(reviews.repositoryId, filter.repositoryIds)];
   if (filter.statuses?.length) conditions.push(inArray(reviews.status, filter.statuses));
+  if (filter.priorities?.length) conditions.push(inArray(reviews.priority, filter.priorities));
   return db
     .select()
     .from(reviews)

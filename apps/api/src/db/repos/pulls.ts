@@ -16,6 +16,7 @@ export type PullInput = {
   baseSha: string | null;
   baseRef: string | null;
   headRef: string | null;
+  labels: string[];
 };
 
 export function upsert(input: PullInput): PullRequest {

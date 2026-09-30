@@ -10,6 +10,7 @@ import { on } from "../github/webhooks.ts";
 import { log } from "../log.ts";
 import { cancelKey, reviewKey } from "../queue/queue.ts";
 import { closeReview, triggerReview } from "./lifecycle.ts";
+import { rerankFromLabels } from "./rank.ts";
 
 const REVIEW_ACTIONS = new Set(["opened", "reopened", "ready_for_review", "synchronize"]);
 
@@ -37,9 +38,14 @@ on("pull_request", async (payload) => {
     baseSha: p.base?.sha ?? null,
     baseRef: p.base?.ref ?? null,
     headRef: p.head?.ref ?? null,
+    labels: ((p.labels ?? []) as { name?: string }[]).map((l) => l.name ?? "").filter(Boolean),
   });
 
   const action: string = payload.action;
+  if (action === "labeled" || action === "unlabeled") {
+    rerankFromLabels(pr);
+    return;
+  }
   if (REVIEW_ACTIONS.has(action)) {
     const installation = installationsRepo.get(repo.installationId);
     if (pr.draft || pr.state !== "open") return;

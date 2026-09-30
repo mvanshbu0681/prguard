@@ -16,7 +16,7 @@ import { ErrorState, InlineError } from "@/components/ui/error-state";
 import { InlineCode } from "@/components/ui/inline-code";
 import { Markdown } from "@/components/ui/markdown";
 import { Panel } from "@/components/ui/panel";
-import { RiskPill } from "@/components/ui/pills";
+import { PriorityPill, RiskPill } from "@/components/ui/pills";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { reviewState, StatusBadge } from "@/components/ui/status";
 import { RelativeTime } from "@/components/ui/time";
@@ -73,6 +73,8 @@ function Review({ review }: { review: ReviewDetail }) {
   const tokens = review.usage.tokensIn + review.usage.tokensOut;
   const finished = review.finishedAt !== null && review.startedAt !== null;
   const findingCount = review.findings.length;
+  const riskWhy = review.riskReasons.join(", ");
+  const why = [review.priorityReason, riskWhy && `${riskWhy.charAt(0).toUpperCase()}${riskWhy.slice(1)}.`].filter(Boolean).join(" ");
 
   // Links from GitHub land on `#f-<fingerprint>`; the card exists only once the findings render.
   useEffect(() => {
@@ -98,6 +100,7 @@ function Review({ review }: { review: ReviewDetail }) {
             </span>
             <Sep />
             <StatusBadge tone={state.tone} label={state.label} />
+            {review.priority && <PriorityPill priority={review.priority} />}
             {review.risk && <RiskPill risk={review.risk} />}
           </div>
 
@@ -120,9 +123,9 @@ function Review({ review }: { review: ReviewDetail }) {
         </div>
       </header>
 
-      {review.riskReasons.length > 0 && (
+      {why && (
         <p className="mt-2 text-sm text-dim">
-          <InlineCode text={review.riskReasons.join(", ")} />
+          <InlineCode text={why} />
         </p>
       )}
 
