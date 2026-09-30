@@ -194,6 +194,8 @@ export const llmCalls = sqliteTable(
     ms: integer("ms").notNull(),
     ok: integer("ok", { mode: "boolean" }).notNull(),
     error: text("error"),
+    /** Repository tools the call used, e.g. `read_file app/models.py`. */
+    tools: text("tools", { mode: "json" }).$type<string[]>().notNull().default([]),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("llm_calls_review_idx").on(t.reviewId)],

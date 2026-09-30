@@ -39,10 +39,18 @@ async function limited<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export function record(meta: CallMeta, m: ResolvedModel, started: number, usage: LanguageModelUsage | undefined, error?: unknown): void {
+export function record(
+  meta: CallMeta,
+  m: ResolvedModel,
+  started: number,
+  usage: LanguageModelUsage | undefined,
+  error?: unknown,
+  tools: string[] = [],
+): void {
   const tokensIn = usage?.inputTokens ?? 0;
   const tokensOut = usage?.outputTokens ?? 0;
   llmCallsRepo.insert({
+    tools,
     reviewId: meta.reviewId ?? null,
     repositoryId: meta.repositoryId ?? null,
     purpose: meta.purpose,
@@ -128,6 +136,18 @@ export async function text(meta: CallMeta & { system: string; prompt: string }):
 
 type Step = { toolCalls: { toolName: string; input: unknown }[] };
 
+/** The repository tools a call used, as `name first-argument`, for the review trace. */
+function toolsUsed(steps: Step[], answerName: string): string[] {
+  return steps
+    .flatMap((s) => s.toolCalls)
+    .filter((c) => c.toolName !== answerName)
+    .map((c) => {
+      const input = (c.input ?? {}) as Record<string, unknown>;
+      const first = Object.values(input).find((v) => typeof v === "string") as string | undefined;
+      return first ? `${c.toolName} ${first.slice(0, 80)}` : c.toolName;
+    });
+}
+
 function findAnswer<T>(steps: Step[], name: string, schema: z.ZodType<T>): { ok: true; value: T } | { ok: false; error: string } | null {
   for (let i = steps.length - 1; i >= 0; i--) {
     const call = [...steps[i]!.toolCalls].reverse().find((c) => c.toolName === name);
@@ -182,7 +202,7 @@ export async function agent<T>(
         abortSignal: meta.signal,
       }),
     );
-    record(meta, m, started, res.totalUsage);
+    record(meta, m, started, res.totalUsage, undefined, toolsUsed(res.steps as unknown as Step[], name));
     const found = findAnswer(res.steps as unknown as Step[], name, schema);
     if (found?.ok) return found.value;
     if (found) problem = found.error;

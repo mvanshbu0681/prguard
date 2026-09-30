@@ -19,6 +19,7 @@ export type LlmCallInput = {
   ms: number;
   ok: boolean;
   error: string | null;
+  tools?: string[];
 };
 
 export function insert(input: LlmCallInput): void {

@@ -92,7 +92,7 @@ reviews.get("/:id", (c) => {
       tokensOut: call.tokensOut,
       ms: call.ms,
       ok: call.ok,
-      tools: [],
+      tools: call.tools,
     })),
     since: review.since ?? null,
   };
