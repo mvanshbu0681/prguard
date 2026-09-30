@@ -9,8 +9,13 @@ import { CancelledError, FatalError, registerJob, type JobContext } from "../que
 import { buildContext } from "./context.ts";
 import { toFileDiffs, type FileDiff } from "./diff.ts";
 import { cancelReason, closeReview, reviewUrl } from "./lifecycle.ts";
-import { classify } from "./noise.ts";
+import * as findingsRepo from "../db/repos/findings.ts";
+import { getSnapshot } from "../github/snapshot.ts";
+import { processFindings, type RawFinding } from "./findings.ts";
+import { classify, fileKind } from "./noise.ts";
 import { checkTitle, reviewBody, toComments } from "./publish.ts";
+import { enabledReviewers } from "./reviewers/index.ts";
+import { reviewChunk } from "./reviewing.ts";
 import { summarize } from "./summarize.ts";
 import type { Finding } from "./types.ts";
 
@@ -54,17 +59,54 @@ async function pipeline(run: Run): Promise<void> {
   const context = buildContext(pr);
   const meta = { reviewId: review.id, repositoryId: run.repo.id };
 
+  const active = enabledReviewers(run.repo.disabledReviewers);
+  const codeFiles = docsOnly ? [] : reviewable.filter((f) => fileKind(f.path) !== "docs");
+  const deep = codeFiles.length > 0 && active.length > 0;
+
   let summary: string | null = null;
   let walkthrough: { path: string; change: string }[] = [];
-  if (reviewable.length) {
-    stage(review.id, "summarizing");
-    const s = await summarize({ context, files: reviewable, incremental: false, meta });
-    summary = s.summary;
-    walkthrough = s.walkthrough;
-  }
+  let raw: RawFinding[] = [];
+  let failedChunks = 0;
+  stage(review.id, deep ? "reviewing" : "summarizing");
+
+  const summaryTask = reviewable.length
+    ? summarize({ context, files: reviewable, incremental: false, meta }).then((s) => {
+        summary = s.summary;
+        walkthrough = s.walkthrough;
+      })
+    : Promise.resolve();
+
+  const reviewTask = deep
+    ? (async () => {
+        const snapshot = await getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
+          log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
+          return null;
+        });
+        ctx.checkCancelled();
+        const chunks = [codeFiles];
+        const tasks = chunks.flatMap((chunk, index) => active.map((reviewer) => ({ reviewer, chunk, index })));
+        const results = await Promise.all(
+          tasks.map((task) =>
+            reviewChunk({ task, chunkCount: chunks.length, otherFiles: [], context, snapshot, meta }).catch((err) => {
+              if (err instanceof CancelledError) throw err;
+              log.warn({ review: review.id, reviewer: task.reviewer.id, err: errMessage(err) }, "reviewer failed");
+              return null;
+            }),
+          ),
+        );
+        for (const r of results) {
+          if (r) raw = raw.concat(r);
+          else failedChunks++;
+        }
+      })()
+    : Promise.resolve();
+
+  await Promise.all([summaryTask, reviewTask]);
   ctx.checkCancelled();
 
-  const findings: Finding[] = [];
+  const findings: Finding[] = processFindings(raw, reviewable);
+  findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, findings);
+  if (failedChunks) reviewsRepo.update(review.id, { partial: true });
 
   stage(review.id, "publishing");
   const note =
@@ -72,7 +114,9 @@ async function pipeline(run: Run): Promise<void> {
       ? "Nothing to review: only deleted, binary, generated or lock files changed."
       : docsOnly
         ? "Documentation only, so this is a summary without a code review."
-        : null;
+        : failedChunks
+          ? "Part of this pull request could not be reviewed. Re-run to try again."
+          : null;
 
   const body = reviewBody({
     summary,

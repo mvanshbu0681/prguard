@@ -1,4 +1,15 @@
-import { APICallError, generateText, NoObjectGeneratedError, Output, type LanguageModelUsage } from "ai";
+import {
+  APICallError,
+  generateText,
+  hasToolCall,
+  isStepCount,
+  NoObjectGeneratedError,
+  Output,
+  tool,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type ToolSet,
+} from "ai";
 import type { z } from "zod";
 import { config } from "../config.ts";
 import * as llmCallsRepo from "../db/repos/llm-calls.ts";
@@ -113,6 +124,106 @@ export async function text(meta: CallMeta & { system: string; prompt: string }):
     record(meta, m, started, undefined, err);
     throw err;
   }
+}
+
+type Step = { toolCalls: { toolName: string; input: unknown }[] };
+
+function findAnswer<T>(steps: Step[], name: string, schema: z.ZodType<T>): { ok: true; value: T } | { ok: false; error: string } | null {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    const call = [...steps[i]!.toolCalls].reverse().find((c) => c.toolName === name);
+    if (!call) continue;
+    const parsed = schema.safeParse(call.input);
+    return parsed.success ? { ok: true, value: parsed.data } : { ok: false, error: parsed.error.message.slice(0, 800) };
+  }
+  return null;
+}
+
+function withoutAnswerCalls(messages: ModelMessage[], name: string): ModelMessage[] {
+  return messages.filter((msg) => {
+    if (!Array.isArray(msg.content)) return true;
+    return !msg.content.some(
+      (part) => (part.type === "tool-call" || part.type === "tool-result") && "toolName" in part && part.toolName === name,
+    );
+  });
+}
+
+/**
+ * A tool loop whose final answer is a call to the `answer` tool (Groq cannot combine tools with JSON
+ * output). If the loop ends without a valid answer, the model is made to call the answer tool.
+ */
+export async function agent<T>(
+  meta: CallMeta & {
+    system: string;
+    prompt: string;
+    tools: ToolSet;
+    answer: { name: string; description: string; schema: z.ZodType<T> };
+    maxSteps: number;
+  },
+): Promise<T | null> {
+  const m = resolveRole(meta.role);
+  const { name, description, schema } = meta.answer;
+  const answerTool = tool({ description, inputSchema: schema as z.ZodType<T & object> });
+
+  let history: ModelMessage[] = [{ role: "user", content: meta.prompt }];
+  let problem: string | null = null;
+
+  const started = Date.now();
+  try {
+    const res = await limited(() =>
+      generateText({
+        model: m.model,
+        system: meta.system,
+        messages: history,
+        tools: { ...meta.tools, [name]: answerTool },
+        toolChoice: "auto",
+        stopWhen: [isStepCount(meta.maxSteps), hasToolCall(name)],
+        providerOptions: m.providerOptions,
+        maxRetries: 4,
+        abortSignal: meta.signal,
+      }),
+    );
+    record(meta, m, started, res.totalUsage);
+    const found = findAnswer(res.steps as unknown as Step[], name, schema);
+    if (found?.ok) return found.value;
+    if (found) problem = found.error;
+    history = [...history, ...withoutAnswerCalls(res.responseMessages as ModelMessage[], name)];
+  } catch (err) {
+    record(meta, m, started, undefined, err);
+    if (!isRepairable(err)) throw err;
+    problem = errMessage(err).slice(0, 400);
+  }
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const nudge = problem
+      ? `Your ${name} call was invalid (${problem}). Call ${name} again now with input that matches its schema exactly.`
+      : `Stop exploring. Call ${name} now with your final answer.`;
+    const startedForced = Date.now();
+    try {
+      const res = await limited(() =>
+        generateText({
+          model: m.model,
+          system: meta.system,
+          messages: [...history, { role: "user", content: nudge }],
+          tools: { [name]: answerTool },
+          toolChoice: { type: "tool", toolName: name },
+          stopWhen: isStepCount(1),
+          providerOptions: m.providerOptions,
+          maxRetries: 3,
+          abortSignal: meta.signal,
+        }),
+      );
+      record({ ...meta, purpose: `${meta.purpose}:final` }, m, startedForced, res.totalUsage);
+      const found = findAnswer(res.steps as unknown as Step[], name, schema);
+      if (found?.ok) return found.value;
+      problem = found ? found.error : "no answer";
+    } catch (err) {
+      record({ ...meta, purpose: `${meta.purpose}:final` }, m, startedForced, undefined, err);
+      if (!isRepairable(err)) throw err;
+      problem = errMessage(err).slice(0, 400);
+    }
+  }
+  log.warn({ purpose: meta.purpose, problem }, "no valid answer from the model");
+  return null;
 }
 
 export { limited };

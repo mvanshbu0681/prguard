@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const installations = sqliteTable("installations", {
   id: integer("id").primaryKey(),
@@ -141,6 +141,30 @@ export const llmCalls = sqliteTable(
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("llm_calls_review_idx").on(t.reviewId)],
+);
+
+export const findings = sqliteTable(
+  "findings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    reviewId: integer("review_id").notNull(),
+    pullRequestId: integer("pull_request_id").notNull(),
+    repositoryId: integer("repository_id").notNull(),
+    reviewer: text("reviewer").notNull(),
+    path: text("path").notNull(),
+    line: integer("line"),
+    startLine: integer("start_line"),
+    severity: text("severity").$type<"critical" | "high" | "medium" | "low" | "nit">().notNull(),
+    category: text("category").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    suggestion: text("suggestion"),
+    confidence: real("confidence").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    placement: text("placement").$type<"inline" | "body" | "hidden">().notNull(),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("findings_review_idx").on(t.reviewId), index("findings_pr_idx").on(t.pullRequestId)],
 );
 
 export type Installation = typeof installations.$inferSelect;
