@@ -131,10 +131,12 @@ export async function compare(gh: GitHub, r: Repo, base: string, head: string) {
   }
 }
 
-/** A review this app already posted on the PR whose body contains `marker` (used after a crash). */
-export async function findPostedReview(gh: GitHub, r: Repo, number: number, marker: string): Promise<{ id: number; url: string } | null> {
+/** A review this app already posted on the PR whose body links to `url` (used after a crash). */
+export async function findPostedReview(gh: GitHub, r: Repo, number: number, url: string): Promise<{ id: number; url: string } | null> {
   const reviews = await gh.paginate(gh.rest.pulls.listReviews, { ...r, pull_number: number, per_page: 100 });
-  const hit = reviews.find((rv) => rv.user?.type === "Bot" && (rv.body ?? "").includes(marker));
+  // The link ends the URL: `/reviews/12"` or `/reviews/12)`, never `/reviews/123`.
+  const linked = new RegExp(`${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["')]`);
+  const hit = reviews.find((rv) => rv.user?.type === "Bot" && linked.test(rv.body ?? ""));
   return hit ? { id: hit.id, url: hit.html_url } : null;
 }
 

@@ -27,7 +27,7 @@ import * as findingsRepo from "../db/repos/findings.ts";
 import { getSnapshot } from "../github/snapshot.ts";
 import { processFindings, type RawFinding } from "./findings.ts";
 import { classify, fileKind, KIND_PRIORITY } from "./noise.ts";
-import { checkTitle, reviewBody, toComments, withInlineInBody } from "./publish.ts";
+import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
 import { enabledReviewers } from "./reviewers/index.ts";
 import { reviewChunk } from "./reviewing.ts";
 import { summarize } from "./summarize.ts";
@@ -324,27 +324,28 @@ async function pipeline(run: Run): Promise<void> {
     return;
   }
 
-  const bodyFor = (items: Finding[]) =>
-    reviewBody({
-      summary,
-      walkthrough,
-      kind,
-      range,
-      findings: items,
-      skipped,
-      notReviewed,
-      filesReviewed: reviewable.length - notReviewed.length,
-      note,
-      reviewUrl: reviewUrl(review.id),
-      reviewed: deep,
-    });
+  const inputFor = (items: Finding[]): BodyInput => ({
+    summary,
+    walkthrough,
+    kind,
+    range,
+    findings: items,
+    skipped,
+    notReviewed,
+    filesReviewed: reviewable.length - notReviewed.length,
+    note,
+    reviewUrl: reviewUrl(review.id),
+    blobUrl: `https://github.com/${run.repo.fullName}/blob/${review.headSha}`,
+    reviewed: deep,
+  });
+  const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));
 
   // A retry after a crash must not post twice: reuse a review already on GitHub for this run.
   const current = reviewsRepo.get(review.id)!;
   let posted: { id: number; url: string } | null = current.githubReviewId
     ? { id: current.githubReviewId, url: current.githubReviewUrl ?? "" }
     : ctx.job.attempts > 1
-      ? await findPostedReview(gh, r, pr.number, `/reviews/${review.id})`)
+      ? await findPostedReview(gh, r, pr.number, reviewUrl(review.id))
       : null;
   const alreadyPosted = posted !== null;
   if (!posted) {
@@ -375,7 +376,7 @@ async function pipeline(run: Run): Promise<void> {
   pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
 
   const check = checkTitle(findings, deep);
-  await completeCheck(gh, r, review, check.conclusion, check.title, `${summary ?? note ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
+  await completeCheck(gh, r, review, check.conclusion, check.title, checkSummary(inputFor(findings)));
   if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
 }
 
