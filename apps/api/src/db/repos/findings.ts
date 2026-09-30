@@ -46,6 +46,19 @@ export function getByCommentId(commentId: number): FindingRow | undefined {
   return db.select().from(findings).where(eq(findings.githubCommentId, commentId)).get();
 }
 
+/** Findings still open on a PR (shown inline or in a review body), from completed reviews. */
+export function listOpenForPull(pullRequestId: number): FindingRow[] {
+  return db
+    .select({ f: findings })
+    .from(findings)
+    .innerJoin(reviews, eq(reviews.id, findings.reviewId))
+    .where(
+      and(eq(findings.pullRequestId, pullRequestId), eq(reviews.status, "completed"), eq(findings.status, "open"), inArray(findings.placement, ["inline", "body"])),
+    )
+    .all()
+    .map((r) => r.f);
+}
+
 /** Open findings on a PR that have a line comment on GitHub, from completed reviews. */
 export function listOpenCommentedForPull(pullRequestId: number): FindingRow[] {
   return db

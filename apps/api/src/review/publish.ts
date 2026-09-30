@@ -220,6 +220,21 @@ export function withInlineInBody(findings: Finding[]): Finding[] {
   return findings.map((f) => (f.placement === "inline" ? { ...f, placement: "body" as const } : f));
 }
 
+/**
+ * The check run title from the PR's open findings, e.g. "3 open · 1 high · 2 fixed". Never a failure:
+ * serious open findings make it neutral.
+ */
+export function openCheckTitle(open: { severity: Finding["severity"] }[], fixed: number): { title: string; conclusion: "success" | "neutral" } {
+  const fixedPart = fixed ? ` · ${fixed} fixed` : "";
+  if (open.length === 0) return { title: fixed ? "All fixed" : "No issues found", conclusion: "success" };
+  const counts = countBySeverity(open);
+  const top = SEVERITIES.find((s) => counts[s] > 0 && s !== "nit" && s !== "low");
+  return {
+    title: `${open.length} open${top ? ` · ${counts[top]} ${top}` : ""}${fixedPart}`,
+    conclusion: counts.critical + counts.high > 0 ? "neutral" : "success",
+  };
+}
+
 export function checkTitle(findings: Finding[], reviewed = true): { title: string; conclusion: "success" | "neutral" } {
   if (!reviewed) return { title: "Summary posted", conclusion: "success" };
   const visible = findings.filter((f) => f.placement !== "hidden");

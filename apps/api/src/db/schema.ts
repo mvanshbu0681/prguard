@@ -136,6 +136,8 @@ export const reviews = sqliteTable(
     priority: text("priority").$type<Priority>(),
     priorityReason: text("priority_reason"),
     signals: text("signals", { mode: "json" }).$type<PrioritySignals | null>(),
+    /** Fixed by this push, new in this review, open on the PR after it; null on a first review. */
+    since: text("since", { mode: "json" }).$type<{ fixed: number; new: number; open: number } | null>(),
     trace: text("trace", { mode: "json" }).$type<ReviewTrace>().notNull().default({ steps: [] }),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),

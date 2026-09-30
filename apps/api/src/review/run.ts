@@ -38,9 +38,10 @@ import { redactSecrets } from "./checks/secrets.ts";
 import { dependencies, isManifest } from "./checks/manifests.ts";
 import { assessRisk, type RiskLevel } from "./risk.ts";
 import { decidePriority, type Priority } from "./priority.ts";
-import { recordCommentIds, snippetOf } from "./tracking.ts";
+import { detectFixes, markFixed, recordCommentIds, snippetOf } from "./tracking.ts";
+import type { FindingRow } from "../db/repos/findings.ts";
 import { classify, fileKind } from "./noise.ts";
-import { checkSummary, checkTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
+import { checkSummary, checkTitle, openCheckTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
 import { applies, checks, enabledPlugins, modelReviewers } from "./reviewers/index.ts";
 import { summarize } from "./summarize.ts";
 import type { Finding } from "./types.ts";
@@ -136,6 +137,34 @@ async function resolveScope(run: Run, pr: PullRequest, files: FileDiff[]): Promi
   return { kind: "incremental", files: scoped, focus, range: { from: last, to: run.review.headSha } };
 }
 
+/** Checks earlier open findings for fixes and marks the fixed ones on GitHub. Only cancellation throws. */
+async function findFixes(
+  run: Run,
+  pr: PullRequest,
+  review: Review,
+  earlierOpen: FindingRow[],
+  snapshot: Promise<string | null>,
+  files: FileDiff[],
+  meta: { reviewId: number; repositoryId: number; signal?: AbortSignal },
+): Promise<FindingRow[]> {
+  if (earlierOpen.length === 0) {
+    run.trace.add("fixes", "Fix check", null, config.features.trackFixes ? "Nothing open" : "Off", "skipped");
+    return [];
+  }
+  const started = Date.now();
+  try {
+    const { fixed, checked } = await detectFixes({ gh: run.gh, r: run.r, prNumber: pr.number, open: earlierOpen, snapshot: await snapshot, files, meta });
+    for (const f of fixed) await markFixed(run.gh, run.r, f, review.headSha);
+    run.trace.add("fixes", "Fix check", started, `${checked} changed, ${fixed.length} fixed`);
+    return fixed;
+  } catch (err) {
+    if (err instanceof CancelledError || run.signal.aborted) throw err;
+    log.warn({ review: review.id, err: errMessage(err) }, "fix check failed");
+    run.trace.add("fixes", "Fix check", started, "Failed", "failed");
+    return [];
+  }
+}
+
 async function pipeline(run: Run): Promise<void> {
   const { gh, r, ctx, trace } = run;
   let { pr, review } = run;
@@ -189,16 +218,28 @@ async function pipeline(run: Run): Promise<void> {
   trace.add("fetch", "Fetch", started, `${scope.files.length} files, ${reviewable.length} reviewable`);
   ctx.checkCancelled();
 
+  const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
+  // Findings still open from earlier reviews: every later push checks whether they were fixed.
+  const hadEarlier = Boolean(pr.lastReviewedSha);
+  const earlierOpen = config.features.trackFixes && hadEarlier ? findingsRepo.listOpenCommentedForPull(pr.id) : [];
+
   if (kind === "incremental" && reviewable.length === 0) {
+    // Only deletions or skipped files: nothing to review, but deleting code often fixes a finding.
+    const snap = earlierOpen.length ? getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch(() => null) : Promise.resolve(null);
+    const fixedNow = await findFixes(run, pr, review, earlierOpen, snap, files, meta);
+    const openAfter = findingsRepo.listOpenForPull(pr.id);
+    const since = { fixed: fixedNow.length, new: 0, open: openAfter.length };
     reviewsRepo.update(review.id, {
       status: "completed",
       stage: "done",
       note: "No new changes to review since the last review.",
       reviewed: false,
+      since: fixedNow.length ? since : null,
       finishedAt: Date.now(),
     });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
-    await completeCheck(gh, r, review, "success", "No new changes", "Nothing new to review since the last review.");
+    const check = fixedNow.length ? openCheckTitle(openAfter, fixedNow.length) : { title: "No new changes", conclusion: "success" as const };
+    await completeCheck(gh, r, review, check.conclusion, check.title, "Nothing new to review since the last review.");
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
     return;
   }
@@ -206,7 +247,6 @@ async function pipeline(run: Run): Promise<void> {
   if (repoNow.briefStatus === "none") queueBrief(repoNow.id);
   const baseContext = buildContext(pr, repoNow);
   const rulesContext = buildContext(pr, repoNow, { rules: true });
-  const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
 
   const plugins = enabledPlugins(run.repo.disabledReviewers);
   // Team rules has nothing to enforce without rules or a brief.
@@ -248,7 +288,7 @@ async function pipeline(run: Run): Promise<void> {
         })
     : Promise.resolve();
 
-  const snapshotTask: Promise<string | null> = reviewedAny
+  const snapshotTask: Promise<string | null> = reviewedAny || earlierOpen.length > 0
     ? getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
         log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
         return null;
@@ -349,7 +389,12 @@ async function pipeline(run: Run): Promise<void> {
       })()
     : (trace.add("checks", "Checks", null, "None apply", "skipped"), Promise.resolve());
 
-  await Promise.all([summaryTask, reviewTask, checksTask]);
+  let fixedNow: FindingRow[] = [];
+  const fixesTask = findFixes(run, pr, review, earlierOpen, snapshotTask, files, meta).then((fixed) => {
+    fixedNow = fixed;
+  });
+
+  await Promise.all([summaryTask, reviewTask, checksTask, fixesTask]);
   ctx.checkCancelled();
 
   const previous = findingsRepo.listPostedForPull(pr.id);
@@ -438,6 +483,11 @@ async function pipeline(run: Run): Promise<void> {
               ? "No new issues since the last review."
               : null;
 
+  const visibleNew = findings.filter((f) => f.placement !== "hidden");
+  const openAfter: { severity: Finding["severity"] }[] = [...findingsRepo.listOpenForPull(pr.id), ...visibleNew];
+  const since = hadEarlier ? { fixed: fixedNow.length, new: visibleNew.length, open: openAfter.length } : null;
+  reviewsRepo.update(review.id, { since });
+
   // Risk from code signals: the whole PR, what uses it, new dependencies and what is still open on it.
   const manifests = reviewable.filter((f) => isManifest(f.path));
   const risk = assessRisk({
@@ -445,7 +495,7 @@ async function pipeline(run: Run): Promise<void> {
     impact: reviewsRepo.get(review.id)!.impact,
     newDependencies: manifests.length ? dependencies(manifests, snapshot).length : 0,
     malware: findings.some((f) => f.reviewer.split("+").includes("supply-chain") && f.severity === "critical"),
-    openFindings: [...findings.filter((f) => f.placement !== "hidden"), ...previous],
+    openFindings: openAfter,
   });
   reviewsRepo.update(review.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
   pullsRepo.update(pr.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
@@ -483,7 +533,8 @@ async function pipeline(run: Run): Promise<void> {
       finishedAt: Date.now(),
     });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
-    await completeCheck(gh, r, review, "success", "No new issues", `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
+    const quiet = fixedNow.length || openAfter.length ? openCheckTitle(openAfter, fixedNow.length) : { title: "No new issues", conclusion: "success" as const };
+    await completeCheck(gh, r, review, quiet.conclusion, quiet.title, `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
     return;
   }
@@ -505,6 +556,7 @@ async function pipeline(run: Run): Promise<void> {
     risk: risk.level,
     priority: ranked.priority,
     reasons,
+    since,
   });
   const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));
 
@@ -547,7 +599,7 @@ async function pipeline(run: Run): Promise<void> {
   });
   pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
 
-  const check = checkTitle(findings, reviewedAny);
+  const check = reviewedAny ? openCheckTitle(openAfter, fixedNow.length) : checkTitle(findings, false);
   await completeCheck(gh, r, review, check.conclusion, check.title, checkSummary(inputFor(findings)));
   if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
   const inline = findings.filter((f) => f.placement === "inline").length;

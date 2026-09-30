@@ -94,7 +94,7 @@ reviews.get("/:id", (c) => {
       ok: call.ok,
       tools: [],
     })),
-    since: null,
+    since: review.since ?? null,
   };
   return c.json(body);
 });
