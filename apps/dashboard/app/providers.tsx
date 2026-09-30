@@ -12,6 +12,8 @@ function makeClient(): QueryClient {
       queries: {
         staleTime: 5_000,
         refetchOnWindowFocus: true,
+        // Live states (running reviews, scanning briefs) must settle even in a tab that isn't focused.
+        refetchIntervalInBackground: true,
         // Client errors (404, 403) won't fix themselves; retry only transient failures.
         retry: (count, error) => !(error instanceof ApiError && error.status < 500) && count < 2,
       },
