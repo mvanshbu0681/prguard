@@ -5,6 +5,7 @@ import { auth } from "./routes/auth.ts";
 import { installations } from "./routes/installations.ts";
 import { me } from "./routes/me.ts";
 import { repos } from "./routes/repos.ts";
+import { reviewers } from "./routes/reviewers.ts";
 import { reviews } from "./routes/reviews.ts";
 
 export function createServer(): Hono {
@@ -17,6 +18,7 @@ export function createServer(): Hono {
   app.route("/api/repos", repos);
   app.route("/api/reviews", reviews);
   app.route("/api/installations", installations);
+  app.route("/api/reviewers", reviewers);
 
   app.onError((err, c) => {
     log.error({ err, path: c.req.path }, "request failed");

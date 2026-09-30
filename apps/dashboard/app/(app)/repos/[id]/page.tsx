@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { GitHubIcon } from "@/components/brand";
 import { BriefPanel } from "@/components/repo/brief-panel";
+import { ReviewersPanel } from "@/components/repo/reviewers-panel";
 import { RulesPanel } from "@/components/repo/rules-panel";
 import { ReviewTable } from "@/components/reviews/review-table";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -95,6 +96,7 @@ function Repo({ repo }: { repo: RepoDetail }) {
         <BriefPanel repo={repo} />
         <div className="space-y-4">
           <RulesPanel key={`rules-${repo.id}`} repo={repo} />
+          <ReviewersPanel repo={repo} />
         </div>
       </div>
 

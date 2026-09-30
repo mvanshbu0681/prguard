@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { queueBrief } from "../../brief/index-repo.ts";
 import * as repositoriesRepo from "../../db/repos/repositories.ts";
+import { reviewers } from "../../review/reviewers/index.ts";
 import { repoDetail, repoItems } from "../serialize.ts";
 import { accessibleRepo, requireUser, type AuthEnv } from "../session.ts";
 
@@ -9,6 +10,10 @@ const patchSchema = z.object({
   enabled: z.boolean().optional(),
   brief: z.string().max(40_000).optional(),
   rules: z.string().max(10_000).optional(),
+  disabledReviewers: z
+    .array(z.string())
+    .optional()
+    .transform((ids) => ids && [...new Set(ids)].filter((id) => reviewers.some((r) => r.id === id))),
 });
 
 export const repos = new Hono<AuthEnv>();

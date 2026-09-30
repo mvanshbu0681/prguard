@@ -220,7 +220,9 @@ async function pipeline(run: Run): Promise<void> {
       ? "Nothing to review: only deleted, binary, generated or lock files changed."
       : docsOnly
         ? "Documentation only, so this is a summary without a code review."
-        : failedChunks
+        : !deep
+          ? "Reviewers are off for this repository, so this is a summary only."
+          : failedChunks
           ? "Part of this pull request could not be reviewed. Re-run to try again."
           : notReviewed.length
             ? `Reviewed part of this pull request${budgetHit ? " (review budget reached)" : " (size limit reached)"}. Not reviewed: ${notReviewed
@@ -255,6 +257,7 @@ async function pipeline(run: Run): Promise<void> {
       filesReviewed: reviewable.length - notReviewed.length,
       note,
       reviewUrl: reviewUrl(review.id),
+      reviewed: deep,
     });
 
   // A retry after a crash must not post twice: reuse a review already on GitHub for this run.
@@ -290,7 +293,7 @@ async function pipeline(run: Run): Promise<void> {
   });
   pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
 
-  const check = checkTitle(findings);
+  const check = checkTitle(findings, deep);
   if (review.checkRunId) {
     await finishCheckRun(gh, r, review.checkRunId, check.conclusion, check.title, `${summary ?? note ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
   }

@@ -22,6 +22,8 @@ export type BodyInput = {
   filesReviewed: number;
   note: string | null;
   reviewUrl: string;
+  /** False when no reviewer ran (docs only, nothing reviewable, reviewers switched off). */
+  reviewed: boolean;
 };
 
 function severityLine(findings: Finding[]): string {
@@ -64,7 +66,7 @@ export function reviewBody(input: BodyInput): string {
   out.push(heading, "");
   if (input.summary) out.push(input.summary, "");
   if (input.note) out.push(`> ${input.note}`, "");
-  out.push(severityLine(input.findings), "");
+  if (input.reviewed) out.push(severityLine(input.findings), "");
 
   const inBody = input.findings.filter((f) => f.placement === "body");
   if (inBody.length) {
@@ -96,7 +98,8 @@ export function withInlineInBody(findings: Finding[]): Finding[] {
   return findings.map((f) => (f.placement === "inline" ? { ...f, placement: "body" as const } : f));
 }
 
-export function checkTitle(findings: Finding[]): { title: string; conclusion: "success" | "neutral" } {
+export function checkTitle(findings: Finding[], reviewed = true): { title: string; conclusion: "success" | "neutral" } {
+  if (!reviewed) return { title: "Summary posted", conclusion: "success" };
   const visible = findings.filter((f) => f.placement !== "hidden");
   const counts = countBySeverity(visible);
   const serious = counts.critical + counts.high > 0;
