@@ -7,6 +7,7 @@ import type { ReviewStatus } from "../../db/schema.ts";
 import { installationClient, splitFullName } from "../../github/app.ts";
 import { getPull } from "../../github/pr.ts";
 import { triggerReview } from "../../review/lifecycle.ts";
+import { reviewerRefs } from "../../review/reviewers/index.ts";
 import { reviewItems } from "../serialize.ts";
 import { accessibleRepo, requireUser, visibleRepos, type AuthEnv } from "../session.ts";
 
@@ -46,6 +47,7 @@ reviews.get("/:id", (c) => {
     .map((f) => ({
       id: f.id,
       reviewer: f.reviewer,
+      reviewers: reviewerRefs(f.reviewer),
       path: f.path,
       line: f.line,
       startLine: f.startLine,

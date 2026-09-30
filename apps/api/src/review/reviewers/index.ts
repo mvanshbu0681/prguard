@@ -32,6 +32,22 @@ export function badgeFor(id: string): string {
   return reviewers.find((r) => r.id === id)?.badge ?? id;
 }
 
+/** How the dashboard lists plugins. */
+export function reviewerInfo(p: Plugin): { id: string; name: string; description: string; badge: string; kind: "model" | "check" } {
+  return { id: p.id, name: p.name, description: p.description, badge: p.badge, kind: p.kind };
+}
+
+/** The reviewers behind a finding (`general+security`), named, at most two. */
+export function reviewerRefs(reviewer: string): { id: string; name: string; badge: string }[] {
+  return reviewer
+    .split("+")
+    .slice(0, 2)
+    .map((id) => {
+      const p = reviewers.find((r) => r.id === id);
+      return { id, name: p?.name ?? id, badge: p?.badge ?? id };
+    });
+}
+
 export { applies } from "./define.ts";
 export type { Check, ModelReviewer, Plugin } from "./define.ts";
 /** A model reviewer; kept as the name the review loop uses. */

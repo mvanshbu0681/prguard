@@ -2,6 +2,7 @@ import type { FindingItem } from "@contracts";
 import { ArrowUpRight } from "lucide-react";
 import { InlineCode } from "@/components/ui/inline-code";
 import { Markdown } from "@/components/ui/markdown";
+import { ReviewerPill } from "@/components/ui/pills";
 import { SeverityPill } from "@/components/ui/severity";
 import { Suggestion } from "./suggestion";
 
@@ -37,7 +38,11 @@ export function FindingCard({ finding }: { finding: FindingItem }) {
         {finding.placement === "body" && (
           <span className="shrink-0 rounded-sm border border-line-2 px-1.5 text-2xs leading-4 text-dim">In summary</span>
         )}
-        <span className="ml-auto shrink-0 truncate text-xs text-dim">{finding.reviewer}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-1">
+          {finding.reviewers.map((r) => (
+            <ReviewerPill key={r.id} badge={r.badge} name={r.name} />
+          ))}
+        </span>
       </header>
 
       <div className="space-y-3 px-4 pb-4 pt-3">

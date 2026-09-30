@@ -5,6 +5,9 @@ export type ReviewStatus = "queued" | "running" | "completed" | "failed" | "canc
 export type ReviewStage = "queued" | "fetching" | "summarizing" | "reviewing" | "publishing" | "done";
 export type BriefStatus = "none" | "queued" | "running" | "ready" | "failed";
 export type Placement = "inline" | "body" | "hidden";
+export type Priority = "p0" | "p1" | "p2" | "p3";
+export type RiskLevel = "low" | "medium" | "high";
+export type FindingStatus = "open" | "fixed" | "dismissed";
 
 export type ApiError = { error: string };
 
@@ -42,7 +45,17 @@ export type RepoListItem = {
   canEdit: boolean;
 };
 
-export type ReviewerInfo = { id: string; name: string; description: string };
+export type ReviewerInfo = {
+  id: string;
+  name: string;
+  description: string;
+  /** Badge id: icon and color of the reviewer's pill. */
+  badge: string;
+  /** A model reviewer, or a check that runs code. */
+  kind: "model" | "check";
+};
+
+export type ReviewerRef = Pick<ReviewerInfo, "id" | "name" | "badge">;
 
 export type RepoDetail = RepoListItem & {
   defaultBranch: string;
@@ -84,6 +97,8 @@ export type ReviewListItem = {
 export type FindingItem = {
   id: number;
   reviewer: string;
+  /** The reviewers that reported it (two when merged), at most two. */
+  reviewers: ReviewerRef[];
   path: string;
   line: number | null;
   startLine: number | null;

@@ -1,6 +1,8 @@
 "use client";
 
 import type { RepoDetail } from "@contracts";
+import clsx from "clsx";
+import { ReviewerIcon } from "@/components/ui/pills";
 import { InlineError } from "@/components/ui/error-state";
 import { Panel, PanelFooter, PanelHeader } from "@/components/ui/panel";
 import { Switch } from "@/components/ui/switch";
@@ -37,8 +39,15 @@ export function ReviewersPanel({ repo }: { repo: RepoDetail }) {
             return (
               <li key={reviewer.id} className="flex items-center gap-4 border-b border-hair px-4 py-3 last:border-0">
                 <div className="min-w-0 flex-1">
-                  <div className={on ? "text-sm font-medium text-primary" : "text-sm font-medium text-dim"}>
+                  <div
+                    className={clsx(
+                      "flex items-center gap-1.5 text-sm font-medium",
+                      on ? "text-primary" : "text-dim",
+                    )}
+                  >
+                    <ReviewerIcon badge={reviewer.badge} className={clsx(!on && "opacity-50")} />
                     {reviewer.name}
+                    {reviewer.kind === "check" && <span className="text-2xs font-normal text-faint">Check</span>}
                   </div>
                   <div className="mt-0.5 text-xs leading-[18px] text-dim">{reviewer.description}</div>
                 </div>

@@ -5,7 +5,7 @@ import * as pullsRepo from "../db/repos/pulls.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import type { Repository, Review } from "../db/schema.ts";
-import { reviewers } from "../review/reviewers/index.ts";
+import { reviewerInfo, reviewers } from "../review/reviewers/index.ts";
 
 const ZERO: SeverityCounts = { critical: 0, high: 0, medium: 0, low: 0, nit: 0 };
 
@@ -70,7 +70,7 @@ export function repoDetail(repo: Repository, editable: Set<number>): RepoDetail 
     brief: repo.brief,
     rules: repo.rules,
     disabledReviewers: repo.disabledReviewers,
-    reviewers: reviewers.map((r) => ({ id: r.id, name: r.name, description: r.description })),
+    reviewers: reviewers.map(reviewerInfo),
     recentReviews: reviewItems(reviewsRepo.list({ repositoryIds: [repo.id], limit: 10 })),
     url: `https://github.com/${repo.fullName}`,
   };
