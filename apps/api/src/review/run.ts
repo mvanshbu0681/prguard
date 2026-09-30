@@ -151,10 +151,13 @@ async function pipeline(run: Run): Promise<void> {
   // queued for the newest push may already be cancelled: unless another open review covers the live
   // head, this one takes it over instead of leaving the newest push unreviewed.
   if (live.head.sha !== review.headSha) {
-    const covered =
-      pr.lastReviewedSha === live.head.sha ||
-      reviewsRepo.listOpenForPull(pr.id).some((o) => o.id !== review.id && o.headSha === live.head.sha);
-    if (covered) throw new CancelledError();
+    const openForHead = reviewsRepo.listOpenForPull(pr.id).some((o) => o.id !== review.id && o.headSha === live.head.sha);
+    if (openForHead) throw new CancelledError();
+    if (pr.lastReviewedSha === live.head.sha) {
+      // A stale event for a head that is already reviewed: nothing else will clear the 👀 it added.
+      if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+      throw new CancelledError();
+    }
     if (review.checkRunId) {
       await finishCheckRun(gh, r, review.checkRunId, "cancelled", "Superseded", "A newer push is being reviewed.");
     }
@@ -280,6 +283,15 @@ async function pipeline(run: Run): Promise<void> {
   if (reviewable.length === 0 && skipped.length) summary = describeSkipped(skipped);
 
   stage(review.id, "publishing");
+  const limits = [
+    summaryFailed && "The summary could not be written this time.",
+    failedChunks > 0 && "Part of this pull request could not be reviewed. Re-run to try again.",
+    notReviewed.length > 0 &&
+      `Reviewed part of this pull request${budgetHit ? " (review budget reached)" : " (size limit reached)"}. Not reviewed: ${notReviewed
+        .slice(0, 10)
+        .map((p) => `\`${p}\``)
+        .join(", ")}${notReviewed.length > 10 ? ` and ${notReviewed.length - 10} more` : ""}.`,
+  ].filter((s): s is string => Boolean(s));
   const note =
     reviewable.length === 0
       ? "Nothing to review: only deleted, binary, generated or lock files changed."
@@ -287,15 +299,8 @@ async function pipeline(run: Run): Promise<void> {
         ? "Documentation only, so this is a summary without a code review."
         : !deep
           ? "Reviewers are off for this repository, so this is a summary only."
-          : summaryFailed
-          ? "The summary could not be written this time."
-          : failedChunks
-          ? "Part of this pull request could not be reviewed. Re-run to try again."
-          : notReviewed.length
-            ? `Reviewed part of this pull request${budgetHit ? " (review budget reached)" : " (size limit reached)"}. Not reviewed: ${notReviewed
-                .slice(0, 10)
-                .map((p) => `\`${p}\``)
-                .join(", ")}${notReviewed.length > 10 ? ` and ${notReviewed.length - 10} more` : ""}.`
+          : limits.length
+            ? limits.join(" ")
             : processed.repeats && findings.length === 0
               ? "No new issues since the last review."
               : null;

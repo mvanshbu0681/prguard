@@ -42,24 +42,26 @@ async function adoptInstallation(installation: GitHubInstallation): Promise<void
   for (const id of repoIds) if (repositoriesRepo.get(id)?.briefStatus === "none") queueBrief(id);
 }
 
-/** What GitHub says this user can see: installations (admin for org admins and owners) and repos. */
+/**
+ * What GitHub says this user can see: installations and repos. A user administers an installation
+ * when it is their own account, or when they are admin on every repository it covers (org owners
+ * are). This needs no organization "Members" permission, which the App does not request.
+ */
 async function readAccess(userClient: Octokit, login: string, installs: GitHubInstallation[]): Promise<usersRepo.Access> {
   const access: usersRepo.Access = { installations: [], repositories: [] };
   for (const installation of installs) {
-    const account = installation.account?.login ?? "";
-    let admin = account.toLowerCase() === login.toLowerCase();
-    if (!admin && installation.account?.type === "Organization") {
-      const membership = await userClient.rest.orgs.getMembershipForAuthenticatedUser({ org: account }).catch(() => null);
-      admin = membership?.data.state === "active" && membership.data.role === "admin";
-    }
-    access.installations.push({ installationId: installation.id, admin });
-    const repos = await userClient.paginate(userClient.rest.apps.listInstallationReposForAuthenticatedUser, {
+    const repos = (await userClient.paginate(userClient.rest.apps.listInstallationReposForAuthenticatedUser, {
       installation_id: installation.id,
       per_page: 100,
-    });
-    for (const repo of repos as { id: number; permissions?: { admin?: boolean; maintain?: boolean } }[]) {
-      access.repositories.push({ repositoryId: Number(repo.id), admin: Boolean(repo.permissions?.admin || repo.permissions?.maintain) });
-    }
+    })) as { id: number; permissions?: { admin?: boolean; maintain?: boolean } }[];
+    const mine = repos.map((repo) => ({ repositoryId: Number(repo.id), admin: Boolean(repo.permissions?.admin || repo.permissions?.maintain) }));
+    access.repositories.push(...mine);
+
+    const owner = (installation.account?.login ?? "").toLowerCase() === login.toLowerCase();
+    const covered = new Set(mine.filter((r) => r.admin).map((r) => r.repositoryId));
+    const all = repositoriesRepo.listActive([installation.id]);
+    const adminOfAll = all.length > 0 && all.every((r) => covered.has(r.id));
+    access.installations.push({ installationId: installation.id, admin: owner || adminOfAll });
   }
   return access;
 }

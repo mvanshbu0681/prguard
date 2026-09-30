@@ -4,7 +4,7 @@ import * as repositoriesRepo from "../db/repos/repositories.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import type { PullRequest, Repository, Review } from "../db/schema.ts";
 import { installationClient, splitFullName } from "../github/app.ts";
-import { addEyes, finishCheckRun, removeReaction, startCheckRun } from "../github/pr.ts";
+import { addEyes, createCompletedCheckRun, finishCheckRun, removeReaction, startCheckRun } from "../github/pr.ts";
 import { errMessage, log } from "../log.ts";
 import { briefKey, cancelKey, enqueue, reviewKey } from "../queue/queue.ts";
 
@@ -82,9 +82,10 @@ export async function failReview(reviewId: number): Promise<void> {
   try {
     const gh = await installationClient(repo.installationId);
     const r = splitFullName(repo.fullName);
-    if (review.checkRunId) {
-      await finishCheckRun(gh, r, review.checkRunId, "neutral", "Review failed", "Something went wrong. Re-run it from the dashboard.");
-    }
+    const text = ["Review failed", "Something went wrong. Re-run it from the dashboard."] as const;
+    if (review.checkRunId) await finishCheckRun(gh, r, review.checkRunId, "neutral", ...text);
+    // A review that took over a newer push has no check run yet; the newest commit still needs one.
+    else await createCompletedCheckRun(gh, r, review.headSha, reviewUrl(review.id), "neutral", ...text);
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
   } catch (err) {
     log.warn({ review: reviewId, err: errMessage(err) }, "could not close a failed review on GitHub");

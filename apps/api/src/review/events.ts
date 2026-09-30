@@ -1,6 +1,9 @@
 import * as installationsRepo from "../db/repos/installations.ts";
 import * as pullsRepo from "../db/repos/pulls.ts";
 import * as repositoriesRepo from "../db/repos/repositories.ts";
+import * as reviewsRepo from "../db/repos/reviews.ts";
+import { installationClient, splitFullName } from "../github/app.ts";
+import { getPull } from "../github/pr.ts";
 import type { Repository } from "../db/schema.ts";
 import { saveRepos } from "../github/reconcile.ts";
 import { on } from "../github/webhooks.ts";
@@ -44,12 +47,20 @@ on("pull_request", async (payload) => {
       log.info({ repo: repo.fullName, pr: pr.number }, "review skipped: repository off");
       return;
     }
+    // A late or repeated push event for a commit that is already reviewed, or being reviewed, adds nothing.
+    const head: string = p.head.sha;
+    if (action === "synchronize" && pr.lastReviewedSha === head) return;
+    if (reviewsRepo.listOpenForPull(pr.id).some((r) => r.headSha === head)) return;
     await triggerReview(repo, pr, action);
     return;
   }
 
   if (action === "closed" || action === "converted_to_draft") {
+    // Events can arrive out of order: only stop reviews if the PR really is closed or a draft now.
+    const gh = await installationClient(repo.installationId);
+    const live = await getPull(gh, splitFullName(repo.fullName), pr.number);
+    if (live.state === "open" && !live.draft) return;
     const cancelled = cancelKey(reviewKey(repo.id, pr.number));
-    for (const job of cancelled) await closeReview(Number(job.payload.reviewId), action === "closed" ? "closed" : "draft");
+    for (const job of cancelled) await closeReview(Number(job.payload.reviewId), live.state === "open" ? "draft" : "closed");
   }
 });

@@ -127,14 +127,23 @@ function fitSuggestion(
   suggestion: string,
 ): { suggestion: string | null; last: number } {
   const text = newLineText(file);
-  const sug = suggestion.replace(/\n$/, "").split("\n");
   const current = [];
   for (let l = start; l <= last; l++) current.push(text.get(l) ?? "");
-  if (sug.join("\n").trim() === current.join("\n").trim()) return { suggestion: null, last };
+  const sug = reindent(suggestion.replace(/\n$/, "").split("\n"), current[0] ?? "");
+  const fitted = sug.join("\n");
+  if (fitted.trim() === current.join("\n").trim()) return { suggestion: null, last };
+
+  // Fewer lines than the range: only a pure deletion (the kept lines, in order) is safe to commit.
+  if (sug.length < current.length) {
+    let i = 0;
+    for (const line of current) if (i < sug.length && line.trim() === sug[i]!.trim()) i++;
+    return { suggestion: i === sug.length ? fitted : null, last };
+  }
 
   const extra = sug.length - current.length;
-  if (extra <= 0) return { suggestion, last };
-  const inSuggestion = new Set(sug.map((s) => s.trim()).filter(Boolean));
+  if (extra === 0) return { suggestion: fitted, last };
+  const meaningful = (s: string) => s.trim().length >= 6 && /[A-Za-z0-9_]{3}/.test(s);
+  const inSuggestion = new Set(sug.map((s) => s.trim()).filter(meaningful));
   let widenTo = last;
   for (let k = 1; k <= Math.min(extra, 12); k++) {
     const fileLine = text.get(last + k);
@@ -142,11 +151,22 @@ function fitSuggestion(
       if (widenTo === last) break;
       return { suggestion: null, last };
     }
-    if (fileLine.trim() && inSuggestion.has(fileLine.trim())) widenTo = last + k;
+    if (inSuggestion.has(fileLine.trim())) widenTo = last + k;
   }
-  if (widenTo === last) return { suggestion, last };
+  if (widenTo === last) return { suggestion: fitted, last };
   for (let l = last + 1; l <= widenTo; l++) if (lines.get(l) !== hunk) return { suggestion: null, last };
-  return { suggestion, last: widenTo };
+  return { suggestion: fitted, last: widenTo };
+}
+
+/** Models often drop leading indentation; restore it from the first line being replaced. */
+function reindent(sug: string[], firstLine: string): string[] {
+  const target = /^\s*/.exec(firstLine)![0];
+  const firstCode = sug.find((s) => s.trim());
+  if (!target || firstCode === undefined) return sug;
+  const have = /^\s*/.exec(firstCode)![0];
+  if (have.length >= target.length || !target.startsWith(have)) return sug;
+  const pad = target.slice(have.length);
+  return sug.map((s) => (s.trim() ? pad + s : s));
 }
 
 const MIN_CONFIDENCE = 0.5;
