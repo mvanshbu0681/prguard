@@ -1,5 +1,0 @@
-# Spec §7 E10: an unresolvable pin. `uv pip install -r requirements.txt` fails
-# whether or not the machine has network, so deps_install_ok is false and the
-# resulting proof is capped at `inconclusive` — an install failure can never
-# produce a `proven` finding.
-prguard-fixture-package-that-does-not-exist==9.9.9

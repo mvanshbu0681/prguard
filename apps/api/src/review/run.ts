@@ -1,0 +1,721 @@
+import * as pullsRepo from "../db/repos/pulls.ts";
+import * as repositoriesRepo from "../db/repos/repositories.ts";
+import * as reviewsRepo from "../db/repos/reviews.ts";
+import type { ImpactSymbol, PrioritySignals, PullRequest, Repository, Review } from "../db/schema.ts";
+import { installationClient, splitFullName, type GitHub } from "../github/app.ts";
+import {
+  compare,
+  findPostedReview,
+  finishCheckRun,
+  getPull,
+  markCheckRunStarted,
+  listFiles,
+  postReview,
+  removeReaction,
+  createCompletedCheckRun,
+  type CheckConclusion,
+  type PrFile,
+  type Repo,
+} from "../github/pr.ts";
+import { errMessage, log } from "../log.ts";
+import { CancelledError, FatalError, registerJob, type JobContext } from "../queue/worker.ts";
+import { queueBrief } from "../brief/index-repo.ts";
+import { codeTerms, codify } from "./codify.ts";
+import { flowMermaid } from "./flow.ts";
+import { buildContext, teamRules } from "./context.ts";
+import { config } from "../config.ts";
+import { addedLines, newLineText, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
+import { filesFor, runReviewers } from "./engine.ts";
+import { hasTestFiles } from "./tools.ts";
+import { impact, outsideCallers, renderImpact } from "./impact.ts";
+import { Tracer } from "./trace.ts";
+import { triage } from "./triage.ts";
+import { cancelReason, closeReview, failReview, reviewUrl } from "./lifecycle.ts";
+import * as findingsRepo from "../db/repos/findings.ts";
+import { getSnapshot } from "../github/snapshot.ts";
+import { place, processFindings, type RawFinding } from "./findings.ts";
+import { verifyFindings } from "./verify.ts";
+import { withSuggestedTests } from "./test-plan.ts";
+import { findSecret, forgetSecrets, rememberSecrets, redactSecrets } from "./checks/secrets.ts";
+import { dependencies, isManifest } from "./checks/manifests.ts";
+import { assessRisk, type RiskLevel } from "./risk.ts";
+import { decidePriority, type Priority } from "./priority.ts";
+import { detectFixes, markFixed, recordCommentIds, snippetOf } from "./tracking.ts";
+import { learningsSection, suppress } from "../learnings/apply.ts";
+import { sweepReactions } from "../commands/reactions.ts";
+import type { FindingRow } from "../db/repos/findings.ts";
+import { classify, fileKind } from "./noise.ts";
+import { checkSummary, checkTitle, openCheckTitle, reviewBody, toComments, withInlineInBody, type BodyInput } from "./publish.ts";
+import { applies, checks, enabledPlugins, modelReviewers } from "./reviewers/index.ts";
+import { summarize } from "./summarize.ts";
+import type { Finding } from "./types.ts";
+
+function describeSkipped(skipped: { path: string; reason: string }[]): string {
+  const byReason = new Map<string, string[]>();
+  for (const s of skipped) byReason.set(s.reason, [...(byReason.get(s.reason) ?? []), s.path]);
+  const label: Record<string, string> = {
+    lockfile: "lock files",
+    generated: "generated files",
+    binary: "binary files",
+    deleted: "deleted files",
+    "diff too large": "files too large to diff",
+    "no changes": "renamed files",
+    "only deletions": "files with only removed lines",
+  };
+  const parts = [...byReason].map(([reason, paths]) => {
+    const shown = paths.slice(0, 5).map((p) => `\`${p}\``).join(", ");
+    return `${label[reason] ?? reason} (${shown}${paths.length > 5 ? ` and ${paths.length - 5} more` : ""})`;
+  });
+  return `This pull request changes only ${parts.join("; ")}.`;
+}
+
+const SEVERITY_ORDER = ["critical", "high", "medium", "low", "nit"];
+
+const RISK_LABEL: Record<RiskLevel, string> = { low: "Low risk", medium: "Medium risk", high: "High risk" };
+const PRIORITY_LABEL: Record<Priority, string> = { p0: "Urgent", p1: "High priority", p2: "Normal priority", p3: "Low priority" };
+
+/** Test gap reports one finding per review: its most severe, most confident one. */
+function oneTestGap(raw: RawFinding[]): RawFinding[] {
+  const gaps = raw.filter((f) => f.reviewer === "tests");
+  if (gaps.length <= 1) return raw;
+  const rank = (f: RawFinding) => {
+    const i = SEVERITY_ORDER.indexOf(f.severity.toLowerCase());
+    return (i < 0 ? 2 : i) - (f.confidence ?? 0.7);
+  };
+  const keep = [...gaps].sort((a, b) => rank(a) - rank(b))[0];
+  return raw.filter((f) => f.reviewer !== "tests" || f === keep);
+}
+
+type Run = {
+  review: Review;
+  pr: PullRequest;
+  repo: Repository;
+  gh: GitHub;
+  r: Repo;
+  ctx: JobContext;
+  signal: AbortSignal;
+  trace: Tracer;
+};
+
+/** Completes the review's check run, or creates a completed one when it has none (a takeover). */
+async function completeCheck(gh: GitHub, r: Repo, review: Review, conclusion: CheckConclusion, title: string, summary: string): Promise<void> {
+  if (review.checkRunId) await finishCheckRun(gh, r, review.checkRunId, conclusion, title, summary);
+  else await createCompletedCheckRun(gh, r, review.headSha, reviewUrl(review.id), conclusion, title, summary);
+}
+
+function stage(reviewId: number, s: Review["stage"]): void {
+  reviewsRepo.update(reviewId, { stage: s });
+}
+
+type Scope = {
+  kind: "full" | "incremental";
+  files: FileDiff[];
+  focus: Map<string, Set<number>> | undefined;
+  range: { from: string; to: string } | null;
+};
+
+/**
+ * What this review covers. After a previous review, only the new commits: lines added both in the
+ * compare from the last reviewed commit and in the PR diff (so merges from the base branch add
+ * nothing). A force-push or an unavailable compare falls back to the whole PR.
+ */
+async function resolveScope(run: Run, pr: PullRequest, files: FileDiff[]): Promise<Scope> {
+  const full: Scope = { kind: "full", files, focus: undefined, range: null };
+  const last = pr.lastReviewedSha;
+  if (!last || run.review.trigger === "manual" || run.review.trigger === "command") return full;
+  if (last === run.review.headSha) return { kind: "incremental", files: [], focus: new Map(), range: { from: last, to: last } };
+
+  const cmp = await compare(run.gh, run.r, last, run.review.headSha);
+  if (!cmp || cmp.status !== "ahead") return full;
+
+  const newFiles = toFileDiffs((cmp.files ?? []) as PrFile[]);
+  const focus = new Map<string, Set<number>>();
+  for (const nf of newFiles) {
+    const prFile = files.find((f) => f.path === nf.path);
+    if (!prFile) continue;
+    const inPr = addedLines(prFile);
+    const both = [...addedLines(nf)].filter((l) => inPr.has(l));
+    if (both.length) focus.set(nf.path, new Set(both));
+  }
+  const scoped = files.filter((f) => focus.has(f.path)).map((f) => ({ ...f, hunks: windowHunks(f.hunks, focus.get(f.path)!) }));
+  return { kind: "incremental", files: scoped, focus, range: { from: last, to: run.review.headSha } };
+}
+
+/** Checks earlier open findings for fixes and marks the fixed ones on GitHub. Only cancellation throws. */
+async function findFixes(
+  run: Run,
+  pr: PullRequest,
+  review: Review,
+  earlierOpen: FindingRow[],
+  snapshot: Promise<string | null>,
+  files: FileDiff[],
+  meta: { reviewId: number; repositoryId: number; signal?: AbortSignal },
+): Promise<FindingRow[]> {
+  if (earlierOpen.length === 0) {
+    run.trace.add("fixes", "Fix check", null, config.features.trackFixes ? "Nothing open" : "Off", "skipped");
+    return [];
+  }
+  const started = Date.now();
+  try {
+    const { fixed, checked } = await detectFixes({ gh: run.gh, r: run.r, prNumber: pr.number, open: earlierOpen, snapshot: await snapshot, files, meta });
+    for (const f of fixed) await markFixed(run.gh, run.r, f, review.headSha);
+    run.trace.add("fixes", "Fix check", started, `${checked} changed, ${fixed.length} fixed`);
+    return fixed;
+  } catch (err) {
+    if (err instanceof CancelledError || run.signal.aborted) throw err;
+    log.warn({ review: review.id, err: errMessage(err) }, "fix check failed");
+    run.trace.add("fixes", "Fix check", started, "Failed", "failed");
+    return [];
+  }
+}
+
+async function pipeline(run: Run): Promise<void> {
+  const { gh, r, ctx, trace } = run;
+  let { pr, review } = run;
+  const started = Date.now();
+
+  run.ctx.checkCancelled();
+  const repoNow = repositoriesRepo.get(run.repo.id);
+  if (!repoNow || repoNow.removedAt || !repoNow.enabled) throw new CancelledError();
+  reviewsRepo.update(review.id, { status: "running", stage: "fetching", startedAt: Date.now(), error: null });
+  if (review.checkRunId) await markCheckRunStarted(gh, r, review.checkRunId);
+
+  const live = await getPull(gh, r, pr.number);
+  pullsRepo.update(pr.id, {
+    title: live.title,
+    body: live.body ?? null,
+    headSha: live.head.sha,
+    baseSha: live.base.sha,
+    draft: Boolean(live.draft),
+    state: live.merged ? "merged" : (live.state as "open" | "closed"),
+    labels: (live.labels ?? []).map((l) => l.name).filter((n): n is string => Boolean(n)),
+  });
+  pr = pullsRepo.get(pr.id)!;
+  if (pr.state !== "open" || pr.draft) throw new CancelledError();
+
+  // The PR moved on since this review was queued. Webhooks can arrive out of order, so the review
+  // queued for the newest push may already be cancelled: unless another open review covers the live
+  // head, this one takes it over instead of leaving the newest push unreviewed.
+  if (live.head.sha !== review.headSha) {
+    const openForHead = reviewsRepo.listOpenForPull(pr.id).some((o) => o.id !== review.id && o.headSha === live.head.sha);
+    if (openForHead) throw new CancelledError();
+    if (pr.lastReviewedSha === live.head.sha) {
+      // A stale event for a head that is already reviewed: nothing else will clear the 👀 it added.
+      if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+      throw new CancelledError();
+    }
+    if (review.checkRunId) {
+      await finishCheckRun(gh, r, review.checkRunId, "cancelled", "Superseded", "A newer push is being reviewed.");
+    }
+    // No check run yet: one is created when this review publishes, so a takeover that is itself
+    // superseded leaves nothing behind on the newer commit.
+    reviewsRepo.update(review.id, { headSha: live.head.sha, baseSha: live.base.sha, checkRunId: null });
+    review = reviewsRepo.get(review.id)!;
+    log.info({ review: review.id, head: live.head.sha }, "review moved to the latest push");
+  }
+
+  const files: FileDiff[] = toFileDiffs(await listFiles(gh, r, pr.number));
+  const scope = await resolveScope({ ...run, review }, pr, files);
+  const { kind, focus, range } = scope;
+  const { reviewable, skipped, docsOnly } = classify(scope.files);
+  // Secret values in the added lines are scrubbed from every model call record of this review.
+  rememberSecrets(
+    review.id,
+    reviewable.flatMap((f) => {
+      const text = newLineText(f);
+      return [...addedLines(f)].flatMap((n) => findSecret(text.get(n) ?? "")?.value ?? []);
+    }),
+  );
+  const anchorFiles = classify(files).reviewable;
+  reviewsRepo.update(review.id, { kind, baseSha: live.base.sha, filesSkipped: skipped });
+  trace.add("fetch", "Fetch", started, `${scope.files.length} files, ${reviewable.length} reviewable`);
+  ctx.checkCancelled();
+
+  const meta = { reviewId: review.id, repositoryId: run.repo.id, signal: run.signal };
+  // Findings still open from earlier reviews: every later push checks whether they were fixed.
+  const hadEarlier = Boolean(pr.lastReviewedSha);
+  // A 👎 since the last review becomes a learning before this review runs, so it applies right away.
+  if (hadEarlier) await sweepReactions(gh, r, pr);
+  const earlierOpen = config.features.trackFixes && hadEarlier ? findingsRepo.listOpenCommentedForPull(pr.id) : [];
+
+  if (kind === "incremental" && reviewable.length === 0) {
+    // Only deletions or skipped files: nothing to review, but deleting code often fixes a finding.
+    const snap = earlierOpen.length ? getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch(() => null) : Promise.resolve(null);
+    const fixedNow = await findFixes(run, pr, review, earlierOpen, snap, files, meta);
+    const openAfter = findingsRepo.listOpenForPull(pr.id);
+    // Nothing new was reviewed, so risk and priority carry over from the PR's last completed review.
+    const last = reviewsRepo.listForPull(pr.id).find((x) => x.id !== review.id && x.status === "completed" && x.risk !== null);
+    reviewsRepo.update(review.id, {
+      status: "completed",
+      stage: "done",
+      note: "No new changes to review since the last review.",
+      reviewed: false,
+      since: { fixed: fixedNow.length, new: 0, open: openAfter.length },
+      ...(last && {
+        risk: last.risk,
+        riskScore: last.riskScore,
+        riskReasons: last.riskReasons,
+        priority: last.priority,
+        priorityReason: last.priorityReason,
+        signals: last.signals,
+      }),
+      finishedAt: Date.now(),
+    });
+    pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
+    // Findings still open keep the same title the main path gives them; only a clean PR reads "No new changes".
+    const check =
+      fixedNow.length || openAfter.length ? openCheckTitle(openAfter, fixedNow.length) : { title: "No new changes", conclusion: "success" as const };
+    await completeCheck(gh, r, review, check.conclusion, check.title, `Nothing new to review since the last review.\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
+    if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+    return;
+  }
+
+  if (repoNow.briefStatus === "none") queueBrief(repoNow.id);
+  const baseContext = buildContext(pr, repoNow);
+  const rulesContext = buildContext(pr, repoNow, { rules: true });
+
+  const plugins = enabledPlugins(run.repo.disabledReviewers);
+  // Team rules has nothing to enforce without rules, learnings or a brief.
+  const hasRules = Boolean(teamRules(repoNow) || repoNow.brief?.trim() || learningsSection(repoNow.id));
+  const models = modelReviewers(plugins).filter((r) => !r.needs?.rules || hasRules);
+  const codeFiles = docsOnly ? [] : reviewable.filter((f) => fileKind(f.path) !== "docs");
+  const deep = models.some((r) => filesFor(r, codeFiles).length > 0);
+  const checkPlugins = checks(plugins).filter((c) => reviewable.some((f) => applies(c, f.path)));
+  const checkIds = new Set(checkPlugins.map((c) => c.id));
+  // A review counts as reviewed when any reviewer or check looked at the code.
+  const reviewedAny = deep || checkPlugins.length > 0;
+
+  let summary: string | null = null;
+  let walkthrough: { path: string; change: string }[] = [];
+  let flow: string | null = null;
+  let signals: PrioritySignals | null = null;
+  let raw: RawFinding[] = [];
+  let failedChunks = 0;
+  let notReviewed: string[] = [];
+  let budgetHit = false;
+  // Usage from an earlier, interrupted attempt does not count against this attempt's budget.
+  const baseline = review.tokensIn + review.tokensOut;
+  stage(review.id, deep ? "reviewing" : "summarizing");
+
+  // A failed summary must not throw away the findings: the review goes out without one.
+  let summaryFailed = false;
+  const summaryTask = reviewable.length
+    ? summarize({ context: baseContext, files: reviewable, incremental: kind === "incremental", focus, meta })
+        .then((s) => {
+          summary = s.summary;
+          walkthrough = s.walkthrough;
+          flow = flowMermaid(s.flow);
+          signals = s.signals;
+        })
+        .catch((err) => {
+          if (run.signal.aborted) throw err;
+          summaryFailed = true;
+          log.warn({ review: review.id, err: errMessage(err) }, "summary failed, publishing without it");
+        })
+    : Promise.resolve();
+
+  const snapshotTask: Promise<string | null> = reviewedAny || earlierOpen.length > 0
+    ? getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch((err) => {
+        log.warn({ review: review.id, err: errMessage(err) }, "snapshot unavailable, reviewing without tools");
+        return null;
+      })
+    : Promise.resolve(null);
+  let snapshot: string | null = null;
+  const reviewTask = deep
+    ? (async () => {
+        const [snap, routing] = await Promise.all([
+          snapshotTask,
+          config.features.triage
+            ? trace.step(
+                "triage",
+                "Triage",
+                () => triage({ files: codeFiles, reviewers: models, context: baseContext, meta }),
+                (t) => `${t.files.length} files${t.fallback ? ", fell back to every reviewer" : ""}`,
+              )
+            : (trace.add("triage", "Triage", null, "Off", "skipped"), null),
+        ]);
+        snapshot = snap;
+        ctx.checkCancelled();
+
+        const impactStarted = Date.now();
+        let symbols: ImpactSymbol[] = [];
+        if (snapshot) {
+          try {
+            symbols = impact(codeFiles, snapshot);
+            reviewsRepo.update(review.id, { impact: symbols });
+            const refs = symbols.reduce((n, s) => n + s.refs, 0);
+            trace.add("impact", "Impact", impactStarted, `${symbols.length} symbols, ${refs} references`);
+          } catch (err) {
+            log.warn({ review: review.id, err: errMessage(err) }, "impact analysis failed");
+            trace.add("impact", "Impact", impactStarted, "Failed", "failed");
+          }
+        } else {
+          trace.add("impact", "Impact", null, "No snapshot", "skipped");
+        }
+        const impactText = renderImpact(symbols);
+        // Breaking change only runs when something outside this PR uses what it changed, and only on
+        // the files that define those symbols.
+        const outside = outsideCallers(symbols, new Set(files.map((f) => f.path)));
+        const hasOutsideCallers = outside.length > 0;
+        if (routing) {
+          const definers = new Set(outside.map((s) => s.path));
+          for (const [path, ids] of routing.routes) {
+            const next = ids.filter((id) => id !== "breaking");
+            if (definers.has(path)) next.push("breaking");
+            routing.routes.set(path, next);
+          }
+        }
+        // Test gap has nothing to compare against in a repository without tests.
+        const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
+        const running = models.filter((r) => (!r.needs?.testsInRepo || testsInRepo) && (r.needs?.impact !== "required" || hasOutsideCallers));
+        // Recorded after the re-route and without reviewers that do not run, so it matches what ran.
+        if (routing) {
+          const ran = new Set(running.map((m) => m.id));
+          reviewsRepo.update(review.id, {
+            triage: routing.files.map((f) => ({ ...f, reviewers: (routing.routes.get(f.path) ?? f.reviewers).filter((id) => ran.has(id)) })),
+          });
+        }
+        const outcome = await trace.step(
+          "review",
+          "Reviewers",
+          () =>
+            runReviewers({
+              reviewers: running,
+              files: codeFiles,
+              routes: routing?.routes,
+              focus,
+              contextFor: (r) => {
+                const base = r.needs?.rules ? rulesContext : baseContext;
+                return r.needs?.impact && impactText ? `${base}\n\n${impactText}` : base;
+              },
+              snapshot,
+              baseline,
+              ctx,
+              meta,
+            }),
+          (o) => `${o.stats.filter((s) => s.chunks > 0).length} reviewers, ${o.raw.length} findings before filtering`,
+        );
+        trace.data.reviewers = outcome.stats;
+        raw = await withSuggestedTests(oneTestGap(outcome.raw), codeFiles, meta);
+        failedChunks = outcome.failedChunks;
+        notReviewed = outcome.notReviewed;
+        budgetHit = outcome.budgetHit;
+      })()
+    : Promise.resolve();
+
+  // Checks are code, not models: they run beside the reviewers on every file they apply to.
+  let checkRaw: RawFinding[] = [];
+  // Exact secret values the Secrets check found: scrubbed from everything written or stored below.
+  let sensitive: string[] = [];
+  const checksTask = checkPlugins.length
+    ? (async () => {
+        const snap = await snapshotTask;
+        const checksStarted = Date.now();
+        const results = await Promise.all(
+          checkPlugins.map(async (check) => {
+            try {
+              const out = await check.run({
+                files: reviewable.filter((f) => applies(check, f.path)),
+                snapshot: snap,
+                repo: repoNow,
+                signal: run.signal,
+              });
+              return { check, out };
+            } catch (err) {
+              log.warn({ review: review.id, check: check.id, err: errMessage(err) }, "check failed");
+              return { check, out: { findings: [] as RawFinding[], detail: "Failed" } };
+            }
+          }),
+        );
+        checkRaw = results.flatMap((x) => x.out.findings);
+        sensitive = results.flatMap((x) => ("sensitive" in x.out ? (x.out.sensitive ?? []) : []));
+        trace.add("checks", "Checks", checksStarted, results.map((x) => `${x.check.name}: ${x.out.detail}`).join("; "));
+      })()
+    : (trace.add("checks", "Checks", null, "None apply", "skipped"), Promise.resolve());
+
+  let fixedNow: FindingRow[] = [];
+  const fixesTask = findFixes(run, pr, review, earlierOpen, snapshotTask, files, meta).then((fixed) => {
+    fixedNow = fixed;
+  });
+
+  await Promise.all([summaryTask, reviewTask, checksTask, fixesTask]);
+  ctx.checkCancelled();
+  const scrub = (text: string) => redactSecrets(text, sensitive);
+
+  const previous = findingsRepo.listPostedForPull(pr.id);
+  const processed = processFindings(raw.concat(checkRaw), anchorFiles, previous, focus, checkIds);
+  let candidates = processed.findings.map((f) => (f.reviewer.split("+").some((id) => checkIds.has(id)) ? { ...f, fromCheck: true } : f));
+
+  // What the team already dismissed is not posted again.
+  const learned = suppress(candidates, run.repo.id);
+  candidates = learned.kept;
+  trace.data.suppressed = learned.suppressed.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, learningId: x.learningId }));
+  trace.add("learnings", "Learnings", null, learned.suppressed.length ? `${learned.suppressed.length} suppressed` : "Nothing suppressed");
+
+  // Model findings of medium severity and above are re-checked against the code before posting.
+  let rejectedCount = 0;
+  if (config.features.verify && candidates.some((f) => !f.fromCheck)) {
+    const verifyStarted = Date.now();
+    const spent = () => {
+      const now = reviewsRepo.get(review.id)!;
+      return now.tokensIn + now.tokensOut - baseline;
+    };
+    const verification = await verifyFindings({
+      findings: candidates,
+      files: anchorFiles,
+      snapshot,
+      context: baseContext,
+      budgetLeft: () => config.review.tokenBudget - spent(),
+      meta,
+    });
+    candidates = verification.findings;
+    rejectedCount = verification.rejected.length;
+    trace.data.rejected = verification.rejected.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, line: x.finding.line, reason: scrub(x.reason) }));
+    trace.data.unsure = verification.unsure.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, line: x.finding.line, reason: scrub(x.reason) }));
+    // Failed calls show in the trace; their findings still go out unverified.
+    const failedNote = verification.failed ? `, ${verification.failed} failed (posted unverified)` : "";
+    trace.add(
+      "verify",
+      "Verification",
+      verifyStarted,
+      verification.checked === 0 && verification.failed
+        ? `Failed, ${verification.failed} posted unverified`
+        : verification.skipped && verification.checked === 0
+          ? "Skipped, review budget reached"
+          : `${verification.checked} checked, ${verification.confirmed} confirmed, ${verification.rejected.length} rejected${failedNote}`,
+      // Any group that failed shows: its findings went out unverified.
+      verification.failed ? "failed" : "ok",
+    );
+  } else {
+    trace.add("verify", "Verification", null, config.features.verify ? "Nothing to verify" : "Off", "skipped");
+  }
+  ctx.checkCancelled();
+
+  const terms = codeTerms(files);
+  let findings: Finding[] = place(candidates).map((f) => ({
+    ...f,
+    title: scrub(codify(f.title, terms)),
+    body: scrub(codify(f.body, terms)),
+    evidence: f.evidence ? scrub(codify(f.evidence, terms)) : f.evidence,
+    suggestion: f.suggestion === null ? null : scrub(f.suggestion),
+    details: f.details ? { title: scrub(f.details.title), body: scrub(codify(f.details.body, terms)) } : f.details,
+  }));
+  if (summary) summary = scrub(codify(summary, terms));
+  walkthrough = walkthrough.map((w) => ({ ...w, change: scrub(codify(w.change, terms)) }));
+  if (flow) flow = scrub(flow);
+  trace.data.funnel = {
+    raw: raw.length,
+    anchored: raw.length - processed.dropped,
+    confident: raw.length - processed.dropped - processed.lowConfidence,
+    unique: processed.unique,
+    fresh: processed.findings.length,
+    suppressed: learned.suppressed.length,
+    rejected: rejectedCount,
+    posted: findings.filter((f) => f.placement !== "hidden").length,
+  };
+  const partial = failedChunks > 0 || notReviewed.length > 0;
+  reviewsRepo.update(review.id, { partial, notReviewed });
+  if (processed.dropped) log.info({ review: review.id, dropped: processed.dropped }, "findings dropped");
+
+  // Nothing the models could read (lock files, generated or binary files): describe it plainly.
+  if (reviewable.length === 0 && skipped.length) summary = describeSkipped(skipped);
+
+  stage(review.id, "publishing");
+  const limits = [
+    summaryFailed && "The summary could not be written this time.",
+    failedChunks > 0 && "Part of this pull request could not be reviewed. Re-run to try again.",
+    notReviewed.length > 0 &&
+      `Reviewed part of this pull request${budgetHit ? " (review budget reached)" : " (size limit reached)"}. Not reviewed: ${notReviewed
+        .slice(0, 10)
+        .map((p) => `\`${p}\``)
+        .join(", ")}${notReviewed.length > 10 ? ` and ${notReviewed.length - 10} more` : ""}.`,
+  ].filter((s): s is string => Boolean(s));
+  const note =
+    reviewable.length === 0
+      ? "Nothing to review: only deleted, binary, generated or lock files changed."
+      : docsOnly
+        ? "Documentation only, so this is a summary without a code review."
+        : !reviewedAny
+          ? "Reviewers are off for this repository, so this is a summary only."
+          : limits.length
+            ? limits.join(" ")
+            : processed.repeats && findings.length === 0
+              ? "No new issues since the last review."
+              : null;
+
+  const visibleNew = findings.filter((f) => f.placement !== "hidden");
+  const openAfter: { severity: Finding["severity"] }[] = [...findingsRepo.listOpenForPull(pr.id), ...visibleNew];
+  const since = hadEarlier ? { fixed: fixedNow.length, new: visibleNew.length, open: openAfter.length } : null;
+  reviewsRepo.update(review.id, { since });
+
+  // Risk from code signals: the whole PR, what uses it, new dependencies and what is still open on it.
+  const manifests = reviewable.filter((f) => isManifest(f.path));
+  const risk = assessRisk({
+    prFiles: files,
+    impact: reviewsRepo.get(review.id)!.impact,
+    newDependencies: manifests.length ? dependencies(manifests, snapshot).length : 0,
+    malware: findings.some((f) => f.reviewer.split("+").includes("supply-chain") && f.severity === "critical"),
+    openFindings: openAfter,
+  });
+  reviewsRepo.update(review.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
+  pullsRepo.update(pr.id, { risk: risk.level, riskScore: risk.score, riskReasons: risk.reasons });
+  // Priority: business impact from the summary, raised by labels and severe findings.
+  const ranked = decidePriority({
+    signals,
+    labels: pr.labels,
+    findings,
+    previous: pr.priority ?? null,
+    incremental: kind === "incremental",
+  });
+  const priorityReason = ranked.reason ? scrub(codify(ranked.reason, terms)) : null;
+  reviewsRepo.update(review.id, { priority: ranked.priority, priorityReason, signals });
+  pullsRepo.update(pr.id, { priority: ranked.priority, priorityReason });
+  const reasons =
+    [
+      priorityReason && `**${PRIORITY_LABEL[ranked.priority]}:** ${priorityReason}`,
+      risk.reasons.length && `**${RISK_LABEL[risk.level]}:** ${risk.reasons.join(", ")}.`,
+    ]
+      .filter(Boolean)
+      .join(" ") || null;
+
+  // A push that brings nothing new to say gets no review, only a check run.
+  const silent = kind === "incremental" && findings.length === 0 && !partial;
+  if (silent) {
+    reviewsRepo.update(review.id, {
+      status: "completed",
+      stage: "done",
+      summary,
+      walkthrough,
+      flow,
+      note: "No new issues in these commits.",
+      reviewed: reviewedAny,
+      filesReviewed: reviewable.length,
+      finishedAt: Date.now(),
+    });
+    pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
+    const quiet = fixedNow.length || openAfter.length ? openCheckTitle(openAfter, fixedNow.length) : { title: "No new issues", conclusion: "success" as const };
+    await completeCheck(gh, r, review, quiet.conclusion, quiet.title, `${summary ?? ""}\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
+    if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+    return;
+  }
+
+  const inputFor = (items: Finding[]): BodyInput => ({
+    summary,
+    walkthrough,
+    flow,
+    kind,
+    range,
+    findings: items,
+    skipped,
+    notReviewed,
+    filesReviewed: reviewable.length - notReviewed.length,
+    note,
+    reviewUrl: reviewUrl(review.id),
+    blobUrl: `https://github.com/${run.repo.fullName}/blob/${review.headSha}`,
+    reviewed: reviewedAny,
+    risk: risk.level,
+    priority: ranked.priority,
+    reasons,
+    since,
+  });
+  const bodyFor = (items: Finding[]) => reviewBody(inputFor(items));
+
+  // A retry after a crash must not post twice: reuse a review already on GitHub for this run.
+  const publishStarted = Date.now();
+  const current = reviewsRepo.get(review.id)!;
+  let posted: { id: number; url: string } | null = current.githubReviewId
+    ? { id: current.githubReviewId, url: current.githubReviewUrl ?? "" }
+    : ctx.job.attempts > 1
+      ? await findPostedReview(gh, r, pr.number, reviewUrl(review.id))
+      : null;
+  const alreadyPosted = posted !== null;
+  if (!posted) {
+    try {
+      posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), toComments(findings, reviewUrl(review.id)));
+    } catch (err) {
+      if ((err as { status?: number }).status !== 422) throw err;
+      log.warn({ review: review.id, err: errMessage(err) }, "line comments rejected, posting findings in the body");
+      findings = withInlineInBody(findings);
+      posted = await postReview(gh, r, pr.number, review.headSha, bodyFor(findings), []);
+    }
+    reviewsRepo.update(review.id, { githubReviewId: posted.id, githubReviewUrl: posted.url });
+  }
+  if (!alreadyPosted || findingsRepo.listForReview(review.id).length === 0) {
+    // A check finding's lines are the problem itself (a secret): never stored.
+    const withSnippets = findings.map((f) => {
+      const snippet = f.fromCheck ? null : snippetOf(f, anchorFiles);
+      return { ...f, snippet: snippet === null ? null : scrub(snippet) };
+    });
+    findingsRepo.insertMany({ reviewId: review.id, pullRequestId: pr.id, repositoryId: run.repo.id }, withSnippets);
+  }
+  await recordCommentIds(gh, r, pr.number, posted.id, review.id);
+
+  reviewsRepo.update(review.id, {
+    status: "completed",
+    stage: "done",
+    summary,
+    walkthrough,
+    flow,
+    note,
+    reviewed: reviewedAny,
+    filesReviewed: reviewable.length - notReviewed.length,
+    finishedAt: Date.now(),
+  });
+  pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
+
+  const check = reviewedAny ? openCheckTitle(openAfter, fixedNow.length) : checkTitle(findings, false);
+  await completeCheck(gh, r, review, check.conclusion, check.title, checkSummary(inputFor(findings)));
+  if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
+  const inline = findings.filter((f) => f.placement === "inline").length;
+  trace.add("publish", "Publish", publishStarted, `${inline} line comment${inline === 1 ? "" : "s"}, check run "${check.title}"`);
+}
+
+async function runReview(payload: Record<string, unknown>, ctx: JobContext): Promise<void> {
+  const reviewId = Number(payload.reviewId);
+  const review = reviewsRepo.get(reviewId);
+  if (!review || !["queued", "running"].includes(review.status)) return;
+  const pr = pullsRepo.get(review.pullRequestId)!;
+  const repo = repositoriesRepo.get(review.repositoryId)!;
+  const r = splitFullName(repo.fullName);
+  const reviewLog = log.child({ review: reviewId, repo: repo.fullName, pr: pr.number });
+  const started = Date.now();
+
+  // Poll for cancellation so in-flight model calls stop as soon as a newer push arrives.
+  const abort = new AbortController();
+  const watch = setInterval(() => {
+    try {
+      ctx.checkCancelled();
+    } catch {
+      abort.abort();
+    }
+  }, 2000);
+
+  const trace = new Tracer();
+  try {
+    const gh = await installationClient(repo.installationId);
+    await pipeline({ review, pr, repo, gh, r, ctx, signal: abort.signal, trace });
+    reviewLog.info({ ms: Date.now() - started }, "review completed");
+  } catch (err) {
+    if (abort.signal.aborted && !(err instanceof CancelledError)) err = new CancelledError();
+    if (err instanceof CancelledError) {
+      await closeReview(reviewId, cancelReason(pullsRepo.get(pr.id), repositoriesRepo.get(repo.id)));
+      throw err;
+    }
+    if (!ctx.isLastAttempt && !(err instanceof FatalError)) {
+      reviewLog.warn({ err: errMessage(err) }, "review attempt failed, retrying");
+      reviewsRepo.update(reviewId, { status: "queued", stage: "queued" });
+      throw err;
+    }
+    reviewLog.error({ err: errMessage(err) }, "review failed");
+    await failReview(reviewId);
+    throw new FatalError(errMessage(err));
+  } finally {
+    trace.save(reviewId);
+    forgetSecrets(reviewId);
+    clearInterval(watch);
+    // Anything still running for this review (e.g. reviewer calls after a failed summary) stops here.
+    abort.abort();
+  }
+}
+
+registerJob("review_pr", runReview, (payload) => failReview(Number(payload.reviewId)));
