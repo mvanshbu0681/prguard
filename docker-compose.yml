@@ -4,7 +4,8 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      args:
+        APP: api
     env_file: .env
     environment:
       DATA_DIR: /data
@@ -21,7 +22,8 @@ services:
   dashboard:
     build:
       context: .
-      dockerfile: apps/dashboard/Dockerfile
+      args:
+        APP: dashboard
     environment:
       API_URL: http://api:8000
     ports:
