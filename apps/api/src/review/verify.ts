@@ -154,12 +154,13 @@ export function rejectionGrounded(evidence: string, f: Finding, code: string, fi
 }
 
 /**
- * A rejection must explain itself: a sentence (8+ words) besides the code it quotes. Anything thinner,
- * such as the flagged code quoted back alone, is treated as unsure, so a real bug is never dropped.
+ * A rejection must say why in its own words (4+ words besides the code and citations), on top of the
+ * grounding above. The flagged code quoted back alone is treated as unsure, so a real bug is never dropped.
  */
-function explains(evidence: string): boolean {
-  const prose = evidence.replace(/```[\s\S]*?```/g, " ").replace(/`[^`\n]*`/g, " ");
-  return prose.trim().split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length >= 8;
+export function explains(evidence: string): boolean {
+  const prose = evidence.replace(/```[\s\S]*?```/g, " ").replace(/`[^`]*`/g, " ");
+  const words = prose.trim().split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w) && !/[/:]/.test(w));
+  return words.length >= 4;
 }
 
 /**
