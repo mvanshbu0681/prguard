@@ -18,14 +18,23 @@ function ownText(body: string): string {
 }
 
 /**
+ * Inline code can mention PR Guard without meaning it too ("try `@prguard review`"). Its `@` is hidden
+ * without moving anything, so the command's arguments still keep their code.
+ */
+function maskInlineCode(text: string): string {
+  return text.replace(/(`+)[^`]+?\1/g, (span) => span.replace(/@/g, " "));
+}
+
+/**
  * The command in a comment that mentions PR Guard (`@prguard` or `@<app slug>`), or null. A bare
  * mention is `help`; a first word that is not a command makes the rest a question.
  */
 export function parseMention(body: string, slug: string): Parsed | null {
   const re = new RegExp(`(^|[^\\w/@.-])@(?:prguard|${escape(slug)})(?![\\w-])([\\s\\S]*)$`, "i");
-  const m = re.exec(ownText(body));
+  const text = ownText(body);
+  const m = re.exec(maskInlineCode(text));
   if (!m) return null;
-  const rest = m[2]!.trim();
+  const rest = text.slice(m.index + m[0].length - m[2]!.length).trim();
   if (!rest) return { command: "help", args: "" };
   const first = rest.split(/\s+/)[0]!;
   const word = first.toLowerCase().replace(/[^a-z]/g, "") as CommandName;

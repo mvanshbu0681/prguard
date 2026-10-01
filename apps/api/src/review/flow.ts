@@ -2,12 +2,16 @@ import type { Flow } from "./summarize.ts";
 
 const MAX_NODES = 8;
 
-/** A label Mermaid always parses: no quotes, pipes, backticks or line breaks, kept short. */
+/**
+ * A label Mermaid always parses once quoted: no quotes, pipes, backticks or line breaks, and no `;` so
+ * text like `#quot;` is never read as an entity code. Kept short.
+ */
 function clean(label: string, max: number): string {
   const text = label
     .replace(/[`\r\n]+/g, " ")
     .replace(/"/g, "'")
     .replace(/\|/g, "/")
+    .replace(/;/g, ",")
     .replace(/[<>]/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -36,8 +40,9 @@ export function flowMermaid(flow: Flow | null | undefined): string | null {
   const lines = ["flowchart LR"];
   for (const id of connected) lines.push(`  ${ids.get(id)}["${labels.get(id)}"]`);
   for (const e of edges) {
+    // Quoted like node labels, so brackets and parentheses in the text cannot end the label early.
     const label = clean(e.label, 24);
-    lines.push(`  ${ids.get(e.from)} -->${label ? `|${label}|` : ""} ${ids.get(e.to)}`);
+    lines.push(`  ${ids.get(e.from)} -->${label ? `|"${label}"|` : ""} ${ids.get(e.to)}`);
   }
   return lines.join("\n");
 }

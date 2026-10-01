@@ -131,6 +131,28 @@ export async function compare(gh: GitHub, r: Repo, base: string, head: string) {
   }
 }
 
+const WRITE_ROLES = new Set(["admin", "maintain", "write"]);
+
+/**
+ * Whether a user has write access to the repository (admin, maintain or write). Only they can teach
+ * PR Guard. False on any API error, so a failed lookup never lets an outside user in. `cache`, keyed
+ * by repo and user, saves repeat lookups within one job.
+ */
+export async function canWrite(gh: GitHub, r: Repo, username: string, cache?: Map<string, boolean>): Promise<boolean> {
+  const key = `${r.owner}/${r.repo}:${username.toLowerCase()}`;
+  const known = cache?.get(key);
+  if (known !== undefined) return known;
+  let allowed = false;
+  try {
+    const { data } = await gh.rest.repos.getCollaboratorPermissionLevel({ ...r, username });
+    allowed = WRITE_ROLES.has(data.permission) || WRITE_ROLES.has(data.role_name);
+  } catch (err) {
+    log.warn({ ...r, username, err: errMessage(err) }, "could not read the user's permission");
+  }
+  cache?.set(key, allowed);
+  return allowed;
+}
+
 /** A review this app already posted on the PR whose body links to `url` (used after a crash). */
 export async function findPostedReview(gh: GitHub, r: Repo, number: number, url: string): Promise<{ id: number; url: string } | null> {
   const reviews = await gh.paginate(gh.rest.pulls.listReviews, { ...r, pull_number: number, per_page: 100 });

@@ -4,7 +4,43 @@ import { badge, button, priorityBadge, reviewerBadges, riskBadge, row, sevBadge,
 import { badgeFor } from "./reviewers/index.ts";
 import { countBySeverity, SEVERITIES, type Finding } from "./types.ts";
 
+/** GitHub rejects review, comment and check bodies over 65,536 characters; this leaves room. */
 const MAX_BODY = 60_000;
+
+/** What closes the markdown left open at the end of `text`: a code fence, then any `<details>`. */
+function closers(text: string): string {
+  let fence: string | null = null;
+  let details = 0;
+  for (const line of text.split("\n")) {
+    const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+    if (fence) {
+      if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length && !m[2]!.trim()) fence = null;
+      continue;
+    }
+    if (m) {
+      fence = m[1]!;
+      continue;
+    }
+    details += (line.match(/<details[\s>]/g) ?? []).length - (line.match(/<\/details>/g) ?? []).length;
+  }
+  return (fence ? `\n${fence}` : "") + "\n\n</details>".repeat(Math.max(0, details));
+}
+
+/**
+ * The last resort when a body is still too long: cut at a line boundary, close what the cut left open
+ * (a code fence, `<details>`), and say it was cut, linking to PR Guard when there is a link.
+ */
+function cutMarkdown(text: string, max: number, url: string | null): string {
+  const note = `\n\n> Truncated to fit GitHub's size limit.${url ? ` [Open in PR Guard](${url}) for the rest.` : ""}`;
+  let room = max - note.length;
+  for (;;) {
+    const end = text.lastIndexOf("\n", room);
+    const cut = text.slice(0, end > 0 ? end : room);
+    const closing = closers(cut);
+    if (cut.length + closing.length + note.length <= max || room <= 0) return `${cut}${closing}${note}`.slice(0, max);
+    room -= closing.length;
+  }
+}
 
 /** Badge ids of a finding's reviewers (`general+security` merges two). */
 function reviewerBadgeIds(reviewer: string): string[] {
@@ -66,17 +102,28 @@ function lineLink(blobUrl: string, f: Finding): string {
 
 /**
  * One line comment: badges, title, body, suggestion, folded evidence and extras, a prompt for coding
- * agents, and a button into the dashboard at this finding.
+ * agents, and a button into the dashboard at this finding. Stays under GitHub's size limit by dropping
+ * the agent prompt first, then the extras, then the suggestion, then cutting.
  */
 export function commentBody(f: Finding, reviewUrl: string): string {
+  const url = findingUrl(reviewUrl, f);
   const badges = row([sevBadge(f.severity), ...reviewerBadges(reviewerBadgeIds(f.reviewer)), f.verified ? badge("verified") : ""]);
-  const parts = [badges, "", `**${f.title}**`, "", f.body.trim()];
-  if (f.suggestion !== null) parts.push("", "```suggestion", f.suggestion.replace(/\n$/, ""), "```");
-  if (f.evidence) parts.push("", fold("Evidence", f.evidence));
-  if (f.details) parts.push("", fold(f.details.title, f.details.body));
-  parts.push("", fold("Prompt for AI agents", `\`\`\`\`text\n${agentPrompt(f)}\n\`\`\`\``));
-  parts.push("", button("button-finding", findingUrl(reviewUrl, f)));
-  return parts.join("\n");
+  const head = [badges, "", `**${f.title}**`, "", f.body.trim()];
+  const optional = {
+    suggestion: f.suggestion !== null ? ["", "```suggestion", f.suggestion.replace(/\n$/, ""), "```"] : [],
+    evidence: f.evidence ? ["", fold("Evidence", f.evidence)] : [],
+    details: f.details ? ["", fold(f.details.title, f.details.body)] : [],
+    prompt: ["", fold("Prompt for AI agents", `\`\`\`\`text\n${agentPrompt(f)}\n\`\`\`\``)],
+  };
+  const build = () =>
+    [...head, ...optional.suggestion, ...optional.evidence, ...optional.details, ...optional.prompt, "", button("button-finding", url)].join("\n");
+  let body = build();
+  for (const part of ["prompt", "details", "suggestion"] as const) {
+    if (body.length <= MAX_BODY) break;
+    optional[part] = [];
+    body = build();
+  }
+  return body.length > MAX_BODY ? cutMarkdown(body, MAX_BODY, url) : body;
 }
 
 export function toComments(findings: Finding[], reviewUrl: string): ReviewComment[] {
@@ -198,7 +245,7 @@ export function reviewBody(input: BodyInput): string {
     rowCount = Math.max(0, rowCount - 10);
     body = assemble(parts, rowCount);
   }
-  return body.length > MAX_BODY ? body.slice(0, MAX_BODY) : body;
+  return body.length > MAX_BODY ? cutMarkdown(body, MAX_BODY, input.reviewUrl || null) : body;
 }
 
 /** The check run summary: the review's header, summary and findings table. */
@@ -212,7 +259,8 @@ export function checkSummary(input: BodyInput): string {
   const rows = tableRows(input).slice(0, 50);
   if (rows.length) head.push(table(rows, tableRows(input).length), "");
   head.push(`[Open in PR Guard](${input.reviewUrl})`);
-  return head.join("\n").slice(0, MAX_BODY);
+  const body = head.join("\n");
+  return body.length > MAX_BODY ? cutMarkdown(body, MAX_BODY, input.reviewUrl || null) : body;
 }
 
 /** Same body with every inline finding moved into it; used when GitHub rejects the line comments. */
