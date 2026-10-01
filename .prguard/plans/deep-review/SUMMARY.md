@@ -75,8 +75,11 @@ tests, Reliability missing the swallowed error) with 15 warnings. The second was
 reviewers losing answers through a fallback Groq rejected. All four blockers are fixed; most
 warnings are fixed and the rest are listed in GAPS. Re-run live on Docker (2026-10-01):
 
-- Reviews 21 to 29 on the latest code: no reviewer lost its answer (trace and `llm_calls`).
-- F1: 4, 4, 5 and 3 of the 5 planted bugs (AC-4 partial, see GAPS); verification rejected none.
+- Reviews 21 to 29: no reviewer lost its answer (trace and `llm_calls`).
+- F1: 4, 4, 5 and 3 of the 5 planted bugs (AC-4 partial, see GAPS). Review 28 rejected one on
+  invented code; rejections now need real counter-evidence.
+- Reviews queue: at most 2 run at once, the rest show "Queued"; model calls wait for room in a
+  per-minute token budget instead of failing on Groq's rate limit.
 
 - F5: the Secrets finding stores no snippet; a scan of findings, reviews, LLM calls and learnings
   finds the secret value nowhere. Exact secret values are scrubbed from everything written or stored.

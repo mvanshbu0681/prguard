@@ -84,19 +84,29 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
 - **fact** Verification (second pass) was BLOCKED on one item: reviewers still lost answers because
   the JSON-mode fallback sent optional keys, which Groq rejects. Fixed: the fallback sends every key
   as required and nullable and tells the model tools are gone; a verdict with null evidence no longer
-  fails its group. In reviews 21 to 29 (Docker, latest code) no reviewer lost its answer (trace
-  `failed` is 0 for every reviewer in all nine), checked with a query over `reviews.trace` and
-  `llm_calls`.
+  fails its group. In reviews 21 to 29 (Docker, each built from the commit current at the time; only
+  27 to 29 had every fix) no reviewer lost its answer (trace `failed` is 0 for every reviewer in all
+  nine), checked with a query over `reviews.trace` and `llm_calls`.
 - **decision** Test gap joined the core reviewers (it still needs tests in the repository): triage
   had left it out of F3. It posted with "Suggested tests" on reviews 22, 23 and 24.
 - **fact** Review 26 dropped the F2 swallowed error on a "rejection" that only quoted the code back.
   A rejection now needs 8 words of prose besides the code it quotes; reviews 27 and 29 posted it.
-- **gap** Groq's limit for `gpt-oss-120b` is 250K tokens per minute. Three ~200K-token reviews at
-  once exhaust it: reviews 28 and 29 posted most findings unverified (the trace says so). One PR at
-  a time stays well under it.
-- **gap** AC-4 holds only in part. On the latest code F1 posted 4, 4, 5 and 3 of the 5 planted bugs
-  (reviews 20, 21, 25, 28); ownership, float money and the swallowed error are posted every time,
-  the over-refund race and the float-equality status come and go with `gpt-oss-120b`. Verification
-  rejected none of them. The spec keeps the current models.
+- **fact** Groq's limit for `gpt-oss-120b` is 250K tokens per minute. Three ~200K-token reviews at
+  once exhausted it: reviews 28 and 29 posted most findings unverified. Fixed (`085501a`): at most
+  `REVIEW_CONCURRENCY` (2) reviews run at once and later PRs wait in the queue with a "Queued" check;
+  every model call reserves its estimated tokens in a per-model one-minute window
+  (`LLM_TOKENS_PER_MINUTE`, 200K) and waits for room; a 429 waits for Groq's reset and tries again.
+  Burst check (reviews 30 to 33, four PRs opened at once on the latest code): two started at once,
+  the other two showed "Queued" for about 200 s and then ran; 95 model calls, 0 rate-limit errors,
+  no verification group failed, no reviewer lost its answer.
+- **gap** AC-4 holds only in part. F1 posted 4, 4, 5 and 3 of the 5 planted bugs (reviews 20, 21,
+  25, 28); ownership, float money and the swallowed error are posted every time, the over-refund
+  race and the float-equality status come and go with `gpt-oss-120b`. The spec keeps the current
+  models.
+- **fact** Verification (third pass) was BLOCKED on review 28: the float-equality status bug was
+  rejected on code that does not exist in the repository. A rejection now needs every quote to be
+  real (in the code shown or at a cited `path:line`, and every citation must exist) and at least
+  one quote from outside the flagged lines (`f9210f3`). The third pass also flagged the Railway
+  config against the spec's "Does not change"; the spec now records it as the user's request.
 - **decision** Learnings from `ignore`, replies and 👎 need write access; spec AC-29 to AC-31 and the
   Access row now say so.
