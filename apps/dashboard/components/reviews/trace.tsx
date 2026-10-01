@@ -245,7 +245,7 @@ function Calls({ calls }: { calls: CallItem[] }) {
           </tr>
           {group.calls.map((call, i) => (
             <tr key={i} className="border-t border-hair">
-              <td className="px-4 py-2.5 align-top font-mono text-xs leading-5 text-body">{call.model}</td>
+              <td className="whitespace-nowrap px-4 py-2.5 align-top font-mono text-xs leading-5 text-body">{call.model}</td>
               <td className="whitespace-nowrap py-2.5 pr-4 align-top text-xs leading-5 text-dim tabular">
                 {compactNumber(call.tokensIn)} in <span className="text-faint">·</span> {compactNumber(call.tokensOut)} out
               </td>
