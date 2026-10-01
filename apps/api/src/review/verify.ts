@@ -32,6 +32,8 @@ export type Rejected = { finding: Finding; reason: string };
 export type Verification = {
   findings: Finding[];
   rejected: Rejected[];
+  /** Rejections that did not hold up (thin or ungrounded evidence): the findings stay, the reason is traced. */
+  unsure: Rejected[];
   checked: number;
   confirmed: number;
   /** Findings whose verification call failed or gave no answer; they are posted unverified. */
@@ -234,6 +236,7 @@ export async function verifyFindings(opts: {
   });
 
   const rejected: Rejected[] = [];
+  const unsure: Rejected[] = [];
   let confirmed = 0;
   const kept: Finding[] = [];
   for (const f of opts.findings) {
@@ -243,6 +246,7 @@ export async function verifyFindings(opts: {
       rejected.push({ finding: f, reason: v.evidence });
       continue;
     }
+    if (v?.verdict === "rejected") unsure.push({ finding: f, reason: v.evidence });
     if (v?.verdict === "confirmed" && isGrounded) {
       confirmed++;
       kept.push({ ...f, verified: true, evidence: v.evidence });
@@ -250,5 +254,5 @@ export async function verifyFindings(opts: {
       kept.push(f);
     }
   }
-  return { findings: kept, rejected, checked: verdicts.size, confirmed, failed, skipped };
+  return { findings: kept, rejected, unsure, checked: verdicts.size, confirmed, failed, skipped };
 }

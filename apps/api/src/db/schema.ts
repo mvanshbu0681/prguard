@@ -103,7 +103,9 @@ export type ReviewTrace = {
   steps: TraceStep[];
   reviewers?: { id: string; files: number; chunks: number; findings: number; failed: number; skipped: number }[];
   funnel?: { raw: number; anchored: number; confident: number; unique: number; fresh: number; suppressed: number; rejected: number; posted: number };
-  rejected?: { title: string; path: string; reason: string }[];
+  rejected?: { title: string; path: string; line?: number | null; reason: string }[];
+  /** Rejections that did not hold up, so the finding was kept. */
+  unsure?: { title: string; path: string; line: number | null; reason: string }[];
   suppressed?: { title: string; path: string; learningId: number }[];
 };
 

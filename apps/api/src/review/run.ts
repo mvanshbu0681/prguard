@@ -470,7 +470,8 @@ async function pipeline(run: Run): Promise<void> {
     });
     candidates = verification.findings;
     rejectedCount = verification.rejected.length;
-    trace.data.rejected = verification.rejected.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, reason: scrub(x.reason) }));
+    trace.data.rejected = verification.rejected.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, line: x.finding.line, reason: scrub(x.reason) }));
+    trace.data.unsure = verification.unsure.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, line: x.finding.line, reason: scrub(x.reason) }));
     // Failed calls show in the trace; their findings still go out unverified.
     const failedNote = verification.failed ? `, ${verification.failed} failed (posted unverified)` : "";
     trace.add(
