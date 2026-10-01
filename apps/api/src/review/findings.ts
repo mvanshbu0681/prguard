@@ -248,6 +248,9 @@ function fromCheck(f: Pick<Finding, "reviewer">, checkIds?: Set<string>): boolea
   return Boolean(checkIds?.size) && f.reviewer.split("+").some((id) => checkIds!.has(id));
 }
 
+/** Reviewers whose findings are their own kind (a missing test, a stale doc). */
+const OWN_KIND = new Set(["tests", "docs"]);
+
 /**
  * The same problem reported twice in one review: the same fingerprint close by, overlapping lines
  * with a similar title, or overlapping lines that name the same subject (reviewers word the same bug
@@ -257,6 +260,9 @@ export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boo
   if (a.path !== b.path) return false;
   // Two check findings are exact (a package, a secret): only the very same one is a duplicate.
   if (fromCheck(a, checkIds) && fromCheck(b, checkIds)) return a.fingerprint === b.fingerprint && a.line === b.line;
+  // A missing test or stale doc is its own kind of finding, never the same as the bug beside it.
+  const [ka, kb] = [a.reviewer.split("+")[0]!, b.reviewer.split("+")[0]!];
+  if ((OWN_KIND.has(ka) || OWN_KIND.has(kb)) && ka !== kb) return false;
   if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
   const wa = stem(titleWords(a.title));
   const wb = stem(titleWords(b.title));
