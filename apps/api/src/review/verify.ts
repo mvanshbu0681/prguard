@@ -95,6 +95,55 @@ function grounded(evidence: string, f: Finding, code: string, files: Map<string,
   return false;
 }
 
+/** Code without line numbers or file headers, squashed. */
+function codeOnly(code: string, keep: (line: number | null) => boolean = () => true): string {
+  return squash(
+    code
+      .split("\n")
+      .flatMap((l) => {
+        const gutter = GUTTER.exec(l);
+        if (!gutter) return [];
+        const n = Number.parseInt(gutter[0].replace(/[^\d]/g, ""), 10);
+        return keep(Number.isNaN(n) ? null : n) ? [l.slice(gutter[0].length)] : [];
+      })
+      .join("\n"),
+  );
+}
+
+/** Every code quote in a piece of evidence: inline spans and each line of a fenced block. */
+function quotesIn(evidence: string): string[] {
+  const quotes: string[] = [];
+  for (const m of evidence.matchAll(/```[^\n]*\n([\s\S]*?)```/g)) {
+    for (const line of m[1]!.split("\n")) quotes.push(squash(line.replace(GUTTER, "")));
+  }
+  for (const m of evidence.replace(/```[\s\S]*?```/g, " ").matchAll(/`([^`]+)`/g)) quotes.push(squash(m[1]!));
+  return quotes.filter((q) => q.length >= 3 && !/^[.…]+$/.test(q));
+}
+
+/**
+ * Dropping a finding needs more than confirming one: every code quote must be real (in the code shown
+ * or at a `path:line` it cites), every citation must exist, and at least one quote must come from
+ * somewhere other than the flagged lines. Quoting the flagged code back, or inventing code, proves nothing.
+ */
+function rejectionGrounded(evidence: string, f: Finding, code: string, files: Map<string, FileDiff>, snapshot: string | null): boolean {
+  const quotes = quotesIn(evidence);
+  if (!quotes.length) return false;
+  const cited: string[] = [];
+  for (const m of evidence.matchAll(/([\w@./-]+\.\w+):(\d+)/g)) {
+    const path = m[1] === f.path || f.path.endsWith(`/${m[1]}`) ? f.path : m[1]!;
+    const line = Number(m[2]);
+    if (!lineExists(path, line, files, snapshot)) return false;
+    const file = files.get(path);
+    cited.push(codeOnly(snapshot ? readFile(snapshot, path, line - 3, line + 3) : file ? window(file, null, path, line) : ""));
+  }
+  const shown = codeOnly(code);
+  const from = f.startLine ?? f.line;
+  const flagged = f.line === null ? "" : codeOnly(code, (n) => n !== null && n >= from! && n <= f.line!);
+  const real = (q: string) => shown.includes(q) || cited.some((c) => c.includes(q));
+  if (!quotes.every(real)) return false;
+  return quotes.some((q) => !(flagged && flagged.includes(q)));
+}
+
 /**
  * A rejection must explain itself: a sentence (8+ words) besides the code it quotes. Anything thinner,
  * such as the flagged code quoted back alone, is treated as unsure, so a real bug is never dropped.
@@ -180,7 +229,7 @@ export async function verifyFindings(opts: {
   for (const f of opts.findings) {
     const v = verdicts.get(f);
     const isGrounded = !!v?.evidence && grounded(v.evidence, f, code.get(f) ?? "", files, opts.snapshot);
-    if (v?.verdict === "rejected" && isGrounded && explains(v.evidence)) {
+    if (v?.verdict === "rejected" && explains(v.evidence) && rejectionGrounded(v.evidence, f, code.get(f) ?? "", files, opts.snapshot)) {
       rejected.push({ finding: f, reason: v.evidence });
       continue;
     }
