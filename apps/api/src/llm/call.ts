@@ -254,6 +254,12 @@ export async function agent<T>(
       problem = errMessage(err).slice(0, 400);
     }
   }
+  // Last resort: the same question in JSON mode, answered from the prompt without what the tools found.
+  try {
+    return await structured({ ...meta, purpose: `${meta.purpose}:json`, schema });
+  } catch (err) {
+    problem = errMessage(err).slice(0, 400);
+  }
   log.warn({ purpose: meta.purpose, problem }, "no valid answer from the model");
   return null;
 }
