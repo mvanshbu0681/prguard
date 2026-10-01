@@ -233,18 +233,29 @@ async function pipeline(run: Run): Promise<void> {
     const snap = earlierOpen.length ? getSnapshot(gh, run.repo.id, run.repo.fullName, review.headSha).catch(() => null) : Promise.resolve(null);
     const fixedNow = await findFixes(run, pr, review, earlierOpen, snap, files, meta);
     const openAfter = findingsRepo.listOpenForPull(pr.id);
-    const since = { fixed: fixedNow.length, new: 0, open: openAfter.length };
+    // Nothing new was reviewed, so risk and priority carry over from the PR's last completed review.
+    const last = reviewsRepo.listForPull(pr.id).find((x) => x.id !== review.id && x.status === "completed" && x.risk !== null);
     reviewsRepo.update(review.id, {
       status: "completed",
       stage: "done",
       note: "No new changes to review since the last review.",
       reviewed: false,
-      since: fixedNow.length ? since : null,
+      since: { fixed: fixedNow.length, new: 0, open: openAfter.length },
+      ...(last && {
+        risk: last.risk,
+        riskScore: last.riskScore,
+        riskReasons: last.riskReasons,
+        priority: last.priority,
+        priorityReason: last.priorityReason,
+        signals: last.signals,
+      }),
       finishedAt: Date.now(),
     });
     pullsRepo.update(pr.id, { lastReviewedSha: review.headSha });
-    const check = fixedNow.length ? openCheckTitle(openAfter, fixedNow.length) : { title: "No new changes", conclusion: "success" as const };
-    await completeCheck(gh, r, review, check.conclusion, check.title, "Nothing new to review since the last review.");
+    // Findings still open keep the same title the main path gives them; only a clean PR reads "No new changes".
+    const check =
+      fixedNow.length || openAfter.length ? openCheckTitle(openAfter, fixedNow.length) : { title: "No new changes", conclusion: "success" as const };
+    await completeCheck(gh, r, review, check.conclusion, check.title, `Nothing new to review since the last review.\n\n[Open in PR Guard](${reviewUrl(review.id)})`);
     if (review.reactionId) await removeReaction(gh, r, pr.number, review.reactionId);
     return;
   }
@@ -314,7 +325,6 @@ async function pipeline(run: Run): Promise<void> {
             : (trace.add("triage", "Triage", null, "Off", "skipped"), null),
         ]);
         snapshot = snap;
-        if (routing) reviewsRepo.update(review.id, { triage: routing.files });
         ctx.checkCancelled();
 
         const impactStarted = Date.now();
@@ -347,14 +357,20 @@ async function pipeline(run: Run): Promise<void> {
         }
         // Test gap has nothing to compare against in a repository without tests.
         const testsInRepo = snapshot !== null && hasTestFiles(snapshot);
+        const running = models.filter((r) => (!r.needs?.testsInRepo || testsInRepo) && (r.needs?.impact !== "required" || hasOutsideCallers));
+        // Recorded after the re-route and without reviewers that do not run, so it matches what ran.
+        if (routing) {
+          const ran = new Set(running.map((m) => m.id));
+          reviewsRepo.update(review.id, {
+            triage: routing.files.map((f) => ({ ...f, reviewers: (routing.routes.get(f.path) ?? f.reviewers).filter((id) => ran.has(id)) })),
+          });
+        }
         const outcome = await trace.step(
           "review",
           "Reviewers",
           () =>
             runReviewers({
-              reviewers: models.filter(
-                (r) => (!r.needs?.testsInRepo || testsInRepo) && (r.needs?.impact !== "required" || hasOutsideCallers),
-              ),
+              reviewers: running,
               files: codeFiles,
               routes: routing?.routes,
               focus,
@@ -445,13 +461,18 @@ async function pipeline(run: Run): Promise<void> {
     candidates = verification.findings;
     rejectedCount = verification.rejected.length;
     trace.data.rejected = verification.rejected.map((x) => ({ title: scrub(x.finding.title), path: x.finding.path, reason: scrub(x.reason) }));
+    // Failed calls show in the trace; their findings still go out unverified.
+    const failedNote = verification.failed ? `, ${verification.failed} failed (posted unverified)` : "";
     trace.add(
       "verify",
       "Verification",
       verifyStarted,
-      verification.skipped && verification.checked === 0
-        ? "Skipped, review budget reached"
-        : `${verification.checked} checked, ${verification.confirmed} confirmed, ${verification.rejected.length} rejected`,
+      verification.checked === 0 && verification.failed
+        ? `Failed, ${verification.failed} posted unverified`
+        : verification.skipped && verification.checked === 0
+          ? "Skipped, review budget reached"
+          : `${verification.checked} checked, ${verification.confirmed} confirmed, ${verification.rejected.length} rejected${failedNote}`,
+      verification.checked === 0 && verification.failed ? "failed" : "ok",
     );
   } else {
     trace.add("verify", "Verification", null, config.features.verify ? "Nothing to verify" : "Off", "skipped");

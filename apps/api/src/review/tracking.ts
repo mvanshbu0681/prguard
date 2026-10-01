@@ -8,6 +8,7 @@ import { listReviewCommentsOf, minimizeComment, threadsOutdated, updateReviewCom
 import { structured } from "../llm/call.ts";
 import { errMessage, log } from "../log.ts";
 import { statusBadge } from "./badges.ts";
+import { redactSecrets } from "./checks/secrets.ts";
 import { newLineText, type FileDiff } from "./diff.ts";
 import type { Finding } from "./types.ts";
 
@@ -16,30 +17,52 @@ const PER_CALL = 10;
 
 const fixSchema = z.object({ results: z.array(z.object({ index: z.number(), fixed: z.boolean(), reason: z.string() })) });
 
-const FIX_SYSTEM = `PR Guard flagged these problems on earlier commits of a pull request. The flagged lines have changed since.
+const FIX_SYSTEM = `PR Guard flagged these problems on earlier commits of a pull request. The flagged code may have changed since.
 For each numbered problem, compare the old code with the current code and decide whether the problem is fixed.
 - fixed: true only when the current code no longer has the problem: it was corrected, or the code was removed without the problem moving elsewhere.
 - fixed: false when the problem is still there, was only reformatted or moved, or you cannot tell.
 - reason: one short sentence.
 Answer only with JSON matching the schema.`;
 
-/** The current code around where a finding used to be, found again by its snippet. */
-function currentWindow(f: FindingRow, snapshot: string | null, files: FileDiff[]): string {
-  let lines: string[] | null = null;
+/** A file's lines at the head: from the snapshot, else the lines the PR diff shows; null when it is gone. */
+function currentLines(path: string, snapshot: string | null, files: FileDiff[]): string[] | null {
   if (snapshot) {
     try {
-      lines = readFileSync(join(snapshot, f.path), "utf8").split("\n");
+      return readFileSync(join(snapshot, path), "utf8").split("\n");
     } catch {
-      lines = null;
+      // Not in the snapshot: the diff below decides whether the file is gone.
     }
   }
-  if (!lines) {
-    const file = files.find((x) => x.path === f.path);
-    if (!file) return "(this file was deleted or is no longer in the pull request)";
-    const text = newLineText(file);
-    lines = [];
-    for (const [n, t] of text) lines[n - 1] = t;
+  const file = files.find((x) => x.path === path);
+  if (!file || file.status === "removed") return null;
+  const lines: string[] = [];
+  for (const [n, t] of newLineText(file)) lines[n - 1] = t;
+  return lines;
+}
+
+/** A current line equals a recorded one; recorded lines had secrets redacted before they were saved. */
+function sameLine(current: string | undefined, recorded: string): boolean {
+  const line = (current ?? "").trimEnd();
+  return line === recorded || (recorded.includes("[redacted]") && redactSecrets(line) === recorded);
+}
+
+/**
+ * Whether the finding's recorded lines no longer appear, unchanged and in order, in the current file.
+ * Without a recorded snippet only a deleted file counts.
+ */
+function linesChanged(f: FindingRow, lines: string[] | null): boolean {
+  if (lines === null) return true;
+  const want = (f.snippet ?? "").split("\n").map((s) => s.trimEnd());
+  if (!want.some((s) => s.trim())) return false;
+  for (let i = 0; i + want.length <= lines.length; i++) {
+    if (want.every((w, j) => sameLine(lines[i + j], w))) return false;
   }
+  return true;
+}
+
+/** The current code around where a finding used to be, found again by its snippet. */
+function currentWindow(f: FindingRow, lines: string[] | null): string {
+  if (lines === null) return "(this file was deleted or is no longer in the pull request)";
   const snippet = (f.snippet ?? "").split("\n").map((s) => s.trim()).filter((s) => s.length >= 6);
   let at = -1;
   for (const probe of snippet) {
@@ -70,8 +93,10 @@ export async function markFixed(gh: GitHub, r: Repo, f: FindingRow, headSha: str
 }
 
 /**
- * Checks earlier open findings whose threads GitHub marks outdated (their lines changed) against the
- * current code, a few per `fast` call. Returns the ones now fixed; marking is left to the caller.
+ * Checks earlier open findings whose code changed against the current code, a few per `fast` call.
+ * Changed means GitHub marks the thread outdated or the finding's recorded lines no longer appear as
+ * they were: GitHub misses some edits, and a deleted comment has no thread at all. Returns the ones now
+ * fixed; marking is left to the caller.
  */
 export async function detectFixes(opts: {
   gh: GitHub;
@@ -83,15 +108,31 @@ export async function detectFixes(opts: {
   meta: { reviewId: number; repositoryId: number; signal?: AbortSignal };
 }): Promise<{ fixed: FindingRow[]; checked: number }> {
   if (opts.open.length === 0) return { fixed: [], checked: 0 };
-  const outdated = await threadsOutdated(opts.gh, opts.r, opts.prNumber);
-  const candidates = opts.open.filter((f) => f.githubCommentId && outdated.get(f.githubCommentId) === true);
+  let threads: Map<number, boolean> | null = null;
+  try {
+    threads = await threadsOutdated(opts.gh, opts.r, opts.prNumber);
+  } catch (err) {
+    log.warn({ review: opts.meta.reviewId, err: errMessage(err) }, "could not read thread states, comparing code only");
+  }
+  const current = new Map<string, string[] | null>();
+  const linesOf = (path: string) => {
+    if (!current.has(path)) current.set(path, currentLines(path, opts.snapshot, opts.files));
+    return current.get(path) ?? null;
+  };
+  const candidates = opts.open.filter((f) => {
+    const outdated = f.githubCommentId === null ? undefined : threads?.get(f.githubCommentId);
+    if (outdated) return true;
+    // A deleted comment has no thread; with no recorded lines to compare, the current code is checked.
+    if (threads && outdated === undefined && !f.snippet?.trim()) return true;
+    return linesChanged(f, linesOf(f.path));
+  });
   const fixed: FindingRow[] = [];
   for (let i = 0; i < candidates.length; i += PER_CALL) {
     const batch = candidates.slice(i, i + PER_CALL);
     const prompt = batch
       .map(
         (f, n) =>
-          `### Problem ${n + 1}: ${f.title} (\`${f.path}\`)\n${f.body}\n\nOld code:\n\`\`\`\n${f.snippet ?? "(not recorded)"}\n\`\`\`\n\nCurrent code:\n\`\`\`\n${currentWindow(f, opts.snapshot, opts.files)}\n\`\`\``,
+          `### Problem ${n + 1}: ${f.title} (\`${f.path}\`)\n${f.body}\n\nOld code:\n\`\`\`\n${f.snippet ?? "(not recorded)"}\n\`\`\`\n\nCurrent code:\n\`\`\`\n${currentWindow(f, linesOf(f.path))}\n\`\`\``,
       )
       .join("\n\n");
     try {

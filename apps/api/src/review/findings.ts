@@ -238,6 +238,16 @@ function overlaps(a: Finding, b: Finding): boolean {
   return (a.startLine ?? a.line) <= b.line && (b.startLine ?? b.line) <= a.line;
 }
 
+/** Lines between two ranges, 0 when they overlap (or either has no line). */
+function rangeGap(a: Pick<Finding, "line" | "startLine">, b: Pick<Finding, "line" | "startLine">): number {
+  if (a.line === null || b.line === null) return 0;
+  return Math.max(0, (a.startLine ?? a.line) - b.line, (b.startLine ?? b.line) - a.line);
+}
+
+function fromCheck(f: Pick<Finding, "reviewer">, checkIds?: Set<string>): boolean {
+  return Boolean(checkIds?.size) && f.reviewer.split("+").some((id) => checkIds!.has(id));
+}
+
 /**
  * The same problem reported twice in one review: the same fingerprint close by, overlapping lines
  * with a similar title, or overlapping lines that name the same subject (reviewers word the same bug
@@ -246,8 +256,7 @@ function overlaps(a: Finding, b: Finding): boolean {
 export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boolean {
   if (a.path !== b.path) return false;
   // Two check findings are exact (a package, a secret): only the very same one is a duplicate.
-  const fromCheck = (f: Finding) => Boolean(checkIds?.size) && f.reviewer.split("+").some((id) => checkIds!.has(id));
-  if (fromCheck(a) && fromCheck(b)) return a.fingerprint === b.fingerprint && a.line === b.line;
+  if (fromCheck(a, checkIds) && fromCheck(b, checkIds)) return a.fingerprint === b.fingerprint && a.line === b.line;
   if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
   const wa = stem(titleWords(a.title));
   const wb = stem(titleWords(b.title));
@@ -259,17 +268,54 @@ export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boo
   return overlaps(a, b) && shared.some((w) => w.length >= 5 && !GENERIC_WORDS.has(w));
 }
 
-type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category">;
+type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category"> & {
+  snippet?: string | null;
+  status?: string;
+};
+type Lines = Pick<Finding, "line" | "startLine">;
 
-/** A finding already shown on this PR by an earlier review (lines may have shifted since). */
-function isRepeat(p: Previous, f: Finding): boolean {
+/** Trimmed text of each line in the new diff to its line numbers, to find earlier findings' lines again. */
+function lineIndex(file: FileDiff): Map<string, number[]> {
+  const index = new Map<string, number[]>();
+  for (const [n, t] of newLineText(file)) {
+    const key = t.trim();
+    if (key.length < 6) continue;
+    const at = index.get(key);
+    if (at) at.push(n);
+    else index.set(key, [n]);
+  }
+  return index;
+}
+
+/** Where an earlier finding's recorded lines sit now (pushes since may have moved them), nearest first. */
+function relocate(p: Previous, index: Map<string, number[]> | undefined): Lines {
+  if (!index || !p.snippet || p.line === null) return p;
+  const start = p.startLine ?? p.line;
+  let best: number | null = null;
+  for (const [offset, probe] of p.snippet.split("\n").entries()) {
+    for (const n of index.get(probe.trim()) ?? []) {
+      if (best === null || Math.abs(n - offset - start) < Math.abs(best - start)) best = n - offset;
+    }
+  }
+  if (best === null) return p;
+  return { startLine: p.startLine === null ? null : best, line: best + p.line - start };
+}
+
+/**
+ * A finding already shown on this PR by an earlier review, at its old lines or where they moved to.
+ * One still open or dismissed is the same finding wherever it sits in the file; a fixed one only
+ * nearby, since the problem can come back elsewhere. Check findings are exact.
+ */
+function isRepeat(p: Previous, moved: Lines, f: Finding, check: boolean): boolean {
   if (p.path !== f.path) return false;
-  const gap = distance(p, f);
-  if (p.fingerprint === f.fingerprint && gap <= 40) return true;
-  const wp = titleWords(p.title);
-  const wf = titleWords(f.title);
+  const gap = Math.min(rangeGap(p, f), rangeGap(moved, f));
+  if (check) return p.fingerprint === f.fingerprint && gap <= 40;
+  const reach = p.status === "fixed" ? 40 : Infinity;
+  if (p.fingerprint === f.fingerprint && gap <= reach) return true;
+  const wp = stem(titleWords(p.title));
+  const wf = stem(titleWords(f.title));
   const sim = jaccard(wp, wf);
-  if (sim >= 0.6 && gap <= 40) return true;
+  if ((sim >= 0.7 && gap <= reach) || (sim >= 0.6 && gap <= 40)) return true;
   const shared = wp.filter((w) => wf.includes(w)).length;
   return gap <= 4 && (sim >= 0.34 || shared >= 2);
 }
@@ -322,7 +368,15 @@ export function processFindings(
     kept.push({ ...f });
   }
 
-  const fresh = kept.filter((f) => !previous.some((p) => isRepeat(p, f)));
+  const indexes = new Map<string, Map<string, number[]>>();
+  const earlier = previous
+    .filter((p) => kept.some((f) => f.path === p.path))
+    .map((p) => {
+      const file = byPath.get(p.path);
+      if (file && !indexes.has(p.path)) indexes.set(p.path, lineIndex(file));
+      return { p, moved: relocate(p, indexes.get(p.path)) };
+    });
+  const fresh = kept.filter((f) => !earlier.some(({ p, moved }) => isRepeat(p, moved, f, fromCheck(f, checkIds))));
   const repeats = kept.length - fresh.length;
   return { findings: fresh, repeats, lowConfidence, dropped, unique: kept.length };
 }
