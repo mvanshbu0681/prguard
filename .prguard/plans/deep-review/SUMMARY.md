@@ -35,8 +35,8 @@ Groq and Socket calls, real GitHub reviews). No tests were written.
 | 6 | AC-15, EC-26 | acme-billing#6: `print` finding carries the Team rules badge; merged findings show two badges |
 | 7 to 13 | AC-8 to AC-14 | acme-billing#6 (ownership), acme-store#11 (swallowed error), #8 (N+1), acme-billing#4 (data), acme-store#7 (slop, docs, test gap) |
 | 14 to 16 | AC-1, AC-2, EC-1, EC-2 | triage and impact recorded on every review; acme-store#8 Breaking change names `src/routes/orders.ts` |
-| 17 | AC-3, AC-4, EC-3 | verified findings carry evidence; rejections cite code; all 5 refunds bugs posted |
-| 18 | AC-5, EC-4 | acme-billing#4: Critical secret on its line, value nowhere; placeholder key not flagged |
+| 17 | AC-3, AC-4 (partial), EC-3 | verified findings carry quoted evidence; rejections cite code; F1 posts 4 of 5 planted bugs per run and verification drops none (see GAPS) |
+| 18 | AC-5, EC-4 | re-run (Docker): Critical secret on its line, no snippet stored, value in no table; placeholder key not flagged |
 | 19 | AC-6, AC-7, EC-5 to EC-8 | acme-store#9 (2 npm malware), acme-billing#5 (`requests` CVEs), acme-gateway#1 (Go malware) |
 | 20 | AC-16, AC-41 | 12 plugins in the Reviewers panel; dashboard hues match the badges |
 | 21, 22 | AC-17, AC-18, AC-36, EC-21, EC-23 | risk and priority on every review; acme-store#10 P0 from `hotfix` |
@@ -67,6 +67,24 @@ malware packages as Critical and P0 (Socket through the container's env); `expla
 a fix push was marked Fixed in 17 s. Dashboard (production build): Repositories, repo page with
 Learnings (a manual learning added and deleted) and all 12 plugins, Queue, Insights and the review
 page checked in Chrome.
+
+## After the first verification
+
+The first verification was BLOCKED (secret line stored as a snippet, Test gap without suggested
+tests, Reliability missing the swallowed error) with 15 warnings. All three blockers and the
+warnings were fixed, then re-run live on Docker (2026-10-01):
+
+- F5: the Secrets finding stores no snippet; a scan of findings, reviews, LLM calls and learnings
+  finds the secret value nowhere. Exact secret values are scrubbed from everything written or stored.
+- F2: Reliability owns the swallowed `try/catch`. An `ignore` (write access only) saved a learning
+  that suppressed the same finding on a fresh PR. A fix push marked it Fixed in 22 s, by comparing
+  the code rather than GitHub's outdated flag, and it was not posted again.
+- F3: Test gap posts with "Suggested tests" and no longer merges into other reviewers' findings.
+- The verification trace now shows failures; that exposed forced-answer calls Groq rejected, now
+  fixed (every tool listed with a required tool choice, JSON mode as the last resort).
+- Also: file-level findings are verified and evidence must quote code; Mermaid edge labels quoted;
+  markdown-safe size limits on comments; inline-code mentions are not commands; triage records what
+  ran; a push with nothing new keeps risk and the open-count check title; Open status on cards.
 
 ## Deviations from the plan
 

@@ -57,3 +57,32 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
   adds to `<body>`); not an app bug.
 - **fact** The session's app worktree moved to `frontend-build-module-error-a40f13`; work continues in
   `staging-work` on branch `manaskhandelwal/deep-review`, cut from `manaskhandelwal/staging-work`.
+- **fact** Verification (first pass) was BLOCKED on three items: a secret line stored as a finding
+  snippet, Test gap posting without "Suggested tests", and Reliability missing the swallowed error.
+- **decision** The Secrets check returns the exact values it found; they are scrubbed from every
+  field a model writes or PR Guard stores (titles, bodies, evidence, suggestions, details, summary,
+  flow, priority reason, trace, tool arguments, learning text). Check findings store no snippet;
+  migration `0012` clears old ones.
+- **decision** A Test gap finding without "Suggested tests" gets them from one fast call, and Test
+  gap and Docs drift findings never merge into another reviewer's finding.
+- **decision** Learnings come only from people with write access (`ignore`, intentional replies, 👎);
+  a hand-written learning suppresses by its words within its path.
+- **decision** Fix detection also looks at the code: a finding whose saved lines changed (or whose
+  comment is gone) is checked even when GitHub does not mark its thread outdated. Repeats of an open
+  finding are matched anywhere in the file, so the same bug is not posted twice.
+- **fact** The honest verification trace exposed a Groq limit: a forced answer call that names one
+  tool rejects the model's stray search calls. The forced call now lists every tool (searches reply
+  "answer now") with a required tool choice, and a JSON-mode call is the last resort. No reviewer or
+  verifier lost its answer in the re-runs.
+- **fact** Re-runs on Docker (2026-10-01): F2 Reliability owns the swallowed error; F3 Test gap
+  posted with suggested tests (one later run produced no Test gap finding at all: model variance);
+  F5 Secrets finding has no snippet and the secret value is in no table; an `ignore` learning
+  suppressed the same finding on a fresh F2 PR; a fix push marked the swallowed error Fixed in 22 s
+  and it was not re-posted.
+- **decision** Dedupe no longer merges findings in one file because they share a word from the file's
+  own name (`refund` in `refunds.py`): that merged five reviewers' findings into one `print` finding.
+  The Bug reviewer now looks for state set by a float comparison and limits that can be exceeded.
+- **gap** AC-4 holds only in part: F1 posts 4 of the 5 planted bugs per run (ownership, float money,
+  swallowed error, and one of over-refund race or float-equality status), and verification rejects
+  none of them. Which fifth bug appears varies run to run with `gpt-oss-120b`; the spec keeps the
+  current models.
