@@ -1,8 +1,8 @@
 // OWNER: t2a (wave 1). Hand-written — not produced by `npm run api:gen`.
 //
 // The generated client's `fetch`. Three jobs, in this order:
-//  1. Send the request through the current base: the fixture resolver in
-//     fixture mode (NEXT_PUBLIC_FIXTURES, default on), the network otherwise.
+//  1. Send the request through the current base: the network, unless a test
+//     sets another one (the demo corpus and its fixture resolver are gone).
 //  2. Turn every failure into an ApiError before the generated client sees it:
 //     a non-2xx response keeps its status and §6.0 envelope; no response at all
 //     becomes status 0 / NETWORK_ERROR. (The generated client would otherwise
@@ -11,8 +11,7 @@
 //  3. Record the call — method, route, status, latency, item count — in a small
 //     in-memory log that /lab/t2a renders. Bodies are only read for the count
 //     while someone is subscribed.
-import { API_BASE, FIXTURES } from "@/lib/env";
-import { fixtureFetch } from "@/lib/fixture-resolver";
+import { API_BASE } from "@/lib/env";
 import { ApiError, apiErrorFromResponse, isAbortError, networkError } from "./errors";
 import { routeLabel, stripBasePath } from "./routes";
 
@@ -103,7 +102,7 @@ export function setTransportBase(base: FetchLike | null, source: ApiCall["source
 
 function currentBase(): { fetch: FetchLike; source: ApiCall["source"] } {
   if (baseOverride) return baseOverride;
-  return FIXTURES ? { fetch: fixtureFetch, source: "fixture" } : { fetch: networkFetch, source: "network" };
+  return { fetch: networkFetch, source: "network" };
 }
 
 const clock = () => (typeof performance !== "undefined" ? performance.now() : Date.now());
