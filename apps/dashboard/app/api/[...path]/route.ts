@@ -58,6 +58,8 @@ async function proxy(req: NextRequest, { params }: Context): Promise<Response> {
     out.set(key, value);
   });
   for (const cookie of upstream.headers.getSetCookie()) out.append("set-cookie", cookie);
+  // Answers carry the visitor's own data: a CDN in front must never store or share them.
+  out.set("cache-control", "private, no-store");
 
   const bodyless = method === "HEAD" || upstream.status === 204 || upstream.status === 304;
   return new Response(bodyless ? null : upstream.body, {

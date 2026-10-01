@@ -13,6 +13,12 @@ import { reviews } from "./routes/reviews.ts";
 export function createServer(): Hono {
   const app = new Hono();
 
+  // Every response is per user (or a webhook reply): a CDN in front must never store or share it.
+  app.use("/api/*", async (c, next) => {
+    await next();
+    c.res.headers.set("Cache-Control", "private, no-store");
+  });
+
   app.get("/api/health", (c) => c.json({ ok: true }));
   registerWebhookRoute(app);
   app.route("/api/auth", auth);
