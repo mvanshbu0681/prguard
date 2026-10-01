@@ -1,6 +1,6 @@
 import * as learningsRepo from "../db/repos/learnings.ts";
 import type { LearningRow } from "../db/schema.ts";
-import { titleWords } from "../review/findings.ts";
+import { stem, titleWords } from "../review/findings.ts";
 import type { Finding } from "../review/types.ts";
 
 const IN_PROMPT = 30;
@@ -27,12 +27,37 @@ function similarity(a: string, b: string): number {
   return inter / (wa.length + wb.size - inter);
 }
 
-/** Whether a learning covers a finding: the same fingerprint, or the same kind of issue on the same path. */
+/** Words that say what to do with a finding (`do not flag`), not what it is about. */
+const FILLER = new Set([
+  "do", "don", "dont", "never", "no", "flag", "flagging", "report", "reporting", "ignore", "skip", "please",
+  "we", "our", "it", "its", "this", "that", "these", "those", "are", "fine", "ok", "okay", "here",
+]);
+
+function inPath(learning: LearningRow, path: string): boolean {
+  if (learning.repoWide || !learning.path) return true;
+  const dir = learning.path.replace(/\/+$/, "");
+  return path === dir || path.startsWith(`${dir}/`);
+}
+
+/** A learning written by hand has only text: most of its words must appear in the finding, one in its title. */
+function textCovers(text: string, f: Finding): boolean {
+  const words = [...new Set(stem(titleWords(text)))].filter((w) => w.length > 1 && !FILLER.has(w));
+  if (!words.length) return false;
+  const inTitle = new Set(stem(titleWords(f.title)));
+  const inFinding = new Set([...inTitle, ...stem(titleWords(f.body))]);
+  const shared = words.filter((w) => inFinding.has(w)).length;
+  return words.some((w) => inTitle.has(w)) && shared >= Math.min(2, words.length) && shared / words.length >= 0.5;
+}
+
+/**
+ * Whether a learning covers a finding: the same fingerprint, the same kind of issue on the same path,
+ * or, for a text-only learning, its words in the finding within its path.
+ */
 export function covers(learning: LearningRow, f: Finding): boolean {
   if (learning.fingerprint && learning.fingerprint === f.fingerprint) return true;
-  if (!learning.title) return false;
-  const samePlace = learning.repoWide || learning.path === f.path;
   const sameKind = !learning.category || learning.category === f.category;
+  if (!learning.title) return !learning.fingerprint && sameKind && inPath(learning, f.path) && textCovers(learning.text, f);
+  const samePlace = learning.repoWide || learning.path === f.path;
   return samePlace && sameKind && similarity(learning.title, f.title) >= 0.5;
 }
 

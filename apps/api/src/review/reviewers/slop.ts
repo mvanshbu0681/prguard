@@ -14,6 +14,7 @@ export default defineReviewer({
 - a new function that duplicates a helper the repository already has: search for similar names and logic, and name the existing helper with its path
 - placeholder or fake logic: hard-coded return values, stubs or TODOs on a main path, mock data outside tests
 - dead or unreachable code, parameters and variables added but never used
-- comments that restate the code, checks that can never fail, style that ignores the brief's conventions
-Severity is usually low or medium; high when placeholder logic sits on a main path.`,
+- comments that restate the code, checks that can never fail
+Severity is usually low or medium; high when placeholder logic sits on a main path.
+Team rules and the brief's conventions have their own reviewer: do not report those.`,
 });

@@ -39,7 +39,7 @@ export function FindingCard({ finding }: { finding: FindingItem }) {
             Verified
           </span>
         )}
-        {settled && <FindingStatusPill status={finding.status} />}
+        <FindingStatusPill status={finding.status} />
         <a
           href={finding.url}
           target="_blank"

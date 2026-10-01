@@ -229,7 +229,7 @@ const GENERIC_WORDS = new Set([
 ]);
 
 /** Plural and singular count as one word when comparing titles (`amounts`, `amount`). */
-function stem(words: string[]): string[] {
+export function stem(words: string[]): string[] {
   return words.map((w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w));
 }
 
@@ -314,7 +314,9 @@ export function processFindings(
   for (const f of rank(confident)) {
     const dup = kept.find((k) => isDuplicate(k, f, checkIds));
     if (dup) {
-      if (!dup.reviewer.split("+").includes(f.reviewer)) dup.reviewer = `${dup.reviewer}+${f.reviewer}`;
+      const ids = dup.reviewer.split("+");
+      // Team rules owns a finding it shares: its badge shows first.
+      if (!ids.includes(f.reviewer)) dup.reviewer = (f.reviewer === "rules" ? [f.reviewer, ...ids] : [...ids, f.reviewer]).join("+");
       continue;
     }
     kept.push({ ...f });
