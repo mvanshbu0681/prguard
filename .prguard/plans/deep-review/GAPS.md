@@ -72,8 +72,7 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
   finding are matched anywhere in the file, so the same bug is not posted twice.
 - **fact** The honest verification trace exposed a Groq limit: a forced answer call that names one
   tool rejects the model's stray search calls. The forced call now lists every tool (searches reply
-  "answer now") with a required tool choice, and a JSON-mode call is the last resort. No reviewer or
-  verifier lost its answer in the re-runs.
+  "answer now") with a required tool choice, and a JSON-mode call is the last resort.
 - **fact** Re-runs on Docker (2026-10-01): F2 Reliability owns the swallowed error; F3 Test gap
   posted with suggested tests (one later run produced no Test gap finding at all: model variance);
   F5 Secrets finding has no snippet and the secret value is in no table; an `ignore` learning
@@ -82,7 +81,22 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
 - **decision** Dedupe no longer merges findings in one file because they share a word from the file's
   own name (`refund` in `refunds.py`): that merged five reviewers' findings into one `print` finding.
   The Bug reviewer now looks for state set by a float comparison and limits that can be exceeded.
-- **gap** AC-4 holds only in part: F1 posts 4 of the 5 planted bugs per run (ownership, float money,
-  swallowed error, and one of over-refund race or float-equality status), and verification rejects
-  none of them. Which fifth bug appears varies run to run with `gpt-oss-120b`; the spec keeps the
-  current models.
+- **fact** Verification (second pass) was BLOCKED on one item: reviewers still lost answers because
+  the JSON-mode fallback sent optional keys, which Groq rejects. Fixed: the fallback sends every key
+  as required and nullable and tells the model tools are gone; a verdict with null evidence no longer
+  fails its group. In reviews 21 to 29 (Docker, latest code) no reviewer lost its answer (trace
+  `failed` is 0 for every reviewer in all nine), checked with a query over `reviews.trace` and
+  `llm_calls`.
+- **decision** Test gap joined the core reviewers (it still needs tests in the repository): triage
+  had left it out of F3. It posted with "Suggested tests" on reviews 22, 23 and 24.
+- **fact** Review 26 dropped the F2 swallowed error on a "rejection" that only quoted the code back.
+  A rejection now needs 8 words of prose besides the code it quotes; reviews 27 and 29 posted it.
+- **gap** Groq's limit for `gpt-oss-120b` is 250K tokens per minute. Three ~200K-token reviews at
+  once exhaust it: reviews 28 and 29 posted most findings unverified (the trace says so). One PR at
+  a time stays well under it.
+- **gap** AC-4 holds only in part. On the latest code F1 posted 4, 4, 5 and 3 of the 5 planted bugs
+  (reviews 20, 21, 25, 28); ownership, float money and the swallowed error are posted every time,
+  the over-refund race and the float-equality status come and go with `gpt-oss-120b`. Verification
+  rejected none of them. The spec keeps the current models.
+- **decision** Learnings from `ignore`, replies and 👎 need write access; spec AC-29 to AC-31 and the
+  Access row now say so.

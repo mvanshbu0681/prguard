@@ -128,11 +128,14 @@ Fixture PRs `F1` to `F9` are defined in [plan.md](plan.md#fixtures). "Posted" me
 - **AC-28** Any other text after `@prguard` is answered as a question, in the thread or conversation it
   was asked in, using the PR and repository as context. `@prguard help` lists the commands.
 - **AC-29** `@prguard ignore <reason>` in a PR Guard thread dismisses the finding, saves a learning, and
-  replies with the Learning saved badge; the finding's comment is collapsed as resolved.
-- **AC-30** A 👎 by a person on a PR Guard line comment dismisses the finding and saves a learning. It is
-  picked up on the PR's next push, when the PR closes, and when a review is re-run.
-- **AC-31** A reply in a PR Guard thread, without a mention, saying the code is intentional saves a
-  learning and gets a one-line acknowledgment. Other replies without a mention get no response.
+  replies with the Learning saved badge; the finding's comment is collapsed as resolved. Only someone
+  with write access can do this; anyone else is told so.
+- **AC-30** A 👎 by a person with write access on a PR Guard line comment dismisses the finding and
+  saves a learning. It is picked up on the PR's next push, when the PR closes, and when a review is
+  re-run.
+- **AC-31** A reply in a PR Guard thread, without a mention, from someone with write access, saying the
+  code is intentional saves a learning and gets a one-line acknowledgment. Other replies without a
+  mention get no response.
 - **AC-32** Learnings apply: on a PR that repeats a dismissed pattern in the same repository, the
   finding is not posted, and the trace shows it suppressed by that learning.
 - **AC-33** A push that fixes a flagged issue marks that finding fixed: its GitHub comment gains the
@@ -227,7 +230,7 @@ Fixture PRs `F1` to `F9` are defined in [plan.md](plan.md#fixtures). "Posted" me
 
 | Axis | Behavior |
 |---|---|
-| Access | Queue, Insights and learnings show only the user's visible repositories. Adding, switching off or deleting learnings needs repo admin, like rules. Commands are open to anyone who can comment on the PR. |
+| Access | Queue, Insights and learnings show only the user's visible repositories. Adding, switching off or deleting learnings needs repo admin, like rules. Commands are open to anyone who can comment on the PR; teaching a learning in the PR (`ignore`, 👎, an intentional reply) needs write access. |
 | Theme | Badges read on GitHub light and dark (checked on the preview). Dashboard stays dark only, as today. |
 | Languages | Reviews: TypeScript, Python, Go, Java checked live. Impact symbol patterns: TS/JS, Python, Go, Java. Supply chain: npm, PyPI, Go. |
 | Failure | Every new step (triage, impact, verification, checks, fix tracking, commands) fails soft: the review or reply still goes out, and the trace records the failure. |
