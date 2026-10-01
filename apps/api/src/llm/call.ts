@@ -5,6 +5,7 @@ import {
   isStepCount,
   NoObjectGeneratedError,
   Output,
+  RetryError,
   tool,
   type LanguageModelUsage,
   type ModelMessage,
@@ -71,6 +72,7 @@ export function record(
 
 /** Errors a second attempt with a nudge can fix: bad JSON, or a provider rejecting malformed output. */
 export function isRepairable(err: unknown): boolean {
+  if (RetryError.isInstance(err)) return isRepairable(err.lastError);
   if (NoObjectGeneratedError.isInstance(err)) return true;
   if (APICallError.isInstance(err)) return err.statusCode === 400;
   return false;
@@ -214,6 +216,14 @@ export async function agent<T>(
     problem = errMessage(err).slice(0, 400);
   }
 
+  // The model sometimes keeps searching after being told to answer; Groq rejects a call to a tool the
+  // request does not list, so the tools stay listed but only say to answer.
+  const closed: ToolSet = Object.fromEntries(
+    Object.entries(meta.tools).map(([toolName, t]) => [
+      toolName,
+      tool({ description: t.description ?? toolName, inputSchema: t.inputSchema, execute: async () => `Searching is over. Call ${name} now.` }),
+    ]),
+  );
   for (let attempt = 0; attempt < 2; attempt++) {
     const nudge = problem
       ? `Your ${name} call was invalid (${problem}). Call ${name} again now with input that matches its schema exactly.`
@@ -225,9 +235,9 @@ export async function agent<T>(
           model: m.model,
           system: meta.system,
           messages: [...history, { role: "user", content: nudge }],
-          tools: { [name]: answerTool },
+          tools: { ...closed, [name]: answerTool },
           toolChoice: { type: "tool", toolName: name },
-          stopWhen: isStepCount(1),
+          stopWhen: [isStepCount(2), hasToolCall(name)],
           providerOptions: m.providerOptions,
           maxRetries: 3,
           abortSignal: meta.signal,
