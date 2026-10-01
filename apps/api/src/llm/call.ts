@@ -273,7 +273,13 @@ export async function agent<T>(
   }
   // Last resort: the same question in JSON mode, answered from the prompt without what the tools found.
   try {
-    return (await structured({ ...meta, purpose: `${meta.purpose}:json`, schema: everyKeyRequired(schema) })) as T;
+    return (await structured({
+      ...meta,
+      purpose: `${meta.purpose}:json`,
+      // The system prompt describes tools; in JSON mode a tool call is rejected, so say they are gone.
+      system: `${meta.system}\n\nNo tools are available now. Reply with the JSON object only, filled from what you already know.`,
+      schema: everyKeyRequired(schema),
+    })) as T;
   } catch (err) {
     problem = errMessage(err).slice(0, 400);
   }

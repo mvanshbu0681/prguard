@@ -13,7 +13,7 @@ const schema = z.object({
 /** Kept on every source file, whatever triage says. */
 const ALWAYS = new Set(["general", "rules"]);
 /** Also kept on every source file that is not low risk: triage only prunes these on trivial files. */
-const CORE = new Set(["security", "reliability", "slop", "performance"]);
+const CORE = new Set(["security", "reliability", "slop", "performance", "tests"]);
 /** New configuration surface in added lines: env vars, flags, routes. Docs drift always looks at these. */
 const CONFIG_SURFACE =
   /process\.env\.|os\.environ|os\.getenv|os\.Getenv|System\.getenv|getenv\(|flag\.(String|Int|Bool|Duration)|add_argument\(|\.(get|post|put|delete|patch)\(\s*["'`]\/|@(app|router)\.(get|post|put|delete|patch)\(/;
