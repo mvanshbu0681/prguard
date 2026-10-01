@@ -642,6 +642,22 @@
   white-space: nowrap;
 }
 
+/* A ledger row for something that stands (a check's finding, a learning):
+   solid hairline, full-strength text, wrapping to two lines, no strike. */
+.note {
+  border-style: solid;
+}
+
+.note .ledgerTitle {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: rgba(19, 19, 19, 0.82);
+  text-decoration: none;
+  white-space: normal;
+}
+
 .termBar {
   display: flex;
   align-items: center;

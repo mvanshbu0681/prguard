@@ -22,7 +22,9 @@ import type { CSSProperties, HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 import { markClearSpace } from './geometry';
 import { Mark, type MarkTone } from './Mark';
-import { GSC_CAP_HEIGHT, WORDMARK_INK } from './metrics';
+import { GSC_CAP_HEIGHT, wordmarkExtent } from './metrics';
+
+const WORDMARK_INK = wordmarkExtent('PR GUARD'.length);
 import { Wordmark } from './Wordmark';
 
 const em = (v: number) => `${Math.round(v * 10000) / 10000}em`;
@@ -46,11 +48,11 @@ export interface LockupProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'chil
   tone?: MarkTone;
   /** Pad by the clear-space rule (mark-height ÷ 6). */
   clearSpace?: boolean;
-  /** Accessible name when the lockup is the mark alone (D). Default "Witness". */
+  /** Accessible name when the lockup is the mark alone (D). Default "PR Guard". */
   label?: string;
 }
 
-export function Lockup({ variant = 'A', size = 'nav', tone = 'signal', clearSpace = false, label = 'Witness', className, style, ...rest }: LockupProps) {
+export function Lockup({ variant = 'A', size = 'nav', tone = 'signal', clearSpace = false, label = 'PR Guard', className, style, ...rest }: LockupProps) {
   const dims = variant === 'C' ? LOCKUP_STACKED : LOCKUP_SIZES[size];
   const vars = {
     '--prg-lockup-gap': `${dims.gap}px`,

@@ -1,74 +1,65 @@
-// Witness v2 hero, rebuilt on the otoma8.com system: a photographic frame with
+// PR Guard v2 hero, rebuilt on the otoma8.com system: a photographic frame with
 // the nav inside it, a centred Plus Jakarta headline, the lime pill with its
 // arrow chip, and a drifting row of real product cards. Server component: every
-// number on it comes from the demo corpus.
+// number on it is what PR Guard posted on the public sandbox (src/sandbox).
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { TrackingMark } from "@/components/brand/TrackingMark";
-import { SEVERITY_INPUTS } from "@/lib/contracts";
-import { getAccuracy, getAccuracySeries, getAuditChain, getDemoProvenFinding, getDemoResult, getManifest } from "@/lib/fixtures";
+import { APP_URL, BOT, CODE_CHECKS, MODEL_REVIEWERS, WALKTHROUGH_LOG, blockingReviews, failedChecks, prLabel, sandbox } from "@/sandbox";
 import { v2FontVariables } from "../fonts";
 import { HeroCards, type HeroCardData } from "./cards";
 import s from "./hero.module.css";
 
-const lastLine = (text: string | null | undefined) => (text ?? "").trim().split("\n").pop() ?? "";
-const tidy = (line: string) => line.replace(/ in /, " · ");
+const HOUR = 3_600_000;
+
+/** Reviews per hour from the first review to the last, with empty hours as 0. */
+function reviewsPerHour(): number[] {
+  const counts = new Map(sandbox.reviewsByHour.map((h) => [Date.parse(h.hour), h.count]));
+  const hours = [...counts.keys()].sort((a, b) => a - b);
+  if (!hours.length) return [];
+  const out: number[] = [];
+  for (let t = hours[0]; t <= hours[hours.length - 1]; t += HOUR) out.push(counts.get(t) ?? 0);
+  return out;
+}
 
 function heroData(): HeroCardData {
-  const { ids } = getManifest();
-  const finding = getDemoProvenFinding();
-  const proof = finding.proof;
-  const severity = finding.severity;
-  const accuracy = getAccuracy();
-  const series = getAccuracySeries();
-  const result = getDemoResult();
-  const chain = getAuditChain().items;
-
-  const inputs = (severity?.inputs ?? {}) as Record<string, number>;
-  const weights = (severity?.weights ?? {}) as Record<string, number>;
-  const contributions = SEVERITY_INPUTS.map((k) => (inputs[k] ?? 0) * (weights[k] ?? 0));
-
-  const weeklyProvenShare = series.weekly.map((w) => {
-    const attempted = w.proven + w.disproven + w.inconclusive + (w.skipped_no_env ?? 0);
-    return attempted ? w.proven / attempted : 0;
-  });
-
-  const at = chain.findIndex((e) => e.seq === ids.tamper_demo_seq);
-  const window = chain.slice(Math.max(0, at - 2), Math.max(0, at - 2) + 3);
-
-  const counts = result.counts ?? {};
+  const show = sandbox.showcase;
+  const comment = show.findings.find((f) => f.verified && f.severity === "high") ?? show.findings[0];
+  const top = show.severityCounts[0];
   return {
-    baseSha: ids.base_sha.slice(0, 7),
-    headSha: ids.head_sha.slice(0, 7),
-    baseResult: tidy(lastLine(proof?.base?.excerpt)),
-    headResult: tidy(lastLine(proof?.head?.excerpt)),
-    score: (severity?.score ?? 0).toFixed(3),
-    band: severity?.band ?? "",
-    contributions,
-    proven: accuracy.proof.proven ?? 0,
-    disproven: accuracy.proof.disproven ?? 0,
-    inconclusive: accuracy.proof.inconclusive ?? 0,
-    attempted: accuracy.proof.attempted ?? 0,
-    selfCaught: (accuracy.precision_proxies.self_caught_false_positive_rate.value ?? 0).toFixed(3),
-    weeklyProvenShare,
-    findingTitle: finding.title,
-    blocking: (counts as { blocking?: number }).blocking ?? 0,
-    advisory: Math.max(0, ((counts as { published?: number }).published ?? 0) - ((counts as { blocking?: number }).blocking ?? 0)),
-    chain: window.map((e) => ({ seq: e.seq, hash: `${e.event_hash.slice(0, 6)}…${e.event_hash.slice(-4)}` })),
+    reviewLabel: prLabel(show.repo, show.pr),
+    priority: show.priority?.alt ?? "",
+    risk: show.risk?.alt ?? "",
+    findings: show.findings.length,
+    severityCounts: show.severityCounts,
+    topSeverityLabel: top ? `${top.count} ${top.severity}` : "",
+    commentTitle: comment?.title ?? "",
+    commentVerified: comment?.verified ?? false,
+    checkConclusion: show.check?.conclusion ?? "",
+    checkTitle: show.check?.title ?? "",
+    walkthroughLabel: prLabel(WALKTHROUGH_LOG.repo, WALKTHROUGH_LOG.pr),
+    raw: WALKTHROUGH_LOG.raw,
+    posted: WALKTHROUGH_LOG.posted,
+    rejected: WALKTHROUGH_LOG.rejected,
+    pullRequestsReviewed: sandbox.totals.pullRequestsReviewed,
+    reviews: sandbox.totals.reviews,
+    reviewsPerHour: reviewsPerHour(),
+    helpSeconds: sandbox.commands.asked.find((c) => c.command === "@prguard help")?.answeredInSeconds ?? null,
+    bot: BOT,
   };
 }
 
 const NAV = [
   { href: "#proof", label: "Product" },
   { href: "#pipeline", label: "How it works" },
-  { href: "/accuracy", label: "Accuracy" },
-  { href: "/overview", label: "Dashboard" },
+  { href: "#team", label: "Reviewers" },
+  { href: sandbox.orgUrl, label: "Sandbox" },
 ];
 
 export function Hero() {
   const d = heroData();
-  const demoRun = getManifest().ids.demo_review_id;
+  const t = sandbox.totals;
 
   return (
     <section id="proof" className={`${s.wrap} ${v2FontVariables}`} aria-labelledby="hero-title">
@@ -81,9 +72,9 @@ export function Hero() {
         <div className={s.shade} aria-hidden />
 
         <header className={`${s.nav} ${s.rise}`}>
-          <Link href="/" className={s.logo} aria-label="Witness home">
+          <Link href="/" className={s.logo} aria-label="PR Guard home">
             <TrackingMark size={30} className={s.logoMark} />
-            Witness
+            PR Guard
           </Link>
           <nav className={s.links} aria-label="Primary">
             {NAV.map((n) => (
@@ -92,26 +83,27 @@ export function Hero() {
               </Link>
             ))}
           </nav>
-          <Link href="/overview" className={`${s.pill} ${s.navCta}`}>
-            <span className={s.navCtaFull}>Open dashboard</span>
-            <span className={s.navCtaShort}>Dashboard</span>
+          <Link href={APP_URL} className={`${s.pill} ${s.navCta}`}>
+            <span className={s.navCtaFull}>Install on GitHub</span>
+            <span className={s.navCtaShort}>Install</span>
           </Link>
         </header>
 
         <div className={s.content}>
           <h1 id="hero-title" className={`${s.h1} ${s.rise}`} style={{ ["--d" as string]: "80ms" }}>
             AI code review that
-            <span className={s.soft}>proves every claim</span>
+            <span className={s.soft}>checks its findings</span>
           </h1>
           <p className={`${s.sub} ${s.rise}`} style={{ ["--d" as string]: "180ms" }}>
-            Witness writes a repro test, runs it at your base and head commit, and lets only a proven bug block the merge.
+            PR Guard runs {MODEL_REVIEWERS} AI reviewers and {CODE_CHECKS} code checks on every pull request, re-checks what they find
+            against your code, and only comments. A person still approves the merge.
           </p>
           <div className={`${s.actions} ${s.rise}`} style={{ ["--d" as string]: "280ms" }}>
-            <Link href={`/runs/${demoRun}?replay=1`} className={`${s.pill} ${s.glass}`}>
-              Watch a live review
+            <Link href={sandbox.showcase.url} className={`${s.pill} ${s.glass}`}>
+              See a real review
             </Link>
-            <Link href="#run" className={`${s.pill} ${s.lime}`}>
-              Run a review
+            <Link href={APP_URL} className={`${s.pill} ${s.lime}`}>
+              Install on GitHub
               <span className={s.chip} aria-hidden>
                 <ArrowUpRight size={18} strokeWidth={2} />
               </span>
@@ -119,7 +111,7 @@ export function Hero() {
           </div>
         </div>
 
-        <div className={`${s.row} ${s.rise}`} style={{ ["--d" as string]: "420ms" }} aria-label="What Witness produces">
+        <div className={`${s.row} ${s.rise}`} style={{ ["--d" as string]: "420ms" }} aria-label="What PR Guard posts">
           <div className={s.track}>
             <HeroCards d={d} />
             <div aria-hidden style={{ display: "contents" }}>
@@ -132,7 +124,8 @@ export function Hero() {
           <p className={s.proofLine}>
             <span className={s.dot} aria-hidden />
             <span>
-              <b>{d.proven}</b> bugs proven by execution · <b>{d.disproven}</b> of its own claims refuted before they reached a PR
+              <b>{t.reviews}</b> reviews on <b>{t.pullRequestsReviewed}</b> public sandbox pull requests · <b>{t.findings}</b> line comments ·{" "}
+              <b>{blockingReviews() + failedChecks()}</b> approvals or blocks
             </span>
           </p>
         </div>

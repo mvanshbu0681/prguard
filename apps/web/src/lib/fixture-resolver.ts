@@ -236,7 +236,7 @@ const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
 const TRUTHY_FLAG = /^(1|true|yes|on)$/i;
 /** ?stall=1 freezes the run here: S3 SPECIALISTS, the stage the dashboard's stalled-run copy names. */
 const STALL_DEFAULT_STAGE = 3;
-const SIM_STORAGE_KEY = "witness:fixture-sim:v1";
+const SIM_STORAGE_KEY = "prguard:fixture-sim:v1";
 /** routes_reviews.py _PR_URL / _PR_SHORTHAND, verbatim. */
 const PR_URL = /^(?:https?:\/\/)?(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+)\/pulls?\/(\d+)(?:[/?#].*)?$/i;
 const PR_SHORTHAND = /^([\w.-]+)\/([\w.-]+)#(\d+)$/;
@@ -699,7 +699,7 @@ export function createFixtureResolver(options: FixtureResolverOptions = {}): Fix
   function json(status: number, body: unknown, rid: string, headers: Record<string, string> = {}): Response {
     return new Response(stringifyLosslessJson(body), {
       status,
-      headers: { "content-type": "application/json", "x-request-id": rid, "x-witness-source": "fixture", ...headers },
+      headers: { "content-type": "application/json", "x-request-id": rid, "x-prguard-source": "fixture", ...headers },
     });
   }
 

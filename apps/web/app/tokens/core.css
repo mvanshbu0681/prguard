@@ -1,5 +1,5 @@
 /* ==========================================================================
-   app/tokens/core.css — Witness design tokens, shared by BOTH surfaces.
+   app/tokens/core.css — PR Guard design tokens, shared by BOTH surfaces.
 
    OWNER: T0 (wave 0). FROZEN once T0 merges: change a token only by raising
    it with the T0 owner (plan §8). `npm run tokens:verify` gates this file
@@ -291,7 +291,7 @@
   --dur-enter:  var(--dur-4); /* 420ms — dashboard: 180ms (layer D). Evidence components use --dur-4 directly (ruling 7) */
   --dur-scan:   var(--dur-5); /* 1400ms */
 
-  /* @group shadcn/ui variables → Witness tokens (their light/dark palettes are deleted) */
+  /* @group shadcn/ui variables → PR Guard tokens (their light/dark palettes are deleted) */
   --background:                 var(--ink-0);
   --foreground:                 var(--text-body);
   --card:                       var(--ink-1);

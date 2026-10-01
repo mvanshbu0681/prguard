@@ -2,7 +2,7 @@
    src/styles/code.css — the code-surface quarantine.
 
    OWNER: t1d (wave 1). Imported by app/globals.css after the token files.
-   Components: src/components/code/ (TerminalBlock, CodeBlock, WitnessDiff).
+   Components: src/components/code/ (TerminalBlock, CodeBlock, PRGuardDiff).
 
    The three scopes are .prg-terminal, .prg-code and .prg-diff (design Appendix A).
    Every green and every diff red in this file is written under one of them:
@@ -376,7 +376,7 @@
     color: var(--text-dim);
   }
 
-  /* witness-cold: Shiki roles → the --syn-* tokens (design §1.12). Plain is the default. */
+  /* prguard-cold: Shiki roles → the --syn-* tokens (design §1.12). Plain is the default. */
   .prg-code__line { color: var(--syn-plain); }
   .prg-code .prg-syn-comment { color: var(--syn-comment); }
   .prg-code .prg-syn-keyword { color: var(--syn-keyword); }
@@ -387,7 +387,7 @@
   .prg-code .prg-syn-deleted { color: var(--diff-del-text); }
 
   /* ------------------------------------------------------------------------
-     5. WitnessDiff — design §5.8
+     5. PRGuardDiff — design §5.8
      ------------------------------------------------------------------------ */
   .prg-diff {
     border: 1px solid var(--rule-1);
@@ -495,7 +495,7 @@
   /* The accused line (dashboard §4, "How a finding's lines are highlighted"). Its row fill is
      the severity band colour at 10% and it REPLACES the diff tint: a diff tint says "this
      line changed", a band tint says "this line is accused". The +/− glyph and the text colour
-     keep carrying the direction of edit. data-fill is the finding's band (WitnessDiff writes
+     keep carrying the direction of edit. data-fill is the finding's band (PRGuardDiff writes
      `fill`, defaulting to the rail tone), so a blocking finding shows an --alarm rail over its
      own band's fill. Same specificity as the add/del rules and after them, so it wins. */
   .prg-diff__row[data-fill="signal"] { --prg-fill-color: var(--signal); }

@@ -1,11 +1,11 @@
 // OWNER: t1a (wave 1).
 //
-// <Wordmark> — WITNESS (brand-gaps §B): Google Sans Code 560 on the variable
+// <Wordmark> — PR GUARD (brand-gaps §B): Google Sans Code 560 on the variable
 // axis, all caps, +0.04em, --text-primary. The mark carries the accent; the
 // wordmark never does. 15px in the nav, 20px in the footer, never below 12px.
 //
-// The DOM text is the prose spelling "Witness" and CSS sets the caps. The eye
-// gets WITNESS; a screen reader reads the word, not seven shouted letters. If
+// The DOM text is the prose spelling "PR Guard" and CSS sets the caps. The eye
+// gets PR GUARD; a screen reader reads the name, not seven shouted letters. If
 // the stylesheet is missing, the fallback is still the correct prose form of
 // the name.
 import type { HTMLAttributes } from 'react';
@@ -22,7 +22,7 @@ export function Wordmark({ size = 15, as: Tag = 'span', className, style, ...res
   const px = Math.max(WORDMARK_MIN, size);
   return (
     <Tag {...rest} className={cn('prg-wordmark', className)} style={{ ...style, fontSize: `${px}px` }}>
-      Witness
+      PR Guard
     </Tag>
   );
 }

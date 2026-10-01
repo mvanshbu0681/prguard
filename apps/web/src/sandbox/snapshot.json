@@ -1,0 +1,897 @@
+{
+  "generatedAt": "2026-10-01T03:37:43.049Z",
+  "generator": "apps/web/scripts/sandbox-snapshot.mjs",
+  "org": "prguard-sandbox",
+  "orgUrl": "https://github.com/prguard-sandbox",
+  "bot": "pr-guard-beta[bot]",
+  "repos": [
+    "acme-billing",
+    "acme-gateway",
+    "acme-ledger",
+    "acme-store",
+    "pg-new-muoi18t0",
+    "pg-scratch"
+  ],
+  "totals": {
+    "pullRequests": 85,
+    "pullRequestsReviewed": 83,
+    "reviews": 106,
+    "reviewStates": {
+      "COMMENTED": 106
+    },
+    "findings": 593,
+    "replies": 7,
+    "verified": 294,
+    "withSuggestion": 425,
+    "withEvidence": 294,
+    "checkRuns": 38,
+    "checkConclusions": {
+      "neutral": 27,
+      "success": 9,
+      "cancelled": 2
+    },
+    "medianSecondsToFirstReview": 23,
+    "firstReviewAt": "2026-09-30T18:33:57Z",
+    "lastReviewAt": "2026-10-01T03:14:06Z"
+  },
+  "bySeverity": {
+    "critical": 69,
+    "high": 175,
+    "medium": 121,
+    "low": 67,
+    "unlabelled": 161
+  },
+  "byReviewer": {
+    "Security": 89,
+    "AI slop": 82,
+    "Data": 59,
+    "Team rules": 88,
+    "Bug": 121,
+    "Reliability": 130,
+    "Performance": 26,
+    "Breaking change": 5,
+    "Docs drift": 17,
+    "Supply chain": 7,
+    "Test gap": 10
+  },
+  "byPriority": {
+    "P0 Urgent": 14,
+    "P1 High priority": 29,
+    "P3 Low priority": 8,
+    "P2 Normal": 10
+  },
+  "byRisk": {
+    "High risk": 44,
+    "Low risk": 2,
+    "Medium risk": 15
+  },
+  "reviewsByHour": [
+    {
+      "hour": "2026-09-30T18:00Z",
+      "count": 21
+    },
+    {
+      "hour": "2026-09-30T19:00Z",
+      "count": 15
+    },
+    {
+      "hour": "2026-09-30T20:00Z",
+      "count": 1
+    },
+    {
+      "hour": "2026-09-30T22:00Z",
+      "count": 1
+    },
+    {
+      "hour": "2026-09-30T23:00Z",
+      "count": 24
+    },
+    {
+      "hour": "2026-10-01T00:00Z",
+      "count": 27
+    },
+    {
+      "hour": "2026-10-01T01:00Z",
+      "count": 14
+    },
+    {
+      "hour": "2026-10-01T02:00Z",
+      "count": 2
+    },
+    {
+      "hour": "2026-10-01T03:00Z",
+      "count": 1
+    }
+  ],
+  "showcase": {
+    "repo": "acme-billing",
+    "pr": 26,
+    "title": "Ledger migration",
+    "url": "https://github.com/prguard-sandbox/acme-billing/pull/26",
+    "reviewUrl": "https://github.com/prguard-sandbox/acme-billing/pull/26#pullrequestreview-5374089954",
+    "postedAt": "2026-10-01T02:01:06Z",
+    "priority": {
+      "id": "p0",
+      "alt": "P0 Urgent"
+    },
+    "risk": {
+      "id": "high",
+      "alt": "High risk"
+    },
+    "reasons": "**Urgent:** Financial record keeping and payment signing; commits a secret. **High risk:** 2 critical findings, 3 high findings, touches payments (`app/services/ledger.py`).",
+    "severityCounts": [
+      {
+        "severity": "critical",
+        "count": 2
+      },
+      {
+        "severity": "high",
+        "count": 3
+      },
+      {
+        "severity": "medium",
+        "count": 3
+      }
+    ],
+    "findings": [
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102924",
+        "path": "app/services/ledger.py",
+        "line": 4,
+        "title": "A secret is committed in `app/services/ledger.py`",
+        "severity": "critical",
+        "reviewers": [
+          "Security",
+          "AI slop"
+        ],
+        "verified": false,
+        "suggestion": null,
+        "evidence": null,
+        "summary": "Rotate it now: deleting it from the code does not remove it from the git history. Load it from the environment or a secret manager instead.",
+        "postedAt": "2026-10-01T02:01:06Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102930",
+        "path": "migrations/004_ledger.sql",
+        "line": 2,
+        "title": "Destructive drop of `invoices.notes` column",
+        "severity": "critical",
+        "reviewers": [
+          "Data"
+        ],
+        "verified": false,
+        "suggestion": null,
+        "evidence": null,
+        "summary": "`ALTER TABLE invoices DROP COLUMN notes;` removes existing note data with no migration step to preserve it. This leads to irreversible data loss. Preserve the data in a new column or a separate table before dropping.",
+        "postedAt": "2026-10-01T02:01:06Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102941",
+        "path": "app/models.py",
+        "line": 80,
+        "title": "Money stored as float in `LedgerEntry`",
+        "severity": "high",
+        "reviewers": [
+          "Data",
+          "Bug"
+        ],
+        "verified": true,
+        "suggestion": "    amount_cents: Mapped[int] = mapped_column(Integer)",
+        "evidence": "`amount: Mapped[float] = mapped_column(Float)` at `app/models.py:80` stores money as float, violating integer cents rule.",
+        "summary": "The `amount` column in `LedgerEntry` uses a `float` (`Float`) type, which can lose precision for monetary values. Store money as integer cents to avoid rounding errors. Change the column to an `Integer` and rename to `amount_cents`.",
+        "postedAt": "2026-10-01T02:01:06Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102957",
+        "path": "migrations/004_ledger.sql",
+        "line": 3,
+        "title": "`ledger_ref` added NOT NULL without default",
+        "severity": "high",
+        "reviewers": [
+          "Data",
+          "Bug"
+        ],
+        "verified": true,
+        "suggestion": null,
+        "evidence": "`ALTER TABLE invoices ADD COLUMN ledger_ref TEXT NOT NULL;` adds a non‑nullable column without a default, which SQLite cannot apply to existing rows (`migrations/004_ledger.sql:3`).",
+        "summary": "`ALTER TABLE invoices ADD COLUMN ledger_ref TEXT NOT NULL;` adds a non‑nullable column to existing rows without a default or backfill, causing the migration to fail. Provide a default value or backfill existing rows.",
+        "postedAt": "2026-10-01T02:01:06Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102962",
+        "path": "migrations/004_ledger.sql",
+        "line": 8,
+        "title": "Monetary amount stored as REAL (float) in `ledger_entries`",
+        "severity": "high",
+        "reviewers": [
+          "Data"
+        ],
+        "verified": true,
+        "suggestion": null,
+        "evidence": "`amount REAL NOT NULL` stores monetary values as floating point, violating the project convention of using integer cents (`migrations/004_ledger.sql:8`).",
+        "summary": "The `amount` column is defined as `REAL`, a floating‑point type, which is unsuitable for money and can cause rounding errors. Use an integer (cents) instead.",
+        "postedAt": "2026-10-01T02:01:06Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102969",
+        "path": "app/models.py",
+        "line": 5,
+        "title": "Using Float for monetary amounts",
+        "severity": "medium",
+        "reviewers": [
+          "Team rules"
+        ],
+        "verified": true,
+        "suggestion": "Replace the line with `amount: Mapped[int] = mapped_column(Integer)` and adjust related logic to use cents.",
+        "evidence": "`amount: Mapped[float] = mapped_column(Float)` at `app/models.py:80` uses Float for monetary value, against convention.",
+        "summary": "The `LedgerEntry.amount` column is defined as `Float`. All money values must be stored as integer cents according to the \"Money handling\" rule. Using `float` introduces rounding errors and violates the repository convention.",
+        "postedAt": "2026-10-01T02:01:06Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102978",
+        "path": "migrations/004_ledger.sql",
+        "line": 9,
+        "title": "`created_at` column lacks timezone and default",
+        "severity": "medium",
+        "reviewers": [
+          "Data"
+        ],
+        "verified": true,
+        "suggestion": null,
+        "evidence": "`created_at TEXT` lacks timezone and default, while the code expects a `DateTime(timezone=True)` with default (`migrations/004_ledger.sql:9`).",
+        "summary": "`created_at` is created as `TEXT` without timezone awareness, while the model expects `DateTime(timezone=True)` with a default. This mismatch can cause runtime errors and loss of timezone info. Define it as `TIMESTAMP` with timezone and a default.",
+        "postedAt": "2026-10-01T02:01:07Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 26,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102982",
+        "path": "app/services/ledger.py",
+        "line": 10,
+        "title": "Signature string uses raw float leading to nondeterministic signatures",
+        "severity": "medium",
+        "reviewers": [
+          "Bug"
+        ],
+        "verified": true,
+        "suggestion": null,
+        "evidence": "`message = f\"{invoice_id}:{amount}\".encode()` `app/services/ledger.py:9`",
+        "summary": "`sign_entry` builds the message with `f\"{invoice_id}:{amount}\"`. Floating‑point representation can vary (e.g., `10.0` vs `10`). This makes signature verification brittle. Format the amount to a fixed decimal representation (e.g., two decimal places) before signing.",
+        "postedAt": "2026-10-01T02:01:07Z"
+      }
+    ],
+    "check": {
+      "conclusion": "neutral",
+      "title": "8 open · 2 critical"
+    }
+  },
+  "walkthrough": {
+    "repo": "acme-billing",
+    "pr": 3,
+    "title": "Add refunds",
+    "url": "https://github.com/prguard-sandbox/acme-billing/pull/3",
+    "author": "manaskhandelwal",
+    "baseSha": "eedf86905678c662c7e16323fb175c64adb70af2",
+    "headSha": "30e97977b40b786eeb5f80af9db8ca6f69a9af20",
+    "files": [
+      {
+        "path": "app/main.py",
+        "additions": 2,
+        "deletions": 1
+      },
+      {
+        "path": "app/models.py",
+        "additions": 16,
+        "deletions": 2
+      },
+      {
+        "path": "app/routers/refunds.py",
+        "additions": 110,
+        "deletions": 0
+      },
+      {
+        "path": "app/schemas.py",
+        "additions": 23,
+        "deletions": 0
+      }
+    ],
+    "postedAt": "2026-09-30T22:48:49Z",
+    "findings": [
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059969",
+        "path": "app/routers/refunds.py",
+        "line": 108,
+        "title": "Swallows commit failures and returns success",
+        "severity": "critical",
+        "reviewers": [
+          "Reliability",
+          "Bug"
+        ],
+        "verified": true,
+        "suggestion": "    except Exception as exc:\n            db.rollback()\n            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=\"Failed to create refund\") from exc",
+        "evidence": "`app/routers/refunds.py`:103-108",
+        "summary": "The bare `except:` rolls back the transaction but does not re‑raise or report the error, so the API returns a refund as if it succeeded while the DB commit may have failed.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059976",
+        "path": "app/routers/refunds.py",
+        "line": 79,
+        "title": "Missing ownership check on refund creation",
+        "severity": "critical",
+        "reviewers": [
+          "Security",
+          "Bug"
+        ],
+        "verified": true,
+        "suggestion": "    invoice = get_owned_invoice(db, invoice_id, current_user)",
+        "evidence": "`app/routers/refunds.py`:79",
+        "summary": "The `create_refund` endpoint loads the invoice with `db.get(Invoice, invoice_id)` without verifying the current user owns it. An attacker can refund any invoice they know the ID of, leading to unauthorized financial operations. Use `get_owned_invoice` like other routes before proceeding.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059981",
+        "path": "app/routers/refunds.py",
+        "line": 81,
+        "title": "Ownership not enforced for invoice lookup",
+        "severity": "high",
+        "reviewers": [
+          "Team rules"
+        ],
+        "verified": true,
+        "suggestion": "    Replace the lookup with the ownership helper:\n    ```python\n    -    invoice = db.get(Invoice, invoice_id)\n    +    invoice = get_owned_invoice(db, invoice_id, current_user)\n    ```",
+        "evidence": "`app/routers/refunds.py`:79",
+        "summary": "`create_refund` fetches the invoice with `db.get` instead of `get_owned_invoice`. This bypasses the ownership check and can allow users to refund invoices they don't own, violating the Ownership rule.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059984",
+        "path": "app/models.py",
+        "line": 82,
+        "title": "Money stored as Float in Refund model",
+        "severity": "high",
+        "reviewers": [
+          "Data",
+          "Security"
+        ],
+        "verified": true,
+        "suggestion": "    amount_cents: Mapped[int] = mapped_column(Integer)",
+        "evidence": "`app/models.py`:82-84",
+        "summary": "The `Refund.amount` column uses `Float`, which stores monetary values as floating‑point numbers and can lose precision. The project stores all money as integer cents to avoid rounding errors. Change the column to an integer cents field.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059990",
+        "path": "app/routers/refunds.py",
+        "line": 22,
+        "title": "Mutable default argument in `build_refund_note`",
+        "severity": "medium",
+        "reviewers": [
+          "Reliability",
+          "Bug"
+        ],
+        "verified": true,
+        "suggestion": "def build_refund_note(reason: str, tags: list[str] | None = None) -> str:\n    \"\"\"Formats the reason stored on a refund, prefixed with its tags.\"\"\"\n    tags = [] if tags is None else list(tags)\n    tags.append(\"refund\")\n    return f\"[{','.join(tags)}] {reason.strip()}\"",
+        "evidence": "`app/routers/refunds.py`:19-22",
+        "summary": "`tags: list[str] = []` is a mutable default that is shared across calls, causing tags to accumulate unexpectedly. Use `None` and create a new list inside the function.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059994",
+        "path": "app/schemas.py",
+        "line": 66,
+        "title": "Refund amount defined as float in schema",
+        "severity": "medium",
+        "reviewers": [
+          "Team rules"
+        ],
+        "verified": true,
+        "suggestion": "    Change the type to `int` representing cents and rename fields accordingly.\n    ```python\n    -    amount: float = Field(gt=0)\n    +    amount_cents: int = Field(gt=0)\n    ```",
+        "evidence": "`app/schemas.py`:65-66 shows `amount: float` in `RefundCreate`, and `app/schemas.py`:74 shows `amount: float` in `RefundRead`. Monetary fields should be integer cents per project conventions.",
+        "summary": "The `RefundCreate.amount` and `RefundRead.amount` fields use `float`. All monetary values should be integer cents. This mismatch can lead to precision errors in API consumers.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 3,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150060000",
+        "path": "app/routers/refunds.py",
+        "line": 109,
+        "title": "Print statement used instead of logger",
+        "severity": "low",
+        "reviewers": [
+          "Team rules",
+          "Reliability"
+        ],
+        "verified": false,
+        "suggestion": "    Replace the print with a logger call:\n    ```python\n    -    print(f\"refund {refund.id} issued for invoice {invoice.id}: {payload.amount}\")\n    +    logger.info(f\"refund {refund.id} issued for invoice {invoice.id}: {payload.amount}\")\n    ```",
+        "evidence": null,
+        "summary": "The code uses `print` to log the refund event. Per the Logging convention, all logs should use the module-level logger and never use `print`.",
+        "postedAt": "2026-09-30T22:48:50Z"
+      }
+    ],
+    "reviewerCounts": {
+      "Reliability": 3,
+      "Bug": 3,
+      "Security": 2,
+      "Team rules": 3,
+      "Data": 1
+    },
+    "check": {
+      "conclusion": "neutral",
+      "title": "8 open · 2 critical"
+    }
+  },
+  "commands": {
+    "repo": "acme-billing",
+    "pr": 6,
+    "url": "https://github.com/prguard-sandbox/acme-billing/pull/6",
+    "asked": [
+      {
+        "command": "@prguard help",
+        "on": "pull request",
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/6#issuecomment-5921465904",
+        "answerUrl": "https://github.com/prguard-sandbox/acme-billing/pull/6#issuecomment-5921466896",
+        "answeredInSeconds": 4
+      },
+      {
+        "command": "@prguard explain",
+        "on": "line comment",
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/6#discussion_r4150255461",
+        "answerUrl": "https://github.com/prguard-sandbox/acme-billing/pull/6#discussion_r4150255898",
+        "answeredInSeconds": 5
+      },
+      {
+        "command": "@prguard fix",
+        "on": "line comment",
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/6#discussion_r4150256506",
+        "answerUrl": "https://github.com/prguard-sandbox/acme-billing/pull/6#discussion_r4150257178",
+        "answeredInSeconds": 7
+      },
+      {
+        "command": "@prguard where is the refundable amount computed, and does it include earlier refunds?",
+        "on": "pull request",
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/6#issuecomment-5921472877",
+        "answerUrl": "https://github.com/prguard-sandbox/acme-billing/pull/6#issuecomment-5921474572",
+        "answeredInSeconds": 7
+      },
+      {
+        "command": "@prguard ignore invoices have at most a handful of refunds, a linear scan is fine",
+        "on": "line comment",
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/6#discussion_r4150258592",
+        "answerUrl": "https://github.com/prguard-sandbox/acme-billing/pull/6#discussion_r4150259113",
+        "answeredInSeconds": 7
+      },
+      {
+        "command": "@prguard explain",
+        "on": "pull request",
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/6#issuecomment-5921478257",
+        "answerUrl": "https://github.com/prguard-sandbox/acme-billing/pull/6#issuecomment-5921479317",
+        "answeredInSeconds": 4
+      }
+    ]
+  },
+  "fixed": {
+    "repo": "acme-billing",
+    "pr": 6,
+    "url": "https://github.com/prguard-sandbox/acme-billing/pull/6",
+    "checkTitle": "10 open · 1 critical · 1 fixed"
+  },
+  "featured": [
+    {
+      "repo": "acme-billing",
+      "pr": 26,
+      "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102941",
+      "path": "app/models.py",
+      "line": 80,
+      "title": "Money stored as float in `LedgerEntry`",
+      "severity": "high",
+      "reviewers": [
+        "Data",
+        "Bug"
+      ],
+      "verified": true,
+      "suggestion": "    amount_cents: Mapped[int] = mapped_column(Integer)",
+      "evidence": "`amount: Mapped[float] = mapped_column(Float)` at `app/models.py:80` stores money as float, violating integer cents rule.",
+      "summary": "The `amount` column in `LedgerEntry` uses a `float` (`Float`) type, which can lose precision for monetary values. Store money as integer cents to avoid rounding errors. Change the column to an `Integer` and rename to `amount_cents`.",
+      "postedAt": "2026-10-01T02:01:06Z"
+    },
+    {
+      "repo": "acme-ledger",
+      "pr": 1,
+      "url": "https://github.com/prguard-sandbox/acme-ledger/pull/1#discussion_r4150230761",
+      "path": "src/main/java/com/acme/ledger/TransferService.java",
+      "line": 25,
+      "title": "Missing authorization on account access",
+      "severity": "critical",
+      "reviewers": [
+        "Security"
+      ],
+      "verified": true,
+      "suggestion": null,
+      "evidence": "`src/main/java/com/acme/ledger/TransferService.java`:25-26 - `accounts.get` called without any authorization checks",
+      "summary": "`accounts.get(fromId)` and `accounts.get(toId)` are called without verifying that the caller is allowed to operate on those accounts, enabling any user to move funds from arbitrary accounts. Add an authorization check (e.g., compare against the authenticated user) before debiting or crediting.",
+      "postedAt": "2026-09-30T23:18:29Z"
+    },
+    {
+      "repo": "acme-gateway",
+      "pr": 2,
+      "url": "https://github.com/prguard-sandbox/acme-gateway/pull/2#discussion_r4150294113",
+      "path": "internal/limiter/limiter.go",
+      "line": 30,
+      "title": "Counts map accessed without synchronization",
+      "severity": "critical",
+      "reviewers": [
+        "Reliability"
+      ],
+      "verified": true,
+      "suggestion": "type Limiter struct {\n    counts    map[string]int\n    limit     int\n    allowlist map[string]bool\n    mu        sync.Mutex\n}\n\nfunc (l *Limiter) Allow(key string) bool {\n    l.mu.Lock()\n    defer l.mu.Unlock()\n    if l.allowlist[key] {\n        return true\n    }\n    l.counts[key]++\n    return l.counts[key] <= l.limit\n}",
+      "evidence": "`internal/limiter/limiter.go`:24-30",
+      "summary": "Methods `Allow` modify `l.counts` (and read `l.allowlist`) without any mutex, causing data races when the limiter is used by concurrent HTTP handlers. Add a lock to protect these shared maps.",
+      "postedAt": "2026-09-30T23:29:19Z"
+    },
+    {
+      "repo": "acme-billing",
+      "pr": 3,
+      "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059976",
+      "path": "app/routers/refunds.py",
+      "line": 79,
+      "title": "Missing ownership check on refund creation",
+      "severity": "critical",
+      "reviewers": [
+        "Security",
+        "Bug"
+      ],
+      "verified": true,
+      "suggestion": "    invoice = get_owned_invoice(db, invoice_id, current_user)",
+      "evidence": "`app/routers/refunds.py`:79",
+      "summary": "The `create_refund` endpoint loads the invoice with `db.get(Invoice, invoice_id)` without verifying the current user owns it. An attacker can refund any invoice they know the ID of, leading to unauthorized financial operations. Use `get_owned_invoice` like other routes before proceeding.",
+      "postedAt": "2026-09-30T22:48:50Z"
+    },
+    {
+      "repo": "acme-billing",
+      "pr": 26,
+      "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102930",
+      "path": "migrations/004_ledger.sql",
+      "line": 2,
+      "title": "Destructive drop of `invoices.notes` column",
+      "severity": "critical",
+      "reviewers": [
+        "Data"
+      ],
+      "verified": false,
+      "suggestion": null,
+      "evidence": null,
+      "summary": "`ALTER TABLE invoices DROP COLUMN notes;` removes existing note data with no migration step to preserve it. This leads to irreversible data loss. Preserve the data in a new column or a separate table before dropping.",
+      "postedAt": "2026-10-01T02:01:06Z"
+    },
+    {
+      "repo": "acme-store",
+      "pr": 4,
+      "url": "https://github.com/prguard-sandbox/acme-store/pull/4#discussion_r4150201913",
+      "path": "src/services/gift-cards.ts",
+      "line": 30,
+      "title": "Client‑controlled redemption amount trusted without verification",
+      "severity": "high",
+      "reviewers": [
+        "Security"
+      ],
+      "verified": true,
+      "suggestion": null,
+      "evidence": "`src/services/gift-cards.ts`:30",
+      "summary": "The `amountCents` supplied by the client is sent to the provider without checking that it does not exceed the card's balance. If the provider trusts the request, an attacker could redeem more value than available. Validate `amountCents` against the card's balance after fetching the card or rely on provider enforcement.",
+      "postedAt": "2026-09-30T23:13:48Z"
+    },
+    {
+      "repo": "acme-billing",
+      "pr": 26,
+      "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102924",
+      "path": "app/services/ledger.py",
+      "line": 4,
+      "title": "A secret is committed in `app/services/ledger.py`",
+      "severity": "critical",
+      "reviewers": [
+        "Security",
+        "AI slop"
+      ],
+      "verified": false,
+      "suggestion": null,
+      "evidence": null,
+      "summary": "Rotate it now: deleting it from the code does not remove it from the git history. Load it from the environment or a secret manager instead.",
+      "postedAt": "2026-10-01T02:01:06Z"
+    },
+    {
+      "repo": "acme-ledger",
+      "pr": 1,
+      "url": "https://github.com/prguard-sandbox/acme-ledger/pull/1#discussion_r4150230824",
+      "path": "src/main/java/com/acme/ledger/TransferService.java",
+      "line": 34,
+      "title": "Non‑atomic debit/credit can leave inconsistent state",
+      "severity": "high",
+      "reviewers": [
+        "Reliability",
+        "AI slop"
+      ],
+      "verified": true,
+      "suggestion": null,
+      "evidence": "`src/main/java/com/acme/ledger/TransferService.java`:32-33",
+      "summary": "`from.debit` is called before `to.credit`. If the credit operation throws, the source account is already debited, causing partial failure and data inconsistency. The operation should be atomic or rolled back on error.",
+      "postedAt": "2026-09-30T23:18:30Z"
+    },
+    {
+      "repo": "acme-billing",
+      "pr": 3,
+      "url": "https://github.com/prguard-sandbox/acme-billing/pull/3#discussion_r4150059969",
+      "path": "app/routers/refunds.py",
+      "line": 108,
+      "title": "Swallows commit failures and returns success",
+      "severity": "critical",
+      "reviewers": [
+        "Reliability",
+        "Bug"
+      ],
+      "verified": true,
+      "suggestion": "    except Exception as exc:\n            db.rollback()\n            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=\"Failed to create refund\") from exc",
+      "evidence": "`app/routers/refunds.py`:103-108",
+      "summary": "The bare `except:` rolls back the transaction but does not re‑raise or report the error, so the API returns a refund as if it succeeded while the DB commit may have failed.",
+      "postedAt": "2026-09-30T22:48:50Z"
+    }
+  ],
+  "checkExamples": [
+    {
+      "check": "Secrets",
+      "repo": "acme-billing",
+      "pr": 26,
+      "url": "https://github.com/prguard-sandbox/acme-billing/pull/26#discussion_r4151102924",
+      "path": "app/services/ledger.py",
+      "line": 4,
+      "title": "A secret is committed in `app/services/ledger.py`",
+      "severity": "critical",
+      "reviewers": [
+        "Security",
+        "AI slop"
+      ],
+      "verified": false,
+      "suggestion": null,
+      "evidence": null,
+      "summary": "Rotate it now: deleting it from the code does not remove it from the git history. Load it from the environment or a secret manager instead.",
+      "postedAt": "2026-10-01T02:01:06Z"
+    },
+    {
+      "check": "Supply chain",
+      "repo": "acme-store",
+      "pr": 9,
+      "url": "https://github.com/prguard-sandbox/acme-store/pull/9#discussion_r4150227080",
+      "path": "package.json",
+      "line": 17,
+      "title": "`toga-ai@1.0.922` is known malware",
+      "severity": "critical",
+      "reviewers": [
+        "Supply chain"
+      ],
+      "verified": false,
+      "suggestion": null,
+      "evidence": null,
+      "summary": "Socket flags this version as malware (supply-chain score 0). Remove it before anyone installs dependencies on this branch. [View on Socket](https://socket.dev/npm/package/toga-ai/overview/1.0.922)",
+      "postedAt": "2026-09-30T23:17:54Z"
+    }
+  ],
+  "topByReviewer": {
+    "Bug": [
+      {
+        "repo": "acme-billing",
+        "pr": 25,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/25#discussion_r4151086581",
+        "title": "Dropping notes column loses existing data",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 24,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/24#discussion_r4150982886",
+        "title": "Adding NOT NULL column without default or backfill",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 22,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/22#discussion_r4150965871",
+        "title": "Swallowed exception hides commit failures",
+        "severity": "critical",
+        "verified": true
+      }
+    ],
+    "Reliability": [
+      {
+        "repo": "acme-billing",
+        "pr": 22,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/22#discussion_r4150965871",
+        "title": "Swallowed exception hides commit failures",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 22,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/22#discussion_r4150965882",
+        "title": "Missing ownership check when creating refund",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 20,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/20#discussion_r4150951746",
+        "title": "Swallowing commit errors and returning success",
+        "severity": "critical",
+        "verified": true
+      }
+    ],
+    "Security": [
+      {
+        "repo": "acme-billing",
+        "pr": 20,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/20#discussion_r4150951738",
+        "title": "Missing ownership check on refund creation",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-ledger",
+        "pr": 1,
+        "url": "https://github.com/prguard-sandbox/acme-ledger/pull/1#discussion_r4150230761",
+        "title": "Missing authorization on account access",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-store",
+        "pr": 33,
+        "url": "https://github.com/prguard-sandbox/acme-store/pull/33#discussion_r4151102694",
+        "title": "SQL injection via string‑concatenated query",
+        "severity": "critical",
+        "verified": true
+      }
+    ],
+    "AI slop": [
+      {
+        "repo": "acme-billing",
+        "pr": 20,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/20#discussion_r4150951738",
+        "title": "Missing ownership check on refund creation",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 19,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/19#discussion_r4150853099",
+        "title": "Exception swallowed after failed commit",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 14,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/14#discussion_r4150705767",
+        "title": "Broad exception swallows errors in refund creation",
+        "severity": "critical",
+        "verified": true
+      }
+    ],
+    "Test gap": [
+      {
+        "repo": "acme-store",
+        "pr": 24,
+        "url": "https://github.com/prguard-sandbox/acme-store/pull/24#discussion_r4150722626",
+        "title": "redeem throws generic Error for invalid code",
+        "severity": "high",
+        "verified": true
+      },
+      {
+        "repo": "acme-store",
+        "pr": 17,
+        "url": "https://github.com/prguard-sandbox/acme-store/pull/17#discussion_r4150551660",
+        "title": "Unencoded gift‑card code in external request",
+        "severity": "high",
+        "verified": true
+      },
+      {
+        "repo": "acme-store",
+        "pr": 23,
+        "url": "https://github.com/prguard-sandbox/acme-store/pull/23#discussion_r4150715034",
+        "title": "Non‑AppError thrown on invalid code",
+        "severity": "medium",
+        "verified": true
+      }
+    ],
+    "Team rules": [
+      {
+        "repo": "acme-billing",
+        "pr": 16,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/16#discussion_r4150723670",
+        "title": "Swallowed exception after rollback",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 13,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/13#discussion_r4150706261",
+        "title": "Swallowing exceptions on commit and still returning success",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 11,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/11#discussion_r4150583910",
+        "title": "Money stored as float in `Refund.amount`",
+        "severity": "critical",
+        "verified": true
+      }
+    ],
+    "Data": [
+      {
+        "repo": "acme-billing",
+        "pr": 27,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/27#discussion_r4151467390",
+        "title": "Dropping `notes` column loses existing data",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 25,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/25#discussion_r4151086581",
+        "title": "Dropping notes column loses existing data",
+        "severity": "critical",
+        "verified": true
+      },
+      {
+        "repo": "acme-billing",
+        "pr": 24,
+        "url": "https://github.com/prguard-sandbox/acme-billing/pull/24#discussion_r4150982886",
+        "title": "Adding NOT NULL column without default or backfill",
+        "severity": "critical",
+        "verified": true
+      }
+    ]
+  },
+  "severityByReviewer": {
+    "Security": {
+      "critical": 25,
+      "high": 31,
+      "medium": 23,
+      "low": 10
+    }
+  }
+}

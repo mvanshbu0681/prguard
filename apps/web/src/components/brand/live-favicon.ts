@@ -4,7 +4,7 @@
 //
 //   running   the pupil is a ring, ticking at the heartbeat period (still watching)
 //   clear     the pupil is solid lime (the mark at rest)
-//   blocked   the pupil is solid --alarm — a 0ms flip: the witness saw the bug
+//   blocked   the pupil is solid --alarm — a 0ms flip: the eye saw the bug
 //
 // Drawn on the same rounded ink tile as favicon.ico ("never transparent"): the
 // state colours then hold their contrast in light and dark tab strips. The
@@ -25,7 +25,7 @@
 // binding. Every DOM access is guarded: without a 2D canvas it does nothing and
 // the static favicon stays, degraded, never broken.
 import { MARK_LID_POINTS, TILE_RADIUS, markGeometry, type MarkLiveState } from './geometry';
-import { WITNESS_HEX } from './palette';
+import { PRGUARD_HEX } from './palette';
 
 export type LiveFaviconState = MarkLiveState | null;
 
@@ -52,14 +52,14 @@ export function paintLiveFavicon(ctx: CanvasRenderingContext2D, state: MarkLiveS
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, g.size, g.size);
-  ctx.fillStyle = WITNESS_HEX.ink;
+  ctx.fillStyle = PRGUARD_HEX.ink;
   ctx.beginPath();
   ctx.roundRect(0, 0, g.size, g.size, g.size * TILE_RADIUS);
   ctx.fill();
 
   // Artboard units from here on.
   ctx.setTransform(k, 0, 0, k, -g.box.x * k, -g.box.y * k);
-  ctx.strokeStyle = WITNESS_HEX.lime;
+  ctx.strokeStyle = PRGUARD_HEX.lime;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.lineWidth = g.stroke;
@@ -77,7 +77,7 @@ export function paintLiveFavicon(ctx: CanvasRenderingContext2D, state: MarkLiveS
     ctx.arc(cx, cy, r - g.stroke / 3.5, 0, Math.PI * 2);
     ctx.stroke();
   } else {
-    ctx.fillStyle = state === 'blocked' ? WITNESS_HEX.alarm : WITNESS_HEX.lime;
+    ctx.fillStyle = state === 'blocked' ? PRGUARD_HEX.alarm : PRGUARD_HEX.lime;
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
   }

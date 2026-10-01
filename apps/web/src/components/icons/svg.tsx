@@ -1,4 +1,4 @@
-// OWNER: t1c (wave 1). The shared renderers for every icon Witness draws itself.
+// OWNER: t1c (wave 1). The shared renderers for every icon PR Guard draws itself.
 //
 // Two families, one hand (docs/design/02-design-system.md §6):
 //

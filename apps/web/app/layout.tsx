@@ -20,11 +20,11 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s — Witness",
-    default: "Witness — proven, or it doesn't block",
+    template: "%s — PR Guard",
+    default: "PR Guard — AI code review that checks its findings",
   },
   description:
-    "An AI code reviewer that executes its own claims. Every finding carries a repro test run at your base SHA and your head SHA. Only proven findings can block a merge.",
+    "PR Guard is an AI pull-request reviewer shipped as a GitHub App. Ten AI reviewers and two code checks comment on every pull request, findings of medium severity and up are re-checked against the code, and a person still approves the merge.",
   // favicon.ico and the OG/Twitter cards are picked up from app/ by file convention.
   // Declaring `icons` at all drops the icon.svg and apple-icon.png conventions from the
   // head, so they are listed here with the Safari pinned-tab mask (brand-gaps §C).

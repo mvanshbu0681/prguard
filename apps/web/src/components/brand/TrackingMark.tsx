@@ -1,5 +1,5 @@
 'use client';
-// <TrackingMark> — the Witness eye, awake. The marketing nav and footer use it:
+// <TrackingMark> — the PR Guard eye, awake. The marketing nav and footer use it:
 // the pupil follows the pointer (it is watching) and blinks every few seconds.
 // Everything else about the drawing is <Mark>'s, from ./geometry.
 //

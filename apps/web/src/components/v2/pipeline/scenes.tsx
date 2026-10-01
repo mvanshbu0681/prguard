@@ -1,13 +1,14 @@
-// The nine stage "videos": each is a small product UI that loops through what
-// that stage did in the demo review. Pure markup; every value arrives in `d`,
-// read from the demo corpus by Pipeline.tsx. The motion lives in CSS: an
-// element with class `in` + `k{n}` appears at step n of the card's loop while
-// the UI card itself stays put, and with reduced motion everything simply
-// rests in its final state.
+// The nine step "videos": each is a small product UI that loops through what
+// that step of a PR Guard review does, on the measured review of
+// acme-billing#3. Pure markup; every value arrives in `d`, read by Pipeline.tsx
+// from the public pull request (src/sandbox/snapshot.json), the team's
+// measurement of that review, or the code (src/sandbox/facts.ts). The motion
+// lives in CSS: an element with class `in` + `k{n}` appears at step n of the
+// card's loop while the UI card itself stays put, and with reduced motion
+// everything simply rests in its final state.
 import type { CSSProperties, ReactNode } from "react";
-import { Check, FileCode2, Webhook, X } from "lucide-react";
-import { SEVERITY_INPUTS } from "@/lib/contracts";
-import type { Finding } from "@/lib/api-types";
+import { Check, FileCode2, Webhook } from "lucide-react";
+import type { SandboxFinding } from "@/sandbox";
 import s from "./pipeline.module.css";
 import { EyeGlyph } from "@/components/brand/EyeGlyph";
 
@@ -17,28 +18,25 @@ export interface SceneData {
   author: string;
   base: string;
   head: string;
-  files: { path: string; reviewed: boolean; note?: string }[];
-  filesReviewed: number;
-  filesExcluded: number;
-  lanes: { key: string; initials: string; color: string; count: number }[];
-  chips: { initials: string; color: string; dropped: boolean }[];
-  kept: number;
-  proven: Finding;
-  fingerprint: string;
-  seenRuns: number;
-  suppressedTitle: string;
-  suppressedScope: string;
-  testFile: string;
-  baseLine: string;
-  headLine: string;
-  errorLine: string;
-  proofTally: { proven: number; disproven: number; inconclusive: number };
-  ladder: { label: string; count: number }[];
-  commentLine: number | null;
-  gateReason: string;
-  gateContext: string;
-  chain: { seq: number; type: string; hash: string }[];
-  events: number;
+  files: { path: string; additions: number }[];
+  reviewersRun: number;
+  reviewersTotal: number;
+  parallelism: number;
+  lanes: { name: string; initials: string; color: string; count: number }[];
+  raw: number;
+  posted: number;
+  verified: number;
+  rejected: number;
+  verifyFrom: string;
+  comment: SandboxFinding;
+  bot: string;
+  learning: { text: string; pr: string };
+  learningsInPrompt: number;
+  fixed: { title: string; pr: string };
+  checkConclusion: string;
+  approvals: number;
+  /** one finding from each code check, from the pull requests they ran on */
+  checks: { check: string; title: string; pr: string }[];
 }
 
 /** Appears at step `k` of the loop. */
@@ -61,58 +59,57 @@ function Bot() {
   );
 }
 
-export function IngestScene({ d }: { d: SceneData }) {
-  const rows: [string, string][] = [
-    ["repo", d.repo],
-    ["pull request", `#${d.pr}`],
-    ["author", d.author],
-    ["base", d.base],
-    ["head", d.head],
-  ];
+function Rows({ rows, from = 1 }: { rows: [string, ReactNode][]; from?: number }) {
+  return (
+    <div className={s.kvs}>
+      {rows.map(([k, v], i) => (
+        <div key={k} className={`${s.kv} ${at(from + i)}`}>
+          <span>{k}</span>
+          <b>{v}</b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function FetchScene({ d }: { d: SceneData }) {
   return (
     <Ui>
       <div className={s.uiHead}>
         <span className={s.glyph}>
           <Webhook size={13} strokeWidth={2} />
         </span>
-        <span className={s.monoStrong}>POST /webhooks/github</span>
+        <span className={s.monoStrong}>POST /api/webhooks</span>
         <span className={`${s.chip} ${s.chipLime} ${s.chipEnd} ${at(7)}`}>
           <Check size={10} strokeWidth={3} /> diff
         </span>
       </div>
-      <div className={s.kvs}>
-        {rows.map(([k, v], i) => (
-          <div key={k} className={`${s.kv} ${at(i + 1)}`}>
-            <span>{k}</span>
-            <b>{v}</b>
-          </div>
-        ))}
-      </div>
+      <Rows
+        rows={[
+          ["repo", d.repo],
+          ["pull request", `#${d.pr}`],
+          ["author", d.author],
+          ["base", d.base],
+          ["head", d.head],
+        ]}
+      />
     </Ui>
   );
 }
 
-export function ContextScene({ d }: { d: SceneData }) {
+export function TriageScene({ d }: { d: SceneData }) {
   return (
     <Ui>
       <div className={s.uiHead}>
         <span className={s.label}>Changed files</span>
-        <span className={s.meta}>
-          {d.filesReviewed} reviewed · {d.filesExcluded} excluded
-        </span>
+        <span className={s.meta}>{d.files.length} files · 1 fast call</span>
       </div>
       <div className={s.files}>
         {d.files.map((f, i) => (
-          <div key={f.path} className={`${s.file} ${f.reviewed ? "" : s.fileOut} ${at(i + 1)}`}>
+          <div key={f.path} className={`${s.file} ${at(i + 1)}`}>
             <FileCode2 size={12} strokeWidth={1.8} />
             <span className={s.filePath}>{f.path}</span>
-            {f.reviewed ? (
-              <span className={s.okDot}>
-                <Check size={9} strokeWidth={3.2} />
-              </span>
-            ) : (
-              <span className={s.tag}>{f.note}</span>
-            )}
+            <span className={s.tag}>+{f.additions}</span>
           </div>
         ))}
       </div>
@@ -120,25 +117,44 @@ export function ContextScene({ d }: { d: SceneData }) {
   );
 }
 
-export function SpecialistsScene({ d }: { d: SceneData }) {
+export function ImpactScene({ d }: { d: SceneData }) {
+  return (
+    <Ui>
+      <div className={s.uiHead}>
+        <span className={s.label}>Impact analysis</span>
+        <span className={s.meta}>head snapshot</span>
+      </div>
+      <Rows
+        rows={[
+          ["snapshot", d.head],
+          ["reads", "symbols around changed lines"],
+          ["finds", "every other place they are used"],
+          ["sends", "the callers to the reviewers"],
+        ]}
+      />
+    </Ui>
+  );
+}
+
+export function ReviewScene({ d }: { d: SceneData }) {
   const most = Math.max(...d.lanes.map((l) => l.count), 1);
   return (
     <Ui>
       <div className={s.uiHead}>
-        <span className={s.label}>Specialist passes</span>
-        <span className={s.meta}>in parallel</span>
+        <span className={s.label}>Posted per reviewer</span>
+        <span className={s.meta}>{d.parallelism} at a time</span>
       </div>
       <div className={s.lanes}>
         {d.lanes.map((l, i) => (
-          <div key={l.key} className={s.lane}>
+          <div key={l.name} className={s.lane}>
             <span className={s.avatar} style={{ background: l.color }}>
               {l.initials}
             </span>
-            <span className={s.laneName}>{l.key}</span>
+            <span className={s.laneName}>{l.name}</span>
             <span className={s.track}>
               <span className={`${s.fill} ${s[`f${i}`]}`} style={{ width: `${(l.count / most) * 100}%` }} />
             </span>
-            <span className={`${s.count} ${at(6 + i)}`}>{l.count}</span>
+            <span className={`${s.count} ${at(5 + i)}`}>{l.count}</span>
           </div>
         ))}
       </div>
@@ -146,182 +162,116 @@ export function SpecialistsScene({ d }: { d: SceneData }) {
   );
 }
 
-export function CoordinatorScene({ d }: { d: SceneData }) {
-  let drop = 0;
+export function ChecksScene({ d }: { d: SceneData }) {
   return (
     <Ui>
       <div className={s.uiHead}>
-        <span className={s.label}>{d.chips.length} raised</span>
-        <span className={`${s.meta} ${at(9)}`}>{d.kept} kept</span>
+        <span className={s.label}>Code checks</span>
+        <span className={s.meta}>no model calls</span>
       </div>
-      <div className={s.chips}>
-        {d.chips.map((c, i) => (
-          <span key={i} className={`${s.fchip} ${c.dropped ? `${s.out} ${s[`o${1 + drop++}`]}` : ""}`}>
-            <i style={{ background: c.color }} />
-            {c.initials}
-          </span>
-        ))}
+      {d.checks.map((c, i) => (
+        <div key={c.check} className={`${s.ledger} ${s.note} ${at(1 + i * 3)}`} style={style({ marginTop: i ? 8 : 0 })}>
+          <span className={s.ledgerTitle}>{c.title}</span>
+          <span className={s.tag}>{c.check}</span>
+        </div>
+      ))}
+    </Ui>
+  );
+}
+
+export function VerifyScene({ d }: { d: SceneData }) {
+  return (
+    <Ui>
+      <div className={s.uiHead}>
+        <span className={s.label}>Verification</span>
+        <span className={s.meta}>{d.verifyFrom} and up</span>
       </div>
-      <div className={s.legend}>
-        <span>
-          <i className={s.legendKept} /> kept
+      <Rows
+        rows={[
+          ["raw findings", d.raw],
+          ["confirmed with quoted code", d.verified],
+          ["rejected and dropped", d.rejected],
+          ["posted", d.posted],
+        ]}
+      />
+    </Ui>
+  );
+}
+
+export function LearningsScene({ d }: { d: SceneData }) {
+  return (
+    <Ui>
+      <div className={s.uiHead}>
+        <span className={s.label}>Learnings</span>
+        <span className={s.meta}>{d.learning.pr}</span>
+      </div>
+      <div className={`${s.ledger} ${s.note} ${at(2)}`}>
+        <span className={s.ledgerTitle}>{d.learning.text}</span>
+        <span className={s.tag}>from @prguard ignore</span>
+      </div>
+      <div style={style({ marginTop: 10 })}>
+        <Rows
+          from={4}
+          rows={[
+            ["in every prompt", `${d.learningsInPrompt} most recent`],
+            ["matching findings", "not posted"],
+          ]}
+        />
+      </div>
+    </Ui>
+  );
+}
+
+export function FixesScene({ d }: { d: SceneData }) {
+  return (
+    <Ui width={318}>
+      <div className={s.uiHead}>
+        <span className={s.okDot}>
+          <Check size={10} strokeWidth={3.2} color="#ffffff" />
         </span>
-        <span>
-          <i className={s.legendDropped} /> dropped as noise or duplicate
-        </span>
+        <span className={s.monoStrong}>PR Guard</span>
+        <span className={`${s.chip} ${s.chipLime} ${s.chipEnd}`}>{d.checkConclusion}</span>
       </div>
+      <p className={`${s.reason} ${at(2)}`}>{d.fixed.title}</p>
+      <span className={`${s.meta} ${at(5)}`} style={style({ display: "block", marginTop: 10 })}>
+        check run on {d.fixed.pr}, after a fix was pushed
+      </span>
     </Ui>
   );
 }
 
-export function SeverityScene({ d }: { d: SceneData }) {
-  const sev = d.proven.severity;
-  const inputs = (sev?.inputs ?? {}) as Record<string, number>;
-  const weights = (sev?.weights ?? {}) as Record<string, number>;
-  const shades = ["#cbf857", "#2b2b2b", "#454545", "#5f5f5f", "#7d7d7d", "#9a9a9a"];
-  return (
-    <Ui>
-      <div className={s.uiHead}>
-        <span className={s.label}>Computed severity</span>
-        <span className={`${s.band} ${at(8)}`}>{sev?.band}</span>
-      </div>
-      <span className={s.bigScore}>{(sev?.score ?? 0).toFixed(3)}</span>
-      <div className={s.bar}>
-        {SEVERITY_INPUTS.map((k, i) => (
-          <span
-            key={k}
-            className={`${s.seg} ${s[`g${i}`]}`}
-            style={{ width: `${(inputs[k] ?? 0) * (weights[k] ?? 0) * 100}%`, background: shades[i] }}
-          />
-        ))}
-      </div>
-      <div className={s.inputs}>
-        {SEVERITY_INPUTS.map((k, i) => (
-          <span key={k} className={at(i + 1)}>
-            <i style={{ background: shades[i] }} />
-            {k.replace(/_/g, " ")} <b>{(inputs[k] ?? 0).toFixed(2)}</b>
-          </span>
-        ))}
-      </div>
-    </Ui>
-  );
-}
-
-export function IdentityScene({ d }: { d: SceneData }) {
-  const groups = d.fingerprint.slice(0, 32).match(/.{8}/g) ?? [];
-  return (
-    <Ui>
-      <div className={s.uiHead}>
-        <span className={s.label}>Fingerprint</span>
-        <span className={s.meta}>sha-256</span>
-      </div>
-      <div className={s.hash}>
-        {groups.map((g, i) => (
-          <span key={i} className={s[`hs${i}`]}>
-            {g}
-          </span>
-        ))}
-      </div>
-      <div className={`${s.kv} ${at(5)}`}>
-        <span>seen before</span>
-        <b>{d.seenRuns} runs</b>
-      </div>
-      <div className={`${s.ledger} ${at(7)}`}>
-        <span className={s.ledgerTitle}>{d.suppressedTitle}</span>
-        <span className={s.tag}>suppressed · {d.suppressedScope} rule</span>
-      </div>
-    </Ui>
-  );
-}
-
-export function ProofScene({ d }: { d: SceneData }) {
-  return (
-    <Ui dark width={318}>
-      <div className={s.termBar}>
-        <i />
-        <i />
-        <i />
-        <span>{d.testFile}</span>
-      </div>
-      <div className={s.termBody}>
-        <div className={at(1)}>
-          <span className={s.dim}>$</span> pytest {d.testFile} -q
-        </div>
-        <div className={at(3)}>
-          <span className={s.dim}>base {d.base} </span>
-          <span className={s.pass}>{d.baseLine}</span>
-        </div>
-        <div className={at(5)}>
-          <span className={s.dim}>head {d.head} </span>
-          <span className={s.failTxt}>{d.headLine}</span>
-        </div>
-        <div className={`${s.failTxt} ${s.clip} ${at(6)}`}>{d.errorLine}</div>
-      </div>
-      <div className={`${s.tally} ${at(8)}`}>
-        <span className={s.tProven}>{d.proofTally.proven} proven</span>
-        <span className={s.tRefuted}>{d.proofTally.disproven} refuted</span>
-        <span className={s.tOpen}>{d.proofTally.inconclusive} inconclusive</span>
-      </div>
-    </Ui>
-  );
-}
-
-export function DeliveryScene({ d }: { d: SceneData }) {
-  const f = d.proven;
-  const file = (f.location?.file_path ?? "").split("/").pop();
+export function PublishScene({ d }: { d: SceneData }) {
+  const f = d.comment;
+  const file = f.path.split("/").pop();
   return (
     <Ui width={310}>
       <div className={s.uiHead}>
         <Bot />
         <span className={s.comment}>
-          <b>witness[bot]</b> on {file}
-          {d.commentLine ? `:${d.commentLine}` : ""}
+          <b>{d.bot}</b> on {file}
+          {f.line ? `:${f.line}` : ""}
         </span>
       </div>
-      <p className={`${s.commentBody} ${at(2)}`}>{f.title}</p>
+      <p className={`${s.commentBody} ${at(2)}`}>{(f.title ?? "").replace(/`/g, "")}</p>
       <div className={`${s.row} ${at(4)}`}>
-        <span className={s.band}>{f.severity?.band}</span>
-        <span className={`${s.chip} ${s.chipLime}`}>
-          <Check size={10} strokeWidth={3} /> proven
-        </span>
+        <span className={s.band}>{f.severity}</span>
+        {f.verified ? (
+          <span className={`${s.chip} ${s.chipLime}`}>
+            <Check size={10} strokeWidth={3} /> verified
+          </span>
+        ) : null}
       </div>
       <div className={s.ladder}>
-        {d.ladder.map((r, i) => (
-          <span key={r.label} className={`${s.rung} ${r.count ? "" : s.rungEmpty} ${at(6 + i)}`}>
-            {r.label} <b>{r.count}</b>
+        {[
+          ["line comments", d.posted],
+          ["check", d.checkConclusion],
+          ["approvals", d.approvals],
+        ].map(([label, value], i) => (
+          <span key={String(label)} className={`${s.rung} ${at(6 + i)}`}>
+            {label} <b>{value}</b>
           </span>
         ))}
       </div>
-    </Ui>
-  );
-}
-
-export function FinaliseScene({ d }: { d: SceneData }) {
-  return (
-    <Ui width={318}>
-      <div className={s.uiHead}>
-        <span className={s.xDot}>
-          <X size={10} strokeWidth={3.2} />
-        </span>
-        <span className={s.monoStrong}>{d.gateContext}</span>
-        <span className={s.failPill}>failing</span>
-      </div>
-      <p className={`${s.reason} ${at(2)}`}>{d.gateReason}</p>
-      <div className={s.chain}>
-        {d.chain.map((b, i) => (
-          <span key={b.seq} className={s.chainItem}>
-            {i > 0 ? <i className={`${s.link} ${at(3 + i * 2)}`} /> : null}
-            <span className={`${s.block} ${i === d.chain.length - 1 ? s.blockNew : ""} ${at(4 + i * 2)}`}>
-              <span className={s.dim2}>#{b.seq}</span>
-              <span>{b.hash}</span>
-              <span className={s.blockType}>{b.type}</span>
-            </span>
-          </span>
-        ))}
-      </div>
-      <span className={`${s.meta} ${at(9)}`} style={style({ display: "block", marginTop: 10 })}>
-        {d.events} audit events · chain verified
-      </span>
     </Ui>
   );
 }

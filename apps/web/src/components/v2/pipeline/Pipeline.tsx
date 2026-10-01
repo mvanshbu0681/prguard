@@ -1,147 +1,142 @@
 // Section 7, rebuilt on the otoma8.com "TESTIMONIALS" composition: a left
 // heading with prev/next controls over a full-bleed carousel of 422x480 video
-// cards. Here each "video" is one of the nine pipeline stages, a looping UI of
-// what that stage did in the demo review; the quote is what it did and the name
-// slot is how long it took. Every value is read from the demo corpus.
+// cards. Here each "video" is one of the nine steps every PR Guard review
+// records in its trace, a looping UI of that step; the quote is what it does
+// and the name slot is a fact about it. Six steps show the measured review of
+// acme-billing#3; checks, learnings and fixes show the sandbox pull requests
+// they ran on, and each card names its pull request.
 import type { JSX } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Combine,
-  FingerprintPattern,
-  FlaskConical,
+  FileSearch,
   FolderTree,
-  Gauge,
+  GitPullRequest,
+  GraduationCap,
   MessageSquareText,
   Play,
+  ScanSearch,
   ShieldCheck,
   Users,
   Webhook,
   type LucideIcon,
 } from "lucide-react";
-import { getAuditChain, getDemoProvenFinding, getDemoResult, getDemoRun, getFindings, getManifest } from "@/lib/fixtures";
-import type { Stage } from "@/lib/contracts";
+import {
+  BOT,
+  DEFAULTS,
+  REVIEWERS,
+  TRACE_STEPS,
+  WALKTHROUGH_LOG,
+  avatarColor,
+  blockingReviews,
+  initialsOf,
+  prLabel,
+  sandbox,
+  type TraceStep,
+} from "@/sandbox";
 import { CarouselButtons } from "../caught/CarouselButtons";
 import {
-  ContextScene,
-  CoordinatorScene,
-  DeliveryScene,
-  FinaliseScene,
-  IdentityScene,
-  IngestScene,
-  ProofScene,
-  SeverityScene,
-  SpecialistsScene,
+  ChecksScene,
+  FetchScene,
+  FixesScene,
+  ImpactScene,
+  LearningsScene,
+  PublishScene,
+  ReviewScene,
+  TriageScene,
+  VerifyScene,
   type SceneData,
 } from "./scenes";
 import s from "./pipeline.module.css";
 
 const TRACK_ID = "pipeline-track";
 
-const SPECIALISTS = [
-  { key: "bugs", initials: "BG", color: "#1f2937" },
-  { key: "security", initials: "SC", color: "#475569" },
-  { key: "tests", initials: "TS", color: "#334155" },
-  { key: "quality", initials: "QA", color: "#57534e" },
-];
-
-const RUNGS: [key: "inline_exact" | "inline_nearest" | "file_level" | "summary_only", chip: string, prose: string][] = [
-  ["inline_exact", "exact line", "the exact line"],
-  ["inline_nearest", "nearest", "the nearest line"],
-  ["file_level", "file", "file level"],
-  ["summary_only", "summary", "the summary"],
-];
-
 type Bg = "sky" | "ink" | "navy";
-const LOOK: Record<Stage, { name: string; icon: LucideIcon; bg: Bg; Scene: (p: { d: SceneData }) => JSX.Element }> = {
-  ingest: { name: "Ingest", icon: Webhook, bg: "sky", Scene: IngestScene },
-  context: { name: "Context", icon: FolderTree, bg: "ink", Scene: ContextScene },
-  specialists: { name: "Specialists", icon: Users, bg: "navy", Scene: SpecialistsScene },
-  coordinator: { name: "Coordinator", icon: Combine, bg: "sky", Scene: CoordinatorScene },
-  severity: { name: "Severity", icon: Gauge, bg: "ink", Scene: SeverityScene },
-  identity: { name: "Identity", icon: FingerprintPattern, bg: "navy", Scene: IdentityScene },
-  proof: { name: "Proof", icon: FlaskConical, bg: "sky", Scene: ProofScene },
-  delivery: { name: "Delivery", icon: MessageSquareText, bg: "ink", Scene: DeliveryScene },
-  finalise: { name: "Finalise", icon: ShieldCheck, bg: "navy", Scene: FinaliseScene },
+const LOOK: Record<TraceStep, { name: string; icon: LucideIcon; bg: Bg; Scene: (p: { d: SceneData }) => JSX.Element }> = {
+  fetch: { name: "Fetch", icon: Webhook, bg: "sky", Scene: FetchScene },
+  triage: { name: "Triage", icon: FolderTree, bg: "ink", Scene: TriageScene },
+  impact: { name: "Impact", icon: FileSearch, bg: "navy", Scene: ImpactScene },
+  review: { name: "Review", icon: Users, bg: "sky", Scene: ReviewScene },
+  checks: { name: "Checks", icon: ShieldCheck, bg: "ink", Scene: ChecksScene },
+  verify: { name: "Verify", icon: ScanSearch, bg: "navy", Scene: VerifyScene },
+  learnings: { name: "Learnings", icon: GraduationCap, bg: "sky", Scene: LearningsScene },
+  fixes: { name: "Fixes", icon: GitPullRequest, bg: "ink", Scene: FixesScene },
+  publish: { name: "Publish", icon: MessageSquareText, bg: "navy", Scene: PublishScene },
 };
 const CROPS = ["20% 30%", "70% 60%", "40% 20%"];
-
-const last = (text: string | null | undefined) => (text ?? "").trim().split("\n").pop() ?? "";
-const joinAnd = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
+const short = (sha: string) => sha.slice(0, 7);
 
 export function Pipeline() {
-  const { ids } = getManifest();
-  const run = getDemoRun();
-  const result = getDemoResult();
-  const proven = getDemoProvenFinding();
-  const findings = result.findings ?? [];
-  const chain = getAuditChain().items.filter((e) => e.review_id === result.review_id);
-  const suppressed = getFindings().find((f) => f.review_id === result.review_id && f.status === "suppressed");
-
-  const ctx = result.context;
-  const excluded = Object.entries(ctx?.excluded_reasons ?? {});
-  const reviewedPaths = [...new Set(findings.map((f) => f.location?.file_path).filter((p): p is string => !!p))];
-  const unseen = (ctx?.files_reviewed ?? 0) - reviewedPaths.length;
-  const counts = result.counts;
-  const proposed = counts?.proposed ?? findings.length;
-  const dropped = counts?.dropped ?? 0;
-  const ladder = result.delivery?.ladder_breakdown;
-  const headLines = (proven.proof?.head?.excerpt ?? "").split("\n");
-  const tally = (st: string) => findings.filter((f) => f.proof?.status === st).length;
-  const short = (sha: string) => sha.slice(0, 7);
+  const w = sandbox.walkthrough;
+  const log = WALKTHROUGH_LOG;
+  const ignore = sandbox.commands.asked.find((a) => a.command.startsWith("@prguard ignore"));
+  const comment = w.findings.find((f) => f.verified && f.severity === "critical") ?? w.findings[0];
+  const lanes = Object.entries(w.reviewerCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, count]) => ({ name, initials: initialsOf(name), color: avatarColor(name), count }));
 
   const d: SceneData = {
-    repo: `${result.repository.owner}/${result.repository.name}`,
-    pr: result.pull_request.number,
-    author: result.pull_request.author ?? "",
-    base: short(result.pull_request.base_sha ?? ids.base_sha),
-    head: short(result.pull_request.head_sha ?? ids.head_sha),
-    files: [
-      ...reviewedPaths.map((path) => ({ path, reviewed: true })),
-      ...(unseen > 0 ? [{ path: `+${unseen} more`, reviewed: true }] : []),
-      ...excluded.map(([path, why]) => ({ path, reviewed: false, note: why })),
-    ],
-    filesReviewed: ctx?.files_reviewed ?? 0,
-    filesExcluded: ctx?.files_excluded ?? 0,
-    lanes: SPECIALISTS.map((p) => ({ ...p, count: findings.filter((f) => f.specialist === p.key).length })),
-    chips: findings.map((f) => {
-      const p = SPECIALISTS.find((x) => x.key === f.specialist) ?? SPECIALISTS[0];
-      return { initials: p.initials, color: p.color, dropped: f.status === "dropped" };
-    }),
-    kept: proposed - dropped,
-    proven,
-    fingerprint: proven.fingerprint ?? "",
-    seenRuns: proven.history?.occurrence_count ?? 0,
-    suppressedTitle: (suppressed?.title ?? "").replace(/`/g, ""),
-    suppressedScope: suppressed?.suppression?.scope ?? "",
-    testFile: (proven.proof?.test_file_path ?? ids.repro_test_path).split("/").pop() ?? "",
-    baseLine: last(proven.proof?.base?.excerpt),
-    headLine: last(proven.proof?.head?.excerpt),
-    errorLine: (headLines.find((l) => l.startsWith("E ")) ?? "").replace(/^E\s+/, "E  "),
-    proofTally: { proven: tally("proven"), disproven: tally("disproven"), inconclusive: tally("inconclusive") },
-    ladder: RUNGS.map(([k, chip]) => ({ label: chip, count: ladder?.[k] ?? 0 })),
-    commentLine: proven.delivery?.delivered_line ?? proven.location?.start_line ?? null,
-    gateReason: result.gate?.reason ?? "",
-    gateContext: result.gate?.context_name ?? "",
-    chain: chain.slice(-3).map((e) => ({ seq: e.seq, type: e.event_type, hash: `${e.event_hash.slice(0, 6)}…${e.event_hash.slice(-2)}` })),
-    events: chain.length,
+    repo: `${sandbox.org}/${w.repo}`,
+    pr: w.pr,
+    author: w.author,
+    base: short(w.baseSha),
+    head: short(w.headSha),
+    files: w.files.map(({ path, additions }) => ({ path, additions })),
+    reviewersRun: log.reviewersRun,
+    reviewersTotal: REVIEWERS.length,
+    parallelism: DEFAULTS.reviewParallelism,
+    lanes,
+    raw: log.raw,
+    posted: log.posted,
+    verified: log.verified,
+    rejected: log.rejected,
+    verifyFrom: DEFAULTS.verifyFrom,
+    comment,
+    bot: BOT,
+    learning: { text: ignore?.command.replace(/^@prguard ignore\s*/, "") ?? "", pr: prLabel(sandbox.commands.repo, sandbox.commands.pr) },
+    learningsInPrompt: DEFAULTS.learningsInPrompt,
+    fixed: { title: sandbox.fixed.checkTitle ?? "", pr: prLabel(sandbox.fixed.repo, sandbox.fixed.pr) },
+    checkConclusion: w.check?.conclusion ?? "neutral",
+    approvals: blockingReviews(),
+    checks: sandbox.checkExamples.map((c) => ({ check: c.check, title: (c.title ?? "").replace(/`/g, ""), pr: prLabel(c.repo, c.pr) })),
   };
 
-  const band = proven.severity?.band ?? "";
-  const rungsUsed = RUNGS.filter(([k]) => (ladder?.[k] ?? 0) > 0).map(([, , prose]) => prose);
-  const QUOTES: Record<Stage, string> = {
-    ingest: `Resolves PR #${d.pr} on ${d.repo} and fetches the diff between ${d.base} and ${d.head}.`,
-    context: `Builds context from ${ctx?.files_changed ?? 0} changed files. ${excluded[0]?.[0] ?? "Nothing"} is left out as a ${excluded[0]?.[1] ?? "file"}.`,
-    specialists: `Bugs, security, tests and quality read the diff at the same time and raise ${proposed} findings.`,
-    coordinator: `Merges the four passes and drops ${dropped} findings as noise or duplicates. ${d.kept} go on.`,
-    severity: `Scores every finding from six stored inputs. The top one lands at ${(proven.severity?.score ?? 0).toFixed(3)}, ${band}.`,
-    identity: `Fingerprints each finding and checks the suppression ledger. ${counts?.suppressed ?? 0} matches an existing rule.`,
-    proof: `Writes repro tests and runs them at base and head: ${d.proofTally.proven} proven, ${d.proofTally.disproven} refuted, ${d.proofTally.inconclusive} inconclusive.`,
-    delivery: `Posts ${result.delivery?.comments_posted ?? 0} comments: on ${joinAnd(rungsUsed)}.`,
-    finalise: `Sets the merge gate to ${result.gate?.conclusion === "failure" ? "failing" : "passing"} and seals ${chain.length} events into the audit chain.`,
+  const here = prLabel(w.repo, w.pr);
+  const QUOTES: Record<TraceStep, string> = {
+    fetch: `Takes PR #${w.pr} on ${d.repo} from the webhook and fetches the diff between ${d.base} and ${d.head}.`,
+    triage: `One fast call rates the risk of each of the ${w.files.length} changed files and picks the reviewers worth running on it.`,
+    impact: "Finds the symbols the change touches in the head snapshot and every other place that uses them, so reviewers see the callers.",
+    review: `${log.reviewersRun} of the ${REVIEWERS.length} reviewers read their files, ${DEFAULTS.reviewParallelism} at a time, and raise ${log.raw} raw findings.`,
+    checks: "Secrets and Supply chain run as plain code beside the models. Shown: a committed key and a malware package they caught.",
+    verify: `A model re-reads the code for each finding of ${DEFAULTS.verifyFrom} severity and up: ${log.verified} confirmed, ${log.rejected} rejected and dropped.`,
+    learnings: "The repository's learnings go into every prompt, and a finding a learning covers is not posted again.",
+    fixes: "On a later push, findings whose code changed are checked again and marked fixed on the pull request.",
+    publish: `Posts one review with ${log.posted} line comments and a ${d.checkConclusion} check. It never approves or requests changes.`,
   };
-  const total = run.stages.reduce((sum, st) => sum + st.duration_ms, 0) / 1000;
-  const replay = `/runs/${run.review_id}?replay=1`;
+  // Each card opens the pull request its scene comes from.
+  const firstCheck = sandbox.checkExamples[0];
+  const HREF: Record<TraceStep, { url: string; label: string }> = {
+    fetch: { url: w.url, label: here },
+    triage: { url: w.url, label: here },
+    impact: { url: w.url, label: here },
+    review: { url: w.url, label: here },
+    checks: { url: firstCheck?.url ?? w.url, label: firstCheck ? prLabel(firstCheck.repo, firstCheck.pr) : here },
+    verify: { url: w.url, label: here },
+    learnings: { url: ignore?.url ?? sandbox.commands.url, label: d.learning.pr },
+    fixes: { url: sandbox.fixed.url, label: d.fixed.pr },
+    publish: { url: w.url, label: here },
+  };
+  const WHO: Record<TraceStep, string> = {
+    fetch: here,
+    triage: `${log.triageMs} ms on ${here}`,
+    impact: "regex symbols, repo-wide scan",
+    review: `${log.reviewersRun} of ${REVIEWERS.length} ran on ${here}`,
+    checks: d.checks.map((c) => c.pr).join(" · "),
+    verify: `${log.posted} of ${log.raw} posted on ${here}`,
+    learnings: d.learning.pr,
+    fixes: d.fixed.pr,
+    publish: `${log.seconds} s for the whole review`,
+  };
 
   return (
     <section id="pipeline" className={s.section} aria-labelledby="pipeline-title">
@@ -151,29 +146,29 @@ export function Pipeline() {
             <span aria-hidden>•</span>How it works
           </p>
           <h2 id="pipeline-title" className={s.h2}>
-            Nine stages. One comment.
+            Nine steps. One review.
           </h2>
           <p className={s.sub}>
-            Follow the demo review of PR #{d.pr} from the webhook to the merge gate: {total.toFixed(1)} seconds, start to finish.
+            Every review records these steps in its trace. On {here}, {log.files} files took {log.seconds} seconds, {log.calls} model calls and{" "}
+            {Math.round(log.tokens / 1000)}K tokens, from the webhook to the posted review.
           </p>
         </div>
         {/* buttonClassName is left to its default so both carousels share the
         exact same arrow-button class from caught.module.css. */}
-        <CarouselButtons trackId={TRACK_ID} label="stage" className={s.nav} />
+        <CarouselButtons trackId={TRACK_ID} label="step" className={s.nav} />
       </div>
 
-      <div id={TRACK_ID} className={s.trackRow} role="region" aria-label="Pipeline stages" tabIndex={0}>
-        {run.stages.map((st, i) => {
-          const look = LOOK[st.key as Stage];
-          if (!look) return null;
+      <div id={TRACK_ID} className={s.trackRow} role="region" aria-label="Review steps" tabIndex={0}>
+        {TRACE_STEPS.map((step, i) => {
+          const look = LOOK[step];
           const { Scene, icon: Icon } = look;
           return (
             <Link
-              key={st.key}
-              href={replay}
+              key={step}
+              href={HREF[step].url}
               className={`${s.card} ${s[look.bg]}`}
               style={{ ["--phase" as string]: `${(i * 1.7) % 8}s` }}
-              aria-label={`Stage ${i + 1}, ${look.name}: ${QUOTES[st.key as Stage]} Replay the run.`}
+              aria-label={`Step ${i + 1}, ${look.name}: ${QUOTES[step]} Open ${HREF[step].label} on GitHub.`}
             >
               {look.bg === "sky" ? (
                 <Image
@@ -197,8 +192,8 @@ export function Pipeline() {
               </span>
               <div className={s.caption} aria-hidden>
                 <Icon size={22} strokeWidth={1.8} className={s.capIcon} />
-                <p className={s.quote}>{QUOTES[st.key as Stage]}</p>
-                <p className={s.who}>{(st.duration_ms / 1000).toFixed(2)}s</p>
+                <p className={s.quote}>{QUOTES[step]}</p>
+                <p className={s.who}>{WHO[step]}</p>
               </div>
             </Link>
           );

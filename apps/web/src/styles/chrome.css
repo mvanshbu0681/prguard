@@ -433,7 +433,7 @@
     stroke-linejoin: round;
   }
 
-  /* WITNESS: Google Sans Code 560, caps, +0.04em, --text-primary. The negative
+  /* PR GUARD: Google Sans Code 560, caps, +0.04em, --text-primary. The negative
      end margin cancels the tracking after the last S, so the box ends at the last
      advance and a centred lockup centres the letters, not the trailing gap. */
   .prg-wordmark {

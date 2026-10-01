@@ -45,7 +45,7 @@ export function Nav() {
       <ScrollProgress />
       <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8">
         <div className="flex min-w-0 items-center gap-[10px]">
-          <a href="#proof" aria-label="Witness — the proof bench" className="shrink-0">
+          <a href="#proof" aria-label="PR Guard home" className="shrink-0">
             <Lockup variant="A" size="nav" />
           </a>
           <span aria-hidden="true" className="hidden h-3.5 w-px shrink-0 bg-rule-1 lg:block" />
