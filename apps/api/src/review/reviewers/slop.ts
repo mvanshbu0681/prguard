@@ -16,5 +16,5 @@ export default defineReviewer({
 - dead or unreachable code, parameters and variables added but never used
 - comments that restate the code, checks that can never fail
 Severity is usually low or medium; high when placeholder logic sits on a main path.
-Team rules and the brief's conventions have their own reviewer: do not report those.`,
+Team rules and the brief's conventions have their own reviewer, and committed keys or secrets belong to the Secrets check: do not report those.`,
 });

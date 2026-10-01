@@ -112,8 +112,28 @@ function codeOnly(code: string, keep: (line: number | null) => boolean = () => t
   );
 }
 
-/** A `path`, `path:line` or `path:line-line` in backticks is a citation, not a code quote. */
-const CITATION = /^[\w@./-]+\.\w+(?::\d+(?:-\d+)?)?$/;
+/**
+ * A `path:line`, `path:line-line` or a path with a folder in backticks is a citation, not a code quote.
+ * A dotted name like `RefundCreate.amount` is code, and must be real like any other quote.
+ */
+const CITATION = /^[\w@./-]+\.\w+:\d+(?:-\d+)?$|^[\w@.-]*\/[\w@./-]+\.\w+$/;
+
+/** Whether code contains a quote; a single word must match whole (`int` is not inside `print`). */
+function holds(code: string, quote: string): boolean {
+  if (!/^\w+$/.test(quote)) return code.includes(quote);
+  return new RegExp(`(^|\\W)${quote}(\\W|$)`).test(code);
+}
+
+/** The cited lines with three lines around them, as code. */
+function citedCode(path: string, line: number, last: number, files: Map<string, FileDiff>, snapshot: string | null): string {
+  if (snapshot) return codeOnly(readFile(snapshot, path, line - 3, last + 3));
+  const file = files.get(path);
+  if (!file) return "";
+  const text = newLineText(file);
+  const out: string[] = [];
+  for (let l = line - 3; l <= last + 3; l++) if (text.has(l)) out.push(`${String(l).padStart(6)} | ${text.get(l)}`);
+  return codeOnly(out.join("\n"));
+}
 
 /** Every code quote in a piece of evidence: inline spans and each line of a fenced block. */
 function quotesIn(evidence: string): string[] {
@@ -141,17 +161,17 @@ export function rejectionGrounded(evidence: string, f: Finding, code: string, fi
     const line = Number(m[2]);
     const last = m[3] ? Number(m[3]) : line;
     if (!lineExists(path, line, files, snapshot)) return false;
-    const file = files.get(path);
-    const text = codeOnly(snapshot ? readFile(snapshot, path, line - 3, last + 3) : file ? window(file, null, path, line) : "");
-    const elsewhere = path !== f.path || f.line === null || last < from! || line > f.line;
-    cited.push({ text, elsewhere });
+    // Elsewhere only when the cited lines and the three around them stay clear of the flagged lines.
+    const elsewhere = path !== f.path || f.line === null || last + 3 < from! || line - 3 > f.line;
+    cited.push({ text: citedCode(path, line, last, files, snapshot), elsewhere });
   }
   const shown = codeOnly(code);
   const flagged = f.line === null ? "" : codeOnly(code, (n) => n !== null && n >= from! && n <= f.line!);
-  const real = (q: string) => shown.includes(q) || cited.some((c) => c.text.includes(q));
+  const real = (q: string) => holds(shown, q) || cited.some((c) => holds(c.text, q));
   if (!quotes.every(real)) return false;
-  const quotedElsewhere = quotes.some((q) => !(flagged && flagged.includes(q)));
-  const citedElsewhere = cited.some((c) => c.elsewhere && quotes.some((q) => c.text.includes(q)));
+  // A single word found somewhere proves nothing alone; it counts only where a citation pins it down.
+  const quotedElsewhere = quotes.some((q) => !/^\w+$/.test(q) && !(flagged && holds(flagged, q)));
+  const citedElsewhere = cited.some((c) => c.elsewhere && quotes.some((q) => holds(c.text, q)));
   return quotedElsewhere || citedElsewhere;
 }
 
