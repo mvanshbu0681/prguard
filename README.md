@@ -25,6 +25,42 @@ as they run, a queue of open PRs by priority and risk, and how useful each revie
 
 Without Docker: `npm install`, then `npm run dev:api` and `npm run dev:dashboard`.
 
+## Deploy on Railway
+
+One Railway project, three services from this repository. Each service reads its config from a
+`railway.json` (Settings, Config-as-code, set the path below); the volume, variables and domains are
+set in Railway.
+
+| Service | Root directory | Config file | Domain |
+| --- | --- | --- | --- |
+| `api` | `/` | `/apps/api/railway.json` | `api.<domain>` |
+| `dashboard` | `/` | `/apps/dashboard/railway.json` | `app.<domain>` |
+| `web` | `/apps/web` | `/apps/web/railway.json` | `<domain>` |
+
+**api**
+
+- Add a volume mounted at `/data`. The database and the review queue live there, so the API runs as
+  a single replica.
+- Variables: `PORT=8000`, `NODE_ENV=production`, `DATA_DIR=/data`,
+  `DASHBOARD_URL=https://app.<domain>`, and from `.env`: `GITHUB_APP_ID`, `GITHUB_APP_SLUG`,
+  `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_WEBHOOK_SECRET`, `GROQ_API_KEY`,
+  `SOCKET_DEV_API_KEY`. Paste the private key's contents as `GITHUB_PRIVATE_KEY`. Leave
+  `WEBHOOK_PROXY_URL` and `DEV_LOGIN` unset.
+
+**dashboard**
+
+- Variables: `PORT=3001`, `API_URL=http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8000`. The browser only
+  talks to the dashboard, which forwards `/api/*` to the API over the private network.
+
+**web** needs no variables.
+
+**Domains.** Add each custom domain on its service (target ports 8000, 3001 and the one Railway
+detects for `web`), then create the CNAME record Railway shows at your DNS provider.
+
+**GitHub App.** Set the Callback URL to `https://app.<domain>/api/auth/callback`, the Webhook URL
+to `https://api.<domain>/api/webhooks` and the Homepage URL to `https://<domain>`. A GitHub App has
+one webhook URL, so local work then needs a second App pointed at a smee.io channel.
+
 ## How a review runs
 
 1. **Triage** (one fast call) rates each file's risk and picks the reviewers worth running on it.
@@ -79,7 +115,7 @@ Comment on a pull request, or reply on one of PR Guard's line comments:
 ## Learnings
 
 `@prguard ignore`, a 👎 on a PR Guard comment, or a reply saying the code is intentional becomes a
-learning for that repository. Learnings go into every prompt and stop matching findings from being
+learning for that repository when it comes from someone with write access. Learnings go into every prompt and stop matching findings from being
 posted again. They are listed, added and switched off on the repository page.
 
 ## Settings
