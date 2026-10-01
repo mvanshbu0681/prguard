@@ -110,6 +110,9 @@ function codeOnly(code: string, keep: (line: number | null) => boolean = () => t
   );
 }
 
+/** A `path`, `path:line` or `path:line-line` in backticks is a citation, not a code quote. */
+const CITATION = /^[\w@./-]+\.\w+(?::\d+(?:-\d+)?)?$/;
+
 /** Every code quote in a piece of evidence: inline spans and each line of a fenced block. */
 function quotesIn(evidence: string): string[] {
   const quotes: string[] = [];
@@ -117,31 +120,37 @@ function quotesIn(evidence: string): string[] {
     for (const line of m[1]!.split("\n")) quotes.push(squash(line.replace(GUTTER, "")));
   }
   for (const m of evidence.replace(/```[\s\S]*?```/g, " ").matchAll(/`([^`]+)`/g)) quotes.push(squash(m[1]!));
-  return quotes.filter((q) => q.length >= 3 && !/^[.…]+$/.test(q));
+  return quotes.filter((q) => q.length >= 3 && !/^[.…]+$/.test(q) && !CITATION.test(q));
 }
 
 /**
  * Dropping a finding needs more than confirming one: every code quote must be real (in the code shown
- * or at a `path:line` it cites), every citation must exist, and at least one quote must come from
- * somewhere other than the flagged lines. Quoting the flagged code back, or inventing code, proves nothing.
+ * or at a `path:line` it cites), every citation must exist, and the counter-evidence must come from
+ * somewhere other than the flagged lines (a quote from elsewhere, or a cited line elsewhere holding a
+ * quote). Quoting the flagged code back, or inventing code, proves nothing.
  */
-function rejectionGrounded(evidence: string, f: Finding, code: string, files: Map<string, FileDiff>, snapshot: string | null): boolean {
+export function rejectionGrounded(evidence: string, f: Finding, code: string, files: Map<string, FileDiff>, snapshot: string | null): boolean {
   const quotes = quotesIn(evidence);
   if (!quotes.length) return false;
-  const cited: string[] = [];
-  for (const m of evidence.matchAll(/([\w@./-]+\.\w+):(\d+)/g)) {
+  const from = f.startLine ?? f.line;
+  const cited: { text: string; elsewhere: boolean }[] = [];
+  for (const m of evidence.matchAll(/([\w@./-]+\.\w+):(\d+)(?:-(\d+))?/g)) {
     const path = m[1] === f.path || f.path.endsWith(`/${m[1]}`) ? f.path : m[1]!;
     const line = Number(m[2]);
+    const last = m[3] ? Number(m[3]) : line;
     if (!lineExists(path, line, files, snapshot)) return false;
     const file = files.get(path);
-    cited.push(codeOnly(snapshot ? readFile(snapshot, path, line - 3, line + 3) : file ? window(file, null, path, line) : ""));
+    const text = codeOnly(snapshot ? readFile(snapshot, path, line - 3, last + 3) : file ? window(file, null, path, line) : "");
+    const elsewhere = path !== f.path || f.line === null || last < from! || line > f.line;
+    cited.push({ text, elsewhere });
   }
   const shown = codeOnly(code);
-  const from = f.startLine ?? f.line;
   const flagged = f.line === null ? "" : codeOnly(code, (n) => n !== null && n >= from! && n <= f.line!);
-  const real = (q: string) => shown.includes(q) || cited.some((c) => c.includes(q));
+  const real = (q: string) => shown.includes(q) || cited.some((c) => c.text.includes(q));
   if (!quotes.every(real)) return false;
-  return quotes.some((q) => !(flagged && flagged.includes(q)));
+  const quotedElsewhere = quotes.some((q) => !(flagged && flagged.includes(q)));
+  const citedElsewhere = cited.some((c) => c.elsewhere && quotes.some((q) => c.text.includes(q)));
+  return quotedElsewhere || citedElsewhere;
 }
 
 /**
