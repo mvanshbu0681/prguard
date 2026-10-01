@@ -20,7 +20,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
       <body>
         <div className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-ink-0 px-4 py-16 text-center">
           <span aria-hidden="true" className="type-display-h4 tracking-[0.04em] text-text-primary">
-            WITNESS
+            PR GUARD
           </span>
           <div className="flex flex-col items-center gap-3">
             <h1 className="sr-only">500 — unhandled</h1>

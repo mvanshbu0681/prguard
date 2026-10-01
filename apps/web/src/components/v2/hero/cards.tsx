@@ -1,118 +1,116 @@
-// The hero's product cards. Each one is a real Witness artefact from the demo
-// corpus, drawn in otoma8's card language (20px radius, hairline, no shadow).
-import { ArrowUpRight, Check, FlaskConical, X } from "lucide-react";
+// The hero's product cards. Each one shows something PR Guard really posted on
+// the public sandbox (src/sandbox), drawn in otoma8's card language (20px
+// radius, hairline, no shadow).
+import { ArrowUpRight, MessageSquareText } from "lucide-react";
 import s from "./cards.module.css";
 import { EyeGlyph } from "@/components/brand/EyeGlyph";
 
 export interface HeroCardData {
-  baseSha: string;
-  headSha: string;
-  baseResult: string;
-  headResult: string;
-  score: string;
-  band: string;
-  /** weight x input per severity input, in the canonical order, summing to the score */
-  contributions: number[];
-  proven: number;
-  disproven: number;
-  inconclusive: number;
-  attempted: number;
-  selfCaught: string;
-  /** proven share of attempted proofs per week, oldest first */
-  weeklyProvenShare: number[];
-  findingTitle: string;
-  blocking: number;
-  advisory: number;
-  chain: { seq: number; hash: string }[];
+  /** "acme-billing#26", the showcase review */
+  reviewLabel: string;
+  priority: string;
+  risk: string;
+  findings: number;
+  /** severity counts in the review's summary, critical first */
+  severityCounts: { severity: string; count: number }[];
+  topSeverityLabel: string;
+  commentTitle: string;
+  commentVerified: boolean;
+  checkConclusion: string;
+  checkTitle: string;
+  /** the measured walkthrough review (acme-billing#3) */
+  walkthroughLabel: string;
+  raw: number;
+  posted: number;
+  rejected: number;
+  pullRequestsReviewed: number;
+  reviews: number;
+  /** reviews posted per hour across the snapshot, oldest first, empty hours as 0 */
+  reviewsPerHour: number[];
+  helpSeconds: number | null;
+  bot: string;
 }
 
 const cx = (...c: (string | false | undefined)[]) => c.filter(Boolean).join(" ");
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
-function ProofCard({ d }: { d: HeroCardData }) {
+function ReviewCard({ d }: { d: HeroCardData }) {
   return (
     <div className={s.card}>
-      <span className={s.label}>Repro test · 2 runs</span>
+      <span className={s.label}>{d.reviewLabel}</span>
       <div className={s.spacer} />
       <div className={s.run}>
-        <span className={s.sha}>base {d.baseSha}</span>
-        <span className={s.ok} aria-label="passed">
-          <Check size={11} strokeWidth={3} />
-        </span>
-        <span className={s.result}>{d.baseResult}</span>
+        <span className={s.sha}>priority</span>
+        <span className={s.result}>{d.priority}</span>
       </div>
       <div className={s.run}>
-        <span className={s.sha}>head {d.headSha}</span>
-        <span className={s.bad} aria-label="failed">
-          <X size={11} strokeWidth={3} />
-        </span>
-        <span className={cx(s.result, s.fail)}>{d.headResult}</span>
+        <span className={s.sha}>risk</span>
+        <span className={cx(s.result, s.fail)}>{d.risk}</span>
       </div>
       <span className={cx(s.tag, s.tagLime)} style={{ marginTop: 10 }}>
-        Proven
+        {d.findings} findings
       </span>
     </div>
   );
 }
 
-function SeverityCard({ d }: { d: HeroCardData }) {
-  const total = d.contributions.reduce((a, b) => a + b, 0);
+function FindingsCard({ d }: { d: HeroCardData }) {
   return (
     <div className={cx(s.card, s.dark)}>
-      <span className={s.label}>Severity score</span>
+      <span className={s.label}>Line comments</span>
       <div className={s.spacer} />
       <span className={s.big} style={{ fontSize: 46 }}>
-        {d.score}
+        {d.findings}
       </span>
       <span className={cx(s.tag, s.tagLime)} style={{ marginTop: 10 }}>
-        {d.band}
+        {d.topSeverityLabel}
       </span>
       <div className={s.segments} aria-hidden>
-        {d.contributions.map((c, i) => (
-          <span key={i} style={{ flex: c, opacity: 1 - i * 0.12 }} />
+        {d.severityCounts.map((c, i) => (
+          <span key={c.severity} style={{ flex: c.count, opacity: 1 - i * 0.12 }} />
         ))}
-        <i className={s.segTrack} style={{ flex: Math.max(0, 1 - total) }} />
       </div>
     </div>
   );
 }
 
-function SandboxCard() {
+function CommentsOnlyCard() {
   return (
     <div className={cx(s.card, s.glassCard)}>
       <div className={s.center}>
         <span className={s.ring}>
-          <FlaskConical size={20} strokeWidth={1.6} />
+          <MessageSquareText size={20} strokeWidth={1.6} />
         </span>
-        <span className={s.glassTitle}>Sandboxed run</span>
-        <span className={s.glassSub}>at your base and head SHA</span>
+        <span className={s.glassTitle}>Comments only</span>
+        <span className={s.glassSub}>a person approves the merge</span>
       </div>
     </div>
   );
 }
 
-function RefutedCard({ d }: { d: HeroCardData }) {
+function FilteredCard({ d }: { d: HeroCardData }) {
   return (
     <div className={s.card}>
-      <span className={s.label}>Refuted by itself</span>
+      <span className={s.label}>Filtered before posting</span>
       <div className={s.spacer} />
       <span className={s.big} style={{ fontSize: 52 }}>
-        {d.disproven}
+        {d.raw - d.posted}
       </span>
       <span style={{ marginTop: 6, fontSize: 12, lineHeight: 1.35, color: "rgba(19,19,19,.6)" }}>
-        of its own claims, disproved before they reached a PR
+        of {d.raw} raw findings on {d.walkthroughLabel} never reached the PR
       </span>
-      <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-        <span className={cx(s.tag, s.tagSoft)}>{d.proven} proven</span>
-        <span className={cx(s.tag, s.tagSoft)}>{d.inconclusive} open</span>
+      <div style={{ display: "flex", gap: 4, marginTop: 12, whiteSpace: "nowrap" }}>
+        <span className={cx(s.tag, s.tagSoft)}>{d.posted} posted</span>
+        <span className={cx(s.tag, s.tagSoft)}>{d.rejected} rejected</span>
       </div>
     </div>
   );
 }
 
-function ShareChart({ values }: { values: number[] }) {
+function ActivityChart({ values }: { values: number[] }) {
   const w = 168;
   const h = 70;
-  const max = Math.max(...values, 0.01);
+  const max = Math.max(...values, 1);
   const pts = values.map((v, i) => [(i / Math.max(1, values.length - 1)) * w, h - (v / max) * (h - 8) - 4]);
   const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
   const area = `${line} L${w} ${h} L0 ${h} Z`;
@@ -134,18 +132,18 @@ function ShareChart({ values }: { values: number[] }) {
   );
 }
 
-function ShareCard({ d }: { d: HeroCardData }) {
+function ActivityCard({ d }: { d: HeroCardData }) {
   return (
     <div className={s.card}>
       <span style={{ fontFamily: "var(--font-v2-display)", fontSize: 15, fontWeight: 600, letterSpacing: -0.3, lineHeight: 1.2 }}>
-        Proof in every
+        Reviews in the
         <br />
-        high-risk review
+        public sandbox
       </span>
       <span className={s.meta} style={{ marginTop: 6 }}>
-        {d.attempted} repro tests run
+        {d.reviews} reviews · {d.pullRequestsReviewed} PRs
       </span>
-      <ShareChart values={d.weeklyProvenShare} />
+      <ActivityChart values={d.reviewsPerHour} />
     </div>
   );
 }
@@ -158,27 +156,27 @@ function CommentCard({ d }: { d: HeroCardData }) {
           <EyeGlyph size={18} />
         </span>
         <span style={{ display: "grid" }}>
-          <span className={s.name}>witness[bot]</span>
+          <span className={s.name}>{d.bot}</span>
           <span className={s.meta}>reviewed · comment</span>
         </span>
       </div>
-      <p className={s.quote} dangerouslySetInnerHTML={{ __html: renderTicks(d.findingTitle) }} />
+      <p className={s.quote} dangerouslySetInnerHTML={{ __html: renderTicks(d.commentTitle) }} />
       <div className={s.spacer} />
-      <span className={cx(s.tag, s.tagInk)}>Blocks merge</span>
+      <span className={cx(s.tag, s.tagInk)}>{d.commentVerified ? "Verified" : "Posted"}</span>
     </div>
   );
 }
 
-function GateCard({ d }: { d: HeroCardData }) {
+function CheckCard({ d }: { d: HeroCardData }) {
   return (
     <div className={cx(s.card, s.limeCard)}>
-      <span className={s.label}>Merge gate</span>
+      <span className={s.label}>Check run</span>
       <div className={s.spacer} />
       <span className={s.big} style={{ fontSize: 36 }}>
-        Held
+        {cap(d.checkConclusion)}
       </span>
       <span style={{ marginTop: 8, fontSize: 12.5, lineHeight: 1.35, color: "rgba(19,19,19,.7)", maxWidth: 120 }}>
-        {d.blocking} proven bug blocks it. {d.advisory} more are advisory.
+        {d.checkTitle}. It never fails a check.
       </span>
       <span className={s.arrowChip} aria-hidden>
         <ArrowUpRight size={16} />
@@ -188,11 +186,11 @@ function GateCard({ d }: { d: HeroCardData }) {
 }
 
 function PipelineCard() {
-  // ingest -> context -> 4 specialists in parallel -> coordinator -> severity -> identity -> proof -> delivery
+  // fetch -> triage -> impact -> reviewers 4 at a time -> checks -> verify -> learnings -> fixes -> publish
   const y = 44;
   return (
     <div className={s.card}>
-      <span className={s.label}>9 stages · 4 parallel</span>
+      <span className={s.label}>9 steps · 4 at a time</span>
       <svg className={s.pipe} viewBox="0 0 168 88" aria-hidden>
         <path d={`M8 ${y} H40`} stroke="#131313" strokeOpacity=".25" strokeWidth="1.5" />
         {[14, 34, 54, 74].map((yy) => (
@@ -211,25 +209,27 @@ function PipelineCard() {
         <circle cx="148" cy={y} r="7" fill="#cbf857" stroke="#131313" strokeWidth="1.5" />
         <circle cx="160" cy={y} r="3" fill="#131313" />
       </svg>
-      <span style={{ fontSize: 12, color: "rgba(19,19,19,.6)" }}>the sandbox proof runs at stage 7</span>
+      <span style={{ fontSize: 12, color: "rgba(19,19,19,.6)" }}>findings are verified before they post</span>
     </div>
   );
 }
 
-function ChainCard({ d }: { d: HeroCardData }) {
+function CommandsCard({ d }: { d: HeroCardData }) {
   return (
     <div className={cx(s.card, s.dark)}>
-      <span className={s.label}>Audit chain</span>
+      <span className={s.label}>Commands</span>
       <div className={s.spacer} />
-      {d.chain.map((e) => (
-        <div key={e.seq} className={s.link}>
-          <span className={s.seq}>#{e.seq}</span>
-          <span>{e.hash}</span>
+      {["review", "explain", "fix", "ignore"].map((c) => (
+        <div key={c} className={s.link}>
+          <span className={s.seq}>@prguard</span>
+          <span>{c}</span>
         </div>
       ))}
-      <span className={cx(s.tag, s.tagGlass)} style={{ marginTop: 10 }}>
-        <Check size={10} strokeWidth={3} /> hash verified
-      </span>
+      {d.helpSeconds !== null ? (
+        <span className={cx(s.tag, s.tagGlass)} style={{ marginTop: 10 }}>
+          help in {d.helpSeconds} s
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -243,15 +243,15 @@ function renderTicks(text: string): string {
 export function HeroCards({ d }: { d: HeroCardData }) {
   return (
     <>
-      <ProofCard d={d} />
-      <SeverityCard d={d} />
-      <SandboxCard />
+      <ReviewCard d={d} />
+      <FindingsCard d={d} />
+      <CommentsOnlyCard />
       <CommentCard d={d} />
-      <GateCard d={d} />
-      <RefutedCard d={d} />
+      <CheckCard d={d} />
+      <FilteredCard d={d} />
       <PipelineCard />
-      <ShareCard d={d} />
-      <ChainCard d={d} />
+      <ActivityCard d={d} />
+      <CommandsCard d={d} />
     </>
   );
 }

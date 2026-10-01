@@ -304,6 +304,18 @@
   color: var(--ink);
 }
 
+/* What the comment said: its first paragraph, cut to three lines. */
+.excerpt {
+  display: -webkit-box;
+  margin: 14px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(19, 19, 19, 0.78);
+}
+
 .scoreRow {
   display: flex;
   align-items: baseline;
@@ -370,6 +382,9 @@
 }
 
 .testFile {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin-top: 12px;
   padding-top: 10px;
   border-top: 1px solid rgba(19, 19, 19, 0.07);

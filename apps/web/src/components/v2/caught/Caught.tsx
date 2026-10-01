@@ -1,87 +1,65 @@
 // Section 5, rebuilt on the otoma8.com "TEAM" composition: a left-aligned
 // heading with prev/next controls, then a full-bleed carousel of grey cards.
-// Where otoma8 shows a portrait, each card shows the proof of one real bug: a
-// white proof card rising out of a sky crop, with the computed severity, its
-// six weighted inputs and the base/head test results.
+// Where otoma8 shows a portrait, each card shows one real finding PR Guard
+// posted on the public sandbox: a white comment card rising out of a sky crop,
+// with its severity, what it said and the evidence it quoted. Each card opens
+// that comment on GitHub.
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Check, X } from "lucide-react";
-import { SEVERITY_INPUTS } from "@/lib/contracts";
-import { getFindings, getReviewsIndex } from "@/lib/fixtures";
-import type { Finding } from "@/lib/api-types";
+import { ArrowUpRight, Check } from "lucide-react";
+import { BOT, prLabel, sandbox, type SandboxFinding } from "@/sandbox";
 import { CarouselButtons } from "./CarouselButtons";
 import s from "./caught.module.css";
 import { EyeGlyph } from "@/components/brand/EyeGlyph";
 
 const TRACK_ID = "caught-track";
-const SHOWN = 8;
-const SHADES = ["#cbf857", "#2b2b2b", "#454545", "#5f5f5f", "#7d7d7d", "#9a9a9a"];
 /** Where each card's crop of the sky photo sits, so no two panels look alike. */
-const CROPS = ["18% 30%", "72% 22%", "40% 64%", "86% 58%", "8% 70%", "56% 12%", "30% 40%", "64% 78%"];
+const CROPS = ["18% 30%", "72% 22%", "40% 64%", "86% 58%", "8% 70%", "56% 12%", "30% 40%", "64% 78%", "48% 50%"];
+const plain = (t: string | null) => (t ?? "").replace(/`/g, "");
 
-const score = (f: Finding) => f.severity?.score ?? 0;
-
-function ProofCard({ f }: { f: Finding }) {
-  const sev = f.severity;
-  const inputs = (sev?.inputs ?? {}) as Record<string, number>;
-  const weights = (sev?.weights ?? {}) as Record<string, number>;
-  const runs = [
-    { at: "base", ok: f.proof?.base?.exit_code === 0 },
-    { at: "head", ok: f.proof?.head?.exit_code === 0 },
-  ];
+function CommentCard({ f }: { f: SandboxFinding }) {
+  const flags = [f.verified && "verified", f.suggestion !== null && "suggestion"].filter((x): x is string => !!x);
   return (
     <div className={s.proof}>
       <div className={s.proofHead}>
         <span className={s.bot} aria-hidden>
           <EyeGlyph size={16} />
         </span>
-        <span className={s.botName}>witness[bot]</span>
-        <span className={`${s.band} ${s[`band_${sev?.band ?? "info"}`] ?? ""}`}>{sev?.band}</span>
+        <span className={s.botName}>{BOT}</span>
+        <span className={`${s.band} ${s[`band_${f.severity ?? "low"}`] ?? ""}`}>{f.severity}</span>
       </div>
-      <div className={s.scoreRow}>
-        <span className={s.score}>{score(f).toFixed(3)}</span>
-        <span className={s.scoreLabel}>computed severity</span>
-      </div>
-      <div className={s.bar} aria-hidden>
-        {SEVERITY_INPUTS.map((k, i) => (
-          <span key={k} style={{ width: `${(inputs[k] ?? 0) * (weights[k] ?? 0) * 100}%`, background: SHADES[i] }} />
-        ))}
-      </div>
-      <div className={s.runs}>
-        {runs.map((r) => (
-          <span key={r.at} className={`${s.run} ${r.ok ? s.runPass : s.runFail}`}>
-            {r.ok ? <Check size={10} strokeWidth={3} /> : <X size={10} strokeWidth={3} />}
-            {r.at} {r.ok ? "passed" : "failed"}
-          </span>
-        ))}
-      </div>
-      <div className={s.testFile}>{f.proof?.test_file_path}</div>
+      <p className={s.excerpt}>{plain(f.summary)}</p>
+      {flags.length ? (
+        <div className={s.runs}>
+          {flags.map((flag) => (
+            <span key={flag} className={`${s.run} ${s.runPass}`}>
+              <Check size={10} strokeWidth={3} />
+              {flag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className={s.testFile}>{f.evidence ? `evidence: ${plain(f.evidence)}` : "posted as a line comment"}</div>
     </div>
   );
 }
 
 export function Caught() {
-  const reviews = new Map(getReviewsIndex().items.map((r) => [r.review_id, r]));
-  const seen = new Set<string>();
-  const proven = getFindings()
-    .filter((f) => f.status === "published" && f.proof?.status === "proven")
-    .sort((a, b) => score(b) - score(a))
-    .filter((f) => !seen.has(f.title) && seen.add(f.title))
-    .slice(0, SHOWN);
+  const findings = sandbox.featured;
 
   return (
     <section id="caught" className={s.section} aria-labelledby="caught-title">
       <div className={`${s.inner} ${s.reveal}`}>
         <p className={s.eyebrow}>
-          <span aria-hidden>•</span>Proven findings
+          <span aria-hidden>•</span>Real findings
         </p>
         <h2 id="caught-title" className={s.h2}>
-          Caught, then proven.
+          Caught in the sandbox.
         </h2>
         <div className={s.headRow}>
-          <Link href="/findings" className={s.cta}>
-            <span className={s.ctaFull}>Browse findings</span>
-            <span className={s.ctaShort}>Findings</span>
+          <Link href={sandbox.orgUrl} className={s.cta}>
+            <span className={s.ctaFull}>Browse the sandbox</span>
+            <span className={s.ctaShort}>Sandbox</span>
             <span className={s.ctaChip} aria-hidden>
               <ArrowUpRight size={18} strokeWidth={2} />
             </span>
@@ -90,16 +68,14 @@ export function Caught() {
         </div>
       </div>
 
-      <div id={TRACK_ID} className={s.track} role="region" aria-label="Proven findings" tabIndex={0}>
-        {proven.map((f, i) => {
-          const r = reviews.get(f.review_id);
-          const where = `${f.location?.file_path ?? ""}${f.location?.start_line ? `:${f.location.start_line}` : ""}`;
+      <div id={TRACK_ID} className={s.track} role="region" aria-label="Real findings" tabIndex={0}>
+        {findings.map((f, i) => {
+          const where = `${f.path}${f.line ? `:${f.line}` : ""}`;
           return (
-            <Link key={f.id} href={`/findings/${f.id}`} className={`${s.card} ${s.reveal}`}>
-              <h3 className={s.name}>{f.title}</h3>
+            <Link key={f.url} href={f.url} className={`${s.card} ${s.reveal}`}>
+              <h3 className={s.name}>{plain(f.title)}</h3>
               <p className={s.role}>
-                {f.specialist}
-                {r ? ` · ${r.repository.name} #${r.pull_request.number}` : ""}
+                {f.reviewers.join(" + ")} · {prLabel(f.repo, f.pr)}
               </p>
               <div className={s.panel} aria-hidden>
                 <Image
@@ -110,7 +86,7 @@ export function Caught() {
                   className={s.photo}
                   style={{ transformOrigin: CROPS[i % CROPS.length] }}
                 />
-                <ProofCard f={f} />
+                <CommentCard f={f} />
               </div>
               <div className={s.foot}>
                 <span className={s.where}>{where}</span>

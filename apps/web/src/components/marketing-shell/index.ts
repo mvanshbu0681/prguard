@@ -2,7 +2,6 @@
 // sections wave 3 builds in app/(marketing)/_sections/**. Consumed by
 // app/(marketing)/layout.tsx.
 export { Nav } from "./Nav";
-export { Footer } from "./Footer";
 export { ScrollProgress } from "./ScrollProgress";
 export { SkipLink } from "./SkipLink";
 export { MobileMenu, type MobileMenuProps } from "./MobileMenu";

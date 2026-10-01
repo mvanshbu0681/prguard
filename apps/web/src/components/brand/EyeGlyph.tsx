@@ -1,5 +1,5 @@
-// <EyeGlyph> — the Witness eye at rest, in currentColor, for places that are
-// not the brand's own slot: the witness[bot] avatars in the landing's GitHub
+// <EyeGlyph> — the PR Guard eye at rest, in currentColor, for places that are
+// not the brand's own slot: the pr-guard-beta[bot] avatars in the landing's GitHub
 // mocks, badges, chips. Server-safe and decorative. The nav and footer use
 // <TrackingMark>; the product chrome uses <Mark> (token-coloured).
 import type { SVGProps } from 'react';

@@ -39,9 +39,9 @@ export default function NotFound() {
           fontFamily: "var(--font-v2-sans), system-ui, sans-serif",
         }}
       >
-        <Link href="/" aria-label="Witness home" className="absolute top-5 left-6 inline-flex items-center gap-2.5 text-[20px] font-semibold tracking-[-0.4px] text-[#ffffff]" style={{ fontFamily: "var(--font-v2-display), system-ui, sans-serif" }}>
+        <Link href="/" aria-label="PR Guard home" className="absolute top-5 left-6 inline-flex items-center gap-2.5 text-[20px] font-semibold tracking-[-0.4px] text-[#ffffff]" style={{ fontFamily: "var(--font-v2-display), system-ui, sans-serif" }}>
           <TrackingMark size={30} className="text-[#cbf857]" />
-          Witness
+          PR Guard
         </Link>
         <p className="text-[13px] tracking-[0.14em] text-[rgba(255,255,255,0.82)] uppercase" style={{ fontFamily: "var(--font-v2-mono), ui-monospace, monospace" }}>
           / 404 — NO SUCH ROUTE
@@ -60,7 +60,7 @@ export default function NotFound() {
           className="group inline-flex h-12 items-center gap-4 rounded-full bg-[#cbf857] py-1 pr-1 pl-7 text-[14px] tracking-[1.68px] text-[#131313] uppercase transition-colors hover:bg-[#d6fb77]"
           style={{ fontFamily: "var(--font-v2-mono), ui-monospace, monospace" }}
         >
-          Back to the proof bench
+          Back to the home page
           <span className="grid size-10 place-items-center rounded-full bg-[#0a0a0a] text-[#ffffff] transition-transform duration-300 group-hover:rotate-45" aria-hidden>
             <ArrowUpRight size={18} strokeWidth={2} />
           </span>

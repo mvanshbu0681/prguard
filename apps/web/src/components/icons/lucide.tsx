@@ -28,7 +28,7 @@ export const LUCIDE_STROKE = 1.5;
  * comment and a lime tick for a clear gate.
  */
 export const BANNED_ICON_PATTERNS: readonly { pattern: RegExp; reason: string; scope: "6.5" | "rule" }[] = [
-  { pattern: /Sparkle/, reason: "sparkles: the four-point AI star concedes the ground Witness fights for (§6.5)", scope: "6.5" },
+  { pattern: /Sparkle/, reason: "sparkles: the four-point AI star concedes the ground PR Guard fights for (§6.5)", scope: "6.5" },
   { pattern: /Brain/, reason: "brains (§6.5)", scope: "6.5" },
   { pattern: /^Bot(?![a-z])|Robot/, reason: "robots (§6.5)", scope: "6.5" },
   { pattern: /Hexagon/, reason: "hexagon grids (§6.5)", scope: "6.5" },
@@ -52,7 +52,7 @@ export type IconProps = Omit<LucideProps, "size" | "strokeWidth" | "absoluteStro
   label?: string;
 };
 
-/** A lucide-react icon at Witness's stroke and size scale. */
+/** A lucide-react icon at PR Guard's stroke and size scale. */
 export function Icon({ icon: Glyph, size = 16, label, className, ...rest }: IconProps) {
   const name = Glyph.displayName ?? "";
   const reason = bannedIconReason(name);

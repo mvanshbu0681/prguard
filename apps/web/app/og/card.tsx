@@ -4,15 +4,15 @@
 // next/og (Satori + resvg) for app/opengraph-image.tsx and app/twitter-image.tsx.
 //
 //   ┌──────────────────────────────────────────────────────────────┐
-//   │  ◉ │ WITNESS                        graph paper, 64px grid   │  Lockup B
-//   │  We don't guess.              ┌ base 7c41a09 ─────────────┐   │
-//   │  We run the test.             │ 1 passed in 0.42s         │   │  the mini bench
-//   │  ├────────────────            ├──── HEAD 9c2d4b1 ─────────┤   │
-//   │                               │ 1 failed in 0.39s         │   │
+//   │  ◉ │ PR GUARD                       graph paper, 64px grid   │  Lockup B
+//   │  We check before              ┌ prguard-sandbox/acme-…#26 ┐   │
+//   │  we comment.                  │ P0 Urgent · High risk     │   │  the mini bench
+//   │  ├────────────────            ├──── 8 FINDINGS ───────────┤   │
+//   │                               │ 2 critical · 3 high · …   │   │
 //   │                               └───────────────────────────┘   │
-//   │                                               ▣ PROVEN      │
+//   │                                            COMMENTS ONLY    │
 //   ├──────────────────────────────────────────────────────────────┤
-//   │  PASSES AT BASE · FAILS AT HEAD · PROVEN      → blocks merge  │  the verdict rail
+//   │  10 AI REVIEWERS · 2 CODE CHECKS · VERIFIED   → you approve  │  the verdict rail
 //   └──────────────────────────────────────────────────────────────┘
 //
 // Satori constraints are hard (brand-gaps §C): no mask-image, no
@@ -28,7 +28,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { CSSProperties, ReactNode } from 'react';
 import { markGeometry, markParts, markViewBox } from '@/components/brand/geometry';
-import { GSC_CAP_HEIGHT, WORDMARK_INK, WORDMARK_TRACKING } from '@/components/brand/metrics';
+import { GSC_CAP_HEIGHT, WORDMARK_TRACKING, wordmarkExtent } from '@/components/brand/metrics';
 import { BRAND_HEX, FLAT_HEX, flattenWhite } from '@/components/brand/palette';
 import type { OgStory } from './data';
 
@@ -92,6 +92,9 @@ function MarkSvg({ size }: { size: number }) {
 }
 
 /** Lockup B at the card's scale: mark 48 · gap 24 · 1px hairline at cap height · gap 24 · wordmark 36 + rail. */
+const WORDMARK = 'PR GUARD';
+const WORDMARK_INK = wordmarkExtent(WORDMARK.length);
+
 function LockupB() {
   const word = 36;
   const gap = 24;
@@ -110,7 +113,7 @@ function LockupB() {
             color: BRAND_HEX.textPrimary,
           }}
         >
-          WITNESS
+          {WORDMARK}
         </div>
         <div
           style={{
@@ -127,20 +130,6 @@ function LockupB() {
   );
 }
 
-/**
- * The proof badge's glyph for PROVEN (design §5.4: filled vial, M1) as a flat
- * silhouette on the 16 grid: a cap, a one-unit neck, and a tube filled to the
- * top. Square corners, no rounding. (A lip fused to the tube read as a nail
- * at 20px.)
- */
-function FilledVial({ size, color }: { size: number; color: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 16 16">
-      <path d="M4 1H12V3.5H4ZM5 4.5H11V15H5Z" fill={color} />
-    </svg>
-  );
-}
-
 const pane = (rail: string, background: string): CSSProperties => ({
   display: 'flex',
   flexDirection: 'column',
@@ -151,17 +140,9 @@ const pane = (rail: string, background: string): CSSProperties => ({
   borderLeft: `2px solid ${rail}`,
 });
 
-/** "1 passed in 0.42s" with the verb in its execution colour. */
-function Result({ text, verb, color }: { text: string; verb: 'passed' | 'failed'; color: string }) {
-  const at = text.indexOf(verb);
-  const [before, after] = at < 0 ? [text, ''] : [text.slice(0, at), text.slice(at + verb.length)];
-  return (
-    <div style={{ display: 'flex', fontSize: 24, lineHeight: 1.2, color: BRAND_HEX.textBody }}>
-      <span style={{ whiteSpace: 'pre' }}>{before}</span>
-      {at < 0 ? null : <span style={{ color }}>{verb}</span>}
-      <span style={{ whiteSpace: 'pre' }}>{after}</span>
-    </div>
-  );
+/** One line of the bench, in the pane's text colour. */
+function Line({ text, color, size = 24 }: { text: string; color: string; size?: number }) {
+  return <div style={{ display: 'flex', fontSize: size, lineHeight: 1.2, color }}>{text}</div>;
 }
 
 // ---------------------------------------------------------------------------
@@ -197,17 +178,17 @@ function Bench({ story }: { story: OgStory }) {
       }}
     >
       <div style={{ ...pane(BRAND_HEX.signalLo, BRAND_HEX.signalTintLo), height: BENCH.paneA, borderTopLeftRadius: 5, borderTopRightRadius: 5 }}>
-        <div style={{ display: 'flex', fontSize: 20, lineHeight: 1.2, color: BRAND_HEX.textDim, marginBottom: 12 }}>{`base ${story.baseSha}`}</div>
-        <Result text={story.baseResult} verb="passed" color={BRAND_HEX.signalText} />
+        <div style={{ display: 'flex', fontSize: 20, lineHeight: 1.2, color: BRAND_HEX.textDim, marginBottom: 12 }}>{story.pullRequest}</div>
+        <Line text={story.verdict} color={BRAND_HEX.signalText} />
       </div>
       {/* The seam: its line is the section rule's continuation, edge to edge. */}
       <div style={{ display: 'flex', alignItems: 'center', height: BENCH.seam }}>
         <div style={{ flexGrow: 1, height: 1, backgroundColor: SEAM_LINE }} />
-        <div style={{ display: 'flex', fontSize: 20, color: BRAND_HEX.textDim, marginLeft: 16, marginRight: 16 }}>{`HEAD ${story.headSha}`}</div>
+        <div style={{ display: 'flex', fontSize: 20, color: BRAND_HEX.textDim, marginLeft: 16, marginRight: 16 }}>{`${story.findings} FINDINGS`}</div>
         <div style={{ flexGrow: 1, height: 1, backgroundColor: SEAM_LINE }} />
       </div>
       <div style={{ ...pane(BRAND_HEX.alarm, BRAND_HEX.alarmTintLo), height: BENCH.paneB, borderBottomLeftRadius: 5, borderBottomRightRadius: 5 }}>
-        <Result text={story.headResult} verb="failed" color={BRAND_HEX.alarmText} />
+        <Line text={story.severities} color={BRAND_HEX.alarmText} size={20} />
       </div>
     </div>
   );
@@ -236,8 +217,8 @@ export function OgCard({ story }: { story: OgStory }) {
           color: BRAND_HEX.textPrimary,
         }}
       >
-        <div>{"We don't guess."}</div>
-        <div>We run the test.</div>
+        <div>We check before</div>
+        <div>we comment.</div>
       </div>
 
       {/* The section rule (motion §4.2.4): a 1px hairline with a tick at its origin, into the seam. */}
@@ -264,8 +245,7 @@ export function OgCard({ story }: { story: OgStory }) {
           letterSpacing: 19 * 0.08,
         }}
       >
-        <FilledVial size={20} color={BRAND_HEX.ink0} />
-        <span style={{ marginLeft: 8 }}>PROVEN</span>
+        <span>COMMENTS ONLY</span>
       </div>
 
       <div
@@ -285,9 +265,9 @@ export function OgCard({ story }: { story: OgStory }) {
         }}
       >
         <div style={{ fontSize: 18, fontWeight: WEIGHT.display, letterSpacing: 18 * 0.12, color: BRAND_HEX.textBody }}>
-          PASSES AT BASE · FAILS AT HEAD · PROVEN
+          {`${story.modelReviewers} AI REVIEWERS · ${story.codeChecks} CODE CHECKS · VERIFIED`}
         </div>
-        <div style={{ fontSize: 26, fontWeight: WEIGHT.data, color: BRAND_HEX.alarmHi }}>→ blocks merge</div>
+        <div style={{ fontSize: 26, fontWeight: WEIGHT.data, color: BRAND_HEX.signalText }}>→ you approve</div>
       </div>
     </div>
   );

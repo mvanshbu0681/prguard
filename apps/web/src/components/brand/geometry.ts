@@ -1,4 +1,4 @@
-// THE WITNESS EYE — the Witness mark as pure geometry. Every renderer draws
+// THE PR GUARD EYE — the PR Guard mark as pure geometry. Every renderer draws
 // from this module and nothing else: <Mark>, <TrackingMark>, the live favicon
 // canvas, scripts/brand (icon.svg, favicon.ico, apple-icon.png, the GitHub App
 // avatar) and the OG card. One source means the tab, the nav and the bot avatar
@@ -8,7 +8,7 @@
 //   lid     one round-capped stroke (2.8 wide, regular form): the upper lid arcs from the
 //           right over the top to the left corner, then drops into a check
 //           mark whose long arm is the lower lid and flicks out past the
-//           right corner. Read it as an eye, then as a tick: Witness watched
+//           right corner. Read it as an eye, then as a tick: PR Guard watched
 //           the test run, and what it saw is verified.
 //   pupil   a solid disc (r 3, regular form) in the open part of the eye. It is
 //           the only part that moves or changes colour: <TrackingMark> lets

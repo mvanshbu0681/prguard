@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "witness-web",
+      "name": "prguard-web",
       "runtimeExecutable": "/Users/vanshmehta/.hermes/node/bin/npm",
       "runtimeArgs": ["--prefix", "apps/web", "run", "dev", "--", "-p", "3401"],
       "port": 3401

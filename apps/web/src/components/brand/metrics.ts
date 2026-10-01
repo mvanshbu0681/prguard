@@ -27,12 +27,9 @@ export const WORDMARK_WEIGHT = 560;
 export const WORDMARK_MIN = 12;
 
 /**
- * Horizontal ink extent of "WITNESS" in em, measured from the start of the
- * text box: [W's left edge, the last S's right edge]. Lockup B's rail spans
- * exactly this ("at exactly the wordmark's width", brand-gaps §B); the
- * trailing tracking after the S is excluded.
+ * Horizontal extent of a wordmark of `cells` glyphs in em ("PR GUARD" is 8:
+ * Google Sans Code is monospace, so every cell, the space included, is one
+ * advance). From the first cell's left edge to the last cell's right edge, the
+ * trailing tracking excluded. Lockup B's rail spans it (brand-gaps §B).
  */
-export const WORDMARK_INK = {
-  start: GSC_W_LSB_560,
-  end: 7 * GSC_ADVANCE + 6 * WORDMARK_TRACKING - GSC_S_RSB_560,
-} as const;
+export const wordmarkExtent = (cells: number) => ({ start: 0, end: cells * GSC_ADVANCE + (cells - 1) * WORDMARK_TRACKING });

@@ -1,4 +1,4 @@
-// <Mark> — THE WITNESS EYE, static (./geometry has the construction). `size`
+// <Mark> — THE PR GUARD EYE, static (./geometry has the construction). `size`
 // is the rendered edge in CSS px; the eye scales through the viewBox, so it is
 // the same drawing at every size. `frame` sets how much of that edge it fills.
 //
