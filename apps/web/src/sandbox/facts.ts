@@ -6,9 +6,9 @@
 //            .prguard/plans/deep-review/GAPS.md; the reviews it names are
 //            public pull requests in the prguard-sandbox org
 //
-// Counts of what PR Guard posted (reviews, findings, commands) are not here:
-// they come from ./snapshot.json, generated from the GitHub API by
-// scripts/sandbox-snapshot.mjs.
+// Counts of what PR Guard posted (reviews, findings, commands, planted-bug
+// recall) are not here: they come from ./snapshot.json, generated from the
+// GitHub API by scripts/sandbox-snapshot.mjs.
 
 export const APP_URL = "https://github.com/apps/pr-guard-beta"; // the GitHub App, "PR Guard Beta"
 export const BOT = "pr-guard-beta[bot]";
@@ -81,16 +81,6 @@ export const WALKTHROUGH_LOG = {
   posted: 7,
   verified: 6,
   rejected: 1,
-  planted: { posted: 5, of: 5 },
   tokens: 142_000,
   calls: 19,
 } as const;
-
-/**
- * The refunds test pull request (F1) carries 5 planted bugs. GAPS.md,
- * "F1 tally including later runs": bugs posted on each of seven reviews.
- */
-export const PLANTED_RUNS = [4, 4, 5, 3, 4, 4, 3] as const;
-export const PLANTED_PER_RUN = 5;
-export const PLANTED_POSTED = PLANTED_RUNS.reduce((a, b) => a + b, 0); // 27
-export const PLANTED_TOTAL = PLANTED_RUNS.length * PLANTED_PER_RUN; // 35

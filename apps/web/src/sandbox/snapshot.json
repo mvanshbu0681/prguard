@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-01T03:37:43.049Z",
+  "generatedAt": "2026-10-01T03:53:35.678Z",
   "generator": "apps/web/scripts/sandbox-snapshot.mjs",
   "org": "prguard-sandbox",
   "orgUrl": "https://github.com/prguard-sandbox",
@@ -30,7 +30,9 @@
       "success": 9,
       "cancelled": 2
     },
-    "medianSecondsToFirstReview": 23,
+    "medianSecondsToFirstReview": 27,
+    "reviewTimingN": 58,
+    "currentFrom": "2026-09-30T22:00:00Z",
     "firstReviewAt": "2026-09-30T18:33:57Z",
     "lastReviewAt": "2026-10-01T03:14:06Z"
   },
@@ -663,6 +665,496 @@
       "postedAt": "2026-09-30T22:48:50Z"
     }
   ],
+  "planted": {
+    "caught": 117,
+    "planted": 166,
+    "reviews": 41,
+    "changes": 6,
+    "runs": [
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 3,
+        "caught": 3,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)",
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 6,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 7,
+        "caught": 3,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)",
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 9,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 10,
+        "caught": 3,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)",
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 12,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 11,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 14,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 13,
+        "caught": 3,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)",
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 15,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 16,
+        "caught": 5,
+        "of": 5,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 17,
+        "caught": 3,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)",
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 19,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 20,
+        "caught": 4,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F1",
+        "change": "refunds",
+        "repo": "acme-billing",
+        "pr": 22,
+        "caught": 3,
+        "of": 5,
+        "missed": [
+          "check-then-act race (over-refund)",
+          "float equality sets status"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 4,
+        "caught": 0,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "placeholder `return true`",
+          "env var not documented",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 7,
+        "caught": 3,
+        "of": 4,
+        "missed": [
+          "env var not documented"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 13,
+        "caught": 4,
+        "of": 4,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 17,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 18,
+        "caught": 3,
+        "of": 4,
+        "missed": [
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 19,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "placeholder `return true`"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 21,
+        "caught": 1,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "placeholder `return true`",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 20,
+        "caught": 1,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "env var not documented",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 23,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "env var not documented",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 22,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 24,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 29,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "logic change without a test"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F3",
+        "change": "gift cards",
+        "repo": "acme-store",
+        "pr": 31,
+        "caught": 2,
+        "of": 4,
+        "missed": [
+          "duplicated money formatter",
+          "env var not documented"
+        ],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 4,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 8,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 18,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 21,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 23,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 24,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 25,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 26,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F5",
+        "change": "ledger migration",
+        "repo": "acme-billing",
+        "pr": 27,
+        "caught": 3,
+        "of": 3,
+        "missed": [],
+        "scored": "title"
+      },
+      {
+        "fixture": "F4",
+        "change": "order history",
+        "repo": "acme-store",
+        "pr": 5,
+        "caught": 0,
+        "of": 2,
+        "missed": null,
+        "scored": "hand"
+      },
+      {
+        "fixture": "F4",
+        "change": "order history",
+        "repo": "acme-store",
+        "pr": 8,
+        "caught": 2,
+        "of": 2,
+        "missed": null,
+        "scored": "hand"
+      },
+      {
+        "fixture": "F7",
+        "change": "rate limit (Go)",
+        "repo": "acme-gateway",
+        "pr": 2,
+        "caught": 4,
+        "of": 4,
+        "missed": null,
+        "scored": "hand"
+      },
+      {
+        "fixture": "F8",
+        "change": "transfers (Java)",
+        "repo": "acme-ledger",
+        "pr": 1,
+        "caught": 3,
+        "of": 4,
+        "missed": null,
+        "scored": "hand"
+      }
+    ]
+  },
   "checkExamples": [
     {
       "check": "Secrets",

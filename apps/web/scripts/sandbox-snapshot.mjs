@@ -38,6 +38,60 @@ const FEATURED = [
   { repo: "acme-ledger", pr: 1, title: "Non‑atomic debit/credit can leave inconsistent state" },
   { repo: "acme-billing", pr: 3, title: "Swallows commit failures and returns success" },
 ];
+// The current review pipeline (badge-format comments) starts here; earlier
+// sandbox reviews came from the first version. Timing and recall count only
+// pull requests opened after it.
+const CURRENT_FROM = "2026-09-30T22:00:00Z";
+
+// Planted-bug recall. The seeded test changes and their planted bugs are
+// defined in .prguard/plans/deep-review/plan.md (F1 to F8). A bug counts as
+// caught only when the TITLE of a posted finding names it (rules below, the
+// same ones the Round 1 deck used). F2 is left out: the docs do not list its
+// bugs. F6 is dependency malware, counted by the Supply chain check instead.
+const PLANTED = [
+  {
+    id: "F1",
+    change: "refunds",
+    match: (p) => p.repo === "acme-billing" && /refund/i.test(p.pr.title),
+    bugs: {
+      "ownership check": (t) => /owner|ownership|owns|authori/.test(t),
+      "money as float": (t) => /float/.test(t) && /money|amount|cent|monetary/.test(t),
+      "check-then-act race (over-refund)": (t) => /race|concurren|check.then.act/.test(t),
+      "float equality sets status": (t) => /equality|==/.test(t),
+      "swallowed error": (t) => /swallow|silent|hides commit|commit (errors|failures) (are )?(swallowed|hidden)|broad except/.test(t),
+    },
+  },
+  {
+    id: "F3",
+    change: "gift cards",
+    match: (p) => p.repo === "acme-store" && /gift card/i.test(p.pr.title),
+    bugs: {
+      "duplicated money formatter": (t) => /duplicat|formatcents/.test(t),
+      "placeholder `return true`": (t) => /placeholder|always (returns? )?true|always succeeds|stub/.test(t),
+      "env var not documented": (t) => /gift_card_provider_url|environment variable|env var/.test(t),
+      "logic change without a test": (t) => /^no test|missing (unit )?tests?|untested|without (a )?test|no tests? cover/.test(t),
+    },
+  },
+  {
+    id: "F5",
+    change: "ledger migration",
+    match: (p) => p.repo === "acme-billing" && /ledger/i.test(p.pr.title),
+    bugs: {
+      "destructive migration": (t) => /drop|destructive/.test(t),
+      "money as Float": (t) => /float/.test(t),
+      "committed secret": (t) => /secret is committed|signing secret/.test(t),
+    },
+  },
+];
+// Scored by hand from each pull request's finding list against plan.md F4, F7
+// and F8 (no title rule fits them); open the pull request to check.
+const PLANTED_BY_HAND = [
+  { id: "F4", change: "order history", repo: "acme-store", pr: 5, caught: 0, of: 2 },
+  { id: "F4", change: "order history", repo: "acme-store", pr: 8, caught: 2, of: 2 },
+  { id: "F7", change: "rate limit (Go)", repo: "acme-gateway", pr: 2, caught: 4, of: 4 },
+  { id: "F8", change: "transfers (Java)", repo: "acme-ledger", pr: 1, caught: 3, of: 4 },
+];
+
 // One finding from each code check, for the Checks step of "How it works".
 const CHECK_EXAMPLES = [
   { check: "Secrets", repo: "acme-billing", pr: 26, title: "A secret is committed in `app/services/ledger.py`" },
@@ -54,6 +108,12 @@ function gh(endpoint, { paginate = false } = {}) {
 const badges = (body, kind) =>
   [...(body ?? "").matchAll(new RegExp(`/img/${kind}-([a-z0-9-]+)\\.png"[^>]*alt="([^"]*)"`, "g"))].map((m) => ({ id: m[1], alt: m[2] }));
 const titleOf = (body) => (body ?? "").match(/\n\*\*(.+?)\*\*\n/)?.[1] ?? null;
+/** The title the recall rules read (the deck's recall.py: either comment format, cut to 120 characters). */
+const recallTitle = (body) => {
+  const b = body ?? "";
+  const m = b.match(/\*\*(?:[^*]*—\s*)?\*\*([^*]+)\*\*/) ?? b.match(/\n\*\*([^*]+)\*\*\n/) ?? b.match(/—\s*\*\*([^*]+)\*\*/);
+  return (m ? m[1] : b.split("\n")[0]).slice(0, 120).toLowerCase();
+};
 const firstParagraph = (body) => {
   const after = (body ?? "").split(/\n\*\*.+?\*\*\n/)[1] ?? "";
   return after.trim().split(/\n\s*\n/)[0]?.trim() ?? "";
@@ -109,11 +169,36 @@ const botReplies = prs.flatMap(({ comments }) => comments.filter((c) => isBot(c)
 // PRs opened from the same branch share a head commit and so its check runs:
 // count each check run once.
 const checkRuns = [...new Map(prs.flatMap(({ checks }) => checks).map((c) => [c.id, c])).values()];
-// From opening the pull request to PR Guard's first review on it, queue included.
+// From opening the pull request to PR Guard's first review on it, queue
+// included, for pull requests the current pipeline reviewed.
 const secondsToFirstReview = prs
+  .filter(({ pr }) => pr.created_at > CURRENT_FROM)
   .map(({ pr, reviews }) => ({ pr, first: reviews.filter(isBot).map((r) => r.submitted_at).sort()[0] }))
   .filter(({ first }) => first)
   .map(({ pr, first }) => seconds(pr.created_at, first));
+
+function plantedRecall() {
+  const runs = [];
+  for (const fx of PLANTED) {
+    for (const p of prs.filter((x) => fx.match(x) && x.pr.created_at > CURRENT_FROM).sort((a, b) => a.pr.created_at.localeCompare(b.pr.created_at))) {
+      const titles = p.comments.filter((c) => isBot(c) && !c.in_reply_to_id).map((c) => recallTitle(c.body));
+      if (!titles.length) continue;
+      const missed = Object.entries(fx.bugs)
+        .filter(([, named]) => !titles.some(named))
+        .map(([bug]) => bug);
+      const of = Object.keys(fx.bugs).length;
+      runs.push({ fixture: fx.id, change: fx.change, repo: p.repo, pr: p.n, caught: of - missed.length, of, missed, scored: "title" });
+    }
+  }
+  for (const h of PLANTED_BY_HAND) runs.push({ fixture: h.id, change: h.change, repo: h.repo, pr: h.pr, caught: h.caught, of: h.of, missed: null, scored: "hand" });
+  return {
+    caught: runs.reduce((a, r) => a + r.caught, 0),
+    planted: runs.reduce((a, r) => a + r.of, 0),
+    reviews: runs.length,
+    changes: new Set(runs.map((r) => r.fixture)).size,
+    runs,
+  };
+}
 const reviewTimes = botReviews.map(({ r }) => r.submitted_at).sort();
 const byHour = tally(reviewTimes.map((t) => t.slice(0, 13) + ":00Z"));
 
@@ -217,6 +302,8 @@ const snapshot = {
     checkRuns: checkRuns.length,
     checkConclusions: tally(checkRuns.map((c) => c.conclusion)),
     medianSecondsToFirstReview: median(secondsToFirstReview),
+    reviewTimingN: secondsToFirstReview.length,
+    currentFrom: CURRENT_FROM,
     firstReviewAt: reviewTimes[0] ?? null,
     lastReviewAt: reviewTimes.at(-1) ?? null,
   },
@@ -230,6 +317,7 @@ const snapshot = {
   commands: { repo: COMMANDS_PR.repo, pr: COMMANDS_PR.pr, url: find(COMMANDS_PR).pr.html_url, asked: commands(COMMANDS_PR) },
   fixed: { repo: FIXED_PR.repo, pr: FIXED_PR.pr, url: find(FIXED_PR).pr.html_url, checkTitle: fixedCheck?.output?.title ?? null },
   featured: FEATURED.map(featured),
+  planted: plantedRecall(),
   checkExamples: CHECK_EXAMPLES.map(({ check, ...f }) => ({ check, ...featured(f) })),
   // Per-reviewer lists for the review-team cards: highest severity first.
   topByReviewer: Object.fromEntries(

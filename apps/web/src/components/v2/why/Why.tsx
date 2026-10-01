@@ -5,10 +5,6 @@
 import Image from "next/image";
 import { GraduationCap, ScanSearch } from "lucide-react";
 import {
-  PLANTED_PER_RUN,
-  PLANTED_POSTED,
-  PLANTED_RUNS,
-  PLANTED_TOTAL,
   REVIEWERS,
   WALKTHROUGH_LOG,
   avatarColor,
@@ -29,6 +25,7 @@ export function Why() {
   const pct = (n: number) => `${(n / log.raw) * 100}%`;
   const posters = Object.keys(sandbox.walkthrough.reviewerCounts);
   const t = sandbox.totals;
+  const planted = sandbox.planted;
 
   return (
     <section id="why" className={s.section} aria-labelledby="why-title">
@@ -69,12 +66,12 @@ export function Why() {
             </div>
             <div className={s.inset}>
               <span className={s.num}>
-                {PLANTED_POSTED}
-                <span style={{ color: "rgba(19,19,19,.4)" }}>/{PLANTED_TOTAL}</span>
+                {planted.caught}
+                <span style={{ color: "rgba(19,19,19,.4)" }}>/{planted.planted}</span>
               </span>
               <p className={s.body}>
-                planted bugs posted across {PLANTED_RUNS.length} reviews of the same refunds change, {Math.min(...PLANTED_RUNS)} to{" "}
-                {Math.max(...PLANTED_RUNS)} of {PLANTED_PER_RUN} each time.
+                planted bugs named in a finding&rsquo;s title, across {planted.reviews} reviews of {planted.changes} seeded test changes in Python,
+                TypeScript, Go and Java.
               </p>
             </div>
           </article>
@@ -127,12 +124,13 @@ export function Why() {
               <p className={s.label}>Approvals or blocks</p>
               <span className={s.bigNum}>{blockingReviews() + failedChecks()}</span>
               <p className={s.body}>Every review is a comment and its check never concludes failure, so a person decides the merge.</p>
-              <span className={s.nMark}>
-                n = {t.reviews} reviews · {t.checkRuns} checks
-              </span>
+              <span className={s.nMark}>n = {t.reviews} reviews</span>
             </article>
             <article className={`${s.card} ${s.navyCard} ${s.reveal} ${s.reveal3}`}>
-              <p className={s.label}>Median, PR opened to review</p>
+              <p className={s.label}>
+                Median, PR opened to review
+                <span style={{ display: "block", marginTop: 4, fontSize: 12, opacity: 0.6 }}>n = {t.reviewTimingN} pull requests</span>
+              </p>
               <span className={s.navyNum}>
                 {t.medianSecondsToFirstReview}
                 <span className={s.unit}>s</span>

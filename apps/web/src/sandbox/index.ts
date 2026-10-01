@@ -47,6 +47,9 @@ export interface Snapshot {
     checkRuns: number;
     checkConclusions: Record<string, number>;
     medianSecondsToFirstReview: number;
+    /** pull requests the median is taken over: those opened after currentFrom */
+    reviewTimingN: number;
+    currentFrom: string;
     firstReviewAt: string;
     lastReviewAt: string;
   };
@@ -91,6 +94,14 @@ export interface Snapshot {
   };
   fixed: { repo: string; pr: number; url: string; checkTitle: string | null };
   featured: SandboxFinding[];
+  /** Planted bugs named in a finding title, per review of a seeded test change (plan.md F1 to F8). */
+  planted: {
+    caught: number;
+    planted: number;
+    reviews: number;
+    changes: number;
+    runs: { fixture: string; change: string; repo: string; pr: number; caught: number; of: number; missed: string[] | null; scored: "title" | "hand" }[];
+  };
   checkExamples: (SandboxFinding & { check: string })[];
   topByReviewer: Record<string, { repo: string; pr: number; url: string; title: string; severity: Severity | null; verified: boolean }[]>;
   severityByReviewer: Record<string, Record<string, number>>;
