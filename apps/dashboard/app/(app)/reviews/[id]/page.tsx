@@ -5,9 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Check, CircleAlert, Info, RotateCw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { Fragment, useEffect, type ReactNode } from "react";
 import { FindingsList } from "@/components/reviews/findings-list";
 import { ReviewProgress } from "@/components/reviews/review-progress";
+import { Trace } from "@/components/reviews/trace";
 import { Avatar } from "@/components/ui/avatar";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Collapsible } from "@/components/ui/collapsible";
@@ -16,6 +17,7 @@ import { ErrorState, InlineError } from "@/components/ui/error-state";
 import { InlineCode } from "@/components/ui/inline-code";
 import { Markdown } from "@/components/ui/markdown";
 import { Panel } from "@/components/ui/panel";
+import { PriorityPill, RiskPill } from "@/components/ui/pills";
 import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { reviewState, StatusBadge } from "@/components/ui/status";
 import { RelativeTime } from "@/components/ui/time";
@@ -71,6 +73,26 @@ function Review({ review }: { review: ReviewDetail }) {
 
   const tokens = review.usage.tokensIn + review.usage.tokensOut;
   const finished = review.finishedAt !== null && review.startedAt !== null;
+  const findingCount = review.findings.length;
+  const since = review.since;
+  const sinceParts = since
+    ? ([
+        [since.fixed, "fixed"],
+        [since.new, "new"],
+        [since.open, "open"],
+      ] as const)
+        .filter(([n]) => n > 0)
+        .map(([n, label]) => `${n} ${label}`)
+    : [];
+  const showTrace = review.trace.steps.length > 0;
+  const riskWhy = review.riskReasons.join(", ");
+  const why = [review.priorityReason, riskWhy && `${riskWhy.charAt(0).toUpperCase()}${riskWhy.slice(1)}.`].filter(Boolean).join(" ");
+
+  // Links from GitHub land on `#f-<fingerprint>`; the card exists only once the findings render.
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith("#f-")) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "start" });
+  }, [findingCount]);
 
   return (
     <article>
@@ -90,6 +112,8 @@ function Review({ review }: { review: ReviewDetail }) {
             </span>
             <Sep />
             <StatusBadge tone={state.tone} label={state.label} />
+            {review.priority && <PriorityPill priority={review.priority} />}
+            {review.risk && <RiskPill risk={review.risk} />}
           </div>
 
           <div className="-my-1 flex shrink-0 items-center gap-1">
@@ -111,6 +135,12 @@ function Review({ review }: { review: ReviewDetail }) {
         </div>
       </header>
 
+      {why && (
+        <p className="mt-2 text-sm text-dim">
+          <InlineCode text={why} />
+        </p>
+      )}
+
       {rerun.isError && (
         <div className="mt-2 flex justify-end">
           <InlineError message={rerun.error.message || "Couldn't start a new review."} />
@@ -130,6 +160,16 @@ function Review({ review }: { review: ReviewDetail }) {
         {review.usage.calls > 0 && (
           <Meta label="Usage">
             {compactNumber(tokens)} tokens <span className="text-faint">·</span> {plural(review.usage.calls, "call")}
+          </Meta>
+        )}
+        {sinceParts.length > 0 && (
+          <Meta label="Since last">
+            {sinceParts.map((part, i) => (
+              <Fragment key={part}>
+                {i > 0 && <span className="text-faint"> · </span>}
+                {part}
+              </Fragment>
+            ))}
           </Meta>
         )}
       </dl>
@@ -200,7 +240,7 @@ function Review({ review }: { review: ReviewDetail }) {
           </Section>
         )}
 
-        {(review.walkthrough.length > 0 || review.filesSkipped.length > 0) && (
+        {(review.walkthrough.length > 0 || review.filesSkipped.length > 0 || showTrace) && (
           <div className="space-y-2">
             {review.walkthrough.length > 0 && (
               <Collapsible title="Walkthrough" count={review.walkthrough.length}>
@@ -211,7 +251,9 @@ function Review({ review }: { review: ReviewDetail }) {
                         <td className="w-[38%] px-4 py-2.5 align-top font-mono text-xs leading-5 text-primary">
                           <span className="break-all">{row.path}</span>
                         </td>
-                        <td className="py-2.5 pr-4 align-top text-body">{row.change}</td>
+                        <td className="py-2.5 pr-4 align-top text-body">
+                          <InlineCode text={row.change} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -234,6 +276,7 @@ function Review({ review }: { review: ReviewDetail }) {
                 </ul>
               </Collapsible>
             )}
+            {showTrace && <Trace review={review} />}
           </div>
         )}
       </div>

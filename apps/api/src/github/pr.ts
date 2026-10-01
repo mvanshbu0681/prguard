@@ -47,9 +47,9 @@ export async function startCheckRun(gh: GitHub, r: Repo, headSha: string, detail
     ...r,
     name: "PR Guard",
     head_sha: headSha,
-    status: "in_progress" as const,
-    started_at: new Date().toISOString(),
-    output: { title: "Reviewing…", summary: "PR Guard is reviewing this pull request." },
+    // Queued until a worker picks the review up: reviews run a few at a time.
+    status: "queued" as const,
+    output: { title: "Queued", summary: "This review starts as soon as the reviews ahead of it finish." },
   };
   try {
     const { data } = await gh.rest.checks.create({ ...base, details_url: detailsUrl });
@@ -62,6 +62,21 @@ export async function startCheckRun(gh: GitHub, r: Repo, headSha: string, detail
       log.warn({ ...r, err: errMessage(err) }, "could not create check run");
       return null;
     }
+  }
+}
+
+/** Moves a queued check run to in progress when its review starts. */
+export async function markCheckRunStarted(gh: GitHub, r: Repo, checkRunId: number): Promise<void> {
+  try {
+    await gh.rest.checks.update({
+      ...r,
+      check_run_id: checkRunId,
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      output: { title: "Reviewing…", summary: "PR Guard is reviewing this pull request." },
+    });
+  } catch (err) {
+    log.warn({ ...r, checkRunId, err: errMessage(err) }, "could not start check run");
   }
 }
 
@@ -131,11 +146,150 @@ export async function compare(gh: GitHub, r: Repo, base: string, head: string) {
   }
 }
 
-/** A review this app already posted on the PR whose body contains `marker` (used after a crash). */
-export async function findPostedReview(gh: GitHub, r: Repo, number: number, marker: string): Promise<{ id: number; url: string } | null> {
+const WRITE_ROLES = new Set(["admin", "maintain", "write"]);
+
+/**
+ * Whether a user has write access to the repository (admin, maintain or write). Only they can teach
+ * PR Guard. False on any API error, so a failed lookup never lets an outside user in. `cache`, keyed
+ * by repo and user, saves repeat lookups within one job.
+ */
+export async function canWrite(gh: GitHub, r: Repo, username: string, cache?: Map<string, boolean>): Promise<boolean> {
+  const key = `${r.owner}/${r.repo}:${username.toLowerCase()}`;
+  const known = cache?.get(key);
+  if (known !== undefined) return known;
+  let allowed = false;
+  try {
+    const { data } = await gh.rest.repos.getCollaboratorPermissionLevel({ ...r, username });
+    allowed = WRITE_ROLES.has(data.permission) || WRITE_ROLES.has(data.role_name);
+  } catch (err) {
+    log.warn({ ...r, username, err: errMessage(err) }, "could not read the user's permission");
+  }
+  cache?.set(key, allowed);
+  return allowed;
+}
+
+/** A review this app already posted on the PR whose body links to `url` (used after a crash). */
+export async function findPostedReview(gh: GitHub, r: Repo, number: number, url: string): Promise<{ id: number; url: string } | null> {
   const reviews = await gh.paginate(gh.rest.pulls.listReviews, { ...r, pull_number: number, per_page: 100 });
-  const hit = reviews.find((rv) => rv.user?.type === "Bot" && (rv.body ?? "").includes(marker));
+  // The link ends the URL: `/reviews/12"` or `/reviews/12)`, never `/reviews/123`.
+  const linked = new RegExp(`${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["')]`);
+  const hit = reviews.find((rv) => rv.user?.type === "Bot" && linked.test(rv.body ?? ""));
   return hit ? { id: hit.id, url: hit.html_url } : null;
+}
+
+export type PostedComment = { id: number; nodeId: string; path: string; body: string; url: string };
+
+/** The line comments of one posted review. */
+export async function listReviewCommentsOf(gh: GitHub, r: Repo, number: number, reviewId: number): Promise<PostedComment[]> {
+  const comments = await gh.paginate(gh.rest.pulls.listCommentsForReview, { ...r, pull_number: number, review_id: reviewId, per_page: 100 });
+  return comments.map((c) => ({ id: c.id, nodeId: c.node_id, path: c.path, body: c.body, url: c.html_url }));
+}
+
+export type PullComment = {
+  id: number;
+  nodeId: string;
+  inReplyTo: number | null;
+  authorLogin: string;
+  authorType: string;
+  thumbsDown: number;
+  body: string;
+};
+
+/** Every line comment on a PR, with its thumbs-down count. */
+export async function listPullComments(gh: GitHub, r: Repo, number: number): Promise<PullComment[]> {
+  const comments = await gh.paginate(gh.rest.pulls.listReviewComments, { ...r, pull_number: number, per_page: 100 });
+  return comments.map((c) => ({
+    id: c.id,
+    nodeId: c.node_id,
+    inReplyTo: c.in_reply_to_id ?? null,
+    authorLogin: c.user?.login ?? "",
+    authorType: c.user?.type ?? "",
+    thumbsDown: c.reactions?.["-1"] ?? 0,
+    body: c.body,
+  }));
+}
+
+export async function updateReviewComment(gh: GitHub, r: Repo, commentId: number, body: string): Promise<void> {
+  await gh.rest.pulls.updateReviewComment({ ...r, comment_id: commentId, body });
+}
+
+/** Reply inside a line-comment thread. */
+export async function replyInThread(gh: GitHub, r: Repo, number: number, commentId: number, body: string): Promise<{ id: number; url: string }> {
+  const { data } = await gh.rest.pulls.createReplyForReviewComment({ ...r, pull_number: number, comment_id: commentId, body });
+  return { id: data.id, url: data.html_url };
+}
+
+/** A comment in the PR conversation. */
+export async function createIssueComment(gh: GitHub, r: Repo, number: number, body: string): Promise<{ id: number; url: string }> {
+  const { data } = await gh.rest.issues.createComment({ ...r, issue_number: number, body });
+  return { id: data.id, url: data.html_url };
+}
+
+export type CommentKind = "issue" | "review";
+
+/** Reacts to a conversation comment or a line comment; returns the reaction id or null. */
+export async function reactToComment(gh: GitHub, r: Repo, kind: CommentKind, commentId: number, content: "eyes" | "+1" | "rocket"): Promise<number | null> {
+  try {
+    const { data } =
+      kind === "issue"
+        ? await gh.rest.reactions.createForIssueComment({ ...r, comment_id: commentId, content })
+        : await gh.rest.reactions.createForPullRequestReviewComment({ ...r, comment_id: commentId, content });
+    return data.id;
+  } catch (err) {
+    log.warn({ ...r, commentId, err: errMessage(err) }, "could not react to comment");
+    return null;
+  }
+}
+
+export async function removeCommentReaction(gh: GitHub, r: Repo, kind: CommentKind, commentId: number, reactionId: number): Promise<void> {
+  try {
+    if (kind === "issue") await gh.rest.reactions.deleteForIssueComment({ ...r, comment_id: commentId, reaction_id: reactionId });
+    else await gh.rest.reactions.deleteForPullRequestComment({ ...r, comment_id: commentId, reaction_id: reactionId });
+  } catch (err) {
+    log.warn({ ...r, commentId, err: errMessage(err) }, "could not remove reaction");
+  }
+}
+
+/** Whether each line-comment thread is outdated (its lines changed since), keyed by the first comment's id. */
+export async function threadsOutdated(gh: GitHub, r: Repo, number: number): Promise<Map<number, boolean>> {
+  const out = new Map<number, boolean>();
+  let cursor: string | null = null;
+  for (let page = 0; page < 10; page++) {
+    const res: {
+      repository: {
+        pullRequest: {
+          reviewThreads: { pageInfo: { hasNextPage: boolean; endCursor: string | null }; nodes: { isOutdated: boolean; comments: { nodes: { databaseId: number }[] } }[] };
+        };
+      };
+    } = await gh.graphql(
+      `query($owner: String!, $repo: String!, $number: Int!, $cursor: String) {
+        repository(owner: $owner, name: $repo) {
+          pullRequest(number: $number) {
+            reviewThreads(first: 100, after: $cursor) {
+              pageInfo { hasNextPage endCursor }
+              nodes { isOutdated comments(first: 1) { nodes { databaseId } } }
+            }
+          }
+        }
+      }`,
+      { owner: r.owner, repo: r.repo, number, cursor },
+    );
+    const threads = res.repository.pullRequest.reviewThreads;
+    for (const t of threads.nodes) {
+      const first = t.comments.nodes[0]?.databaseId;
+      if (first) out.set(first, t.isOutdated);
+    }
+    if (!threads.pageInfo.hasNextPage) break;
+    cursor = threads.pageInfo.endCursor;
+  }
+  return out;
+}
+
+/** Collapses a comment as resolved. Works on the App's own comments with its current permissions. */
+export async function minimizeComment(gh: GitHub, nodeId: string): Promise<void> {
+  await gh.graphql(`mutation($id: ID!) { minimizeComment(input: { subjectId: $id, classifier: RESOLVED }) { minimizedComment { isMinimized } } }`, {
+    id: nodeId,
+  });
 }
 
 export async function postReview(

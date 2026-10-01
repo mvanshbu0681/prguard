@@ -11,8 +11,10 @@ import { useMe } from "./me-provider";
 import { Avatar } from "./ui/avatar";
 
 const NAV = [
+  { href: "/queue", label: "Queue" },
   { href: "/reviews", label: "Reviews" },
   { href: "/repos", label: "Repositories" },
+  { href: "/insights", label: "Insights" },
   { href: "/settings", label: "Settings" },
 ] as const;
 

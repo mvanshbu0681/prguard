@@ -37,6 +37,14 @@ export function duration(ms: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
+// Step and call timings: `340 ms`, `1.2 s`, then as `duration()` from a minute up.
+export function shortDuration(ms: number): string {
+  const n = Math.max(0, Math.round(ms));
+  if (n < 1000) return `${n} ms`;
+  if (n < 60_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")} s`;
+  return duration(n);
+}
+
 export function compactNumber(n: number): string {
   if (n < 1000) return String(n);
   if (n < 1_000_000) return `${trim(n / 1000)}K`;

@@ -32,13 +32,30 @@ const schema = z.object({
 
   WORKER_CONCURRENCY: num(4),
   LLM_CONCURRENCY: num(6),
+  LLM_TOKENS_PER_MINUTE: num(200000),
+  REVIEW_CONCURRENCY: num(2),
   CHUNK_TOKENS: num(12000),
   MAX_CHUNKS: num(8),
-  REVIEW_TOKEN_BUDGET: num(200000),
+  REVIEW_TOKEN_BUDGET: num(400000),
 
   DEV_LOGIN: optional,
   SESSION_DAYS: num(7),
+
+  /** Where badge images are served from. Empty posts text labels instead of images. */
+  ASSET_BASE_URL: z.string().optional(),
+  /** Socket API key for the supply-chain check; without it the check is skipped. */
+  SOCKET_DEV_API_KEY: optional,
+
+  // Switches for the review steps: "off" turns one off.
+  TRIAGE: optional,
+  VERIFY: optional,
+  TRACK_FIXES: optional,
+  COMMANDS: optional,
 });
+
+const on = (value: string | undefined) => !["off", "0", "false", "no"].includes((value ?? "").trim().toLowerCase());
+
+const DEFAULT_ASSET_BASE_URL = "https://cdn.jsdelivr.net/gh/prguard-sandbox/prguard-assets@v1/img";
 
 function fromRoot(path: string): string {
   return isAbsolute(path) ? path : resolve(ROOT, path);
@@ -74,6 +91,7 @@ function load() {
       geminiApiKey: env.GEMINI_API_KEY,
       roles: { fast: env.MODEL_FAST, smart: env.MODEL_SMART },
       concurrency: env.LLM_CONCURRENCY,
+      tokensPerMinute: env.LLM_TOKENS_PER_MINUTE,
     },
     review: {
       chunkTokens: env.CHUNK_TOKENS,
@@ -81,8 +99,17 @@ function load() {
       tokenBudget: env.REVIEW_TOKEN_BUDGET,
     },
     workerConcurrency: env.WORKER_CONCURRENCY,
+    reviewConcurrency: env.REVIEW_CONCURRENCY,
     devLogin: env.DEV_LOGIN === "1" && env.NODE_ENV !== "production",
     sessionDays: env.SESSION_DAYS,
+    assetBaseUrl: (env.ASSET_BASE_URL ?? DEFAULT_ASSET_BASE_URL).trim().replace(/\/$/, ""),
+    socketApiKey: env.SOCKET_DEV_API_KEY,
+    features: {
+      triage: on(env.TRIAGE),
+      verify: on(env.VERIFY),
+      trackFixes: on(env.TRACK_FIXES),
+      commands: on(env.COMMANDS),
+    },
   };
 }
 

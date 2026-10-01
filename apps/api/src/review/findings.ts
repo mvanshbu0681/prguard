@@ -5,7 +5,7 @@ import { SEVERITY_RANK, type Finding, type Severity } from "./types.ts";
 
 export const rawFindingSchema = z.object({
   path: z.string(),
-  line: z.number(),
+  line: z.number().nullish(),
   end_line: z.number().nullish(),
   severity: z.string(),
   category: z.string().nullish(),
@@ -13,6 +13,7 @@ export const rawFindingSchema = z.object({
   body: z.string(),
   suggestion: z.string().nullish(),
   confidence: z.number().nullish(),
+  details: z.object({ title: z.string(), body: z.string() }).nullish(),
 });
 
 export const submitSchema = z.object({ findings: z.array(rawFindingSchema) });
@@ -54,13 +55,32 @@ function resolvePath(raw: string, files: Map<string, FileDiff>): FileDiff | unde
   return matches.length === 1 ? matches[0] : undefined;
 }
 
+const DIFF_PREFIX = /^[+\- ]?\s*\d+\s\|\s?/;
+
+/**
+ * Models sometimes copy the diff's `+    82 | ` prefix into code. When every line carries it, it is
+ * removed; committing it would break the file.
+ */
+export function stripDiffPrefix(code: string): string {
+  const lines = code.split("\n");
+  const filled = lines.filter((l) => l.trim());
+  if (filled.length === 0 || !filled.every((l) => DIFF_PREFIX.test(l))) return code;
+  return lines.map((l) => l.replace(DIFF_PREFIX, "")).join("\n");
+}
+
 /**
  * Validates a model finding against the PR diff. The line must be commentable (inside a hunk): an
  * exact hit keeps a multi-line range and suggestion; a near miss snaps to the closest diff line in
  * the same hunk and drops the suggestion; anything else is kept for the review body.
  */
 export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding | null {
-  const title = raw.title.trim().replace(/\.$/, "");
+  let title = raw.title.trim().replace(/\.$/, "");
+  // A Test gap finding names the missing test, so it never reads like the bug another reviewer posts.
+  if (raw.reviewer === "tests" && title && !/^no tests? /i.test(title)) {
+    // A plain first word reads lowercase after the prefix; a name like `AppError` keeps its case.
+    const plain = /^[A-Z][a-z]+(\s|$)/.test(title);
+    title = `No test covers ${plain ? title[0]!.toLowerCase() + title.slice(1) : title}`;
+  }
   const body = raw.body.trim();
   if (!title || !body) return null;
 
@@ -69,15 +89,16 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
   const category = (raw.category ?? "bug").trim().toLowerCase().split(/\s+/)[0] || "bug";
   const file = resolvePath(raw.path, files);
   const path = file?.path ?? raw.path.trim().replace(/^\.?\//, "");
-  const base = { reviewer: raw.reviewer, path, severity, category, title, body, confidence, fingerprint: fingerprint(path, title) };
+  const details = raw.details?.title.trim() && raw.details.body.trim() ? { title: raw.details.title.trim(), body: raw.details.body.trim() } : null;
+  const base = { reviewer: raw.reviewer, path, severity, category, title, body, confidence, fingerprint: fingerprint(path, title), details };
 
   // A file outside this diff (seen through the repo tools) cannot carry a line comment.
-  if (!file) return { ...base, line: null, startLine: null, suggestion: null, placement: "body" };
+  if (!file || raw.line == null) return { ...base, line: null, startLine: null, suggestion: null, placement: "body" };
 
   const lines = commentableLines(file);
   const line = Math.round(raw.line);
   const end = raw.end_line ? Math.round(raw.end_line) : null;
-  const suggestion = raw.suggestion && raw.suggestion.trim() ? raw.suggestion.replace(/\r/g, "") : null;
+  const suggestion = raw.suggestion && raw.suggestion.trim() ? stripDiffPrefix(raw.suggestion.replace(/\r/g, "")) : null;
 
   if (lines.has(line)) {
     const hunk = lines.get(line);
@@ -158,6 +179,20 @@ function fitSuggestion(
   return { suggestion: fitted, last: widenTo };
 }
 
+/**
+ * A replacement for exactly lines `start..last` of a file in the PR diff, fitted like review
+ * suggestions (indentation, no-op check), or null when it cannot be committed safely there. The range
+ * never widens: a reply's suggestion applies to its thread's lines.
+ */
+export function fitReplacement(file: FileDiff, start: number, last: number, code: string): string | null {
+  const lines = commentableLines(file);
+  const hunk = lines.get(last);
+  if (hunk === undefined) return null;
+  for (let l = start; l <= last; l++) if (lines.get(l) !== hunk) return null;
+  const fitted = fitSuggestion(file, lines, hunk, start, last, stripDiffPrefix(code.replace(/\r/g, "")));
+  return fitted.last === last ? fitted.suggestion : null;
+}
+
 /** Models often drop leading indentation; restore it from the first line being replaced. */
 function reindent(sug: string[], firstLine: string): string[] {
   const target = /^\s*/.exec(firstLine)![0];
@@ -193,31 +228,108 @@ function distance(a: Pick<Finding, "line" | "startLine">, b: Pick<Finding, "line
   return Math.abs((a.startLine ?? a.line) - (b.startLine ?? b.line));
 }
 
-/**
- * The same problem reported twice in one review: the same fingerprint close by, or overlapping lines
- * with a similar title. A second real occurrence elsewhere in the file is kept.
- */
-export function isDuplicate(a: Finding, b: Finding): boolean {
-  if (a.path !== b.path) return false;
-  if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
-  if (!near(a, b)) return false;
-  const wa = titleWords(a.title);
-  const wb = titleWords(b.title);
-  const shared = wa.filter((w) => wb.includes(w)).length;
-  return jaccard(wa, wb) >= 0.34 || shared >= 2;
+/** Title words too common to say two findings are about the same thing. */
+const GENERIC_WORDS = new Set([
+  "missing", "check", "checks", "error", "errors", "value", "values", "invalid", "unused", "before", "after",
+  "should", "using", "instead", "without", "could", "never", "always", "handling", "handle", "possible", "potential",
+]);
+
+/** Plural and singular count as one word when comparing titles (`amounts`, `amount`). */
+export function stem(words: string[]): string[] {
+  return words.map((w) => (w.length > 4 && w.endsWith("s") && !w.endsWith("ss") ? w.slice(0, -1) : w));
 }
 
-type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category">;
+function overlaps(a: Finding, b: Finding): boolean {
+  if (a.line === null || b.line === null) return false;
+  return (a.startLine ?? a.line) <= b.line && (b.startLine ?? b.line) <= a.line;
+}
 
-/** A finding already shown on this PR by an earlier review (lines may have shifted since). */
-function isRepeat(p: Previous, f: Finding): boolean {
+/** Lines between two ranges, 0 when they overlap (or either has no line). */
+function rangeGap(a: Pick<Finding, "line" | "startLine">, b: Pick<Finding, "line" | "startLine">): number {
+  if (a.line === null || b.line === null) return 0;
+  return Math.max(0, (a.startLine ?? a.line) - b.line, (b.startLine ?? b.line) - a.line);
+}
+
+function fromCheck(f: Pick<Finding, "reviewer">, checkIds?: Set<string>): boolean {
+  return Boolean(checkIds?.size) && f.reviewer.split("+").some((id) => checkIds!.has(id));
+}
+
+/** Reviewers whose findings are their own kind (a missing test, a stale doc). */
+const OWN_KIND = new Set(["tests", "docs"]);
+
+/**
+ * The same problem reported twice in one review: the same fingerprint close by, overlapping lines
+ * with a similar title, or overlapping lines that name the same subject (reviewers word the same bug
+ * differently). A second real occurrence elsewhere in the file is kept.
+ */
+export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boolean {
+  if (a.path !== b.path) return false;
+  // Two check findings are exact (a package, a secret): only the very same one is a duplicate.
+  if (fromCheck(a, checkIds) && fromCheck(b, checkIds)) return a.fingerprint === b.fingerprint && a.line === b.line;
+  // A missing test or stale doc is its own kind of finding, never the same as the bug beside it.
+  const [ka, kb] = [a.reviewer.split("+")[0]!, b.reviewer.split("+")[0]!];
+  if ((OWN_KIND.has(ka) || OWN_KIND.has(kb)) && ka !== kb) return false;
+  if (a.fingerprint === b.fingerprint && distance(a, b) <= 20) return true;
+  const wa = stem(titleWords(a.title));
+  const wb = stem(titleWords(b.title));
+  // The same issue worded almost the same way is one finding, even when reviewers anchor it apart.
+  if (jaccard(wa, wb) >= 0.7) return true;
+  if (!near(a, b)) return false;
+  // Words from the file's own name (`refund` in `refunds.py`) are in most of its titles: they name no subject.
+  const fileWords = new Set(stem(titleWords(a.path.replace(/[/._-]+/g, " "))));
+  const shared = wa.filter((w) => wb.includes(w) && !fileWords.has(w));
+  if (jaccard(wa, wb) >= 0.34 || shared.length >= 2) return true;
+  return overlaps(a, b) && shared.some((w) => w.length >= 5 && !GENERIC_WORDS.has(w));
+}
+
+type Previous = Pick<Finding, "path" | "title" | "fingerprint" | "line" | "startLine" | "category"> & {
+  snippet?: string | null;
+  status?: string;
+};
+type Lines = Pick<Finding, "line" | "startLine">;
+
+/** Trimmed text of each line in the new diff to its line numbers, to find earlier findings' lines again. */
+function lineIndex(file: FileDiff): Map<string, number[]> {
+  const index = new Map<string, number[]>();
+  for (const [n, t] of newLineText(file)) {
+    const key = t.trim();
+    if (key.length < 6) continue;
+    const at = index.get(key);
+    if (at) at.push(n);
+    else index.set(key, [n]);
+  }
+  return index;
+}
+
+/** Where an earlier finding's recorded lines sit now (pushes since may have moved them), nearest first. */
+function relocate(p: Previous, index: Map<string, number[]> | undefined): Lines {
+  if (!index || !p.snippet || p.line === null) return p;
+  const start = p.startLine ?? p.line;
+  let best: number | null = null;
+  for (const [offset, probe] of p.snippet.split("\n").entries()) {
+    for (const n of index.get(probe.trim()) ?? []) {
+      if (best === null || Math.abs(n - offset - start) < Math.abs(best - start)) best = n - offset;
+    }
+  }
+  if (best === null) return p;
+  return { startLine: p.startLine === null ? null : best, line: best + p.line - start };
+}
+
+/**
+ * A finding already shown on this PR by an earlier review, at its old lines or where they moved to.
+ * One still open or dismissed is the same finding wherever it sits in the file; a fixed one only
+ * nearby, since the problem can come back elsewhere. Check findings are exact.
+ */
+function isRepeat(p: Previous, moved: Lines, f: Finding, check: boolean): boolean {
   if (p.path !== f.path) return false;
-  const gap = distance(p, f);
-  if (p.fingerprint === f.fingerprint && gap <= 40) return true;
-  const wp = titleWords(p.title);
-  const wf = titleWords(f.title);
+  const gap = Math.min(rangeGap(p, f), rangeGap(moved, f));
+  if (check) return p.fingerprint === f.fingerprint && gap <= 40;
+  const reach = p.status === "fixed" ? 40 : Infinity;
+  if (p.fingerprint === f.fingerprint && gap <= reach) return true;
+  const wp = stem(titleWords(p.title));
+  const wf = stem(titleWords(f.title));
   const sim = jaccard(wp, wf);
-  if (sim >= 0.6 && gap <= 40) return true;
+  if ((sim >= 0.7 && gap <= reach) || (sim >= 0.6 && gap <= 40)) return true;
   const shared = wp.filter((w) => wf.includes(w)).length;
   return gap <= 4 && (sim >= 0.34 || shared >= 2);
 }
@@ -236,7 +348,7 @@ export function rank(findings: Finding[]): Finding[] {
   );
 }
 
-export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number; dropped: number };
+export type Processed = { findings: Finding[]; repeats: number; lowConfidence: number; dropped: number; unique: number };
 
 /**
  * Anchors, filters, dedupes, ranks and places findings. `previous` holds findings already shown on
@@ -247,6 +359,7 @@ export function processFindings(
   files: FileDiff[],
   previous: Previous[] = [],
   focus?: Map<string, Set<number>>,
+  checkIds?: Set<string>,
 ): Processed {
   const byPath = new Map(files.map((f) => [f.path, f]));
   const valid = raw.map((r) => anchor(r, byPath)).filter((f): f is Finding => f !== null);
@@ -259,31 +372,49 @@ export function processFindings(
 
   const kept: Finding[] = [];
   for (const f of rank(confident)) {
-    const dup = kept.find((k) => isDuplicate(k, f));
+    const dup = kept.find((k) => isDuplicate(k, f, checkIds));
     if (dup) {
-      if (!dup.reviewer.split("+").includes(f.reviewer)) dup.reviewer = `${dup.reviewer}+${f.reviewer}`;
+      const ids = dup.reviewer.split("+");
+      // Team rules owns a finding it shares: its badge shows first.
+      if (!ids.includes(f.reviewer)) dup.reviewer = (f.reviewer === "rules" ? [f.reviewer, ...ids] : [...ids, f.reviewer]).join("+");
       continue;
     }
     kept.push({ ...f });
   }
 
-  const fresh = kept.filter((f) => !previous.some((p) => isRepeat(p, f)));
+  const indexes = new Map<string, Map<string, number[]>>();
+  const earlier = previous
+    .filter((p) => kept.some((f) => f.path === p.path))
+    .map((p) => {
+      const file = byPath.get(p.path);
+      if (file && !indexes.has(p.path)) indexes.set(p.path, lineIndex(file));
+      return { p, moved: relocate(p, indexes.get(p.path)) };
+    });
+  const fresh = kept.filter((f) => !earlier.some(({ p, moved }) => isRepeat(p, moved, f, fromCheck(f, checkIds))));
   const repeats = kept.length - fresh.length;
+  return { findings: fresh, repeats, lowConfidence, dropped, unique: kept.length };
+}
 
+/**
+ * Caps line comments: at most `MAX_INLINE`, nits at most `MAX_NITS`. Overflow goes to the review
+ * body, extra nits are hidden. Runs last, after verification and learnings have removed findings.
+ */
+export function place(findings: Finding[]): Finding[] {
   let inline = 0;
   let nits = 0;
-  for (const f of fresh) {
-    if (f.placement !== "inline") continue;
+  return rank(findings).map((original) => {
+    const f = { ...original };
+    if (f.placement !== "inline") return f;
     if (f.severity === "nit") {
       if (nits >= MAX_NITS || inline >= MAX_INLINE) f.placement = "hidden";
       else {
         nits++;
         inline++;
       }
-      continue;
+      return f;
     }
     if (inline >= MAX_INLINE) f.placement = "body";
     else inline++;
-  }
-  return { findings: fresh, repeats, lowConfidence, dropped };
+    return f;
+  });
 }

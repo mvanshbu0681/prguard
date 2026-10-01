@@ -1,6 +1,7 @@
 {
   "name": "prguard",
   "private": true,
+  "type": "module",
   "workspaces": [
     "apps/api",
     "apps/dashboard"
@@ -8,6 +9,10 @@
   "scripts": {
     "dev:api": "npm run dev -w apps/api",
     "dev:dashboard": "npm run dev -w apps/dashboard",
-    "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/dashboard"
+    "typecheck": "npm run typecheck -w apps/api && npm run typecheck -w apps/dashboard",
+    "badges": "node scripts/badges/render.ts"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.63.0"
   }
 }

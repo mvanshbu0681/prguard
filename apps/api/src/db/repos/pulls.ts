@@ -16,6 +16,7 @@ export type PullInput = {
   baseSha: string | null;
   baseRef: string | null;
   headRef: string | null;
+  labels: string[];
 };
 
 export function upsert(input: PullInput): PullRequest {
@@ -51,6 +52,16 @@ export function getByNumber(repositoryId: number, number: number): PullRequest |
     .from(pullRequests)
     .where(and(eq(pullRequests.repositoryId, repositoryId), eq(pullRequests.number, number)))
     .get();
+}
+
+/** Open, non-draft pull requests of these repositories. */
+export function listOpen(repositoryIds: number[]): PullRequest[] {
+  if (repositoryIds.length === 0) return [];
+  return db
+    .select()
+    .from(pullRequests)
+    .where(and(inArray(pullRequests.repositoryId, repositoryIds), eq(pullRequests.state, "open"), eq(pullRequests.draft, false)))
+    .all();
 }
 
 export function update(id: number, patch: Partial<Omit<PullRequest, "id" | "repositoryId" | "number" | "createdAt">>): void {

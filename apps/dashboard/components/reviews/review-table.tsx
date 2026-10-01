@@ -2,6 +2,7 @@ import type { ReviewListItem } from "@contracts";
 import clsx from "clsx";
 import Link from "next/link";
 import { Avatar } from "@/components/ui/avatar";
+import { PriorityPill, RiskPill } from "@/components/ui/pills";
 import { InlineCode } from "@/components/ui/inline-code";
 import { Skeleton } from "@/components/ui/skeleton";
 import { reviewState, StatusLabel } from "@/components/ui/status";
@@ -11,8 +12,8 @@ import { FindingsCell } from "./findings-cell";
 export type ReviewTableVariant = "full" | "compact";
 
 const columns: Record<ReviewTableVariant, string> = {
-  full: "grid-cols-[124px_minmax(0,1fr)_148px_236px_92px_76px]",
-  compact: "grid-cols-[124px_minmax(0,1fr)_148px_236px_76px]",
+  full: "grid-cols-[124px_minmax(0,1fr)_136px_148px_236px_92px_76px]",
+  compact: "grid-cols-[124px_minmax(0,1fr)_136px_148px_236px_76px]",
 };
 
 export function ReviewTableHeader({ variant }: { variant: ReviewTableVariant }) {
@@ -26,6 +27,7 @@ export function ReviewTableHeader({ variant }: { variant: ReviewTableVariant }) 
     >
       <span role="columnheader">Status</span>
       <span role="columnheader">Pull request</span>
+      <span role="columnheader">Priority</span>
       <span role="columnheader">Author</span>
       <span role="columnheader">Findings</span>
       {variant === "full" && <span role="columnheader">Kind</span>}
@@ -60,6 +62,11 @@ export function ReviewRow({ review, variant = "full" }: { review: ReviewListItem
         <span className="block truncate text-primary">
           <span className="tabular text-dim">#{review.pr.number}</span> <InlineCode text={review.pr.title} />
         </span>
+      </span>
+
+      <span role="cell" className="flex min-w-0 items-center gap-1">
+        {review.priority && <PriorityPill priority={review.priority} compact />}
+        {review.risk && <RiskPill risk={review.risk} />}
       </span>
 
       <span role="cell" className="flex min-w-0 items-center gap-2">
@@ -100,6 +107,7 @@ export function ReviewRowsSkeleton({ rows = 8, variant = "full" }: { rows?: numb
             {variant === "full" && <Skeleton className="h-2 w-28" />}
             <Skeleton className="h-2.5" style={{ width: `${48 + ((i * 17) % 36)}%` }} />
           </span>
+          <Skeleton className="h-2.5 w-20" />
           <span className="flex items-center gap-2">
             <Skeleton className="size-[18px] rounded-full" />
             <Skeleton className="h-2.5 w-16" />

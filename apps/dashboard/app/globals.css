@@ -29,12 +29,33 @@
   --color-accent-hover: #5ad8e4;
   --color-accent-text: #7aecf8;
 
-  /* Severity */
-  --color-sev-critical: #f64f47;
-  --color-sev-high: #f18336;
-  --color-sev-medium: #cfa25a;
-  --color-sev-low: #a39879;
-  --color-sev-nit: #83878b;
+  /* Severity, priority, risk and reviewers: the same hues as the GitHub badges */
+  --color-sev-critical: #ff5f57;
+  --color-sev-high: #ff9147;
+  --color-sev-medium: #f2c14e;
+  --color-sev-low: #8bb4f7;
+  --color-sev-nit: #a3aab2;
+
+  --color-prio-p0: #ff5f57;
+  --color-prio-p1: #ff9147;
+  --color-prio-p2: #8bb4f7;
+  --color-prio-p3: #a3aab2;
+
+  --color-risk-low: #56d364;
+  --color-risk-medium: #f2c14e;
+  --color-risk-high: #ff5f57;
+
+  --color-rev-general: #b794f6;
+  --color-rev-security: #ff79c6;
+  --color-rev-reliability: #56d364;
+  --color-rev-breaking: #ffa28b;
+  --color-rev-performance: #f9e2af;
+  --color-rev-data: #39c5cf;
+  --color-rev-slop: #d2a8ff;
+  --color-rev-rules: #a5d6ff;
+  --color-rev-supply-chain: #d4a373;
+  --color-rev-docs: #9da5ff;
+  --color-rev-tests: #7ee787;
 
   /* Status */
   --color-ok: #58d8ae;

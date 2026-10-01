@@ -1,6 +1,6 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { db } from "../client.ts";
-import { reviews, type Review, type ReviewStatus } from "../schema.ts";
+import { reviews, type Priority, type Review, type ReviewStatus } from "../schema.ts";
 
 export type NewReview = Pick<Review, "pullRequestId" | "repositoryId" | "headSha" | "baseSha" | "trigger">;
 
@@ -31,10 +31,11 @@ export function addUsage(id: number, tokensIn: number, tokensOut: number): void 
     .run();
 }
 
-export function list(filter: { repositoryIds: number[]; statuses?: ReviewStatus[]; limit: number }): Review[] {
+export function list(filter: { repositoryIds: number[]; statuses?: ReviewStatus[]; priorities?: Priority[]; limit: number }): Review[] {
   if (filter.repositoryIds.length === 0) return [];
   const conditions = [inArray(reviews.repositoryId, filter.repositoryIds)];
   if (filter.statuses?.length) conditions.push(inArray(reviews.status, filter.statuses));
+  if (filter.priorities?.length) conditions.push(inArray(reviews.priority, filter.priorities));
   return db
     .select()
     .from(reviews)
@@ -63,6 +64,37 @@ export function latestByRepos(repositoryIds: number[]): Map<number, Review> {
       .all()
       .map((r) => [r.repositoryId, r]),
   );
+}
+
+/** The newest review of each pull request. */
+export function latestByPulls(pullRequestIds: number[]): Map<number, Review> {
+  if (pullRequestIds.length === 0) return new Map();
+  const ids = db
+    .select({ id: sql<number>`max(${reviews.id})` })
+    .from(reviews)
+    .where(inArray(reviews.pullRequestId, pullRequestIds))
+    .groupBy(reviews.pullRequestId)
+    .all()
+    .map((r) => r.id);
+  if (ids.length === 0) return new Map();
+  return new Map(
+    db
+      .select()
+      .from(reviews)
+      .where(inArray(reviews.id, ids))
+      .all()
+      .map((r) => [r.pullRequestId, r]),
+  );
+}
+
+/** Completed reviews of these repositories created since `since`. */
+export function listCompletedSince(repositoryIds: number[], since: number): Review[] {
+  if (repositoryIds.length === 0) return [];
+  return db
+    .select()
+    .from(reviews)
+    .where(and(inArray(reviews.repositoryId, repositoryIds), eq(reviews.status, "completed"), gte(reviews.createdAt, since)))
+    .all();
 }
 
 export function listForPull(pullRequestId: number): Review[] {

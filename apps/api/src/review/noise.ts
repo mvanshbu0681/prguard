@@ -36,8 +36,12 @@ const DOCS = /(\.(md|mdx|markdown|rst|txt|adoc)$)|(^|\/)(docs?|documentation)\/|
 const TESTS = /(^|\/)(tests?|__tests__|spec|specs|e2e)\/|[._-](test|spec)\.[a-z0-9]+$|_test\.(go|py)$|(^|\/)test_[^/]+\.py$/i;
 const CONFIG = /\.(json|ya?ml|toml|ini|cfg|conf|env\.example|properties|xml|gradle|lock)$|(^|\/)(dockerfile|makefile|\.github\/|\.gitignore|\.dockerignore|\.editorconfig|\.eslintrc|\.prettierrc)/i;
 
+/** Dependency manifests that would otherwise look like docs (`requirements.txt`). */
+const MANIFEST = /(^|\/)(requirements[^/]*\.txt|go\.mod)$/;
+
 export function fileKind(path: string): FileKind {
   const p = path.toLowerCase();
+  if (MANIFEST.test(p)) return "config";
   if (DOCS.test(p)) return "docs";
   if (TESTS.test(p)) return "test";
   if (CONFIG.test(p)) return "config";

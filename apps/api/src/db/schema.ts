@@ -60,11 +60,54 @@ export const pullRequests = sqliteTable(
     baseRef: text("base_ref"),
     headRef: text("head_ref"),
     lastReviewedSha: text("last_reviewed_sha"),
+    /** Copied from the latest completed review, for the Queue. */
+    risk: text("risk").$type<"low" | "medium" | "high">(),
+    riskScore: integer("risk_score"),
+    riskReasons: text("risk_reasons", { mode: "json" }).$type<string[]>().notNull().default([]),
+    priority: text("priority").$type<"p0" | "p1" | "p2" | "p3">(),
+    priorityReason: text("priority_reason"),
+    labels: text("labels", { mode: "json" }).$type<string[]>().notNull().default([]),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (t) => [uniqueIndex("pull_requests_repo_number_idx").on(t.repositoryId, t.number)],
 );
+
+export type TriageFile = { path: string; risk: "low" | "medium" | "high"; reviewers: string[] };
+
+/** What the summary said about business impact; kept so labels can re-rank a PR without a model call. */
+export type PrioritySignals = { changeType: string | null; businessImpact: string | null; impactArea: string | null };
+export type Priority = "p0" | "p1" | "p2" | "p3";
+
+/** A symbol the change touches and the code that references it. */
+export type ImpactSymbol = {
+  name: string;
+  path: string;
+  line: number;
+  refs: number;
+  files: number;
+  filePaths: string[];
+  samples: { path: string; line: number; text: string }[];
+};
+
+export type TraceStep = {
+  key: "fetch" | "triage" | "impact" | "review" | "checks" | "verify" | "learnings" | "fixes" | "publish";
+  label: string;
+  status: "ok" | "skipped" | "failed";
+  ms: number;
+  detail: string;
+};
+
+/** How a review ran, for the dashboard's trace. */
+export type ReviewTrace = {
+  steps: TraceStep[];
+  reviewers?: { id: string; files: number; chunks: number; findings: number; failed: number; skipped: number }[];
+  funnel?: { raw: number; anchored: number; confident: number; unique: number; fresh: number; suppressed: number; rejected: number; posted: number };
+  rejected?: { title: string; path: string; line?: number | null; reason: string }[];
+  /** Rejections that did not hold up, so the finding was kept. */
+  unsure?: { title: string; path: string; line: number | null; reason: string }[];
+  suppressed?: { title: string; path: string; learningId: number }[];
+};
 
 export type ReviewStatus = "queued" | "running" | "completed" | "failed" | "cancelled" | "skipped";
 export type ReviewStage = "queued" | "fetching" | "summarizing" | "reviewing" | "publishing" | "done";
@@ -85,6 +128,19 @@ export const reviews = sqliteTable(
     note: text("note"),
     reviewed: integer("reviewed", { mode: "boolean" }).notNull().default(true),
     walkthrough: text("walkthrough", { mode: "json" }).$type<{ path: string; change: string }[]>().notNull().default([]),
+    /** Mermaid flowchart of the change, shown folded in the review body. */
+    flow: text("flow"),
+    triage: text("triage", { mode: "json" }).$type<TriageFile[]>().notNull().default([]),
+    impact: text("impact", { mode: "json" }).$type<ImpactSymbol[]>().notNull().default([]),
+    risk: text("risk").$type<"low" | "medium" | "high">(),
+    riskScore: integer("risk_score"),
+    riskReasons: text("risk_reasons", { mode: "json" }).$type<string[]>().notNull().default([]),
+    priority: text("priority").$type<Priority>(),
+    priorityReason: text("priority_reason"),
+    signals: text("signals", { mode: "json" }).$type<PrioritySignals | null>(),
+    /** Fixed by this push, new in this review, open on the PR after it; null on a first review. */
+    since: text("since", { mode: "json" }).$type<{ fixed: number; new: number; open: number } | null>(),
+    trace: text("trace", { mode: "json" }).$type<ReviewTrace>().notNull().default({ steps: [] }),
     filesReviewed: integer("files_reviewed").notNull().default(0),
     filesSkipped: text("files_skipped", { mode: "json" }).$type<{ path: string; reason: string }[]>().notNull().default([]),
     notReviewed: text("not_reviewed", { mode: "json" }).$type<string[]>().notNull().default([]),
@@ -140,6 +196,8 @@ export const llmCalls = sqliteTable(
     ms: integer("ms").notNull(),
     ok: integer("ok", { mode: "boolean" }).notNull(),
     error: text("error"),
+    /** Repository tools the call used, e.g. `read_file app/models.py`. */
+    tools: text("tools", { mode: "json" }).$type<string[]>().notNull().default([]),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("llm_calls_review_idx").on(t.reviewId)],
@@ -164,10 +222,50 @@ export const findings = sqliteTable(
     confidence: real("confidence").notNull(),
     fingerprint: text("fingerprint").notNull(),
     placement: text("placement").$type<"inline" | "body" | "hidden">().notNull(),
+    details: text("details", { mode: "json" }).$type<{ title: string; body: string } | null>(),
+    verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+    evidence: text("evidence"),
+    status: text("status").$type<"open" | "fixed" | "dismissed">().notNull().default("open"),
+    /** The finding's lines at publish time, to find them again after later pushes. */
+    snippet: text("snippet"),
+    githubCommentId: integer("github_comment_id"),
+    githubNodeId: text("github_node_id"),
+    githubCommentUrl: text("github_comment_url"),
+    fixedInSha: text("fixed_in_sha"),
+    fixedAt: integer("fixed_at"),
+    dismissedBy: text("dismissed_by"),
+    dismissedAt: integer("dismissed_at"),
+    learningId: integer("learning_id"),
     createdAt: integer("created_at").notNull(),
   },
   (t) => [index("findings_review_idx").on(t.reviewId), index("findings_pr_idx").on(t.pullRequestId)],
 );
+
+/** Something a team told PR Guard not to flag, applied to later reviews of the repository. */
+export const learnings = sqliteTable(
+  "learnings",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    repositoryId: integer("repository_id").notNull(),
+    text: text("text").notNull(),
+    source: text("source").$type<"command" | "reaction" | "reply" | "manual">().notNull(),
+    /** The finding it came from, for matching similar findings later. */
+    path: text("path"),
+    category: text("category"),
+    fingerprint: text("fingerprint"),
+    title: text("title"),
+    findingId: integer("finding_id"),
+    /** Applies to any file of the repository, not only `path`. */
+    repoWide: integer("repo_wide", { mode: "boolean" }).notNull().default(false),
+    author: text("author"),
+    url: text("url"),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    createdAt: integer("created_at").notNull(),
+  },
+  (t) => [index("learnings_repo_idx").on(t.repositoryId)],
+);
+
+export type LearningRow = typeof learnings.$inferSelect;
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),

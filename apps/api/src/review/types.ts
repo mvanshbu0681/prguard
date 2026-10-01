@@ -18,6 +18,15 @@ export type Finding = {
   confidence: number;
   fingerprint: string;
   placement: "inline" | "body" | "hidden";
+  /** A folded extra section, e.g. suggested tests or what Socket found. */
+  details?: { title: string; body: string } | null;
+  /** Confirmed by the verification pass, with the code that shows it. */
+  verified?: boolean;
+  evidence?: string | null;
+  /** From a check (code, not a model): certain, so never verified or suppressed like model findings. */
+  fromCheck?: boolean;
+  /** The finding's lines at publish time. */
+  snippet?: string | null;
 };
 
 export function countBySeverity(findings: Pick<Finding, "severity">[]): Record<Severity, number> {

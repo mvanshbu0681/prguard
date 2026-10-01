@@ -1,0 +1,1 @@
+ALTER TABLE `llm_calls` ADD `tools` text DEFAULT '[]' NOT NULL;

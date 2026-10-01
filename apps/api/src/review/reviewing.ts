@@ -28,9 +28,13 @@ Each finding:
 - category: one word, e.g. bug, security, performance, error-handling, concurrency, naming, style, rules.
 - title: at most 10 words, specific.
 - body: 1 to 3 short sentences: what is wrong, why it matters, how to fix it. Friendly and direct, no preamble.
+- In title and body, put identifiers, file paths, commands, config keys and literal values in single backticks, e.g. \`create_refund\`, \`app/models.py\`, \`None\`.
 - suggestion: only when the fix is small and certain, the exact replacement code for lines line..end_line (whole lines, same indentation). Otherwise null.
 - confidence: 0 to 1, how sure you are that this is a real problem.
+- details: null, unless your instructions ask for a folded extra section; then { title, body }.
 
+Stay inside your focus above: other reviewers cover everything else, so reporting it here only adds noise.
+Never report that something is fine, needs no change, or has nothing to fix: submit an empty list instead.
 Report only real, specific problems in the added code. Report each problem once, not on every line it appears. Do not praise, do not summarise the change, and skip what a formatter would fix unless the team rules require it.`;
 }
 

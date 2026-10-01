@@ -10,6 +10,12 @@ import { startWorkers } from "./queue/worker.ts";
 import "./brief/index-repo.ts";
 import "./review/events.ts";
 import "./review/run.ts";
+import "./commands/events.ts";
+import "./commands/run.ts";
+import "./commands/answer.ts";
+import "./commands/fix.ts";
+import "./commands/ignore.ts";
+import "./commands/replies.ts";
 
 async function main(): Promise<void> {
   migrateDb();

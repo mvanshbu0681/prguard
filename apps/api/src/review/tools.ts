@@ -3,6 +3,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { tool } from "ai";
 import { z } from "zod";
 import { log } from "../log.ts";
+import { fileKind } from "./noise.ts";
 
 const MAX_OUTPUT = 12_000;
 const MAX_READ_LINES = 300;
@@ -101,6 +102,16 @@ export function listFiles(root: string, path?: string | null): string {
     .slice(0, 200)
     .map((e) => (e.isDirectory() ? `${e.name}/` : e.name));
   return clip(entries.join("\n") || "(empty)");
+}
+
+/** Whether the snapshot holds any test file (checked over at most `MAX_FILES_SCANNED` files). */
+export function hasTestFiles(root: string): boolean {
+  let scanned = 0;
+  for (const file of walk(root, root)) {
+    if (++scanned > MAX_FILES_SCANNED) return false;
+    if (fileKind(relative(root, file).replace(/\\/g, "/")) === "test") return true;
+  }
+  return false;
 }
 
 /** Read-only tools confined to a repository snapshot. */

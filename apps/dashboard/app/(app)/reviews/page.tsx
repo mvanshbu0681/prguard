@@ -3,7 +3,9 @@
 import clsx from "clsx";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
+import type { Priority } from "@contracts";
 import { hasRepos, useMe } from "@/components/me-provider";
+import { PRIORITY_LABEL } from "@/components/ui/pills";
 import { ReviewRowsSkeleton, ReviewTable, ReviewTableHeader } from "@/components/reviews/review-table";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,6 +27,10 @@ const STATUS_OPTIONS = [
 
 function parseStatus(value: string | null): ReviewFilter | null {
   return value === "active" || value === "completed" || value === "failed" ? value : null;
+}
+
+function parsePriority(value: string | null): Priority | null {
+  return value === "p0" || value === "p1" || value === "p2" || value === "p3" ? value : null;
 }
 
 function parseRepo(value: string | null): number | null {
@@ -49,8 +55,12 @@ function Reviews() {
   const pathname = usePathname();
   const params = useSearchParams();
 
-  const filters: ReviewFilters = { repo: parseRepo(params.get("repo")), status: parseStatus(params.get("status")) };
-  const filtered = filters.repo !== null || filters.status !== null;
+  const filters: ReviewFilters = {
+    repo: parseRepo(params.get("repo")),
+    status: parseStatus(params.get("status")),
+    priority: parsePriority(params.get("priority")),
+  };
+  const filtered = filters.repo !== null || filters.status !== null || filters.priority !== null;
 
   const repos = useRepos();
   const reviews = useReviews(filters);
@@ -60,6 +70,7 @@ function Reviews() {
     const sp = new URLSearchParams();
     if (merged.repo !== null) sp.set("repo", String(merged.repo));
     if (merged.status) sp.set("status", merged.status);
+    if (merged.priority) sp.set("priority", merged.priority);
     const qs = sp.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
@@ -79,6 +90,19 @@ function Reviews() {
           {repos.data?.map((repo) => (
             <option key={repo.id} value={repo.id}>
               {repo.fullName}
+            </option>
+          ))}
+        </Select>
+        <Select
+          aria-label="Priority"
+          className="w-44"
+          value={filters.priority ?? ""}
+          onChange={(e) => update({ priority: parsePriority(e.target.value) })}
+        >
+          <option value="">All priorities</option>
+          {(["p0", "p1", "p2", "p3"] as const).map((p) => (
+            <option key={p} value={p}>
+              {p.toUpperCase()} {PRIORITY_LABEL[p]}
             </option>
           ))}
         </Select>
@@ -108,7 +132,11 @@ function Reviews() {
             <EmptyState
               title="No matching reviews."
               action={
-                <button type="button" onClick={() => update({ repo: null, status: null })} className={buttonClass({ size: "sm" })}>
+                <button
+                  type="button"
+                  onClick={() => update({ repo: null, status: null, priority: null })}
+                  className={buttonClass({ size: "sm" })}
+                >
                   Clear filters
                 </button>
               }
