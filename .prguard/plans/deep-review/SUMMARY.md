@@ -35,8 +35,8 @@ Groq and Socket calls, real GitHub reviews). No tests were written.
 | 6 | AC-15, EC-26 | acme-billing#6: `print` finding carries the Team rules badge; merged findings show two badges |
 | 7 to 13 | AC-8 to AC-14 | acme-billing#6 (ownership), acme-store#11 (swallowed error), #8 (N+1), acme-billing#4 (data), acme-store#7 (slop, docs, test gap) |
 | 14 to 16 | AC-1, AC-2, EC-1, EC-2 | triage and impact recorded on every review; acme-store#8 Breaking change names `src/routes/orders.ts` |
-| 17 | AC-3, AC-4 (partial), EC-3 | verified findings carry quoted evidence; rejections cite code; F1 posts 4 of 5 planted bugs per run and verification drops none (see GAPS) |
-| 18 | AC-5, EC-4 | re-run (Docker): Critical secret on its line, no snippet stored, value in no table; placeholder key not flagged |
+| 17 | AC-3, AC-4 (partial), EC-3 | verified findings carry quoted evidence; rejections need real code from outside the flagged lines; F1 posts 3 to 5 of the 5 planted bugs per run, and review 28 dropped one on invented code before the rule was tightened (see GAPS) |
+| 18 | AC-5, EC-4 | re-run (Docker): Critical secret on its line, no snippet stored, value in no table; the Secrets check ignores the placeholder key (AI slop reported it once, finding 308; its prompt now leaves keys to the Secrets check) |
 | 19 | AC-6, AC-7, EC-5 to EC-8 | acme-store#9 (2 npm malware), acme-billing#5 (`requests` CVEs), acme-gateway#1 (Go malware) |
 | 20 | AC-16, AC-41 | 12 plugins in the Reviewers panel; dashboard hues match the badges |
 | 21, 22 | AC-17, AC-18, AC-36, EC-21, EC-23 | risk and priority on every review; acme-store#10 P0 from `hotfix` |
@@ -70,10 +70,12 @@ page checked in Chrome.
 
 ## After verification
 
-The first verification was BLOCKED (secret line stored as a snippet, Test gap without suggested
-tests, Reliability missing the swallowed error) with 15 warnings. The second was BLOCKED on
-reviewers losing answers through a fallback Groq rejected. All four blockers are fixed; most
-warnings are fixed; the open ones are listed under "Open items" in GAPS. Re-run live on Docker (2026-10-01):
+Five verification passes. The first four were BLOCKED: a secret line stored as a snippet, Test gap
+without suggested tests and Reliability missing the swallowed error (first); reviewers losing
+answers through a fallback Groq rejected (second); a rejection on invented code and the Railway
+config against the spec (third); a rejection rule so strict that no rejection could hold (fourth).
+The fifth passed with warnings; its two pre-merge warnings are fixed and replayed (see GAPS). Open
+items are listed under "Open items" in GAPS. Re-run live on Docker (2026-10-01):
 
 - Reviews 21 to 29: no reviewer lost its answer (trace and `llm_calls`).
 - F1: 4, 4, 5 and 3 of the 5 planted bugs (AC-4 partial, see GAPS). Review 28 rejected one on
@@ -82,7 +84,9 @@ warnings are fixed; the open ones are listed under "Open items" in GAPS. Re-run 
   per-minute token budget instead of failing on Groq's rate limit.
 
 - F5: the Secrets finding stores no snippet; a scan of findings, reviews, LLM calls and learnings
-  finds the secret value nowhere. Exact secret values are scrubbed from everything written or stored.
+  finds the secret value nowhere. Exact secret values on the PR's added lines are scrubbed from what
+  models write and what is stored; a secret read through the file tools or quoted in a command reply
+  is caught by pattern only.
 - F2: Reliability owns the swallowed `try/catch`. An `ignore` (write access only) saved a learning
   that suppressed the same finding on a fresh PR. A fix push marked it Fixed in 22 s, by comparing
   the code rather than GitHub's outdated flag, and it was not posted again.
