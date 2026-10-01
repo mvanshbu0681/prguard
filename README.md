@@ -27,15 +27,16 @@ Without Docker: `npm install`, then `npm run dev:api` and `npm run dev:dashboard
 
 ## Deploy on Railway
 
-One Railway project, three services from this repository. Each service reads its config from a
-`railway.json` (Settings, Config-as-code, set the path below); the volume, variables and domains are
-set in Railway.
+One Railway project, three services from this repository. `api` and `dashboard` both build the
+root `Dockerfile`, which picks the app from the service's name, so name them exactly `api` and
+`dashboard` (or set an `APP` variable to `api` or `dashboard`). The volume, variables and domains
+are set in Railway.
 
-| Service | Root directory | Config file | Domain |
-| --- | --- | --- | --- |
-| `api` | `/` | `/apps/api/railway.json` | `api.<domain>` |
-| `dashboard` | `/` | `/apps/dashboard/railway.json` | `app.<domain>` |
-| `web` | `/apps/web` | `/apps/web/railway.json` | `<domain>` |
+| Service | Root directory | Domain |
+| --- | --- | --- |
+| `api` | `/` (leave empty) | `api.<domain>` |
+| `dashboard` | `/` (leave empty) | `app.<domain>` |
+| `web` | `/apps/web` | `<domain>` |
 
 **api**
 

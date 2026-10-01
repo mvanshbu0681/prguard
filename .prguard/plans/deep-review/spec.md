@@ -225,8 +225,9 @@ Fixture PRs `F1` to `F9` are defined in [plan.md](plan.md#fixtures). "Posted" me
 - `MODEL_FAST` and `MODEL_SMART` defaults, and the Groq and Gemini providers.
 - The dashboard's design system (tokens other than the severity hues, components, spacing, type scale),
   its routes, sign-in and access rules. `/reviews` stays the landing page.
-- No tests and no CI. Deployment config is `docker-compose.yml` plus one `railway.json` per app and
-  the README's Railway steps (added at the user's request, 2026-10-01).
+- No tests and no CI. Deployment config is `docker-compose.yml`, one root `Dockerfile` shared by
+  Compose and Railway, `apps/web/railway.json` and the README's Railway steps (added at the user's
+  request, 2026-10-01).
 
 ## Cross-cutting axes
 
