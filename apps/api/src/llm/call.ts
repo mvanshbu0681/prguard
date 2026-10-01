@@ -12,12 +12,12 @@ import {
   type ToolSet,
 } from "ai";
 import { z } from "zod";
-import { config } from "../config.ts";
 import * as llmCallsRepo from "../db/repos/llm-calls.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import { errMessage, log } from "../log.ts";
 import { redactSecrets } from "../review/checks/secrets.ts";
 import { resolveRole, type ResolvedModel, type Role } from "./models.ts";
+import { estimateCall, limited } from "./rate.ts";
 
 export type CallMeta = {
   purpose: string;
@@ -26,20 +26,6 @@ export type CallMeta = {
   repositoryId?: number;
   signal?: AbortSignal;
 };
-
-// A small semaphore so bursts of parallel reviews do not stampede the provider.
-let active = 0;
-const waiting: (() => void)[] = [];
-async function limited<T>(fn: () => Promise<T>): Promise<T> {
-  if (active >= config.llm.concurrency) await new Promise<void>((resolve) => waiting.push(resolve));
-  active++;
-  try {
-    return await fn();
-  } finally {
-    active--;
-    waiting.shift()?.();
-  }
-}
 
 export function record(
   meta: CallMeta,
@@ -92,7 +78,7 @@ export async function structured<T>(meta: CallMeta & { system: string; prompt: s
   for (let attempt = 0; attempt < 2; attempt++) {
     const started = Date.now();
     try {
-      const res = await limited(() =>
+      const res = await limited(m.modelId, estimateCall(meta.system, meta.prompt), meta.signal, () =>
         generateText({
           model: m.model,
           system: meta.system,
@@ -119,7 +105,7 @@ export async function text(meta: CallMeta & { system: string; prompt: string }):
   const m = resolveRole(meta.role);
   const started = Date.now();
   try {
-    const res = await limited(() =>
+    const res = await limited(m.modelId, estimateCall(meta.system, meta.prompt), meta.signal, () =>
       generateText({
         model: m.model,
         system: meta.system,
@@ -209,7 +195,9 @@ export async function agent<T>(
 
   const started = Date.now();
   try {
-    const res = await limited(() =>
+    // Each step of the tool loop sends the conversation again.
+    const estimate = estimateCall(meta.system, meta.prompt) * Math.min(meta.maxSteps, 3);
+    const res = await limited(m.modelId, estimate, meta.signal, () =>
       generateText({
         model: m.model,
         system: meta.system,
@@ -248,7 +236,7 @@ export async function agent<T>(
       : `Stop exploring. Call ${name} now with your final answer.`;
     const startedForced = Date.now();
     try {
-      const res = await limited(() =>
+      const res = await limited(m.modelId, estimateCall(meta.system, JSON.stringify(history)) * 2, meta.signal, () =>
         generateText({
           model: m.model,
           system: meta.system,
@@ -287,4 +275,3 @@ export async function agent<T>(
   return null;
 }
 
-export { limited };

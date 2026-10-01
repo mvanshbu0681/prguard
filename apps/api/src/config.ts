@@ -32,6 +32,8 @@ const schema = z.object({
 
   WORKER_CONCURRENCY: num(4),
   LLM_CONCURRENCY: num(6),
+  LLM_TOKENS_PER_MINUTE: num(200000),
+  REVIEW_CONCURRENCY: num(2),
   CHUNK_TOKENS: num(12000),
   MAX_CHUNKS: num(8),
   REVIEW_TOKEN_BUDGET: num(400000),
@@ -89,6 +91,7 @@ function load() {
       geminiApiKey: env.GEMINI_API_KEY,
       roles: { fast: env.MODEL_FAST, smart: env.MODEL_SMART },
       concurrency: env.LLM_CONCURRENCY,
+      tokensPerMinute: env.LLM_TOKENS_PER_MINUTE,
     },
     review: {
       chunkTokens: env.CHUNK_TOKENS,
@@ -96,6 +99,7 @@ function load() {
       tokenBudget: env.REVIEW_TOKEN_BUDGET,
     },
     workerConcurrency: env.WORKER_CONCURRENCY,
+    reviewConcurrency: env.REVIEW_CONCURRENCY,
     devLogin: env.DEV_LOGIN === "1" && env.NODE_ENV !== "production",
     sessionDays: env.SESSION_DAYS,
     assetBaseUrl: (env.ASSET_BASE_URL ?? DEFAULT_ASSET_BASE_URL).trim().replace(/\/$/, ""),

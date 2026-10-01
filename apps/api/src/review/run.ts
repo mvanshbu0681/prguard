@@ -8,6 +8,7 @@ import {
   findPostedReview,
   finishCheckRun,
   getPull,
+  markCheckRunStarted,
   listFiles,
   postReview,
   removeReaction,
@@ -177,6 +178,7 @@ async function pipeline(run: Run): Promise<void> {
   const repoNow = repositoriesRepo.get(run.repo.id);
   if (!repoNow || repoNow.removedAt || !repoNow.enabled) throw new CancelledError();
   reviewsRepo.update(review.id, { status: "running", stage: "fetching", startedAt: Date.now(), error: null });
+  if (review.checkRunId) await markCheckRunStarted(gh, r, review.checkRunId);
 
   const live = await getPull(gh, r, pr.number);
   pullsRepo.update(pr.id, {

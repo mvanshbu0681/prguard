@@ -47,9 +47,9 @@ export async function startCheckRun(gh: GitHub, r: Repo, headSha: string, detail
     ...r,
     name: "PR Guard",
     head_sha: headSha,
-    status: "in_progress" as const,
-    started_at: new Date().toISOString(),
-    output: { title: "Reviewing…", summary: "PR Guard is reviewing this pull request." },
+    // Queued until a worker picks the review up: reviews run a few at a time.
+    status: "queued" as const,
+    output: { title: "Queued", summary: "This review starts as soon as the reviews ahead of it finish." },
   };
   try {
     const { data } = await gh.rest.checks.create({ ...base, details_url: detailsUrl });
@@ -62,6 +62,21 @@ export async function startCheckRun(gh: GitHub, r: Repo, headSha: string, detail
       log.warn({ ...r, err: errMessage(err) }, "could not create check run");
       return null;
     }
+  }
+}
+
+/** Moves a queued check run to in progress when its review starts. */
+export async function markCheckRunStarted(gh: GitHub, r: Repo, checkRunId: number): Promise<void> {
+  try {
+    await gh.rest.checks.update({
+      ...r,
+      check_run_id: checkRunId,
+      status: "in_progress",
+      started_at: new Date().toISOString(),
+      output: { title: "Reviewing…", summary: "PR Guard is reviewing this pull request." },
+    });
+  } catch (err) {
+    log.warn({ ...r, checkRunId, err: errMessage(err) }, "could not start check run");
   }
 }
 

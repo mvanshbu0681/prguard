@@ -1,3 +1,4 @@
+import { config } from "../config.ts";
 import * as jobsRepo from "../db/repos/jobs.ts";
 import type { Job } from "../db/schema.ts";
 import { errMessage, log } from "../log.ts";
@@ -55,7 +56,8 @@ export function startWorkers(count: number): void {
 
 async function loop(slot: number): Promise<void> {
   while (running) {
-    const job = jobsRepo.claim();
+    // Reviews spend most of the model budget: a few at a time, the rest wait their turn in order.
+    const job = jobsRepo.claim(config.reviewConcurrency);
     if (!job) {
       await waitForWork(1000 + slot * 50);
       continue;

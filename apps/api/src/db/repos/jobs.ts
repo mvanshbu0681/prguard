@@ -34,7 +34,8 @@ export function hasKey(key: string): boolean {
 }
 
 /** Atomically takes the oldest runnable job, never one whose key (PR or repo) already has a job running. */
-export function claim(): Job | undefined {
+/** The next runnable job: one per key at a time, and at most `maxReviews` reviews running at once. */
+export function claim(maxReviews: number): Job | undefined {
   const now = Date.now();
   return db
     .update(jobs)
@@ -44,6 +45,7 @@ export function claim(): Job | undefined {
         jobs.id,
         sql`(select q.id from ${jobs} q where q.status = 'queued' and q.run_after <= ${now}
               and not exists (select 1 from ${jobs} r where r.key = q.key and r.status = 'running')
+              and (q.type <> 'review_pr' or (select count(*) from ${jobs} r where r.type = 'review_pr' and r.status = 'running') < ${maxReviews})
               order by q.id limit 1)`,
       ),
     )
