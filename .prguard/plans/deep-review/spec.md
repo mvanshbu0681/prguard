@@ -214,7 +214,8 @@ Fixture PRs `F1` to `F9` are defined in [plan.md](plan.md#fixtures). "Posted" me
 
 ## Does not change
 
-- `apps/web` is untouched. `main` is untouched; work lands on `staging` through a PR.
+- `apps/web` is untouched apart from its `railway.json` (added at the user's request, 2026-10-01).
+  `main` is untouched; work lands on `staging` through a PR.
 - PR Guard never approves or requests changes, and its check run never concludes `failure`.
 - The GitHub App keeps its current permissions. The only App change is the Issue comment event
   subscription, already done by the user.
@@ -224,7 +225,8 @@ Fixture PRs `F1` to `F9` are defined in [plan.md](plan.md#fixtures). "Posted" me
 - `MODEL_FAST` and `MODEL_SMART` defaults, and the Groq and Gemini providers.
 - The dashboard's design system (tokens other than the severity hues, components, spacing, type scale),
   its routes, sign-in and access rules. `/reviews` stays the landing page.
-- No tests, no CI, no deployment config beyond `docker-compose.yml`.
+- No tests and no CI. Deployment config is `docker-compose.yml` plus one `railway.json` per app and
+  the README's Railway steps (added at the user's request, 2026-10-01).
 
 ## Cross-cutting axes
 
