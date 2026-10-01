@@ -76,7 +76,11 @@ export function stripDiffPrefix(code: string): string {
 export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding | null {
   let title = raw.title.trim().replace(/\.$/, "");
   // A Test gap finding names the missing test, so it never reads like the bug another reviewer posts.
-  if (raw.reviewer === "tests" && title && !/^no tests? /i.test(title)) title = `No test covers ${title[0]!.toLowerCase()}${title.slice(1)}`;
+  if (raw.reviewer === "tests" && title && !/^no tests? /i.test(title)) {
+    // A plain first word reads lowercase after the prefix; a name like `AppError` keeps its case.
+    const plain = /^[A-Z][a-z]+(\s|$)/.test(title);
+    title = `No test covers ${plain ? title[0]!.toLowerCase() + title.slice(1) : title}`;
+  }
   const body = raw.body.trim();
   if (!title || !body) return null;
 

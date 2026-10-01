@@ -83,8 +83,24 @@ export function rateLimitWait(err: unknown): number | null {
   return Math.min(Math.max(wait, 1000), WINDOW_MS);
 }
 
-async function acquire(): Promise<void> {
-  if (active >= config.llm.concurrency) await new Promise<void>((resolve) => waiting.push(resolve));
+async function acquire(signal?: AbortSignal): Promise<void> {
+  if (active >= config.llm.concurrency) {
+    await new Promise<void>((resolve, reject) => {
+      if (signal?.aborted) return reject(signal.reason);
+      const turn = () => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      };
+      // A cancelled review leaves the line instead of holding a place in it.
+      const onAbort = () => {
+        const i = waiting.indexOf(turn);
+        if (i >= 0) waiting.splice(i, 1);
+        reject(signal!.reason);
+      };
+      waiting.push(turn);
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
+  }
   active++;
 }
 
@@ -106,12 +122,24 @@ export async function limited<T extends { totalUsage?: LanguageModelUsage }>(
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     const spend = await reserve(model, estimate, signal);
-    await acquire();
+    try {
+      await acquire(signal);
+    } catch (err) {
+      spend.tokens = 0;
+      throw err;
+    }
     try {
       const res = await fn();
-      // The reservation was a guess: the window keeps what the call really used.
+      // The reservation was a guess: the window keeps what the call really used, counted from when it
+      // finished, so a call that waited or ran past a minute is not forgotten.
       const used = (res.totalUsage?.inputTokens ?? 0) + (res.totalUsage?.outputTokens ?? 0);
+      const recent = windows.get(model) ?? [];
+      const i = recent.indexOf(spend);
+      if (i >= 0) recent.splice(i, 1);
       if (used > 0) spend.tokens = used;
+      spend.at = Date.now();
+      recent.push(spend);
+      windows.set(model, recent);
       return res;
     } catch (err) {
       const wait = rateLimitWait(err);
