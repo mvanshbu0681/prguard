@@ -17,6 +17,8 @@ export async function api<T>(path: string, init: ApiInit = {}): Promise<T> {
   const hasBody = body !== undefined;
 
   const res = await fetch(`/api${path}`, {
+    // Always the live answer: a copy the browser stored earlier (e.g. under a CDN's max-age) can be stale.
+    cache: "no-store",
     ...rest,
     credentials: "same-origin",
     headers: {
