@@ -269,7 +269,9 @@ export function isDuplicate(a: Finding, b: Finding, checkIds?: Set<string>): boo
   // The same issue worded almost the same way is one finding, even when reviewers anchor it apart.
   if (jaccard(wa, wb) >= 0.7) return true;
   if (!near(a, b)) return false;
-  const shared = wa.filter((w) => wb.includes(w));
+  // Words from the file's own name (`refund` in `refunds.py`) are in most of its titles: they name no subject.
+  const fileWords = new Set(stem(titleWords(a.path.replace(/[/._-]+/g, " "))));
+  const shared = wa.filter((w) => wb.includes(w) && !fileWords.has(w));
   if (jaccard(wa, wb) >= 0.34 || shared.length >= 2) return true;
   return overlaps(a, b) && shared.some((w) => w.length >= 5 && !GENERIC_WORDS.has(w));
 }
