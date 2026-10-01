@@ -216,8 +216,9 @@ export async function agent<T>(
     problem = errMessage(err).slice(0, 400);
   }
 
-  // The model sometimes keeps searching after being told to answer; Groq rejects a call to a tool the
-  // request does not list, so the tools stay listed but only say to answer.
+  // The model sometimes keeps searching after being told to answer, and Groq rejects any call that is
+  // not listed or does not match a forced tool. So every tool stays listed, a tool call is required, and
+  // the search tools only say to answer.
   const closed: ToolSet = Object.fromEntries(
     Object.entries(meta.tools).map(([toolName, t]) => [
       toolName,
@@ -236,8 +237,8 @@ export async function agent<T>(
           system: meta.system,
           messages: [...history, { role: "user", content: nudge }],
           tools: { ...closed, [name]: answerTool },
-          toolChoice: { type: "tool", toolName: name },
-          stopWhen: [isStepCount(2), hasToolCall(name)],
+          toolChoice: "required",
+          stopWhen: [isStepCount(3), hasToolCall(name)],
           providerOptions: m.providerOptions,
           maxRetries: 3,
           abortSignal: meta.signal,
