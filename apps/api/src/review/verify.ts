@@ -96,11 +96,12 @@ function grounded(evidence: string, f: Finding, code: string, files: Map<string,
 }
 
 /**
- * A rejection must explain itself: a sentence (8+ words) grounded in the code. Anything thinner is
- * treated as unsure, so a real bug is never dropped on a bare reference.
+ * A rejection must explain itself: a sentence (8+ words) besides the code it quotes. Anything thinner,
+ * such as the flagged code quoted back alone, is treated as unsure, so a real bug is never dropped.
  */
 function explains(evidence: string): boolean {
-  return evidence.trim().split(/\s+/).length >= 8;
+  const prose = evidence.replace(/```[\s\S]*?```/g, " ").replace(/`[^`\n]*`/g, " ");
+  return prose.trim().split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length >= 8;
 }
 
 /**
