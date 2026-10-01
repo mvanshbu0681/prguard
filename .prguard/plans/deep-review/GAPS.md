@@ -122,6 +122,20 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
   not hold up (`unsure`, `6cc5354`), with the finding's line.
 - **fact** F1 tally including later runs: 4, 4, 5, 3, 4, 4, 3 of 5 (reviews 20, 21, 25, 28, 30,
   34, 38). Ownership, float money and the swallowed error post every time.
+- **fact** Not every run on the fourth-pass rule rejected: reviews 36 and 39 still posted the
+  `utcnow` false positive as Critical, and reviews 37 to 39 rejected nothing; only review 40 did.
+- **decision** Fifth pass (PASSED-WITH-WARNINGS) found two loopholes, fixed in `d13dc55`: a dotted
+  name (`RefundCreate.amount`) no longer passes as a citation, a citation within three lines of the
+  flagged code no longer counts as evidence from elsewhere, and a single word (`int`) counts only
+  where a citation pins it down. AI slop's prompt leaves committed keys to the Secrets check. Also
+  `dfaf48e`: token usage counts from when a call finishes, a cancelled review leaves the call line,
+  and Test gap titles keep identifier case. Replayed on 17 cases (12 stored rejections, review 40,
+  4 adversarial variants): all as expected.
+- **fact** Final runs on `d13dc55` (reviews 41 to 44): F5 rejected the `utcnow` false positive on
+  both runs (42, 44) with grounded reasons; F2 rejected a false "named-parameter mismatch" (43) and
+  kept one thin rejection as unsure (41); the swallowed error posted on both F2 runs; no reviewer
+  lost its answer; the real F5 secret is in no stored row. AI slop still reported the planted
+  placeholder key once (finding 324) despite the new prompt line.
 
 ## Open items (need the user's call or a later pass)
 
