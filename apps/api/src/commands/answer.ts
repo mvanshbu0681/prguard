@@ -4,7 +4,7 @@ import { getSnapshot } from "../github/snapshot.ts";
 import { listFiles } from "../github/pr.ts";
 import { agent } from "../llm/call.ts";
 import { errMessage, log } from "../log.ts";
-import { redactSecrets } from "../review/checks/secrets.ts";
+import { redactSecrets, secretsIn } from "../review/checks/secrets.ts";
 import { codify } from "../review/codify.ts";
 import { buildContext } from "../review/context.ts";
 import { savePull } from "../review/events.ts";
@@ -60,7 +60,8 @@ async function answer(c: CommandContext, mode: "explain" | "question"): Promise<
     log.warn({ repo: c.repo.fullName, pr: c.payload.number, err: errMessage(err) }, "answer failed");
     throw err;
   }
-  await c.reply(body ? redactSecrets(codify(body, new Set())) : NO_ANSWER);
+  // The code the model was shown may hold a secret it repeats: that exact value is scrubbed too.
+  await c.reply(body ? redactSecrets(codify(body, new Set()), secretsIn(parts.join("\n"))) : NO_ANSWER);
 }
 
 registerCommand("explain", (c) => answer(c, "explain"));

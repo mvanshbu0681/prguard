@@ -2,16 +2,17 @@ import type { FileDiff } from "./diff.ts";
 
 /** Text that is already code or markup: fences, code spans, links, HTML tags, URLs. */
 const PROTECTED = /```[\s\S]*?```|`[^`\n]+`|\[[^\]\n]*\]\([^)\n]*\)|<[^>\n]+>|https?:\/\/\S+/g;
-const TOKEN = /[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*(?:\(\))?/g;
+const TOKEN = /\.?[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*(?:\(\))?/g;
 
 const SNAKE = /^[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+$/;
 const CAMEL = /^[a-z][a-z0-9]*[A-Z][A-Za-z0-9]*$/;
 const PASCAL_MULTI = /^[A-Z][a-z0-9]+[A-Z][A-Za-z0-9]*$/;
 const DOTTED = /^[A-Za-z_]\w+(?:\.[A-Za-z_]\w*)+$/;
 
-/** Shapes only code has: `snake_case`, `camelCase`, `a.b`, `call()`. Plain words never qualify. */
+/** Shapes only code has: `snake_case`, `camelCase`, `a.b`, `call()`, `.dotfile`. Plain words never qualify. */
 function looksLikeCode(token: string): boolean {
   const bare = token.replace(/\(\)$/, "");
+  if (bare.startsWith(".")) return bare.length >= 4;
   if (token.endsWith("()") && bare.length >= 2) return true;
   return SNAKE.test(bare) || CAMEL.test(bare) || DOTTED.test(bare);
 }

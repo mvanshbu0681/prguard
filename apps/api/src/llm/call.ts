@@ -62,11 +62,11 @@ export function record(
     tokensOut,
     ms: Date.now() - started,
     ok: !error,
-    error: error ? errMessage(error).slice(0, 500) : null,
+    error: error ? redactSecrets(errMessage(error)).slice(0, 500) : null,
   });
   if (meta.reviewId) reviewsRepo.addUsage(meta.reviewId, tokensIn, tokensOut);
   const fields = { purpose: meta.purpose, model: m.modelId, tokensIn, tokensOut, ms: Date.now() - started };
-  if (error) log.warn({ ...fields, err: errMessage(error) }, "llm call failed");
+  if (error) log.warn({ ...fields, err: redactSecrets(errMessage(error)) }, "llm call failed");
   else log.debug(fields, "llm call");
 }
 

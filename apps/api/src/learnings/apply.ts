@@ -58,7 +58,8 @@ export function covers(learning: LearningRow, f: Finding): boolean {
   const sameKind = !learning.category || learning.category === f.category;
   if (!learning.title) return !learning.fingerprint && sameKind && inPath(learning, f.path) && textCovers(learning.text, f);
   const samePlace = learning.repoWide || learning.path === f.path;
-  return samePlace && sameKind && similarity(learning.title, f.title) >= 0.5;
+  // Another reviewer may file the same finding under its own category: a closer title still matches.
+  return samePlace && similarity(learning.title, f.title) >= (sameKind ? 0.5 : 0.7);
 }
 
 /**

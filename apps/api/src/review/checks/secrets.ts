@@ -47,6 +47,11 @@ export function findSecret(line: string): { kind: string; value: string } | null
   return null;
 }
 
+/** The secret values in a piece of code or a prompt, line by line. */
+export function secretsIn(text: string): string[] {
+  return text.split("\n").flatMap((line) => findSecret(line)?.value ?? []);
+}
+
 /**
  * Removes secrets from text a model wrote or PR Guard stores: the exact values the Secrets check
  * found in this change, plus anything shaped like a known key or a `secret = "value"` assignment.

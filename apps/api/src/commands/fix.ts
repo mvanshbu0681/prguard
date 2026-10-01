@@ -2,7 +2,7 @@ import { z } from "zod";
 import { getSnapshot } from "../github/snapshot.ts";
 import { listFiles, threadsOutdated } from "../github/pr.ts";
 import { agent } from "../llm/call.ts";
-import { redactSecrets } from "../review/checks/secrets.ts";
+import { redactSecrets, secretsIn } from "../review/checks/secrets.ts";
 import { codify } from "../review/codify.ts";
 import { buildContext } from "../review/context.ts";
 import { newLineText, toFileDiffs } from "../review/diff.ts";
@@ -61,8 +61,10 @@ async function fix(c: CommandContext): Promise<void> {
   });
   const code = result ? fitReplacement(file, start, last, result.code) : null;
   if (!code || !result) return void (await c.reply(NO_FIX));
-  const explanation = redactSecrets(codify(result.explanation.trim(), new Set()));
-  await c.reply(`\`\`\`suggestion\n${redactSecrets(code).replace(/\n$/, "")}\n\`\`\`\n\n${explanation}`);
+  // The code the model was shown may hold a secret it repeats: that exact value is scrubbed too.
+  const sensitive = secretsIn(prompt);
+  const explanation = redactSecrets(codify(result.explanation.trim(), new Set()), sensitive);
+  await c.reply(`\`\`\`suggestion\n${redactSecrets(code, sensitive).replace(/\n$/, "")}\n\`\`\`\n\n${explanation}`);
 }
 
 registerCommand("fix", fix);
