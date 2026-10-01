@@ -16,7 +16,8 @@ const VERIFIED_SEVERITIES = new Set(["critical", "high", "medium"]);
 const GUTTER = /^[+-]?[ \t]*\d*[ \t]\| ?/;
 
 const verdictSchema = z.object({
-  verdicts: z.array(z.object({ index: z.number(), verdict: z.string(), evidence: z.string() })),
+  // A verdict without evidence is allowed (the model sometimes sends null); it leaves the finding unverified.
+  verdicts: z.array(z.object({ index: z.number(), verdict: z.string(), evidence: z.string().nullish() })),
 });
 
 const SYSTEM = `You verify findings from PR Guard's code reviewers before they are posted on a pull request.
@@ -163,7 +164,7 @@ export async function verifyFindings(opts: {
       }
       for (const v of answer.verdicts) {
         const f = group[Math.round(v.index) - 1];
-        if (f) verdicts.set(f, { verdict: v.verdict.trim().toLowerCase(), evidence: v.evidence.trim() });
+        if (f) verdicts.set(f, { verdict: v.verdict.trim().toLowerCase(), evidence: v.evidence?.trim() ?? "" });
       }
     } catch (err) {
       if (err instanceof CancelledError || opts.meta.signal?.aborted) throw err;
