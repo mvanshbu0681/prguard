@@ -24,7 +24,7 @@ import { codeTerms, codify } from "./codify.ts";
 import { flowMermaid } from "./flow.ts";
 import { buildContext, teamRules } from "./context.ts";
 import { config } from "../config.ts";
-import { addedLines, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
+import { addedLines, newLineText, toFileDiffs, windowHunks, type FileDiff } from "./diff.ts";
 import { filesFor, runReviewers } from "./engine.ts";
 import { hasTestFiles } from "./tools.ts";
 import { impact, outsideCallers, renderImpact } from "./impact.ts";
@@ -36,7 +36,7 @@ import { getSnapshot } from "../github/snapshot.ts";
 import { place, processFindings, type RawFinding } from "./findings.ts";
 import { verifyFindings } from "./verify.ts";
 import { withSuggestedTests } from "./test-plan.ts";
-import { redactSecrets } from "./checks/secrets.ts";
+import { findSecret, forgetSecrets, rememberSecrets, redactSecrets } from "./checks/secrets.ts";
 import { dependencies, isManifest } from "./checks/manifests.ts";
 import { assessRisk, type RiskLevel } from "./risk.ts";
 import { decidePriority, type Priority } from "./priority.ts";
@@ -218,6 +218,14 @@ async function pipeline(run: Run): Promise<void> {
   const scope = await resolveScope({ ...run, review }, pr, files);
   const { kind, focus, range } = scope;
   const { reviewable, skipped, docsOnly } = classify(scope.files);
+  // Secret values in the added lines are scrubbed from every model call record of this review.
+  rememberSecrets(
+    review.id,
+    reviewable.flatMap((f) => {
+      const text = newLineText(f);
+      return [...addedLines(f)].flatMap((n) => findSecret(text.get(n) ?? "")?.value ?? []);
+    }),
+  );
   const anchorFiles = classify(files).reviewable;
   reviewsRepo.update(review.id, { kind, baseSha: live.base.sha, filesSkipped: skipped });
   trace.add("fetch", "Fetch", started, `${scope.files.length} files, ${reviewable.length} reviewable`);
@@ -474,7 +482,8 @@ async function pipeline(run: Run): Promise<void> {
         : verification.skipped && verification.checked === 0
           ? "Skipped, review budget reached"
           : `${verification.checked} checked, ${verification.confirmed} confirmed, ${verification.rejected.length} rejected${failedNote}`,
-      verification.checked === 0 && verification.failed ? "failed" : "ok",
+      // Any group that failed shows: its findings went out unverified.
+      verification.failed ? "failed" : "ok",
     );
   } else {
     trace.add("verify", "Verification", null, config.features.verify ? "Nothing to verify" : "Off", "skipped");
@@ -701,6 +710,7 @@ async function runReview(payload: Record<string, unknown>, ctx: JobContext): Pro
     throw new FatalError(errMessage(err));
   } finally {
     trace.save(reviewId);
+    forgetSecrets(reviewId);
     clearInterval(watch);
     // Anything still running for this review (e.g. reviewer calls after a failed summary) stops here.
     abort.abort();

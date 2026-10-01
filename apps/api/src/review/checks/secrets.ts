@@ -47,6 +47,21 @@ export function findSecret(line: string): { kind: string; value: string } | null
   return null;
 }
 
+/** Secret values found in each running review, so its model call records can be scrubbed of them. */
+const byReview = new Map<number, string[]>();
+
+export function rememberSecrets(reviewId: number, values: string[]): void {
+  if (values.length) byReview.set(reviewId, values);
+}
+
+export function forgetSecrets(reviewId: number): void {
+  byReview.delete(reviewId);
+}
+
+export function secretsOf(reviewId: number | undefined): string[] {
+  return reviewId ? (byReview.get(reviewId) ?? []) : [];
+}
+
 /** The secret values in a piece of code or a prompt, line by line. */
 export function secretsIn(text: string): string[] {
   return text.split("\n").flatMap((line) => findSecret(line)?.value ?? []);

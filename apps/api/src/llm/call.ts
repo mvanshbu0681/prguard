@@ -15,7 +15,7 @@ import { z } from "zod";
 import * as llmCallsRepo from "../db/repos/llm-calls.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
 import { errMessage, log } from "../log.ts";
-import { redactSecrets } from "../review/checks/secrets.ts";
+import { redactSecrets, secretsOf } from "../review/checks/secrets.ts";
 import { resolveRole, type ResolvedModel, type Role } from "./models.ts";
 import { estimateCall, limited } from "./rate.ts";
 
@@ -36,9 +36,10 @@ export function record(
   tools: string[] = [],
 ): void {
   const tokensIn = usage?.inputTokens ?? 0;
+  const sensitive = secretsOf(meta.reviewId);
   const tokensOut = usage?.outputTokens ?? 0;
   llmCallsRepo.insert({
-    tools,
+    tools: tools.map((t) => redactSecrets(t, sensitive)),
     reviewId: meta.reviewId ?? null,
     repositoryId: meta.repositoryId ?? null,
     purpose: meta.purpose,
@@ -48,11 +49,11 @@ export function record(
     tokensOut,
     ms: Date.now() - started,
     ok: !error,
-    error: error ? redactSecrets(errMessage(error)).slice(0, 500) : null,
+    error: error ? redactSecrets(errMessage(error), sensitive).slice(0, 500) : null,
   });
   if (meta.reviewId) reviewsRepo.addUsage(meta.reviewId, tokensIn, tokensOut);
   const fields = { purpose: meta.purpose, model: m.modelId, tokensIn, tokensOut, ms: Date.now() - started };
-  if (error) log.warn({ ...fields, err: redactSecrets(errMessage(error)) }, "llm call failed");
+  if (error) log.warn({ ...fields, err: redactSecrets(errMessage(error), sensitive) }, "llm call failed");
   else log.debug(fields, "llm call");
 }
 

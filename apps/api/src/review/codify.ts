@@ -1,7 +1,7 @@
 import type { FileDiff } from "./diff.ts";
 
 /** Text that is already code or markup: fences, code spans, links, HTML tags, URLs. */
-const PROTECTED = /```[\s\S]*?```|`[^`\n]+`|\[[^\]\n]*\]\([^)\n]*\)|<[^>\n]+>|https?:\/\/\S+/g;
+const PROTECTED = /```[\s\S]*?```|`[^`]+`|\[[^\]\n]*\]\([^)\n]*\)|<[^>\n]+>|https?:\/\/\S+/g;
 const TOKEN = /\.?[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*(?:\(\))?/g;
 
 const SNAKE = /^[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+$/;
@@ -64,7 +64,7 @@ export function codify(text: string, terms: Set<string>): string {
   return mapUnprotected(result, (plain) =>
     plain.replace(TOKEN, (token, offset: number, whole: string) => {
       const before = whole[offset - 1] ?? "";
-      if (/[\w@`/\-$]/.test(before)) return token;
+      if (/[\w@`/\-$)\]]/.test(before)) return token;
       const bare = token.replace(/\(\)$/, "");
       return terms.has(bare) || looksLikeCode(token) ? `\`${token}\`` : token;
     }),

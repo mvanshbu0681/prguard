@@ -5,7 +5,7 @@ import { SEVERITY_RANK, type Finding, type Severity } from "./types.ts";
 
 export const rawFindingSchema = z.object({
   path: z.string(),
-  line: z.number(),
+  line: z.number().nullish(),
   end_line: z.number().nullish(),
   severity: z.string(),
   category: z.string().nullish(),
@@ -74,7 +74,9 @@ export function stripDiffPrefix(code: string): string {
  * the same hunk and drops the suggestion; anything else is kept for the review body.
  */
 export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding | null {
-  const title = raw.title.trim().replace(/\.$/, "");
+  let title = raw.title.trim().replace(/\.$/, "");
+  // A Test gap finding names the missing test, so it never reads like the bug another reviewer posts.
+  if (raw.reviewer === "tests" && title && !/^no tests? /i.test(title)) title = `No test covers ${title[0]!.toLowerCase()}${title.slice(1)}`;
   const body = raw.body.trim();
   if (!title || !body) return null;
 
@@ -87,7 +89,7 @@ export function anchor(raw: RawFinding, files: Map<string, FileDiff>): Finding |
   const base = { reviewer: raw.reviewer, path, severity, category, title, body, confidence, fingerprint: fingerprint(path, title), details };
 
   // A file outside this diff (seen through the repo tools) cannot carry a line comment.
-  if (!file) return { ...base, line: null, startLine: null, suggestion: null, placement: "body" };
+  if (!file || raw.line == null) return { ...base, line: null, startLine: null, suggestion: null, placement: "body" };
 
   const lines = commentableLines(file);
   const line = Math.round(raw.line);
