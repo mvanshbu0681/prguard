@@ -110,3 +110,35 @@ Running record of decisions, open gaps and learned facts from the autonomous bui
   config against the spec's "Does not change"; the spec now records it as the user's request.
 - **decision** Learnings from `ignore`, replies and 👎 need write access; spec AC-29 to AC-31 and the
   Access row now say so.
+- **fact** Verification (fourth pass) was BLOCKED: the third pass's rule treated a backticked
+  `path:line` citation as a code quote, so no rejection could hold (reviews 30 to 36 rejected 0, and
+  `utcnow`, synchronous `findById` and "missing comma" false positives were posted). Fixed
+  (`9dded49`, `3a851a7`): citations are citations, a citation outside the flagged lines that holds a
+  quote counts as counter-evidence, and the reason needs 4 words of its own instead of 8. Replayed
+  on the 12 stored rejections (snapshots copied from the container): the 9 correct ones reject,
+  review 26 (flagged code quoted back) and review 28 (invented code) stay unsure, and review 7 stays
+  unsure because its multi-line quote does not match the file exactly. Live, review 40 (F5) rejected
+  the `utcnow` false positive with a grounded reason. The trace now also keeps rejections that did
+  not hold up (`unsure`, `6cc5354`), with the finding's line.
+- **fact** F1 tally including later runs: 4, 4, 5, 3, 4, 4, 3 of 5 (reviews 20, 21, 25, 28, 30,
+  34, 38). Ownership, float money and the swallowed error post every time.
+
+## Open items (need the user's call or a later pass)
+
+- **AC-4 partial** (above): the over-refund race and the float-equality status come and go.
+- **Test gap variance:** on some F3 runs it posts nothing (review 32); when it posts, it carries
+  "Suggested tests" (reviews 22, 23, 24, 37).
+- **AC-12:** the `formatCents` duplicate is reported on some F3 runs only (23, 37 missed it).
+- **AC-15:** Bug, Security and AI slop still report the `print` and `console.log` rule lines; they
+  merge into the Team rules finding, which shows its badge first.
+- **AC-23:** a code span nested inside another breaks evidence formatting (finding 251).
+- **AC-32:** suppression depends on how the model words the title (suppressed on 27 and 31, posted
+  on 26 and 29).
+- **AC-34:** fix detection by comparing code was shown once (review 8); not re-run since.
+- **Shared token budget:** `@prguard` replies wait in the same per-model window as reviews, so in a
+  burst a reply can take about a minute; reviews in a burst take longer but none fail.
+- **AC-5 residual:** exact secret values are scrubbed when they are on added lines of the PR; a
+  secret the model reads through its file tools, or quotes in a command reply, is caught by pattern
+  only.
+- **EC-4 adjacent:** AI slop reported the planted placeholder key on F5 (finding 308, "Hard-coded
+  partner API key"); the Secrets check correctly ignores it. The real secret is in no stored row.

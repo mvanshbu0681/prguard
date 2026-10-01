@@ -1,187 +1,218 @@
-# Verification: deep-review (third pass)
+# Verification: deep-review (fourth pass)
 
 **Date:** 2026-10-01
-**Branch:** `manaskhandelwal/deep-review`, base `f0ad389`, HEAD `1baebaf` (second pass was at `7e2339d`)
-**Status:** BLOCKED
+**Branch:** `manaskhandelwal/deep-review`, base `f0ad389`, HEAD `100b09b` (third pass was at `1baebaf`)
+**Status:** BLOCKED (1 blocker, 11 warnings)
 
 Method: goal-backward from `spec.md`. `SUMMARY.md` and `GAPS.md` were read as claims only. I read every commit in
-`7e2339d..HEAD` in full (`b1ac695`, `63b769a`, `2564a06`, `aba50b1`, `cea5227`, `23af1d7`, `9bcabe8`, `1baebaf`).
-Evidence comes from the code, `tsc`, read-only queries on the Docker DB, the F1 and F2 head snapshots inside the
-container, and `gh api` GET calls on `prguard-sandbox`. No tests, builds, app runs or product scripts were run. Secret
-checks report counts only.
+`1baebaf..HEAD` in full (`085501a`, `f9210f3`, `9ab6cb4`, `55203fd`, `100b09b`). Evidence comes from the code, `tsc`,
+read-only queries on the Docker DB, `docker inspect` and `docker logs`, and `gh api` GET calls on `prguard-sandbox`. No
+tests, builds, app runs or product scripts were run. Secret checks report counts only.
 
-Which code ran (UTC). Commit times: `2564a06` 00:41:21, `aba50b1` 00:42:30, `cea5227` 00:44:43, `23af1d7` 00:46:10,
-`9bcabe8` 00:47:49. The current container started at 00:47:56, and its source contains every fix (grep for
-`everyKeyRequired`, "No tools are available now", `evidence?.trim()`, `secretsIn`, the prose filter, `CORE` with `tests`).
-- HEAD code: #27 (F2), #28 (F1), #29 (F2), all created at 00:48:07.
-- Earlier builds: #21 to #23 (00:45:01) and #24 to #26 (00:46:33). #21 failed `verify:json` on null evidence (llm_call 439),
-  which is the bug `23af1d7` fixed. GAPS says #26 predates `9bcabe8`. #20 (00:43:12) predates `cea5227`.
-- So the SUMMARY claim "Reviews 21 to 29 on the latest code" holds only for #27 to #29. No F3 run used HEAD code.
+Which code ran (UTC): `55203fd` committed 01:07:52, image built 01:08:00, container started 01:08:03. `100b09b` is docs
+only. Reviews 30 to 33 were created 01:08:26 to 01:08:27, so all four ran on HEAD code: 30 is F1 (acme-billing#19),
+31 is F2 (acme-store#28), 32 is F3 (acme-store#29), 33 is F5 (acme-billing#18).
 
 ## Previous blockers and warnings
 
-| Second-pass item | Now | Evidence |
+| Third-pass item | Now | Evidence |
 |---|---|---|
-| B1 reviewer JSON fallback rejected by Groq | Fixed | `everyKeyRequired` (`llm/call.ts:177-188`) and the no-tools note (`call.ts:280-281`). In #21 to #29 there are 0 failed `reviewer:*:json` calls and 7 successful ones (llm_calls 474, 496, 497, 501, 556, 559, 567). `trace.reviewers[].failed` is 0 for every reviewer. #18 and #19 (after `2564a06`, before `cea5227`) still failed with "Tool choice is none, but model called a tool" (357, 365). `cea5227` fixes that |
-| W1 AC-3 evidence not tied to its finding | Open, now harmful | `grounded()` is unchanged (`verify.ts:76-96`). It let a fabricated rejection drop a planted bug on #28 (Blocker 1) |
-| W2 AC-4 | Open, worse on HEAD | #28 posted 3 of 5, and verification dropped one of them (Blocker 1) |
+| B1 rejection on fabricated code | Fixed for that case, over-corrected | `rejectionGrounded()` (`verify.ts:128-145`) stops #28's invented quote, and also stops nearly every legitimate rejection (Blocker 1) |
+| B2 Railway config vs "Does not change" | Resolved | `9ab6cb4` records it in the spec as the user's request. `spec.md:10` still says "no deployment" (Warning 11) |
+| W1 AC-4 variance | Open | #30 posted 4 of 5 (Warning 1) |
+| W2 Groq TPM | Fixed | `085501a`: review cap plus per-model token window. Burst #30 to #33: 0 rate-limit errors, 0 failed verification groups |
 | W3 AC-12 | Open | Warning 3 |
-| W4 AC-14 | Partly | Test gap is now in `CORE` (`triage.ts:16`) and posts with Suggested tests on #22 to #24, but as duplicate bug reports (Warning 4) |
-| W5 AC-15 | Open | Warning 5 |
-| W6 AC-23 | Partly | Dotfiles fixed (`codify.ts:5,15`): #22 finding 153 and #24 finding 177 render `` `.env.example` ``. Code-span breakage is wider (Warning 7) |
-| W7 AC-32 | Partly | Suppressed on #27, posted on #26 and #29 (Warning 8) |
-| W8 AC-34 | Open | Every review since #17 is a fresh `opened` full review (Warning 9) |
-| W9 AC-5 residual | Partly | Warning 10 |
-| W10 spec drift on access | Fixed | `spec.md` AC-29 to AC-31 and the Access row now require write access (`1baebaf`). The builder made this spec edit, so the user should confirm it |
-| W11 SUMMARY overstates | Open | Warning 11 |
+| W4 AC-14 | Open | #32 has no Test gap finding (Warning 2) |
+| W5 AC-15 | Partly | Docs drift stays out now; other reviewers still report rule lines (Warning 4) |
+| W6 AC-13 | Fixed | `line` is nullish (`findings.ts:8`); #32 posted 252 and the file-level 253 |
+| W7 AC-23 | Partly | Multi-line spans are protected (`codify.ts:4`); nested backticks still break (Warning 5) |
+| W8 AC-32 | Partly | #31 suppressed the line-69 `await` by learning 2 (Warning 6) |
+| W9 AC-34 | Open | Not exercised (Warning 7) |
+| W10 AC-5 residual | Partly | `record()` scrubs this review's exact values from `tools`, `error` and the warn log (`call.ts:39-56`). Warning 10 |
+| W11 SUMMARY and GAPS | Partly | "verification rejected none" and "latest code" corrected. New and remaining overstatements (Warning 11) |
 
 ## Success criteria
 
 ### Reviewers and engine
-- **AC-1** VERIFIED. `CORE` gained `tests` (`triage.ts:16`), but only reviewers in a file's `allowed` list are added (`triage.ts:77-84`), so `needs.testsInRepo` (`tests.ts:12`) still gates it. On #22 the triage routes `tests` to both files and `trace.reviewers` shows tests on 1 chunk. F1 has no `tests` entry (no tests in that repo).
-- **AC-2** VERIFIED (carried). F4 was not re-run, and `impact.ts` and the Breaking change reviewer are unchanged since `bee8a42`. Breaking change no longer loses its answer: #29 `reviewer:breaking:json` succeeded (556).
-- **AC-3** BLOCKER (Blocker 1).
-  - Works: null evidence no longer fails a whole group (`verify.ts:20,168`). #21 failed on it (439), and there is no `verify:json` failure in #24 to #29 (507, 572, 580 ok).
-  - Works: a rejection needs 8 prose words besides its code (`verify.ts:102-105`). #26's code-only rejection of the F2 swallowed error would now count as unsure, and #27 (202) and #29 (221) posted it.
-  - Fails: a rejection is grounded by any 3+ character span found in the shown window, and the flagged code itself qualifies. #28 rejected "Exact float equality to decide final refund status" with the quote `amount: int  # amount in cents` at `app/schemas.py:45`. A grep of the F1 head snapshot in the container for `amount: int` and `amount in cents` returns 0 matches. The real code is `amount: float = Field(gt=0)` (`app/schemas.py:65`) and `def refundable_amount(...) -> float` (`app/routers/refunds.py:25`). The rejection passed `grounded()` because it also quotes `refundable_amount` and `payload.amount == remaining` from the flagged window.
-- **AC-4** BLOCKER (Blocker 1). Planted bugs posted on F1:
+- **AC-1** VERIFIED. #32 routes `tests` (1 chunk); `data` gets 0 chunks on #31 and #32.
+- **AC-2** VERIFIED (carried). Impact and Breaking change code unchanged.
+- **AC-3** BLOCKER (Blocker 1). Confirmation still works: 25 of 30 checked findings in #30 to #33 carry a Verified badge
+  and evidence. Rejection no longer works: 0 of 30 rejected.
+- **AC-4** WARNING. #30: ownership (225), swallowed error (226), float money (227, 229, 230), float-equality status (235,
+  verified with real quotes from `app/schemas.py:63-66` and `app/routers/refunds.py:104`). Refund above balance is
+  missing (no finding mentions balance, exceed, race or concurrency). History on F1: 4, 4, 5, 3, 4. Nothing was dropped
+  by verification this time.
+- **AC-5** VERIFIED. #33 finding 254 is Critical on `app/services/ledger.py:4`. Count scan for both F5 values (lengths 32
+  and 17): 0 rows in findings (title, body, evidence, suggestion, snippet, details), reviews (summary, trace, flow,
+  walkthrough, priority_reason), llm_calls (tools, error) and learnings. Logs and `pull_requests` were not rescanned.
+- **AC-6, AC-7, AC-10, AC-16** VERIFIED (carried; code unchanged).
+- **AC-8** VERIFIED. #30 finding 225: "The `create_refund` endpoint fetches the invoice with `db.get` ...".
+- **AC-9** VERIFIED. #31 finding 241 (Reliability, verified).
+- **AC-11** VERIFIED. #33: 255 (drop column), 258 (float money).
+- **AC-12** WARNING (Warning 3). **AC-13** VERIFIED (one run). **AC-14** WARNING (Warning 2). **AC-15** WARNING (Warning 4).
 
-  | Run | Code | Posted | Missing |
-  |---|---|---|---|
-  | #20 | before `cea5227` | 4 (139, 140, 138, 145) | race |
-  | #21 | before `23af1d7` | 4 (163, 162, 161, 167) | race |
-  | #25 | before `9bcabe8` | 5 (180, 182, 181, 186, 189) | none |
-  | #28 | HEAD | 3 (209, 210, 207) | race; status transition **rejected by verification** |
-
-  GAPS ("Verification rejected none of them") and SUMMARY ("verification rejected none") are contradicted by `reviews.trace.rejected` on #28. The 4-of-5 variance alone would still need the user's acceptance. A verification drop on fabricated code is a code defect.
-- **AC-5** VERIFIED. The F5 fixture holds two committed values (`app/services/ledger.py` lines 4 and 5 at `85758f2`, lengths 32 and 17). Each appears in 0 rows of `findings`, `reviews`, `llm_calls` (tools, error), `learnings`, `repositories.brief` and `pull_requests`. Residual channels: Warning 10.
-- **AC-6, AC-7** VERIFIED (carried). The code is unchanged.
-- **AC-8** VERIFIED. Posted on #21 (163), #25 (180) and #28 (209). Finding 209 reads "`create_refund` fetches the invoice with `db.get` which ignores the current user".
-- **AC-9** VERIFIED. Reliability owns the swallowed `try/catch` on the HEAD runs: #27 (202, `reliability+security`) and #29 (221, `reliability`).
-- **AC-10, AC-11** VERIFIED (carried). F2 also gets N+1 findings (#27 203, #29 222).
-- **AC-12** WARNING. Fully met on #23 only: placeholder 156, plus 160, which names `formatCents` in `src/services/pricing.ts`. #22 (148) and #24 (172) report only the placeholder.
-- **AC-13** WARNING. #22 (153) and #24 (177) report `GIFT_CARD_PROVIDER_URL`, but #23 has no Docs drift finding. Groq rejected its first answer for `line: null` (llm_call 417; `rawFindingSchema.line` is `z.number()`, `findings.ts:8`), and the retried answer was empty. This was 4 of 4 runs in the second pass and is 2 of 3 now.
-- **AC-14** WARNING. Each F3 run posts one Test gap finding with folded Suggested tests (152, 158, 174). Each one is a bug report, not a test gap (Warning 4).
-- **AC-15** WARNING. Warning 5.
-- **AC-16** VERIFIED (carried).
-
-### Ranking
-- **AC-17, AC-18** VERIFIED. Reviews #17 to #29 all completed with a risk and a priority.
-
-### GitHub output
-- **AC-19 to AC-22, AC-24** VERIFIED (carried). The publishing code is unchanged since `7e2339d`. The #28 check run reads "10 open · 2 critical".
-- **AC-23** WARNING. The F1 check passes on HEAD (finding 209), and dotfiles stay whole. Multi-line code spans still break, now more often (Warning 7).
-
-### In the PR
-- **AC-25 to AC-31** VERIFIED (carried). Command and learning code is unchanged apart from the reply scrub (`answer.ts:64`, `fix.ts:65-67`). The spec now matches write-only learnings.
-- **AC-32** WARNING. Warning 8.
-- **AC-33** VERIFIED (carried). **AC-34** WARNING (Warning 9).
-
-### Dashboard
-- **AC-35 to AC-41** VERIFIED (carried). `b1ac695` only adds `whitespace-nowrap` to the model cell (`trace.tsx:248`).
-
-### Languages and platform
-- **AC-42, AC-43** VERIFIED (carried).
+### Ranking, GitHub output, in the PR, dashboard, platform
+- **AC-17, AC-18** VERIFIED. #30 to #33 completed with risk and priority; #33 is P0.
+- **AC-19 to AC-22, AC-24** VERIFIED (carried). Check titles: "12 open · 2 critical", "9 open · 2 critical",
+  "8 open · 3 high", "8 open · 4 critical". Two of those criticals are false positives (Blocker 1).
+- **AC-23** WARNING (Warning 5). The F1 check passes (225).
+- **AC-25** VERIFIED (carried). 👀 is still immediate; a review may now wait under a "Queued" check, as the user asked.
+- **AC-26 to AC-31, AC-33** VERIFIED (carried). **AC-32** WARNING (Warning 6). **AC-34** WARNING (Warning 7).
+- **AC-35 to AC-43** VERIFIED (carried). No dashboard or `apps/web` change since `1baebaf`.
 
 ## Edge cases
-- EC-3 VERIFIED live on HEAD. Under Groq's TPM limit, #28 shows "8 failed (posted unverified)" and #29 "5 failed", and those findings posted unverified.
-- EC-19 VERIFIED. `suppress` still skips critical check findings (`apply.ts:75`).
-- Code unchanged, carried as VERIFIED: EC-1, EC-2, EC-4 to EC-18, EC-20 to EC-26.
+- **EC-3** VERIFIED in code: any failed group now marks the step `failed` (`run.ts:486`). Not exercised live (no failures in the burst).
+- **EC-13** WARNING. Command jobs pass the review cap (`jobs.ts:48`), but their model calls share the token window (Warning 9).
+- **EC-19** VERIFIED (carried). The rest are carried as VERIFIED: the code is unchanged.
 
-## Project rule spot checks
+## Queue and rate limiter (`085501a`), adversarial pass
+- **Claim** (`jobs.ts:40-53`): one `UPDATE ... WHERE id = (subquery)`, atomic in SQLite. The cap applies only to
+  `review_pr` (`jobs.ts:48`), so commands, replies, indexing and sweeps skip past blocked reviews. Reviews run oldest
+  first. `REVIEW_CONCURRENCY` must be a positive int (`config.ts:9`), and the default 2 of 4 workers leaves 2 free.
+- **No stuck "Queued" check.** Every exit closes it:
+  - superseded (`lifecycle.ts:47-48`)
+  - PR closed or draft (`events.ts:78-79`)
+  - repo switched off (`lifecycle.ts:96-100`; "removed" skips GitHub, as before)
+  - cancelled before start (`run.ts:177-179`, then `closeReview`)
+  - failed or abandoned (`run.ts:709,720`)
+- **Abort:** token waits are abortable (`rate.ts:19-31,48,59`). `acquire()` is not (`rate.ts:86-89`), but the call then
+  gets the aborted signal and fails at once, and `run.ts:698` maps it to a cancel.
+- **Crash recovery:** heartbeats run on their own timer (`worker.ts:76`), so a token wait does not look like a dead worker.
+- **Deadlock:** none. The request is clamped to the budget (`rate.ts:43`), so an empty window always admits a call.
+- **Live:** #30 and #31 started 01:08:28 and 01:08:30. #32 and #33 started 01:11:51 and 01:11:54 (GitHub `started_at`),
+  as the first two finished. Other counts:
+  - 95 model calls, 0 with a rate-limit error
+  - 0 "rate limited, waiting" log lines
+  - every reviewer `failed` 0, every verify step `ok`
+  - cost: #30 and #31 each took 3 min 22 s, against about 40 s for #27 to #29 run alone
+- **Accounting:** Warning 8. **Shared budget:** Warning 9.
 
-This repo has no `docs/CONSTITUTION.md`, guardrails file or cross-cutting invariants doc. The rules come from plan.md, tasks.md and the spec.
+## Project rule spot checks and commands run
+
+This repo has no `docs/CONSTITUTION.md`, guardrails file or cross-cutting invariants doc. The rules come from
+`plan.md`, `tasks.md` and the spec.
 
 | Rule | Command | Output |
 |---|---|---|
 | Types | `npx tsc --noEmit -p apps/api`; `npx tsc --noEmit -p apps/dashboard` | exit 0; exit 0 |
-| Coverage | `scripts/check-task-coverage.mjs` | Not in this repo. `plan.md` and `tasks.md` are unchanged since `7e2339d`. `spec.md` changed only at AC-29 to AC-31 and the Access row |
-| No tests, CI or deploy config | `git diff --name-only f0ad389..HEAD`, filtered | No tests and no CI. Three `railway.json` files (Blocker 2) |
-| `apps/web` untouched | `git diff --name-only f0ad389..HEAD -- apps/web` | `apps/web/railway.json` (Blocker 2) |
-| Dependencies | `git diff 7e2339d..HEAD --stat` on the package files | empty |
-| Env only via config | grep `process.env` in `apps/api/src` | `config.ts` only |
-| Never approve or fail | added lines in `7e2339d..HEAD` | none |
-| Em and en dashes | added lines (apps, README, spec, SUMMARY, GAPS) | 0 |
-| Commits | `git log 7e2339d..HEAD --format=%B` | No co-author or attribution lines. `aba50b1` bundles three unrelated fixes |
-| Secret value | `ddb.mjs` counts for both F5 values | 0 everywhere |
-| Reviewer answers | `llm_calls` with `%:json`; `trace.reviewers[].failed` | #21 to #29: 0 reviewer failures |
-| Verification | `trace.rejected`; verify step; snapshot grep | #28's rejection quotes text that is absent from the snapshot |
-| Which code ran | `docker inspect` StartedAt; container grep | 00:47:56Z; all fixes present |
+| Which code ran | `docker inspect` (container, image); `git log --format="%h %cI"` | image 01:08:00Z after `55203fd` 01:07:52Z |
+| Coverage | `scripts/check-task-coverage.mjs` | Not in this repo. `plan.md` and `tasks.md` unchanged since `1baebaf` |
+| No tests, no CI | `git diff --name-only f0ad389..HEAD`, filtered | only product files (`tests.ts`, `test-plan.ts`, a badge) |
+| `apps/web`, dashboard | `git diff --name-only 1baebaf..HEAD -- apps/web apps/dashboard` | empty |
+| Dependencies | `git diff --stat 1baebaf..HEAD` on package files | empty |
+| Env only via config | grep `process.env` outside `config.ts` | 0 |
+| Never approve or fail | added lines in `1baebaf..HEAD` | 0 |
+| Em and en dashes | added lines (apps, README, `.env.example`, spec, SUMMARY, GAPS) | 0 |
+| Commits | `git log 1baebaf..HEAD --format=%B` | 0 attribution lines. `55203fd` bundles five unrelated fixes |
+| Secret values | `secret-scan.mjs docker` (counts via `ddb.mjs`) | 2 values, 0 rows |
+| Burst | `ddb.mjs` on reviews, trace, findings, llm_calls; `gh api` check runs; `docker logs` grep | as above |
+| Rejections | `ddb.mjs` on `trace.rejected` (all reviews); `gh api` contents at the PR heads | Blocker 1 |
 
 Test-strength audit: not applicable. There are no tests, by design.
 
 ## Does not change
-- "`apps/web` is untouched": **broken** by `63b769a` (`apps/web/railway.json`).
-- "No deployment config beyond `docker-compose.yml`": **broken** by `63b769a` (three `railway.json` files and a README deploy section).
-- These still hold: never approves; the check never ends `failure`; App permissions, incremental behavior, API fields, models, providers and the dashboard design system are untouched. The README deploy steps match the code: `/api/health` (`server.ts:16`), `DATA_DIR` and `GITHUB_PRIVATE_KEY` (`config.ts:15,24,64`), and the dashboard's `API_URL`.
+- `apps/web` untouched apart from `railway.json`; deployment config as amended: hold.
+- Never approves; check never concludes `failure`; App permissions; API fields; models and providers; dashboard
+  design system; no tests and no CI: hold.
+- Incremental scope, takeover, cancellation, crash recovery and the 422 fallback: hold. The queue only adds a wait
+  before a review starts. Takeover and cancel paths are unchanged, and recovered jobs keep their ids, so they run first.
 
 ## Cross-cutting axes
-- **Access** (docs only): the spec now matches the code.
-- **Failure** (touched):
-  - The reviewer fallback now works.
-  - A partial verification failure shows in the step detail, but the step status stays `ok` unless nothing was checked (`run.ts:470-475`).
-  - A failed Suggested-tests call is only logged (`test-plan.ts:36-37`).
-- **Cost** (touched):
-  - Test gap now runs on every non-low-risk source file in repos with tests (`triage.ts:16,84`).
-  - AI slop reaches the JSON fallback on #25, #26, #27 and #29, at up to 3 extra calls each.
-  - `limited()` caps concurrent calls, not tokens (`call.ts:31-42`). Three parallel reviews of about 200K tokens each exceed Groq's 250K TPM.
-- **Languages** (touched): the codify change applies to every language. Method chains (TS, Java, Go) now hit it.
-- **Theme**: the dashboard change is layout only.
-- **Idempotency**: unchanged.
+- **Failure** (touched): a 429 now waits; after 6 waits it throws into the existing fail-soft paths. A partial
+  verification failure now shows as `failed`.
+- **Cost** (touched): spend is unchanged, but each agent call reserves 3 times its estimate (`call.ts:200`), which
+  lowers throughput under load.
+- **Access** (touched): the token window and the review cap are shared by every installation. One repository's burst
+  delays everyone's reviews and replies. Fine for one deployment; the spec does not mention it.
+- **Idempotency** (touched): the claim is atomic; commands are still keyed by comment id.
+- **Languages** (touched): the `codify` change applies to every language.
+- **Theme**: untouched (no dashboard change).
 - **Untouched**: billing, i18n, mobile.
 
 ## Blockers
 
-1. **Verification drops a real bug on fabricated evidence, and the docs say it never does.**
-   - **What and where:** `grounded()` (`apps/api/src/review/verify.ts:76-96`) accepts a rejection when any 3+ character code span appears in the shown window, or when any cited `path:line` has code. The flagged code itself qualifies. `explains()` (`verify.ts:102-105`) counts prose words only.
-   - **Evidence:** on #28 (HEAD code), the F1 status-transition bug (`app/routers/refunds.py:104`) was rejected with the quote `amount: int  # amount in cents` at `app/schemas.py:45`. That text is nowhere in the head snapshot. The real code is `amount: float` (`schemas.py:65`) and `-> float` (`refunds.py:25`). The rejection passed on `refundable_amount` and `payload.amount == remaining`, both quoted from the flagged window.
-   - **Spec:** AC-3 and AC-4. The challenge round says the verifier "may reject only with cited code", and fabricated code is not cited code.
+1. **Verification can no longer reject a finding written the way its own prompt asks, so known false positives post again.**
+   - **What and where:**
+     - `rejectionGrounded()` (`apps/api/src/review/verify.ts:128-145`) counts every backticked span as a code quote
+       (`quotesIn`, `verify.ts:114-121`). Each one must appear in the shown code or in a cited window (`verify.ts:142-143`).
+     - A backticked `path:line` is never in code: `codeOnly` keeps only gutter lines (`verify.ts:99-111`), and
+       `readFile` puts the path in a header.
+     - The verifier prompt asks for exactly that format: "quoted in backticks and cited as `path:line`" (`verify.ts:26`).
+   - **Replay on stored rejections:** I replayed the rule on the 12 rejections in `reviews.trace.rejected` (#6 to #28).
+     - 10 cite a backticked `path:line`, and all 10 now count as unsure.
+     - 8 of those 10 were correct:
+       - `utcnow` is defined at `app/models.py:11` on both F1 and F5 heads (#6, #10, #15, #20, #25)
+       - `findById` is synchronous at `src/db/products.ts:39` (#9)
+       - the `__future__` forward reference (#15, #25)
+     - For the `utcnow` rejections on #6, #15 and #25, the citation span is the only reason they fail.
+   - **Live on HEAD:** #30 to #33 checked 30 findings and rejected 0, with no failed group. Four false positives posted
+     as line comments:
+     - 228 High, `utcnow` (acme-billing#19, `app/models.py:84`)
+     - 256 Critical, `utcnow` (acme-billing#18, `app/models.py:81`)
+     - 240 High, "missing await" on the synchronous `findById` (acme-store#28, `src/routes/discounts.ts:62`)
+     - 238 Critical, "missing comma" (acme-store#28). `src/db/client.ts:41` and `:52` both end in a backtick and a comma.
+     - Two of these are false Criticals, counted in the check titles.
+   - **Spec:** AC-3 and FR-5 (rejected findings are not posted). The challenge round says the verifier "may reject only
+     with cited code", and names verification as the mitigation for reviewer noise. The rule now accepts only uncited
+     rejections.
    - **Rule:**
-     - Second-pass Warning 1 named this exact weakness: grounding checks that a quote exists, not that it supports the verdict. It was not fixed.
-     - GAPS ("Verification rejected none of them") and SUMMARY ("verification rejected none") are contradicted by `reviews.trace.rejected` on #28. This is the third pass in a row with a written claim that the stored evidence disproves.
+     - The third-pass fix direction said "every code span other than a bare `path:line`". The exemption was dropped.
+     - The new filter was checked only against the failing case (#28), never replayed on stored positives.
+     - GAPS and SUMMARY describe the rule ("rejections now need real counter-evidence") but not its outcome: 0
+       rejections across the burst.
    - **Fix direction:**
-     - For a rejection, every code span other than a bare `path:line` must appear verbatim in the shown code, or in the snapshot at the path it cites.
-     - At least one span must come from outside the flagged lines.
-     - A cited `path:line` must contain the quoted text. Anything else counts as unsure.
-     - Re-run F1 one PR at a time, to stay under the TPM limit, and check `trace.rejected` against the snapshot. Correct the GAPS and SUMMARY lines.
-
-2. **The branch adds deployment config and touches `apps/web`, which the spec says do not change.**
-   - **What and where:** `63b769a` adds `apps/api/railway.json`, `apps/dashboard/railway.json`, `apps/web/railway.json` and a README section, "Deploy on Railway".
-   - **Spec:** under "Does not change": "`apps/web` is untouched" and "No tests, no CI, no deployment config beyond `docker-compose.yml`". The intro says "no deployment". Neither SUMMARY nor GAPS records the change.
-   - **Rule:** a change to something the spec promised to leave alone is a blocker, even when every criterion passes.
-   - **Fix direction:** the user decides; no code work is needed. Either move `63b769a` to its own branch and PR, or amend those two spec lines and note the change in GAPS.
+     - Treat spans that are only a citation (`^[\w@./-]+\.\w+:\d+(-\d+)?$`) as citations, not quotes.
+     - Keep the rest: every other quote must be real, every citation must exist, and at least one real quote must come
+       from outside the flagged lines.
+     - Replay the 12 stored rejections: #26 and #28 must stay unsure, and the `utcnow` and `findById` ones must reject.
+     - Re-run F1, F2 and F5, and check `trace.rejected` and the posted comments.
 
 ## Warnings
-1. **AC-4 variance:** 4, 4, 5 and 3 of 5 on #20, #21, #25 and #28, and the race is missing on 3 of 4. Needs the user's explicit acceptance once Blocker 1 is fixed.
-2. **Groq TPM:** parallel reviews exhaust the 250K TPM limit (llm_calls 570, 573, 576, 579). On #28, 8 of 9 candidates posted unverified, and 5 of 7 on #29. The step still shows `ok` (`run.ts:470-475`). Documented in GAPS. Needs the user's acceptance or a token-rate limiter.
-3. **AC-12:** fully met on #23 only. #22 and #24 miss the `formatCents` duplicate.
-4. **AC-14:**
-   - Test gap posts bug reports instead of "No test covers ..." findings, because nothing enforces `tests.ts:16`. #24 finding 174 is High `bug`.
-   - Since `a67c793` these findings never merge, so the AppError issue posts 2 or 3 times on lines 26-27: #22 (147, 149, 152), #23 (154, 158), #24 (171, 174).
-   - One test suggested in 152 expects an unchecked non-200 response to succeed, and 174's tests nest backticks.
-   - A failed Suggested-tests call is only logged (`test-plan.ts:36-37`).
-5. **AC-15:** other reviewers still report rule lines (#28 finding 215 is `rules+performance+security+general+slop`; #21 finding 170 is category `security`). Docs drift never merges, so it posts the `console.log` rule line beside Team rules (#27 findings 205 and 206 on line 54).
-6. **AC-13:** Docs drift missed `GIFT_CARD_PROVIDER_URL` on #23 after Groq rejected a `line: null` finding (llm_call 417, `findings.ts:8`).
-7. **AC-23:** multi-line code spans are not protected (`codify.ts:4`). The new leading-dot token (`codify.ts:5`, `aba50b1`) now wraps `.prepare` and `.get()` inside them, which breaks #27 finding 200's evidence.
-8. **AC-32:** suppression depends on title wording (`apply.ts:56-63`). #27 suppressed the missing `await` by learning 2 (similarity 0.75). #29 (219) and #26 (193) posted the same line-69 issue (0.33). `aba50b1` also widened matching across categories, at 0.7.
-9. **AC-34:** not exercised live since fix detection began comparing code.
-10. **AC-5 residual:**
-    - Command replies scrub only the values `findSecret` sees in the prompt (`answer.ts:64`, `fix.ts:65-67`), not code the model read through tools.
-    - `llm_calls.error` and the warn log are pattern-only (`call.ts:65,69`), although the `aba50b1` message says "exact secret values".
-    - `llm_calls.tools` is pattern-only (`call.ts:150`).
-11. **SUMMARY and GAPS overstate:**
-    - "verification rejected none" is false (#28).
-    - "Reviews 21 to 29 on the latest code" and "reviews 20, 21, 25, 28" on the latest code: only #27 to #29 ran on HEAD.
-    - "the rest are listed in GAPS": the AC-3 grounding gap, the AC-14 duplicates, AC-15, the AC-23 code spans, AC-32 and AC-34 are not listed.
+1. **AC-4:** #30 posted 4 of 5 (refund above balance missing). F1 history is 4, 4, 5, 3, 4. Needs the user's explicit acceptance.
+2. **AC-14:** #32 has no Test gap finding: `tests` ran on 1 chunk, and its `:final` answer was 39 tokens. The "No test
+   covers" rename (`findings.ts:78-79`) is unexercised live, lowercases a leading identifier (`AppError` becomes
+   `appError`), and does not enforce scope. Model variance needs the user's acceptance.
+3. **AC-12:** #32 reports the placeholder (246) but not the `formatCents` duplicate. Fully met on 1 of 4 F3 runs (#23).
+4. **AC-15:** other reviewers still report rule lines: #30 finding 236 is `rules+slop+reliability+security+general`, and
+   #32 finding 247 is `rules+general+slop`. Docs drift now stays out (#31 243).
+5. **AC-23:** nested backticks still break evidence. #32 finding 251 reads `` `${`PROVIDER_URL`}` `` and
+   `` `src/services/gift-cards.ts`:28 `` (`codify.ts:4,61-70`).
+6. **AC-32:** suppression depends on title wording. Suppressed on #27 and #31; posted on #26 and #29.
+7. **AC-34:** not exercised live since fix detection began comparing code.
+8. **Token accounting** (`rate.ts:108-114`):
+   - A call reserves before it gets a concurrency slot, and the reservation is dated then.
+   - If it waits over 60 s for a slot, or runs over 60 s, its real usage lands on a spend already dropped from the
+     window, so bursts can exceed the budget. The 429 wait catches it.
+   - Failed attempts keep their estimate.
+9. **Shared budget:**
+   - Commands and indexing share the per-model window with reviews (`rate.ts:12`), so an `@prguard` reply can wait
+     about a minute during a burst.
+   - `acquire()` ignores the abort signal (`rate.ts:86-89`).
+   - Burst reviews take about 5 times longer.
+   - Needs the user's acceptance.
+10. **AC-5 residual:** exact-value scrubbing covers only secrets on added lines (`run.ts:222-228`). Secrets read through
+    tools, and command replies (`answer.ts:64`, `fix.ts:65-67`), stay pattern-only.
+11. **Docs overstate:**
+    - SUMMARY "the rest are listed in GAPS" is still false. AC-12, the AC-14 duplicates, AC-15, AC-23, AC-32 and AC-34
+      are absent.
+    - SUMMARY "F3: Test gap posts with Suggested tests" is untrue on the only HEAD F3 run (#32).
+    - GAPS AC-4 omits #30.
+    - Neither file says #30 to #33 rejected nothing.
+    - `spec.md:10` still says "no deployment".
 
-Carried observation: the local `data/prguard.db` still holds F5 bytes in free pages. Run `VACUUM` or delete it.
+Carried observation: the local `data/prguard.db` held F5 bytes in free pages at the last check. Run `VACUUM` or delete it.
 
 ## Next steps
-1. The builder fixes Blocker 1 and corrects the claims in Warning 11. Then re-run F1 and F3 one PR at a time on HEAD, checking `trace.rejected` against the snapshot, the `%:json` calls and `trace.reviewers[].failed`.
-2. The user decides Blocker 2 (split `63b769a` or amend the spec), the AC-4 variance and the Groq TPM limit (Warnings 1 and 2), and confirms the builder's spec edit for write-access learnings.
+1. The builder fixes Blocker 1 and replays the 12 stored rejections. Then it re-runs F1, F2 and F5 on HEAD and checks
+   two things:
+   - `trace.rejected` against the PR heads
+   - that the `utcnow`, `findById` and comma findings are gone and the planted bugs remain
+   It also corrects the claims in Warning 11.
+2. The user decides on the AC-4 and AC-14 variance (Warnings 1 and 2) and the queue's throughput and shared budget
+   (Warning 9).
 3. Re-run the verifier.
 4. Then run `/prguard-learn`. Inputs:
-   - Blocker 1: a grounding check that accepts the flagged code as proof for rejecting it. A warning left open became a dropped planted bug.
-   - The class "written claim contradicted by stored evidence" recurred for a third pass ("verification rejected none", "latest code").
-   - Blocker 2: an out-of-scope commit landed on the feature branch with no check against "Does not change".
-   - A rule that stops merges (Test gap, Docs drift) without enforcing each reviewer's scope turned into duplicate posts.
+   - Blocker 1: a fix tightened a filter after checking only the failing case and was never replayed on stored
+     positives, so it switched the feature off. The fix direction's explicit exemption (`path:line`) was dropped.
+   - The claims class recurred in a new form: the docs describe what a rule requires, not what it did (0 rejections).
+   - The queue and rate limiter shipped with live burst evidence and closed a warning cleanly. That is the pattern to keep.

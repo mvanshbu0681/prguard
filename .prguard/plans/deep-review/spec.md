@@ -7,7 +7,7 @@ fix tracking across pushes, `@prguard` commands, and learnings from team feedbac
 to image badges (hosted at `prguard-sandbox/prguard-assets`, style A) and a structured layout. The
 dashboard gains a Queue, Insights, a review trace and a Learnings panel.
 
-Same constraints as the MVP: no tests of any kind, no CI, no deployment. Groq only (`gpt-oss-20b` for
+Same constraints as the MVP: no tests of any kind, no CI. Deployment is limited to the Railway config the user asked for (see Does not change). Groq only (`gpt-oss-20b` for
 `fast`, `gpt-oss-120b` for `smart`); Gemini stays optional. Advisory only.
 
 ## Users and stories

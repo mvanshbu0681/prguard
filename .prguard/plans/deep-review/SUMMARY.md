@@ -73,7 +73,7 @@ page checked in Chrome.
 The first verification was BLOCKED (secret line stored as a snippet, Test gap without suggested
 tests, Reliability missing the swallowed error) with 15 warnings. The second was BLOCKED on
 reviewers losing answers through a fallback Groq rejected. All four blockers are fixed; most
-warnings are fixed and the rest are listed in GAPS. Re-run live on Docker (2026-10-01):
+warnings are fixed; the open ones are listed under "Open items" in GAPS. Re-run live on Docker (2026-10-01):
 
 - Reviews 21 to 29: no reviewer lost its answer (trace and `llm_calls`).
 - F1: 4, 4, 5 and 3 of the 5 planted bugs (AC-4 partial, see GAPS). Review 28 rejected one on
@@ -86,7 +86,7 @@ warnings are fixed and the rest are listed in GAPS. Re-run live on Docker (2026-
 - F2: Reliability owns the swallowed `try/catch`. An `ignore` (write access only) saved a learning
   that suppressed the same finding on a fresh PR. A fix push marked it Fixed in 22 s, by comparing
   the code rather than GitHub's outdated flag, and it was not posted again.
-- F3: Test gap posts with "Suggested tests" and no longer merges into other reviewers' findings.
+- F3: when Test gap posts, it carries "Suggested tests" and no longer merges into other reviewers' findings; on some runs it posts nothing (model variance, see GAPS).
 - The verification trace now shows failures; that exposed forced-answer calls Groq rejected, now
   fixed (every tool listed with a required tool choice, JSON mode as the last resort).
 - Also: file-level findings are verified and evidence must quote code; Mermaid edge labels quoted;
