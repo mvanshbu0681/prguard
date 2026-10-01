@@ -11,7 +11,7 @@ import {
   type ModelMessage,
   type ToolSet,
 } from "ai";
-import type { z } from "zod";
+import { z } from "zod";
 import { config } from "../config.ts";
 import * as llmCallsRepo from "../db/repos/llm-calls.ts";
 import * as reviewsRepo from "../db/repos/reviews.ts";
@@ -171,6 +171,23 @@ function withoutAnswerCalls(messages: ModelMessage[], name: string): ModelMessag
 }
 
 /**
+ * Groq's JSON mode needs every key listed as required, so optional keys become required and
+ * nullable. Callers already accept null wherever a key was optional.
+ */
+function everyKeyRequired(schema: z.ZodType): z.ZodType {
+  if (schema instanceof z.ZodOptional || schema instanceof z.ZodNullable) {
+    let inner = schema.unwrap() as z.ZodType;
+    while (inner instanceof z.ZodOptional || inner instanceof z.ZodNullable) inner = inner.unwrap() as z.ZodType;
+    return everyKeyRequired(inner).nullable();
+  }
+  if (schema instanceof z.ZodObject) {
+    return z.object(Object.fromEntries(Object.entries(schema.shape).map(([key, value]) => [key, everyKeyRequired(value as z.ZodType)])));
+  }
+  if (schema instanceof z.ZodArray) return z.array(everyKeyRequired(schema.element as z.ZodType));
+  return schema;
+}
+
+/**
  * A tool loop whose final answer is a call to the `answer` tool (Groq cannot combine tools with JSON
  * output). If the loop ends without a valid answer, the model is made to call the answer tool.
  */
@@ -256,7 +273,7 @@ export async function agent<T>(
   }
   // Last resort: the same question in JSON mode, answered from the prompt without what the tools found.
   try {
-    return await structured({ ...meta, purpose: `${meta.purpose}:json`, schema });
+    return (await structured({ ...meta, purpose: `${meta.purpose}:json`, schema: everyKeyRequired(schema) })) as T;
   } catch (err) {
     problem = errMessage(err).slice(0, 400);
   }
